@@ -1,0 +1,356 @@
+/* CyTOF Gate App Styling */
+
+/* ── Plot container ────────────────────────────────────────────── */
+#cytof-plot-container {
+  position: relative;
+  width: 460px;
+  height: 460px;
+  margin: 0 auto;
+}
+
+#cytof-plot-container canvas {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+}
+
+#cytof-plot-container svg {
+  position: absolute;
+  top: 0; left: 0;
+}
+
+.plot-frame {
+  fill: none;
+  stroke: #333;
+  stroke-width: 1px;
+}
+
+/* ── Plot controls bar (mode toolbar + buttons above plot) ─────── */
+.plot-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.plot-controls-bar .mode-toolbar {
+  margin-bottom: 0;
+}
+
+/* ── Below-plot controls (channels, display mode, alpha) ────────── */
+.below-plot-controls {
+  margin-top: 8px;
+  padding: 8px 0;
+}
+
+.below-plot-controls .form-group {
+  margin-bottom: 4px;
+}
+
+/* ── Gate drawing styles ──────────────────────────────────────── */
+.rubber-band {
+  fill: rgba(100, 100, 255, 0.08);
+  stroke: #4444ff;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 2;
+  pointer-events: none;
+}
+
+.poly-preview-line {
+  stroke: #4444ff;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 2;
+  pointer-events: none;
+}
+
+/* ── Panel sections ──────────────────────────────────────────── */
+.panel-section {
+  padding: 0 4px;
+}
+
+/* ── Sample filter table panel ───────────────────────────────── */
+.sample-filter-panel {
+  max-height: 650px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  background: #fafafa;
+}
+
+/* Make DT compact inside the filter panel */
+.sample-filter-panel table.dataTable {
+  font-size: 11px;
+}
+
+.sample-filter-panel table.dataTable td,
+.sample-filter-panel table.dataTable th {
+  padding: 2px 6px;
+}
+
+/* Column filter inputs at top of DT */
+.sample-filter-panel .dataTables_filter {
+  display: none;
+}
+
+.sample-filter-panel input[type="search"] {
+  font-size: 11px;
+  padding: 2px 4px;
+  height: auto;
+}
+
+.sample-filter-panel select {
+  font-size: 11px;
+  padding: 1px 2px;
+  height: auto;
+}
+
+/* ── Sidebar panels ──────────────────────────────────────────── */
+.gate-list-panel, .population-tree-panel {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px;
+  margin-bottom: 10px;
+  background: #fafafa;
+}
+
+/* ── Gate card ─────────────────────────────────────────────────── */
+.gate-card {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+
+.gate-card:hover {
+  background: #eef;
+}
+
+.gate-card.selected {
+  background: #dde8ff;
+  border-color: #88a8ff;
+}
+
+.gate-color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.gate-card-name {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gate-card-channels {
+  color: #999;
+  font-size: 10px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.gate-card-info {
+  color: #888;
+  font-size: 11px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.gate-card-delete {
+  margin-left: 4px;
+  color: #c00;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.4;
+  padding: 0 4px;
+}
+
+.gate-card-delete:hover {
+  opacity: 1;
+}
+
+/* ── Population tree ──────────────────────────────────────────── */
+.pop-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  margin: 1px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.pop-row:hover {
+  background: #eef;
+}
+
+.pop-row.active {
+  background: #d6edff;
+  border-color: #88b8ff;
+}
+
+.pop-row-indent {
+  display: inline-block;
+}
+
+.pop-row-name {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pop-row-count {
+  color: #666;
+  font-size: 11px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.pop-row-pct {
+  color: #888;
+  font-size: 11px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.pop-row-delete {
+  margin-left: 4px;
+  color: #c00;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.4;
+  padding: 0 4px;
+}
+
+.pop-row-delete:hover {
+  opacity: 1;
+}
+
+/* ── Gate ref badges in population tree ───────────────────────── */
+.gate-ref-badge {
+  display: inline-block;
+  padding: 0 4px;
+  margin-left: 3px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: white;
+  line-height: 16px;
+}
+
+.gate-ref-badge.exclude {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* ── Mode toolbar ─────────────────────────────────────────────── */
+.mode-toolbar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.mode-toolbar .btn {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.mode-toolbar .btn.active-mode {
+  background-color: #337ab7;
+  color: white;
+  border-color: #2e6da4;
+}
+
+/* ── Section headers ──────────────────────────────────────────── */
+.section-header {
+  font-weight: 600;
+  font-size: 13px;
+  color: #555;
+  margin: 10px 0 4px 0;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-header .btn-xs {
+  font-size: 11px;
+  padding: 1px 6px;
+}
+
+/* ── Status bar ───────────────────────────────────────────────── */
+.status-bar {
+  font-size: 12px;
+  color: #666;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border-radius: 3px;
+  margin-top: 8px;
+}
+
+/* ── Population editor (right panel) ──────────────────────────── */
+.pop-editor-panel {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  background: #fafafa;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.pop-editor-row {
+  margin-bottom: 6px;
+}
+
+.pop-editor-row label {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+/* Compact radio buttons in gate ref editor */
+.gate-ref-edit-row .radio-inline {
+  font-size: 11px;
+  padding-left: 18px;
+  margin-right: 4px;
+}
+
+.gate-ref-edit-row .form-group {
+  margin-bottom: 0;
+}
+
+/* Compact radio buttons in create population modal */
+.gate-ref-row .radio-inline {
+  font-size: 11px;
+  padding-left: 18px;
+  margin-right: 4px;
+}
+
+.gate-ref-row .form-group {
+  margin-bottom: 0;
+}
+
+/* ── Overlay checkbox list (scrollable when many items) ───────── */
+#overlay_levels {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  padding: 4px;
+  background: #fdfdfd;
+}

@@ -1,0 +1,24 @@
+# R
+.Rhistory
+.RData
+.Rproj.user
+*.Rproj
+
+# Shiny / R artifacts
+rsconnect/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Data files (do not commit patient/experiment data)
+*.fcs
+*.FCS
+*.rds
+*.RDS
+*.rda
+*.RDA
+
+# Logs
+*.log
