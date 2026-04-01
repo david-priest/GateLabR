@@ -201,29 +201,49 @@ ui <- fluidPage(
               actionButton("mode_cancel", "Cancel", class = "btn-sm btn-warning")
             ),
             tags$div(style = "display:flex; gap:4px; margin-left: auto;",
+              actionButton("flip_axes", "", icon = icon("arrows-h"),
+                           class = "btn-xs btn-default"),
               actionButton("reset_view_btn", "Reset", class = "btn-xs btn-default"),
               actionButton("refresh_plot_btn", "Refresh", class = "btn-xs btn-default")
             )
           ),
           tags$div(id = "cytof-plot-container",
-                   style = "width: 460px; height: 580px;"),
+                   style = "width: 100%;"),
+
+          # Hidden X/Y selects: axis-label clicks update these; UI is on the plot
+          tags$div(style = "display:none;",
+            selectInput("x_channel", NULL, choices = NULL),
+            selectInput("y_channel", NULL, choices = NULL)
+          ),
+
           tags$div(class = "below-plot-controls",
             fluidRow(
-              column(4, selectInput("x_channel", "X:", choices = NULL)),
-              column(4, selectInput("y_channel", "Y:", choices = NULL)),
-              column(1, actionButton("flip_axes", "", icon = icon("arrows-h"),
-                                     style = "margin-top: 25px;", class = "btn-sm")),
-              column(3,
+              column(6,
                 radioButtons("display_mode", NULL,
                              choices = c("Scatter" = "scatter",
                                          "Pseudo" = "pseudocolor",
                                          "Contour" = "contour"),
                              selected = "pseudocolor", inline = TRUE)
+              ),
+              column(6,
+                sliderInput("point_alpha", "Opacity:",
+                            min = 0.05, max = 1.0, value = 0.35, step = 0.05,
+                            width = "100%")
               )
             ),
-            sliderInput("point_alpha", "Point opacity:",
-                        min = 0.05, max = 1.0, value = 0.35, step = 0.05,
-                        width = "100%")
+            conditionalPanel(
+              "input.display_mode == 'contour'",
+              selectInput("contour_threshold",
+                          "Outer contour (% of peak density):",
+                          choices = c("1%" = 1, "2%" = 2, "5%" = 5,
+                                      "10%" = 10, "20%" = 20, "30%" = 30),
+                          selected = 5, width = "100%")
+            ),
+            hr(style = "margin: 6px 0;"),
+            tags$div(class = "section-header", "Color by marker / metadata"),
+            selectInput("overlay_coldata", NULL,
+                        choices = c("(none)" = ""), selected = ""),
+            uiOutput("overlay_checkboxes_ui")
           ),
           uiOutput("subset_stats_ui")
         ),
@@ -330,13 +350,6 @@ ui <- fluidPage(
         tags$div(class = "section-header", "Population Editor"),
         uiOutput("population_editor_ui"),
 
-        hr(),
-
-        # ── Color by colData ──
-        tags$div(class = "section-header", "Color by colData"),
-        selectInput("overlay_coldata", NULL,
-                    choices = c("(none)" = ""), selected = ""),
-        uiOutput("overlay_checkboxes_ui")
       )
     )
   )
@@ -722,6 +735,10 @@ server <- function(input, output, session) {
       )
     }
 
+    # Attach channel list + contour threshold so JS can build axis pickers
+    plot_data$channels          <- as.list(rv$channels)
+    plot_data$contour_threshold <- as.numeric(input$contour_threshold %||% 5)
+
     rv$current_plot_data <- plot_data
     session$sendCustomMessage("updatePlot", plot_data)
   }
@@ -741,7 +758,21 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$display_mode, { req(rv$assay_data); send_full_plot() }, ignoreInit = TRUE)
+  observeEvent(input$contour_threshold, { req(rv$assay_data); send_full_plot() }, ignoreInit = TRUE)
   observeEvent(input$reset_view_btn, { req(rv$assay_data); send_full_plot(reset_view = TRUE) })
+
+  # Axis-label clicks → update the hidden channel selects (which trigger send_full_plot)
+  observeEvent(input$axis_label_click, {
+    click <- input$axis_label_click
+    req(click, click$axis, click$selected)
+    if (click$selected %in% rv$channels) {
+      if (click$axis == "x") {
+        updateSelectInput(session, "x_channel", selected = click$selected)
+      } else {
+        updateSelectInput(session, "y_channel", selected = click$selected)
+      }
+    }
+  })
   observeEvent(input$refresh_plot_btn, {
     req(rv$assay_data); rv$cache_version <- -1L; rv$pop_events_map <- list(); send_full_plot()
   })
@@ -1048,7 +1079,7 @@ server <- function(input, output, session) {
                     style = paste0("background:", gate$color, "; width:10px; height:10px; border-radius:2px; flex-shrink:0;")),
           tags$span(gate$name, style = "font-size:12px; min-width: 80px;"),
           radioButtons(paste0("edit_ref_", gid), NULL,
-                       choices = c("Off" = "off", "Inc" = "include", "Exc" = "exclude"),
+                       choices = c("Off" = "off", "Include" = "include", "Exclude" = "exclude"),
                        selected = current_val, inline = TRUE))
       })
       gate_refs_ui <- tagList(
@@ -1491,6 +1522,41 @@ ui_with_runjs <- tagList(
   tags$script(HTML("
     Shiny.addCustomMessageHandler('runjs', function(code) {
       eval(code);
+    });
+
+    $(document).ready(function() {
+      var tips = {
+        // Left column
+        'save_workspace_btn': 'Save current gates & populations to SCE metadata (in memory)',
+        'load_workspace_btn': 'Load a workspace from another SCE object currently in memory',
+        'export_pop_btn':     'Export the active population as a colData column on the SCE',
+        'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
+        'save_rds_dl':        'Download the SCE with embedded workspace as an .rds file',
+        'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
+        // Mode toolbar
+        'mode_navigate': 'Navigate mode — pan and zoom (no drawing)',
+        'mode_rect':     'Draw a rectangle gate',
+        'mode_poly':     'Draw a freehand polygon gate',
+        'mode_cancel':   'Cancel the current drawing and return to navigate mode',
+        'flip_axes':     'Swap the X and Y channels',
+        'reset_view_btn':   'Reset zoom to the full data range',
+        'refresh_plot_btn': 'Force a full re-render of the plot',
+        // Right panel
+        'rename_gate_btn':  'Rename the selected gate',
+        'undo_btn':         'Undo the last gate or population change',
+        'redo_btn':         'Redo the last undone change',
+        'delete_gate_btn':  'Delete the selected gate',
+        'add_pop_btn':      'Define a new population using gate references',
+        // Strategy / Illustration
+        'strategy_export_png': 'Export the gating strategy grid as a PNG',
+        'illust_render_btn':   'Render the illustration mini-plot grid',
+        'illust_export_png':   'Export the illustration grid as a PNG'
+      };
+      Object.entries(tips).forEach(function([id, tip]) {
+        var el = $('#' + id);
+        if (el.length) el.attr({ title: tip, 'data-toggle': 'tooltip', 'data-placement': 'top' });
+      });
+      $('[data-toggle=\"tooltip\"]').tooltip({ delay: { show: 500, hide: 100 } });
     });
   "))
 )

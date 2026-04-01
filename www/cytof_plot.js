@@ -23,11 +23,11 @@
 (function () {
 
     // ── Layout constants ────────────────────────────────────────────────────
-    const PLOT_W  = 460;
-    const PLOT_H  = 580;
+    let PLOT_W    = 460;
+    let PLOT_H    = 460;
     const M       = { top: 20, right: 15, bottom: 45, left: 55 };
-    const W       = PLOT_W - M.left - M.right;
-    const H       = PLOT_H - M.top  - M.bottom;
+    let W         = 0;
+    let H         = 0;
     const CTNR    = 'cytof-plot-container';
     const VRAD    = 7;      // vertex handle radius (px)
     const CLOSEPX = 28;     // polygon close-click threshold (px)
@@ -59,6 +59,7 @@
     let _densityCache = null;
     let _contourCache = null;
     let _contourKey   = null;  // fingerprint of x/y data used to build _contourCache
+    let _channelPickerEl = null;  // floating channel-picker <select> overlay
 
     // requestAnimationFrame handles for throttling
     let _zoomRafId = null;   // zoom/pan redraw
@@ -110,6 +111,16 @@
     function _init() {
         var ctnr = document.getElementById(CTNR);
         if (!ctnr) return;
+
+        // Compute responsive plot dimensions from available column width
+        var _parentEl = ctnr.parentElement;
+        var _availW = (_parentEl && _parentEl.clientWidth > 0) ? _parentEl.clientWidth :
+                      (_parentEl && _parentEl.parentElement && _parentEl.parentElement.clientWidth > 0)
+                          ? _parentEl.parentElement.clientWidth : 480;
+        PLOT_W = Math.max(360, _availW - 16);
+        PLOT_H = PLOT_W;
+        W = PLOT_W - M.left - M.right;
+        H = PLOT_H - M.top  - M.bottom;
 
         ctnr.innerHTML = '';
         ctnr.style.cssText = [
@@ -168,18 +179,20 @@
             .attr('transform', 'translate(0,' + H + ')');
         _g.append('g').attr('class', 'y-axis');
 
-        // Axis labels (informational, non-interactive)
+        // Axis labels — click to open channel picker
         _g.append('text').attr('class', 'cytof-xlabel')
             .attr('text-anchor', 'middle')
             .attr('x', W / 2).attr('y', H + 40)
-            .style('font-size', '14px').style('fill', '#333')
-            .style('pointer-events', 'none');
+            .style('font-size', '14px').style('fill', '#1a73e8')
+            .style('cursor', 'pointer').style('user-select', 'none')
+            .on('click', function() { _showChannelPicker('x'); });
         _g.append('text').attr('class', 'cytof-ylabel')
             .attr('text-anchor', 'middle')
             .attr('transform', 'rotate(-90)')
             .attr('x', -H / 2).attr('y', -48)
-            .style('font-size', '14px').style('fill', '#333')
-            .style('pointer-events', 'none');
+            .style('font-size', '14px').style('fill', '#1a73e8')
+            .style('cursor', 'pointer').style('user-select', 'none')
+            .on('click', function() { _showChannelPicker('y'); });
 
         // Title
         _svg.append('text').attr('class', 'cytof-title')
@@ -532,6 +545,71 @@
             if (px >= 0 && px <= W && py >= 0 && py <= H) pts.push([px, py]);
         }
         return pts;
+    }
+
+    // ── Channel picker (clicking axis labels) ────────────────────────────────
+    function _showChannelPicker(axis) {
+        _hideChannelPicker();
+        if (!_plotData || !_plotData.channels || !_plotData.channels.length) return;
+
+        var labelSel = _g.select(axis === 'x' ? '.cytof-xlabel' : '.cytof-ylabel');
+        if (labelSel.empty()) return;
+        var labelRect = labelSel.node().getBoundingClientRect();
+
+        var sel = document.createElement('select');
+        sel.style.cssText = [
+            'position:fixed', 'z-index:9999',
+            'max-height:300px', 'min-width:180px',
+            'font-size:13px', 'border:1px solid #aaa',
+            'border-radius:4px', 'background:#fff',
+            'box-shadow:0 3px 12px rgba(0,0,0,0.22)',
+            'outline:none', 'cursor:pointer', 'overflow-y:auto'
+        ].join(';');
+        sel.style.left = Math.min(labelRect.left, window.innerWidth - 200) + 'px';
+        sel.style.top  = (labelRect.bottom + 4) + 'px';
+        sel.size = Math.min(_plotData.channels.length, 14);
+
+        var currentVal = axis === 'x' ? _plotData.x_label : _plotData.y_label;
+        _plotData.channels.forEach(function(ch) {
+            var opt = document.createElement('option');
+            opt.value = opt.text = ch;
+            if (ch === currentVal) opt.selected = true;
+            sel.appendChild(opt);
+        });
+
+        sel.addEventListener('change', function() {
+            var val = sel.value;
+            _hideChannelPicker();
+            if (typeof Shiny !== 'undefined') {
+                Shiny.setInputValue('axis_label_click',
+                    { axis: axis, selected: val }, { priority: 'event' });
+            }
+        });
+        sel.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') _hideChannelPicker();
+        });
+        // Close on any outside click
+        setTimeout(function() {
+            document.addEventListener('mousedown', _outsidePickerClick, true);
+        }, 10);
+
+        document.body.appendChild(sel);
+        _channelPickerEl = sel;
+        sel.focus();
+    }
+
+    function _outsidePickerClick(e) {
+        if (_channelPickerEl && !_channelPickerEl.contains(e.target)) {
+            _hideChannelPicker();
+        }
+    }
+
+    function _hideChannelPicker() {
+        if (_channelPickerEl) {
+            _channelPickerEl.remove();
+            _channelPickerEl = null;
+            document.removeEventListener('mousedown', _outsidePickerClick, true);
+        }
     }
 
     function _computeBandwidth(pts) {

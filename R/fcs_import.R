@@ -3,6 +3,28 @@
 # Uses CATALYST::prepData if available, otherwise builds SCE manually
 # from flowCore::read.FCS / read.flowSet.
 
+#' Identify CyTOF metal channels that should receive arcsinh transformation
+#' Returns a logical vector, TRUE = metal channel to transform
+.is_metal_channel <- function(channel_names) {
+  # Known non-metal channels present in CyTOF FCS files
+  non_metal_exact <- c("Time", "Event_length", "Cell_length",
+                       "Center", "Offset", "Width", "Residual",
+                       "file_number", "Beads", "Dead", "Live", "Viability")
+  non_metal_prefix <- c("^FSC", "^SSC", "^Viab", "^Scatter")
+
+  is_non_metal <- tolower(channel_names) %in% tolower(non_metal_exact) |
+    Reduce(`|`, lapply(non_metal_prefix,
+                       function(p) grepl(p, channel_names, ignore.case = TRUE)))
+
+  # Metal channels: contain a metal element + mass number pattern
+  # e.g. "Ir191Di", "Y89Di", "Eu153Di", "89Y", "153Eu"
+  looks_metal <- grepl("Di$", channel_names, ignore.case = TRUE) |
+    grepl("[0-9]{2,3}[A-Z][a-z]", channel_names) |
+    grepl("[A-Z][a-z]?[0-9]{2,3}", channel_names)
+
+  looks_metal & !is_non_metal
+}
+
 #' Import one or more FCS files and return a SingleCellExperiment
 #'
 #' @param file_paths Character vector of FCS file paths
@@ -105,8 +127,17 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5) {
   # Build SCE: channels = rows, events = columns
   counts_mat <- t(combined)  # channels × events
 
-  # Apply arcsinh transform
-  exprs_mat <- asinh(counts_mat / cofactor)
+  # Apply arcsinh transform to metal channels only; leave Time, Event_length etc. as-is
+  metal_mask <- .is_metal_channel(rownames(counts_mat))
+  exprs_mat  <- counts_mat
+  if (any(metal_mask)) {
+    exprs_mat[metal_mask, ] <- asinh(counts_mat[metal_mask, ] / cofactor)
+  }
+  if (!any(metal_mask)) {
+    # No metal channels detected — transform everything as fallback
+    warning("No metal channels detected by name pattern; applying arcsinh to all channels.")
+    exprs_mat <- asinh(counts_mat / cofactor)
+  }
 
   # Create SCE
   sce <- SingleCellExperiment::SingleCellExperiment(
