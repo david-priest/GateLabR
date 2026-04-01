@@ -23,10 +23,11 @@
 (function () {
 
     // ── Layout constants ────────────────────────────────────────────────────
-    const TOTAL   = 460;
+    const PLOT_W  = 460;
+    const PLOT_H  = 580;
     const M       = { top: 20, right: 15, bottom: 45, left: 55 };
-    const W       = TOTAL - M.left - M.right;
-    const H       = TOTAL - M.top  - M.bottom;
+    const W       = PLOT_W - M.left - M.right;
+    const H       = PLOT_H - M.top  - M.bottom;
     const CTNR    = 'cytof-plot-container';
     const VRAD    = 7;      // vertex handle radius (px)
     const CLOSEPX = 28;     // polygon close-click threshold (px)
@@ -114,22 +115,22 @@
         ctnr.style.cssText = [
             'position:relative',
             'display:inline-block',
-            'width:'  + TOTAL + 'px',
-            'height:' + TOTAL + 'px',
+            'width:'  + PLOT_W + 'px',
+            'height:' + PLOT_H + 'px',
         ].join(';');
 
         // Canvas for scatter / density
         _canvas = document.createElement('canvas');
-        _canvas.width  = TOTAL;
-        _canvas.height = TOTAL;
+        _canvas.width  = PLOT_W;
+        _canvas.height = PLOT_H;
         _canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;';
         ctnr.appendChild(_canvas);
         _ctx = _canvas.getContext('2d');
 
         // SVG for axes + gate overlays + interaction
         var svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svgEl.setAttribute('width',  TOTAL);
-        svgEl.setAttribute('height', TOTAL);
+        svgEl.setAttribute('width',  PLOT_W);
+        svgEl.setAttribute('height', PLOT_H);
         svgEl.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;';
         ctnr.appendChild(svgEl);
         _svg = d3.select(svgEl);
@@ -437,7 +438,7 @@
 
     // ── Canvas rendering ──────────────────────────────────────────────────────
     function _drawCanvas(zx, zy) {
-        _ctx.clearRect(0, 0, TOTAL, TOTAL);
+        _ctx.clearRect(0, 0, PLOT_W, PLOT_H);
         if (!_plotData || !_plotData.x || !_plotData.x.length) return;
         // Multi-sample overlay mode: always use scatter with per-point colors
         if (_plotData.overlay_mode && _plotData.color_indices) {

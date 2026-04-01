@@ -30,18 +30,18 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5) {
   if (requireNamespace("CATALYST", quietly = TRUE)) {
     message("Using CATALYST::prepData to build SCE from FCS files...")
 
-    # Build metadata dataframe
-    md <- data.frame(
-      file_name = basename(file_paths),
-      sample_id = sample_names,
-      stringsAsFactors = FALSE
-    )
-
     tryCatch({
-      # Read into flowSet first
+      # Read into flowSet first; sampleNames become the join key for md
       fs <- flowCore::read.flowSet(file_paths, transformation = FALSE,
                                     truncate_max_range = FALSE)
       flowCore::sampleNames(fs) <- sample_names
+
+      # md$file_name must match sampleNames(fs)
+      md <- data.frame(
+        file_name = sample_names,
+        sample_id = sample_names,
+        stringsAsFactors = FALSE
+      )
 
       sce <- CATALYST::prepData(fs, md = md, transform = TRUE,
                                  cofactor = cofactor, FACS = FALSE)

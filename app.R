@@ -1,6 +1,9 @@
-# CyTOF Gate App — Main Shiny Application
+# GateLabR — Main Shiny Application
 # 3-column layout: sample filter | tabbed plot | gates + populations
 # Tabs: Gating | Strategy | Illustration
+
+# Remove the default 5 MB upload cap so large FCS / RDS files can be loaded
+options(shiny.maxRequestSize = Inf)
 
 library(shiny)
 library(SingleCellExperiment)
@@ -19,6 +22,7 @@ source("R/models.R")
 source("R/gate_engine.R")
 source("R/workspace.R")
 source("R/fcs_import.R")
+source("R/fcs_export.R")
 source("R/strategy_utils.R")
 
 # ── Discover SCE objects in global environment ──────────────────────────────
@@ -143,17 +147,39 @@ ui <- fluidPage(
         hr(),
 
         # ── Workspace controls ──
+        tags$div(class = "section-header", "Workspace"),
+
+        # Row 1: in-memory workspace operations
         fluidRow(
-          column(3, actionButton("save_workspace_btn", "Save",
+          column(3, actionButton("save_workspace_btn", "Save WS",
                                  class = "btn-sm btn-primary", style = "width:100%")),
-          column(3, actionButton("load_workspace_btn", "Load",
+          column(3, actionButton("load_workspace_btn", "Load WS",
                                  class = "btn-sm btn-default", style = "width:100%")),
-          column(3, actionButton("export_pop_btn", "Export",
+          column(3, actionButton("export_pop_btn", "→colData",
                                  class = "btn-sm btn-info", style = "width:100%")),
           column(3, actionButton("refresh_sce_btn", "Refresh",
                                  class = "btn-sm btn-default", style = "width:100%"))
         ),
-        tags$div(class = "status-bar", style = "margin-top: 8px;",
+
+        # Row 2: file persistence + FCS export
+        tags$div(style = "margin-top: 4px;",
+          fluidRow(
+            column(6, downloadButton("save_rds_dl", "Save RDS",
+                                     class = "btn-sm btn-success",
+                                     style = "width:100%; padding: 5px 8px;")),
+            column(6, actionButton("export_fcs_btn", "Export FCS",
+                                   class = "btn-sm btn-warning", style = "width:100%"))
+          )
+        ),
+
+        # Load RDS — standard file input
+        fileInput("load_rds_upload", NULL,
+                  accept = c(".rds", ".RDS"),
+                  buttonLabel = "Load RDS...",
+                  placeholder = "No file selected",
+                  multiple = FALSE),
+
+        tags$div(class = "status-bar",
           textOutput("status_text", inline = TRUE)
         )
       )
@@ -180,7 +206,7 @@ ui <- fluidPage(
             )
           ),
           tags$div(id = "cytof-plot-container",
-                   style = "width: 460px; height: 460px;"),
+                   style = "width: 460px; height: 580px;"),
           tags$div(class = "below-plot-controls",
             fluidRow(
               column(4, selectInput("x_channel", "X:", choices = NULL)),
@@ -1344,6 +1370,117 @@ server <- function(input, output, session) {
       showNotification(paste("Export error:", e$message), type = "error", duration = 5)
     })
   })
+
+  # ── Save SCE + workspace to RDS ─────────────────────────────────────────────
+  output$save_rds_dl <- downloadHandler(
+    filename = function() {
+      nm <- rv$sce_name %||% "workspace"
+      paste0(nm, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
+    },
+    content = function(file) {
+      req(rv$sce)
+      autosave()             # embed current workspace into SCE metadata first
+      saveRDS(rv$sce, file)
+    }
+  )
+
+  # ── Load SCE from RDS ────────────────────────────────────────────────────────
+  observeEvent(input$load_rds_upload, {
+    req(input$load_rds_upload)
+    f <- input$load_rds_upload
+    tryCatch({
+      showNotification("Loading RDS…", type = "message", duration = 2)
+      sce <- readRDS(f$datapath)
+      if (!methods::is(sce, "SingleCellExperiment")) {
+        showNotification("File does not contain a SingleCellExperiment object.",
+                         type = "error", duration = 6)
+        return()
+      }
+      # Derive a clean R variable name from the filename
+      sce_name <- tools::file_path_sans_ext(f$name)
+      sce_name <- gsub("[^A-Za-z0-9_]", "_", sce_name)
+      sce_name <- sub("^([0-9])", "sce_\\1", sce_name)
+      if (nchar(sce_name) == 0) sce_name <- "sce_loaded"
+      assign(sce_name, sce, envir = .GlobalEnv)
+      sce_names <- find_sce_objects()
+      updateSelectInput(session, "sce_select", choices = sce_names, selected = sce_name)
+      showNotification(paste("Loaded RDS as", sce_name), type = "message", duration = 4)
+    }, error = function(e) {
+      showNotification(paste("RDS load error:", e$message), type = "error", duration = 8)
+    })
+  })
+
+  # ── Export FCS — modal then download ────────────────────────────────────────
+  observeEvent(input$export_fcs_btn, {
+    req(rv$sce)
+    pop_choices <- setNames(
+      names(rv$populations),
+      vapply(rv$populations, function(p) p$name, character(1))
+    )
+    available_assays <- SummarizedExperiment::assayNames(rv$sce)
+    assay_choices <- setNames(
+      available_assays,
+      ifelse(available_assays == "exprs",   "Transformed – arcsinh (exprs)",
+      ifelse(available_assays == "counts",  "Untransformed – raw (counts)",
+                                             available_assays))
+    )
+    showModal(modalDialog(
+      title = "Export FCS Files",
+      selectInput("fcs_export_pop_id", "Population to export:",
+                  choices  = pop_choices,
+                  selected = rv$active_population_id %||% rv$root_population_id),
+      radioButtons("fcs_export_assay", "Data to include:",
+                   choices  = assay_choices,
+                   selected = if ("exprs" %in% available_assays) "exprs" else available_assays[1]),
+      radioButtons("fcs_export_split", "Output format:",
+                   choices  = c("One FCS file per sample" = "per_sample",
+                                "Single combined FCS file" = "combined"),
+                   selected = "per_sample"),
+      tags$p(tags$em("Gates are always evaluated in transformed (exprs) space.",
+                     style = "color:#888; font-size:11px;")),
+      footer = tagList(
+        modalButton("Cancel"),
+        downloadButton("do_export_fcs_dl", "Download FCS", class = "btn-primary")
+      )
+    ))
+  })
+
+  output$do_export_fcs_dl <- downloadHandler(
+    filename = function() {
+      pop_id   <- isolate(input$fcs_export_pop_id) %||% rv$root_population_id
+      pop      <- rv$populations[[pop_id]]
+      pop_name <- if (!is.null(pop)) gsub("[^A-Za-z0-9_]", "_", pop$name) else "population"
+      paste0(pop_name, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".zip")
+    },
+    content = function(file) {
+      req(rv$sce)
+      pop_id     <- isolate(input$fcs_export_pop_id) %||% rv$root_population_id
+      assay_nm   <- isolate(input$fcs_export_assay)  %||% "exprs"
+      split_by   <- (isolate(input$fcs_export_split) %||% "per_sample") == "per_sample"
+
+      tmp_dir <- tempfile("fcs_export_")
+      dir.create(tmp_dir)
+      on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+      written <- export_population_as_fcs(
+        sce              = rv$sce,
+        population_id    = pop_id,
+        populations      = rv$populations,
+        gates            = rv$gates,
+        root_population_id = rv$root_population_id,
+        assay_name       = assay_nm,
+        split_by_sample  = split_by,
+        output_dir       = tmp_dir
+      )
+
+      if (length(written) == 0) stop("No events found in selected population/samples.")
+
+      # Zip all files, stripping directory paths
+      owd <- setwd(tmp_dir)
+      on.exit(setwd(owd), add = TRUE)
+      utils::zip(file, files = basename(written), flags = "-9")
+    }
+  )
 
   output$status_text <- renderText("Select an SCE object to begin")
 }
