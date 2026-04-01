@@ -112,12 +112,16 @@
         var ctnr = document.getElementById(CTNR);
         if (!ctnr) return;
 
-        // Compute responsive plot dimensions from available column width
-        var _parentEl = ctnr.parentElement;
-        var _availW = (_parentEl && _parentEl.clientWidth > 0) ? _parentEl.clientWidth :
-                      (_parentEl && _parentEl.parentElement && _parentEl.parentElement.clientWidth > 0)
-                          ? _parentEl.parentElement.clientWidth : 480;
-        PLOT_W = Math.max(360, _availW - 16);
+        // Compute responsive plot dimensions: walk up the DOM until we find a
+        // non-trivial rendered width (e.g. the Bootstrap column element).
+        var _availW = 0;
+        var _el = ctnr.parentElement;
+        while (_el && _availW < 50) {
+            _availW = (_el.getBoundingClientRect().width || _el.clientWidth) | 0;
+            _el = _el.parentElement;
+        }
+        if (_availW < 50) _availW = (window.innerWidth * 0.30) | 0;
+        PLOT_W = Math.max(380, _availW - 32);
         PLOT_H = PLOT_W;
         W = PLOT_W - M.left - M.right;
         H = PLOT_H - M.top  - M.bottom;
@@ -185,6 +189,7 @@
             .attr('x', W / 2).attr('y', H + 40)
             .style('font-size', '14px').style('fill', '#1a73e8')
             .style('cursor', 'pointer').style('user-select', 'none')
+            .on('pointerdown', function(event) { event.stopPropagation(); })
             .on('click', function() { _showChannelPicker('x'); });
         _g.append('text').attr('class', 'cytof-ylabel')
             .attr('text-anchor', 'middle')
@@ -192,6 +197,7 @@
             .attr('x', -H / 2).attr('y', -48)
             .style('font-size', '14px').style('fill', '#1a73e8')
             .style('cursor', 'pointer').style('user-select', 'none')
+            .on('pointerdown', function(event) { event.stopPropagation(); })
             .on('click', function() { _showChannelPicker('y'); });
 
         // Title
@@ -1295,9 +1301,18 @@
         var ctnr = document.getElementById(CTNR);
         if (!ctnr) return;
 
-        // Init (or re-init if container was wiped by Dash hot-reload)
+        // Init (or re-init if canvas missing, or if column width has changed)
         if (!_ready || !ctnr.querySelector('canvas')) {
             _init();
+        } else {
+            // Re-measure enclosing column width; re-init if it changed by >30 px
+            var _chkW = 0, _chkEl = ctnr.parentElement;
+            while (_chkEl && _chkW < 50) {
+                _chkW = (_chkEl.getBoundingClientRect().width || _chkEl.clientWidth) | 0;
+                _chkEl = _chkEl.parentElement;
+            }
+            var _targetW = Math.max(380, _chkW - 32);
+            if (_chkW >= 50 && Math.abs(_targetW - PLOT_W) > 30) _init();
         }
 
         // ── Fast path: only gate overlays changed, no canvas redraw needed ───

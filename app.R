@@ -233,11 +233,14 @@ ui <- fluidPage(
             ),
             conditionalPanel(
               "input.display_mode == 'contour'",
-              selectInput("contour_threshold",
-                          "Outer contour (% of peak density):",
-                          choices = c("1%" = 1, "2%" = 2, "5%" = 5,
-                                      "10%" = 10, "20%" = 20, "30%" = 30),
-                          selected = 5, width = "100%")
+              tags$div(style = "display:flex; align-items:center; gap:6px; margin-top:2px;",
+                tags$span("Outer contour:",
+                          style = "font-size:12px; white-space:nowrap; color:#555;"),
+                selectInput("contour_threshold", NULL,
+                            choices = c("1%" = 1, "2%" = 2, "5%" = 5,
+                                        "10%" = 10, "20%" = 20, "30%" = 30),
+                            selected = 5, width = "110px")
+              )
             ),
             hr(style = "margin: 6px 0;"),
             tags$div(class = "section-header", "Color by marker / metadata"),
