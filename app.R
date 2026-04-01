@@ -106,7 +106,7 @@ ui <- fluidPage(
     tags$link(rel = "stylesheet", href = "custom.css")
   ),
 
-  titlePanel("CyTOF Gating"),
+  titlePanel("GateLabR"),
 
   fluidRow(
     # ═══════════════════════════════════════════════════════════════════════════

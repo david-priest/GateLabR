@@ -1,4 +1,4 @@
-#' Launch the CyTOF Gating App
+#' Launch GateLabR
 #'
 #' @param sce Optional SingleCellExperiment object. If NULL, the app will scan
 #'   the global environment for available SCE objects.
@@ -9,8 +9,8 @@ launchGatingApp <- function(sce = NULL, port = NULL, launch.browser = TRUE) {
   # Resolve app directory: use the captured path from when this file was sourced
   app_dir <- .cytof_gate_env$app_dir
   if (is.null(app_dir) || !file.exists(file.path(app_dir, "app.R"))) {
-    stop("Cannot find app.R. Source launch.R from the cytof-gate-app directory first:\n",
-         "  source('path/to/cytof-gate-app/launch.R')")
+    stop("Cannot find app.R. Source launch.R from the GateLabR directory first:\n",
+         "  source('path/to/GateLabR/launch.R')")
   }
 
   # Find all SCE objects in the global environment
