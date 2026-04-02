@@ -50,9 +50,13 @@
   # Accept suffixes even when channels are renamed, e.g. "CD3-A (V500-A)".
   has_flow_suffix <- .has_flow_suffix(channel_names)
 
+  # Handle both element-first and mass-first isotope labels.
+  # Examples: Y89, Ce140, 89Y, 140Ce, Y89Di.
   looks_metal <- grepl("Di$", channel_names, ignore.case = TRUE) |
-    grepl("[0-9]{2,3}[A-Z][a-z]", channel_names) |
-    grepl("[A-Z][a-z]?[0-9]{2,3}", channel_names)
+    grepl("(?<![A-Za-z0-9])[A-Z][a-z]?[0-9]{2,3}(?![A-Za-z0-9])",
+          channel_names, perl = TRUE) |
+    grepl("(?<![A-Za-z0-9])[0-9]{2,3}[A-Z][a-z]?(?![A-Za-z0-9])",
+          channel_names, perl = TRUE)
 
   looks_metal & !is_non_metal & !has_flow_suffix
 }
