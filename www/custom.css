@@ -1,11 +1,24 @@
-/* CyTOF Gate App Styling */
+/* GateLabR Styling */
+
+/* ── Global tweaks ─────────────────────────────────────────────── */
+body { font-size: 13px; }
+
+/* Reduce default Shiny form-group bottom margin */
+.panel-section .form-group { margin-bottom: 6px; }
+
+/* Compact file input */
+.panel-section .btn-file { font-size: 12px; padding: 4px 10px; }
+.panel-section .form-control[readonly] { font-size: 12px; height: 30px; }
+
+/* Tighten selectInput dropdowns in panel sections */
+.panel-section .selectize-input { font-size: 12px; min-height: 30px; padding: 4px 8px; }
+.panel-section label.control-label { font-size: 12px; margin-bottom: 2px; }
 
 /* ── Plot container ────────────────────────────────────────────── */
 #cytof-plot-container {
   position: relative;
-  width: 460px;
-  height: 460px;
   margin: 0 auto;
+  /* Width/height set dynamically by JS based on available column space */
 }
 
 #cytof-plot-container canvas {
@@ -39,13 +52,111 @@
 
 /* ── Below-plot controls (channels, display mode, alpha) ────────── */
 .below-plot-controls {
-  margin-top: 8px;
-  padding: 8px 0;
+  margin-top: 10px;
+  padding: 4px 0;
 }
 
 .below-plot-controls .form-group {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
+
+/* Compact radio buttons in below-plot controls */
+.below-plot-controls .radio-inline {
+  font-size: 12px;
+  padding-left: 18px;
+  margin-right: 2px;
+}
+
+/* Compact slider in below-plot controls */
+.below-plot-controls .irs--shiny {
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+
+.below-plot-controls label {
+  font-size: 12px;
+  margin-bottom: 1px;
+}
+
+/* Compact IRS styles scoped only to the inline opacity slider */
+.opacity-slider-wrap { margin-bottom: 6px; }
+.opacity-slider-wrap .irs { height: 46px; }
+.opacity-slider-wrap .irs-line { top: 26px; }
+.opacity-slider-wrap .irs-bar  { top: 26px; }
+.opacity-slider-wrap .irs-handle { top: 21px; }
+.opacity-slider-wrap .irs-single { top: 2px; font-size: 10px; }
+
+.gating-max-events .form-group {
+  margin-bottom: 0;
+}
+
+.gating-max-events input.form-control {
+  height: 26px;
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+/* Keep the contour threshold select compact */
+.below-plot-controls .selectize-input { min-height: 26px; font-size: 11px; padding: 2px 6px; }
+
+/* Logicle W: two columns side-by-side */
+.flow-w-sidebyside {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.flow-w-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.flow-w-col .form-group {
+  margin-bottom: 0;
+}
+
+/* Give the slider full natural height inside the col */
+.flow-w-col .irs {
+  height: 54px;
+}
+
+.flow-w-col .irs-line,
+.flow-w-col .irs-bar {
+  top: 24px;
+}
+
+.flow-w-col .irs-handle {
+  top: 18px;
+}
+
+.flow-w-col .irs-single {
+  top: 2px;
+  font-size: 10px;
+}
+
+.flow-transform-controls {
+  margin-top: 12px;
+  padding: 10px 10px 8px 10px;
+  border: 1px solid #d9dfeb;
+  border-radius: 4px;
+  background: #f8fbff;
+}
+
+.flow-transform-label {
+  width: 36px;
+  color: #5d6877;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+
+.flow-transform-note {
+  color: #6f7786;
+  font-size: 10px;
+  margin: 8px 0 4px 0;
+}
+
 
 /* ── Gate drawing styles ──────────────────────────────────────── */
 .rubber-band {
@@ -68,15 +179,63 @@
   padding: 0 4px;
 }
 
+/* ── Compact inline FCS controls ─────────────────────────────── */
+.fcs-inline-controls {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.fcs-inline-item {
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.fcs-inline-item .form-group {
+  margin-bottom: 0;
+}
+
+.fcs-inline-action {
+  flex: 0 0 auto;
+}
+
+.fcs-inline-action .btn {
+  margin-bottom: 0;
+}
+
 /* ── Sample filter table panel ───────────────────────────────── */
 .sample-filter-panel {
-  max-height: 650px;
-  overflow-y: auto;
-  border: 1px solid #ddd;
+  min-height: 560px;
+  max-height: 74vh;
+  overflow: hidden;
+  border: 1px solid #d7dbe2;
   border-radius: 4px;
-  padding: 4px;
+  padding: 6px;
   margin-bottom: 10px;
-  background: #fafafa;
+  background: #fbfcfe;
+}
+
+/* Keep DT at a stable height so filter controls do not collapse with row count */
+.sample-filter-panel .dataTables_wrapper {
+  min-height: 520px;
+}
+
+.sample-filter-panel .dataTables_scrollBody {
+  min-height: 420px !important;
+  max-height: 56vh !important;
+}
+
+.sample-filter-subheader {
+  font-size: 11px;
+  color: #6a7380;
+  line-height: 1.35;
+  margin: 2px 0 6px 0;
+  padding: 4px 6px;
+  border: 1px dashed #d9dfe8;
+  border-radius: 4px;
+  background: #f5f8fc;
 }
 
 /* Make DT compact inside the filter panel */
@@ -87,6 +246,17 @@
 .sample-filter-panel table.dataTable td,
 .sample-filter-panel table.dataTable th {
   padding: 2px 6px;
+}
+
+.sample-filter-panel table.dataTable thead th {
+  background: #eef3fa;
+  border-bottom: 1px solid #d0d8e3;
+}
+
+.sample-filter-panel table.dataTable tbody tr.selected,
+.sample-filter-panel table.dataTable tbody tr.selected td {
+  background-color: #dbeaff !important;
+  color: #1b355f !important;
 }
 
 /* Column filter inputs at top of DT */
@@ -100,15 +270,26 @@
   height: auto;
 }
 
-.sample-filter-panel select {
+.sample-filter-panel select,
+.sample-filter-panel thead input,
+.sample-filter-panel thead select {
   font-size: 11px;
-  padding: 1px 2px;
-  height: auto;
+  padding: 3px 4px;
+  min-height: 26px;
+  background: #ffffff;
+}
+
+.sample-filter-panel thead input:focus,
+.sample-filter-panel thead select:focus {
+  outline: none;
+  border-color: #7aa7f8;
+  box-shadow: 0 0 0 2px rgba(91, 141, 239, 0.12);
 }
 
 /* ── Sidebar panels ──────────────────────────────────────────── */
 .gate-list-panel, .population-tree-panel {
-  max-height: 250px;
+  min-height: 260px;
+  max-height: 520px;
   overflow-y: auto;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -184,13 +365,14 @@
 /* ── Population tree ──────────────────────────────────────────── */
 .pop-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 3px 6px;
   margin: 1px 0;
   border-radius: 3px;
   cursor: pointer;
   font-size: 13px;
   border: 1px solid transparent;
+  gap: 6px;
 }
 
 .pop-row:hover {
@@ -204,6 +386,14 @@
 
 .pop-row-indent {
   display: inline-block;
+  flex: 0 0 auto;
+}
+
+.pop-row-name-col {
+  display: flex;
+  align-items: center;
+  flex: 0 0 36%;
+  min-width: 140px;
 }
 
 .pop-row-name {
@@ -214,18 +404,35 @@
   white-space: nowrap;
 }
 
+.pop-row-gates-col {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 140px;
+}
+
+.pop-row-gates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  min-height: 16px;
+}
+
 .pop-row-count {
   color: #666;
   font-size: 11px;
-  margin-left: 6px;
+  margin-left: 2px;
   white-space: nowrap;
+  padding-top: 1px;
 }
 
 .pop-row-pct {
   color: #888;
   font-size: 11px;
-  margin-left: 4px;
+  margin-left: 2px;
   white-space: nowrap;
+  padding-top: 1px;
 }
 
 .pop-row-delete {
@@ -245,7 +452,6 @@
 .gate-ref-badge {
   display: inline-block;
   padding: 0 4px;
-  margin-left: 3px;
   border-radius: 3px;
   font-size: 10px;
   color: white;
@@ -255,6 +461,23 @@
 .gate-ref-badge.exclude {
   text-decoration: line-through;
   opacity: 0.7;
+}
+
+.gate-ref-badge.selected-gate {
+  box-shadow: 0 0 0 2px #2f80ed, inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+}
+
+.gate-ref-badge.exclude.selected-gate {
+  opacity: 0.95;
+}
+
+.pop-tree-gate-badge {
+  cursor: pointer;
+}
+
+.pop-tree-gate-badge:hover {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18) inset;
 }
 
 /* ── Mode toolbar ─────────────────────────────────────────────── */
@@ -294,6 +517,12 @@
   padding: 1px 6px;
 }
 
+.population-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ── Status bar ───────────────────────────────────────────────── */
 .status-bar {
   font-size: 12px;
@@ -310,7 +539,7 @@
   border-radius: 4px;
   padding: 8px;
   background: #fafafa;
-  max-height: 400px;
+  max-height: 68vh;
   overflow-y: auto;
 }
 
@@ -321,6 +550,30 @@
 .pop-editor-row label {
   font-size: 12px;
   margin-bottom: 2px;
+}
+
+.pop-editor-top-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.pop-editor-top-block {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pop-editor-top-block .form-group {
+  margin-bottom: 0;
+}
+
+.inherited-gates-inline {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 2px;
 }
 
 /* Compact radio buttons in gate ref editor */
@@ -338,11 +591,28 @@
 .gate-ref-row .radio-inline {
   font-size: 11px;
   padding-left: 18px;
-  margin-right: 4px;
+  margin-right: 3px;
 }
 
 .gate-ref-row .form-group {
   margin-bottom: 0;
+}
+
+.gate-ref-row {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Inherited gate rows in population editor ─────────────────── */
+.pop-editor-panel .inherited-gate-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  margin: 2px 0;
+  background: #f4f5f7;
+  border-radius: 3px;
+  opacity: 0.80;
 }
 
 /* ── Overlay checkbox list (scrollable when many items) ───────── */
@@ -354,3 +624,26 @@
   padding: 4px;
   background: #fdfdfd;
 }
+
+/* ── Workspace buttons — compact ─────────────────────────────── */
+.panel-section .btn-sm {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+
+/* ── Instrument badge ────────────────────────────────────────── */
+.instrument-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: white;
+}
+
+/* ── Color-by section ────────────────────────────────────────── */
+.below-plot-controls .selectize-dropdown { font-size: 12px; }
+
+/* ── Conditional panel compact ──────────────────────────────── */
+.below-plot-controls .shiny-bound-output,
+.below-plot-controls .shiny-html-output { margin-bottom: 0; }

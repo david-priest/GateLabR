@@ -71,8 +71,41 @@ validate_gate <- function(gate) {
 
 #' Add a child population to a parent
 link_child_to_parent <- function(populations, child_id, parent_id) {
-  populations[[parent_id]]$children <- c(populations[[parent_id]]$children, child_id)
+  populations[[parent_id]]$children <- unique(c(populations[[parent_id]]$children, child_id))
   populations[[child_id]]$parent_id <- parent_id
+  populations
+}
+
+#' Sort all population children recursively by population name
+#'
+#' Keeps tree topology unchanged while ensuring deterministic display order.
+sort_population_tree <- function(populations, root_population_id) {
+  if (is.null(root_population_id) || is.null(populations[[root_population_id]])) {
+    return(populations)
+  }
+
+  recurse_sort <- function(pop_id) {
+    pop <- populations[[pop_id]]
+    if (is.null(pop)) return()
+
+    child_ids <- pop$children
+    child_ids <- unique(child_ids)
+    child_ids <- child_ids[child_ids %in% names(populations)]
+    child_ids <- child_ids[child_ids != pop_id]
+
+    if (length(child_ids) > 1) {
+      child_names <- vapply(child_ids, function(cid) {
+        nm <- populations[[cid]]$name
+        if (is.null(nm) || !nzchar(nm)) cid else nm
+      }, character(1))
+      child_ids <- child_ids[order(tolower(child_names), child_ids)]
+    }
+
+    populations[[pop_id]]$children <<- child_ids
+    for (cid in child_ids) recurse_sort(cid)
+  }
+
+  recurse_sort(root_population_id)
   populations
 }
 

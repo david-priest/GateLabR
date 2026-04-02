@@ -59,7 +59,7 @@
     let _densityCache = null;
     let _contourCache = null;
     let _contourKey   = null;  // fingerprint of x/y data used to build _contourCache
-    let _channelPickerEl = null;  // floating channel-picker <select> overlay
+    let _channelPickerEl = null;  // floating searchable channel-picker overlay
 
     // requestAnimationFrame handles for throttling
     let _zoomRafId = null;   // zoom/pan redraw
@@ -69,6 +69,7 @@
     // Prevents gates_only updates from calling _drawGates mid-drag
     // (which would destroy the SVG element currently being dragged).
     let _dragging = false;
+    let _polyJustClosed = false;  // guard: suppress _onClick after mousedown closes polygon
 
     // Pending-edit map: gate_id → {vertices, seq}
     // Populated when _notifyGateEdit fires; cleared when server acks via clearPendingEdit().
@@ -121,7 +122,7 @@
             _el = _el.parentElement;
         }
         if (_availW < 50) _availW = (window.innerWidth * 0.30) | 0;
-        PLOT_W = Math.max(380, _availW - 32);
+        PLOT_W = Math.min(Math.max(380, _availW - 32), 630);
         PLOT_H = PLOT_W;
         W = PLOT_W - M.left - M.right;
         H = PLOT_H - M.top  - M.bottom;
@@ -245,6 +246,19 @@
 
     // ── Pointer events — rect gate ───────────────────────────────────────────
     function _onMousedown(event) {
+        // Poly-close: fire on mousedown so one press is sufficient.
+        // Clicking the first-vertex green circle or within CLOSEPX of it closes the polygon.
+        if (_mode === 'draw-poly' && _polyVerts.length >= 3) {
+            var [px, py] = _ptr(event);
+            var zx = _zx(), zy = _zy();
+            var fx = zx(_polyVerts[0].dx), fy = zy(_polyVerts[0].dy);
+            if (Math.hypot(px - fx, py - fy) <= CLOSEPX) {
+                event.preventDefault();
+                event.stopPropagation();
+                _closePolygon();
+                return;
+            }
+        }
         if (_mode !== 'draw-rect') return;
         event.preventDefault();
         var [px, py] = _ptr(event);
@@ -305,10 +319,13 @@
     function _onClick(event) {
         if (_mode !== 'draw-poly') return;
 
+        // If polygon was closed via mousedown, swallow this click and reset guard
+        if (_polyJustClosed) { _polyJustClosed = false; return; }
+
         var [px, py] = _ptr(event);
         var zx = _zx(), zy = _zy();
 
-        // Close check FIRST — must work even when cursor is over a gate element
+        // Close check as fallback (in case mousedown didn't fire)
         if (_polyVerts.length >= 3) {
             var fx = zx(_polyVerts[0].dx), fy = zy(_polyVerts[0].dy);
             if (Math.hypot(px - fx, py - fy) <= CLOSEPX) {
@@ -330,6 +347,7 @@
         if (_polyVerts.length < 3) return;
         var verts = _polyVerts.map(function (v) { return [v.dx, v.dy]; });
         _polyVerts = []; _mouseData = null;
+        _polyJustClosed = true;
         _g.select('.draw-layer').selectAll('*').remove();
         _notifyNewGate('polygon', verts);
     }
@@ -562,46 +580,118 @@
         if (labelSel.empty()) return;
         var labelRect = labelSel.node().getBoundingClientRect();
 
-        var sel = document.createElement('select');
-        sel.style.cssText = [
+        var panel = document.createElement('div');
+        panel.style.cssText = [
             'position:fixed', 'z-index:9999',
-            'max-height:300px', 'min-width:180px',
+            'min-width:240px', 'max-width:420px',
             'font-size:13px', 'border:1px solid #aaa',
             'border-radius:4px', 'background:#fff',
             'box-shadow:0 3px 12px rgba(0,0,0,0.22)',
-            'outline:none', 'cursor:pointer', 'overflow-y:auto'
+            'padding:6px'
         ].join(';');
-        sel.style.left = Math.min(labelRect.left, window.innerWidth - 200) + 'px';
-        sel.style.top  = (labelRect.bottom + 4) + 'px';
-        sel.size = Math.min(_plotData.channels.length, 14);
+        panel.style.left = Math.min(labelRect.left, window.innerWidth - 260) + 'px';
+        panel.style.top  = (labelRect.bottom + 4) + 'px';
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Type to search channels...';
+        input.autocomplete = 'off';
+        input.style.cssText = [
+            'display:block', 'width:100%',
+            'border:1px solid #b8c2cf', 'border-radius:3px',
+            'padding:4px 6px', 'font-size:12px',
+            'margin-bottom:5px'
+        ].join(';');
+
+        var sel = document.createElement('select');
+        sel.size = Math.min(_plotData.channels.length, 12);
+        sel.style.cssText = [
+            'display:block', 'width:100%',
+            'font-size:12px', 'border:1px solid #c5cdd8',
+            'border-radius:3px', 'outline:none',
+            'cursor:pointer'
+        ].join(';');
+
+        panel.appendChild(input);
+        panel.appendChild(sel);
 
         var currentVal = axis === 'x' ? _plotData.x_label : _plotData.y_label;
-        _plotData.channels.forEach(function(ch) {
-            var opt = document.createElement('option');
-            opt.value = opt.text = ch;
-            if (ch === currentVal) opt.selected = true;
-            sel.appendChild(opt);
-        });
-
-        sel.addEventListener('change', function() {
-            var val = sel.value;
+        var channels = _plotData.channels.slice();
+        var _pickerFired = false;
+        function _selectChannel(val) {
+            if (_pickerFired) return;
+            _pickerFired = true;
             _hideChannelPicker();
             if (typeof Shiny !== 'undefined') {
                 Shiny.setInputValue('axis_label_click',
-                    { axis: axis, selected: val }, { priority: 'event' });
+                    { axis: axis, selected: val, _ts: Date.now() },
+                    { priority: 'event' });
+            }
+        }
+
+        function _renderOptions(query) {
+            var q = (query || '').toLowerCase();
+            var filtered = channels.filter(function(ch) {
+                return ch.toLowerCase().indexOf(q) !== -1;
+            });
+
+            sel.innerHTML = '';
+            if (filtered.length === 0) {
+                var none = document.createElement('option');
+                none.text = '(no matching channels)';
+                none.disabled = true;
+                sel.appendChild(none);
+                return;
+            }
+
+            filtered.forEach(function(ch, idx) {
+                var opt = document.createElement('option');
+                opt.value = opt.text = ch;
+                if ((q && idx === 0) || (!q && ch === currentVal)) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        _renderOptions('');
+
+        sel.addEventListener('change', function() { _selectChannel(sel.value); });
+        // Backup: mouseup on option (some browsers don't fire change on listbox click)
+        sel.addEventListener('mouseup', function(e) {
+            if (e.target.tagName === 'OPTION' && e.target.value !== currentVal) {
+                _selectChannel(e.target.value);
             }
         });
         sel.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') _hideChannelPicker();
+            if (e.key === 'Enter' && sel.value) _selectChannel(sel.value);
+        });
+
+        input.addEventListener('input', function() {
+            _renderOptions(input.value);
+        });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                _hideChannelPicker();
+                return;
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                sel.focus();
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (sel.value) _selectChannel(sel.value);
+            }
         });
         // Close on any outside click
         setTimeout(function() {
             document.addEventListener('mousedown', _outsidePickerClick, true);
         }, 10);
 
-        document.body.appendChild(sel);
-        _channelPickerEl = sel;
-        sel.focus();
+        document.body.appendChild(panel);
+        _channelPickerEl = panel;
+        input.focus();
     }
 
     function _outsidePickerClick(e) {
@@ -1099,6 +1189,10 @@
                 if (didMove) {
                     // Persist the move; _pendingEdits protects against stale server data.
                     _notifyGateEdit(gate);
+                } else if (_xBase && _plotData) {
+                    // Pure click-select: render selection immediately so vertices appear
+                    // without waiting for an async gates_only round-trip.
+                    _drawGates(_zx(), _zy());
                 }
                 // If not moved (pure click): the Tier-1 render queued during 'start'
                 // will fire now that _dragging is false and call _drawGates to visually
@@ -1311,7 +1405,7 @@
                 _chkW = (_chkEl.getBoundingClientRect().width || _chkEl.clientWidth) | 0;
                 _chkEl = _chkEl.parentElement;
             }
-            var _targetW = Math.max(380, _chkW - 32);
+            var _targetW = Math.min(Math.max(380, _chkW - 32), 630);
             if (_chkW >= 50 && Math.abs(_targetW - PLOT_W) > 30) _init();
         }
 

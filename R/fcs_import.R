@@ -25,7 +25,16 @@
   in_exact | in_pattern
 }
 
+#' Flow-like acquisition suffixes used in channel names
+.has_flow_suffix <- function(channel_names) {
+  grepl("-(A|H|W|T)(\\b|\\)|\\s|$)", channel_names, ignore.case = TRUE)
+}
+
 #' CyTOF metal channels: Di suffix OR element+mass-number pattern
+#'
+#' Excludes flow cytometry channels that happen to match element+mass patterns
+#' (e.g. BD S8 spectral: V500-A, B530-A, R670-A, UV379-A look like metal
+#' channels but are fluorophore labels with area/height/width suffixes).
 .is_metal_channel <- function(channel_names) {
   non_metal_exact  <- c("Time", "Event_length", "Cell_length",
                         "Center", "Offset", "Width", "Residual",
@@ -36,11 +45,16 @@
     Reduce(`|`, lapply(non_metal_prefix,
                        function(p) grepl(p, channel_names, ignore.case = TRUE)))
 
+  # Flow cytometry channels have -A/-H/-W/-T suffixes (area/height/width/total)
+  # CyTOF metal channels never have these suffixes.
+  # Accept suffixes even when channels are renamed, e.g. "CD3-A (V500-A)".
+  has_flow_suffix <- .has_flow_suffix(channel_names)
+
   looks_metal <- grepl("Di$", channel_names, ignore.case = TRUE) |
     grepl("[0-9]{2,3}[A-Z][a-z]", channel_names) |
     grepl("[A-Z][a-z]?[0-9]{2,3}", channel_names)
 
-  looks_metal & !is_non_metal
+  looks_metal & !is_non_metal & !has_flow_suffix
 }
 
 #' Flow scatter channels (FSC / SSC / LightLoss and variants)
@@ -60,22 +74,451 @@
 
 #' Autodetect CyTOF vs flow cytometry from channel names
 #'
-#' Heuristic (mirrors cytof-gating Python transform.py logic):
-#'   - If >= 25% of channels (and >= 3) are metal channels  → "cytof"
+#' Heuristic:
 #'   - If >= 2 FSC/SSC scatter channels present              → "flow"
+#'     (scatter channels are definitive — CyTOF never has FSC/SSC)
+#'   - If >= 25% of channels (and >= 3) are metal channels   → "cytof"
 #'   - Fallback: any metals → "cytof", otherwise → "flow"
 #'
 #' @param channel_names Character vector of channel names
 #' @return "cytof" or "flow"
 detect_instrument_type <- function(channel_names) {
+  if (length(channel_names) == 0) return("flow")
+
   n_total   <- length(channel_names)
   n_metal   <- sum(.is_metal_channel(channel_names))
   n_scatter <- sum(.is_scatter_channel(channel_names))
+  n_flow_suffix <- sum(.has_flow_suffix(channel_names))
+  n_qc <- sum(.is_qc_channel(channel_names))
+  n_signal <- max(0, n_total - n_qc)
 
-  if (n_metal >= 3 && (n_metal / n_total) >= 0.25) return("cytof")
+  # Scatter channels are definitive for flow — CyTOF never has FSC/SSC
   if (n_scatter >= 2)                               return("flow")
-  if (n_metal > 0)                                  return("cytof")
+
+  # Strong evidence of CyTOF: multiple metals and no flow-style suffixes
+  if (n_metal >= 3 && n_flow_suffix == 0) return("cytof")
+
+  # Strong evidence of flow: multiple channels encoded with area/height/width suffixes
+  if (n_flow_suffix >= 3) return("flow")
+
+  # Relative signal composition fallback
+  if (n_signal > 0 && (n_metal / n_signal) >= 0.35 && n_metal > n_flow_suffix) return("cytof")
+  if (n_flow_suffix > n_metal) return("flow")
+
+  if (n_metal > 0 && n_scatter == 0)                return("cytof")
   return("flow")
+}
+
+# ---------------------------------------------------------------------------
+# Flow channel filtering (BD S8 spectral and similar instruments)
+# ---------------------------------------------------------------------------
+
+#' Filter and rename flow cytometry channels
+#'
+#' Mirrors the Python app's _filter_flow_channels logic:
+#'   - Keep scatter channels (FSC/SSC) with -A, -H, -W suffixes only
+#'   - Keep unmixed fluorophore channels that have an antibody marker label
+#'     ($PnS != $PnN AND $PnS ends with "-A")
+#'   - Keep LightLoss-A, Autofluorescence-A
+#'   - Rename unmixed channels to "{PnS} ({PnN})" format
+#'   - Drop all spectral raw channels, generic QC columns (Regions, EventNumber, etc.)
+#'
+#' @param ff flowFrame object (untransformed)
+#' @return list(ff = filtered flowFrame, display_names = character vector,
+#'              pnr_values = named numeric of $PnR per kept channel)
+filter_flow_channels <- function(ff) {
+  params <- flowCore::parameters(ff)
+  pdata  <- flowCore::pData(params)
+  pnn    <- as.character(pdata$name)  # $PnN
+  pns    <- if ("desc" %in% colnames(pdata)) as.character(pdata$desc) else rep(NA, length(pnn))
+  pnr    <- if ("range" %in% colnames(pdata)) as.numeric(pdata$range) else rep(NA, length(pnn))
+
+  # Build keep/rename logic
+  keep_idx     <- logical(length(pnn))
+  display_name <- character(length(pnn))
+  pnr_out      <- numeric(length(pnn))
+
+  for (i in seq_along(pnn)) {
+    ch <- pnn[i]
+    desc <- pns[i]
+    cu <- toupper(ch)
+
+    # Scatter channels: FSC/SSC with -A, -H, -W suffixes
+    if (grepl("^(FSC|SSC)", cu)) {
+      if (grepl("-(A|H|W)$", ch, ignore.case = TRUE)) {
+        keep_idx[i] <- TRUE
+        display_name[i] <- ch
+        pnr_out[i] <- pnr[i]
+      }
+      next
+    }
+
+    # LightLoss imaging scatter: keep -A, -H, -W variants (like FSC/SSC)
+    if (grepl("^LightLoss", ch, ignore.case = TRUE) &&
+        grepl("-(A|H|W)$", ch, ignore.case = TRUE)) {
+      keep_idx[i] <- TRUE
+      display_name[i] <- ch
+      pnr_out[i] <- pnr[i]
+      next
+    }
+
+    # Autofluorescence-A
+    if (grepl("^Autofluorescence", ch, ignore.case = TRUE) &&
+        grepl("-(A|H|W)$", ch, ignore.case = TRUE)) {
+      keep_idx[i] <- TRUE
+      display_name[i] <- ch
+      pnr_out[i] <- pnr[i]
+      next
+    }
+
+    # Unmixed fluorophore channels: PnS != PnN AND PnS ends with "-A"
+    if (!is.na(desc) && nchar(trimws(desc)) > 0 &&
+        desc != ch && grepl("-A$", desc)) {
+      keep_idx[i] <- TRUE
+      display_name[i] <- paste0(desc, " (", ch, ")")
+      pnr_out[i] <- pnr[i]
+      next
+    }
+
+    # Time and Event_length are kept as QC channels
+    if (grepl("^(Time|Event_length|Cell_length)$", ch, ignore.case = TRUE)) {
+      keep_idx[i] <- TRUE
+      display_name[i] <- ch
+      pnr_out[i] <- pnr[i]
+      next
+    }
+  }
+
+  if (sum(keep_idx) == 0) {
+    # No spectral filtering possible — fallback to keeping all channels
+    message("  No spectral channel filtering applied (no unmixed channels detected)")
+    display_name <- ifelse(is.na(pns) | nchar(trimws(pns)) == 0, pnn, pns)
+    return(list(ff = ff, display_names = display_name,
+                pnr_values = setNames(pnr, display_name)))
+  }
+
+  # Subset the flowFrame to kept channels
+  kept_pnn <- pnn[keep_idx]
+  ff_filtered <- ff[, kept_pnn]
+  names_out <- display_name[keep_idx]
+  pnr_vals <- setNames(pnr_out[keep_idx], names_out)
+
+  n_removed <- sum(!keep_idx)
+  message("  Flow channel filter: kept ", sum(keep_idx), " channels, removed ",
+          n_removed, " (spectral raw / QC)")
+
+  list(ff = ff_filtered, display_names = names_out, pnr_values = pnr_vals)
+}
+
+# ---------------------------------------------------------------------------
+# Transformation helpers
+# ---------------------------------------------------------------------------
+
+#' Estimate logicle W from channel values and top-of-scale T
+#'
+#' Matches the Python cytof-gating app's estimate_logicle_w():
+#'   q = 5th percentile; if q >= 0 → default 0.5 (FlowJo default)
+#'   abs_q = max(|q|, 1.0) — floor prevents log10 underflow
+#'   W = (M - log10(T / abs_q)) / 2, clamped to [0.1, 2.0]
+.estimate_logicle_w <- function(vals, t_val, m_val = 4.5,
+                                default_w = 0.5,
+                                min_w = 0.1,
+                                max_w = 2.0) {
+  q5 <- as.numeric(quantile(vals, 0.05, na.rm = TRUE))
+  if (!is.finite(q5) || q5 >= 0 || !is.finite(t_val) || t_val <= 0) {
+    return(default_w)
+  }
+  abs_q <- max(abs(q5), 1.0)
+  w_val <- tryCatch(
+    (m_val - log10(t_val / abs_q)) / 2,
+    error = function(e) default_w
+  )
+  w_val <- max(min_w, min(w_val, max_w))
+  as.numeric(w_val)
+}
+
+#' Estimate per-channel logicle W defaults for a matrix
+#'
+#' @param raw_mat event x channel matrix
+#' @param channel_names channel names corresponding to columns in raw_mat
+#' @return named numeric vector of W values for signal channels
+estimate_logicle_w_params <- function(raw_mat, channel_names) {
+  qc_mask      <- .is_qc_channel(channel_names)
+  scatter_mask <- .is_scatter_channel(channel_names) & !qc_mask
+  signal_mask  <- !qc_mask & !scatter_mask
+  sig_chs <- channel_names[signal_mask]
+  if (length(sig_chs) == 0) return(setNames(numeric(0), character(0)))
+
+  w_vals <- vapply(sig_chs, function(ch) {
+    vals <- raw_mat[, ch]
+    t_val <- max(as.numeric(quantile(vals, 0.999, na.rm = TRUE)), 262144)
+    .estimate_logicle_w(vals, t_val = t_val)
+  }, numeric(1))
+  setNames(w_vals, sig_chs)
+}
+
+.resolve_logicle_t <- function(raw_channel_vals) {
+  if (is.null(raw_channel_vals) || length(raw_channel_vals) == 0) return(262144)
+  t_val <- suppressWarnings(as.numeric(quantile(raw_channel_vals, 0.999, na.rm = TRUE)))
+  if (!is.finite(t_val) || t_val <= 0) t_val <- 262144
+  max(t_val, 262144)
+}
+
+flow_transform_channel_values <- function(raw_vals,
+                                          channel_name,
+                                          raw_channel_vals = NULL,
+                                          logicle_w_params = NULL,
+                                          scatter_cofactor_params = NULL) {
+  if (.is_qc_channel(channel_name)) return(raw_vals)
+
+  if (.is_scatter_channel(channel_name)) {
+    cf <- 150
+    if (!is.null(scatter_cofactor_params) && !is.null(scatter_cofactor_params[[channel_name]])) {
+      cf <- as.numeric(scatter_cofactor_params[[channel_name]])
+      if (!is.finite(cf) || cf <= 0) cf <- 150
+    }
+    return(asinh(raw_vals / cf))
+  }
+
+  t_val <- .resolve_logicle_t(raw_channel_vals)
+  w_val <- if (!is.null(logicle_w_params) && !is.null(logicle_w_params[[channel_name]])) {
+    as.numeric(logicle_w_params[[channel_name]])
+  } else {
+    vals_for_w <- if (!is.null(raw_channel_vals)) raw_channel_vals else raw_vals
+    .estimate_logicle_w(vals_for_w, t_val = t_val)
+  }
+  if (!is.finite(w_val)) w_val <- 0.5
+  w_val <- max(0.1, min(w_val, 2.0))
+
+  lg <- flowCore::logicleTransform(
+    transformationId = paste0("lg_fwd_", channel_name),
+    w = w_val, t = t_val, m = 4.5, a = 0
+  )
+  as.numeric(lg(raw_vals))
+}
+
+flow_inverse_channel_values <- function(display_vals,
+                                        channel_name,
+                                        raw_channel_vals = NULL,
+                                        logicle_w_params = NULL,
+                                        scatter_cofactor_params = NULL) {
+  if (.is_qc_channel(channel_name)) return(display_vals)
+
+  if (.is_scatter_channel(channel_name)) {
+    cf <- 150
+    if (!is.null(scatter_cofactor_params) && !is.null(scatter_cofactor_params[[channel_name]])) {
+      cf <- as.numeric(scatter_cofactor_params[[channel_name]])
+      if (!is.finite(cf) || cf <= 0) cf <- 150
+    }
+    return(cf * sinh(display_vals))
+  }
+
+  t_val <- .resolve_logicle_t(raw_channel_vals)
+  w_val <- if (!is.null(logicle_w_params) && !is.null(logicle_w_params[[channel_name]])) {
+    as.numeric(logicle_w_params[[channel_name]])
+  } else {
+    vals_for_w <- if (!is.null(raw_channel_vals)) raw_channel_vals else display_vals
+    .estimate_logicle_w(vals_for_w, t_val = t_val)
+  }
+  if (!is.finite(w_val)) w_val <- 0.5
+  w_val <- max(0.1, min(w_val, 2.0))
+
+  lg <- flowCore::logicleTransform(
+    transformationId = paste0("lg_fwd_", channel_name),
+    w = w_val, t = t_val, m = 4.5, a = 0
+  )
+  inv_lg <- flowCore::inverseLogicleTransform(
+    lg,
+    transformationId = paste0("lg_inv_", channel_name)
+  )
+  as.numeric(inv_lg(display_vals))
+}
+
+flow_forward_vertices <- function(vertices,
+                                  x_channel,
+                                  y_channel,
+                                  raw_mat = NULL,
+                                  channel_names = NULL,
+                                  logicle_w_params = NULL,
+                                  scatter_cofactor_params = NULL) {
+  if (is.null(vertices) || length(vertices) == 0) return(vertices)
+
+  x_raw <- NULL
+  y_raw <- NULL
+  if (!is.null(raw_mat) && !is.null(channel_names)) {
+    if (x_channel %in% channel_names) x_raw <- raw_mat[, x_channel]
+    if (y_channel %in% channel_names) y_raw <- raw_mat[, y_channel]
+  }
+
+  x_vals <- vapply(vertices, function(v) as.numeric(v[[1]]), numeric(1))
+  y_vals <- vapply(vertices, function(v) as.numeric(v[[2]]), numeric(1))
+
+  x_tx <- flow_transform_channel_values(
+    raw_vals = x_vals,
+    channel_name = x_channel,
+    raw_channel_vals = x_raw,
+    logicle_w_params = logicle_w_params,
+    scatter_cofactor_params = scatter_cofactor_params
+  )
+  y_tx <- flow_transform_channel_values(
+    raw_vals = y_vals,
+    channel_name = y_channel,
+    raw_channel_vals = y_raw,
+    logicle_w_params = logicle_w_params,
+    scatter_cofactor_params = scatter_cofactor_params
+  )
+
+  lapply(seq_along(x_tx), function(i) c(as.numeric(x_tx[[i]]), as.numeric(y_tx[[i]])))
+}
+
+flow_inverse_vertices <- function(vertices,
+                                  x_channel,
+                                  y_channel,
+                                  raw_mat = NULL,
+                                  channel_names = NULL,
+                                  logicle_w_params = NULL,
+                                  scatter_cofactor_params = NULL) {
+  if (is.null(vertices) || length(vertices) == 0) return(vertices)
+
+  x_raw <- NULL
+  y_raw <- NULL
+  if (!is.null(raw_mat) && !is.null(channel_names)) {
+    if (x_channel %in% channel_names) x_raw <- raw_mat[, x_channel]
+    if (y_channel %in% channel_names) y_raw <- raw_mat[, y_channel]
+  }
+
+  x_vals <- vapply(vertices, function(v) as.numeric(v[[1]]), numeric(1))
+  y_vals <- vapply(vertices, function(v) as.numeric(v[[2]]), numeric(1))
+
+  x_tx <- flow_inverse_channel_values(
+    display_vals = x_vals,
+    channel_name = x_channel,
+    raw_channel_vals = x_raw,
+    logicle_w_params = logicle_w_params,
+    scatter_cofactor_params = scatter_cofactor_params
+  )
+  y_tx <- flow_inverse_channel_values(
+    display_vals = y_vals,
+    channel_name = y_channel,
+    raw_channel_vals = y_raw,
+    logicle_w_params = logicle_w_params,
+    scatter_cofactor_params = scatter_cofactor_params
+  )
+
+  lapply(seq_along(x_tx), function(i) c(as.numeric(x_tx[[i]]), as.numeric(y_tx[[i]])))
+}
+
+#' Transform an event x channel matrix according to instrument type
+#'
+#' @param raw_mat event x channel matrix (untransformed)
+#' @param channel_names character vector matching columns in raw_mat
+#' @param instrument_type "cytof" or "flow"
+#' @param cofactor arcsinh cofactor used for CyTOF metal channels
+#' @param verbose print transform summary messages
+#' @return transformed matrix (same dimensions as raw_mat)
+transform_matrix_by_instrument <- function(raw_mat, channel_names,
+                                           instrument_type,
+                                           cofactor = 5,
+                                           logicle_w_params = NULL,
+                                           scatter_cofactor_params = NULL,
+                                           verbose = FALSE) {
+  if (!instrument_type %in% c("cytof", "flow")) {
+    stop("instrument_type must be 'cytof' or 'flow'")
+  }
+
+  exprs_mat <- raw_mat
+
+  if (instrument_type == "cytof") {
+    metal_mask <- .is_metal_channel(channel_names)
+    if (any(metal_mask)) {
+      exprs_mat[, metal_mask] <- asinh(raw_mat[, metal_mask] / cofactor)
+      if (verbose) {
+        message("  CyTOF: arcsinh/", cofactor, " on ",
+                sum(metal_mask), " metal channel(s); ",
+                sum(!metal_mask), " channel(s) left raw")
+      }
+    } else {
+      warning("No metal channels detected; arcsinh/", cofactor,
+              " applied to all channels as fallback.")
+      exprs_mat <- asinh(raw_mat / cofactor)
+    }
+    return(exprs_mat)
+  }
+
+  # Flow cytometry — three channel classes
+  qc_mask      <- .is_qc_channel(channel_names)
+  scatter_mask <- .is_scatter_channel(channel_names) & !qc_mask
+  signal_mask  <- !qc_mask & !scatter_mask
+
+  # 1. Signal (fluorescence) channels -> logicle
+  if (any(signal_mask)) {
+    sig_chs <- channel_names[signal_mask]
+    logicle_exprs <- raw_mat[, sig_chs, drop = FALSE]
+    failed_chs <- character(0)
+
+    for (ch in sig_chs) {
+      vals <- raw_mat[, ch]
+      logicle_exprs[, ch] <- tryCatch({
+        t_val <- max(as.numeric(quantile(vals, 0.999, na.rm = TRUE)), 262144)
+        m_val <- 4.5
+        if (!is.null(logicle_w_params) && !is.null(logicle_w_params[[ch]])) {
+          w_val <- as.numeric(logicle_w_params[[ch]])
+          if (!is.finite(w_val)) w_val <- 0.5
+          w_val <- max(0.1, min(w_val, 2.0))
+        } else {
+          w_val <- .estimate_logicle_w(vals, t_val = t_val, m_val = m_val)
+        }
+        lg <- flowCore::logicleTransform(
+          transformationId = paste0("lg_", ch),
+          w = w_val, t = t_val, m = m_val, a = 0)
+        lg(vals)
+      }, error = function(e) {
+        tryCatch({
+          ch_ff <- flowCore::flowFrame(exprs = raw_mat[, ch, drop = FALSE])
+          tr <- flowCore::estimateLogicle(ch_ff, channels = ch)
+          flowCore::exprs(flowCore::transform(ch_ff, tr))[, 1]
+        }, error = function(e2) {
+          failed_chs <<- c(failed_chs, ch)
+          asinh(vals / 150)
+        })
+      })
+    }
+    exprs_mat[, sig_chs] <- logicle_exprs
+    if (verbose) {
+      message("  Flow: logicle on ", length(sig_chs) - length(failed_chs),
+              " signal channel(s)")
+      if (length(failed_chs) > 0) {
+        message("  Flow: arcsinh/150 fallback on ", length(failed_chs),
+                " channel(s): ", paste(failed_chs, collapse = ", "))
+      }
+    }
+  }
+
+  # 2. Scatter channels (FSC/SSC) -> arcsinh(x / cofactor)
+  if (any(scatter_mask)) {
+    scatter_chs <- channel_names[scatter_mask]
+    for (ch in scatter_chs) {
+      cf <- 150
+      if (!is.null(scatter_cofactor_params) && !is.null(scatter_cofactor_params[[ch]])) {
+        cf <- as.numeric(scatter_cofactor_params[[ch]])
+        if (!is.finite(cf) || cf <= 0) cf <- 150
+      }
+      exprs_mat[, ch] <- asinh(raw_mat[, ch] / cf)
+    }
+    if (verbose) {
+      message("  Flow: arcsinh/scatter-cofactor on ", sum(scatter_mask),
+              " scatter channel(s): ",
+              paste(channel_names[scatter_mask], collapse = ", "))
+    }
+  }
+
+  # 3. QC/timing channels -> left as raw
+  if (any(qc_mask) && verbose) {
+    message("  Flow: ", sum(qc_mask), " QC channel(s) left raw: ",
+            paste(channel_names[qc_mask], collapse = ", "))
+  }
+
+  exprs_mat
 }
 
 # ---------------------------------------------------------------------------
@@ -91,7 +534,10 @@ detect_instrument_type <- function(channel_names) {
 #' @return A SingleCellExperiment with assays "counts" (raw) and "exprs"
 #'         (transformed). SCE metadata contains instrument_type, transform_type,
 #'         experiment_info (for the sample-filter table), and cofactor.
-import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5) {
+import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
+                             instrument_mode = c("auto", "cytof", "flow")) {
+
+  instrument_mode <- match.arg(instrument_mode)
 
   if (!requireNamespace("flowCore", quietly = TRUE)) {
     stop("Package 'flowCore' is required.\n",
@@ -114,34 +560,69 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5) {
   all_sample_ids <- character(0)
   channel_names  <- NULL
   instrument_type <- NULL
+  detected_type <- NULL
+  pnn_to_channel <- NULL
 
   for (i in seq_along(file_paths)) {
 
-    ff      <- flowCore::read.FCS(file_paths[i], transformation = FALSE,
-                                   truncate_max_range = FALSE)
-    raw_mat <- flowCore::exprs(ff)
+    ff <- flowCore::read.FCS(file_paths[i], transformation = FALSE,
+                              truncate_max_range = FALSE)
 
-    # Resolve display names: prefer $PnS (desc), fall back to $PnN (name)
-    params <- flowCore::parameters(ff)
-    pdata  <- flowCore::pData(params)
-    if ("desc" %in% colnames(pdata)) {
-      desc          <- pdata$desc
-      names_pn      <- pdata$name
-      display_names <- ifelse(is.na(desc) | nchar(trimws(desc)) == 0,
-                              names_pn, desc)
-    } else {
-      display_names <- pdata$name
+    # Detect instrument type from the first file
+    if (is.null(instrument_type)) {
+      params <- flowCore::parameters(ff)
+      pdata  <- flowCore::pData(params)
+      raw_names <- as.character(pdata$name)
+      detected_type <- detect_instrument_type(raw_names)
+      instrument_type <- if (instrument_mode == "auto") detected_type else instrument_mode
+      if (instrument_mode == "auto") {
+        message("  Detected instrument: ", instrument_type)
+      } else {
+        message("  Using user-selected instrument: ", instrument_type,
+                " (auto detected: ", detected_type, ")")
+      }
     }
+
+    # For flow data: filter channels (removes spectral raw, renames unmixed)
+    if (instrument_type == "flow") {
+      filt <- filter_flow_channels(ff)
+      ff <- filt$ff
+      display_names <- filt$display_names
+    } else {
+      # CyTOF: use $PnS (desc) as display name, fall back to $PnN
+      params <- flowCore::parameters(ff)
+      pdata  <- flowCore::pData(params)
+      if ("desc" %in% colnames(pdata)) {
+        desc      <- as.character(pdata$desc)
+        names_pn  <- as.character(pdata$name)
+        display_names <- ifelse(is.na(desc) | nchar(trimws(desc)) == 0,
+                                names_pn, desc)
+      } else {
+        display_names <- as.character(pdata$name)
+      }
+    }
+
+    raw_mat <- flowCore::exprs(ff)
+    pnn_names <- colnames(raw_mat)
     colnames(raw_mat) <- display_names
 
-    # Detect instrument type from the first file's channel names
+    if (!is.null(pnn_names) && length(pnn_names) == length(display_names)) {
+      map_now <- setNames(as.character(display_names), as.character(pnn_names))
+      if (is.null(pnn_to_channel)) {
+        pnn_to_channel <- map_now
+      } else {
+        pnn_to_channel <- c(pnn_to_channel, map_now)
+        pnn_to_channel <- pnn_to_channel[!duplicated(names(pnn_to_channel))]
+      }
+    }
+
+    # Set channel names from first file
     if (is.null(channel_names)) {
-      channel_names   <- display_names
-      instrument_type <- detect_instrument_type(channel_names)
-      message("  Detected: ", instrument_type,
-              " | metal channels: ", sum(.is_metal_channel(channel_names)),
-              " | scatter channels: ", sum(.is_scatter_channel(channel_names)),
-              " | QC channels: ", sum(.is_qc_channel(channel_names)))
+      channel_names <- display_names
+      message("  Channels: ", length(channel_names),
+              " | metal: ", sum(.is_metal_channel(channel_names)),
+              " | scatter: ", sum(.is_scatter_channel(channel_names)),
+              " | QC: ", sum(.is_qc_channel(channel_names)))
     } else {
       # Check channel consistency across files
       if (!identical(sort(display_names), sort(channel_names))) {
@@ -154,67 +635,13 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5) {
     }
 
     raw_mat   <- raw_mat[, channel_names, drop = FALSE]
-    exprs_mat <- raw_mat  # will be overwritten per-channel below
-
-    # ── Transform ──────────────────────────────────────────────────────────
-    if (instrument_type == "cytof") {
-
-      # Metal channels: arcsinh(x / cofactor)
-      metal_mask <- .is_metal_channel(channel_names)
-      if (any(metal_mask)) {
-        exprs_mat[, metal_mask] <- asinh(raw_mat[, metal_mask] / cofactor)
-        if (i == 1)
-          message("  CyTOF: arcsinh/", cofactor, " on ",
-                  sum(metal_mask), " metal channel(s); ",
-                  sum(!metal_mask), " channel(s) left raw")
-      } else {
-        warning("No metal channels detected; arcsinh/", cofactor,
-                " applied to all channels as fallback.")
-        exprs_mat <- asinh(raw_mat / cofactor)
-      }
-
-    } else {
-      # Flow cytometry — three channel classes
-      qc_mask      <- .is_qc_channel(channel_names)
-      scatter_mask <- .is_scatter_channel(channel_names) & !qc_mask
-      signal_mask  <- !qc_mask & !scatter_mask
-
-      # 1. Signal (fluorescence) channels → logicle via flowCore::estimateLogicle
-      if (any(signal_mask)) {
-        sig_chs <- channel_names[signal_mask]
-        # estimateLogicle needs a flowFrame with the original $PnN column names,
-        # not necessarily display names. Build a minimal one for the estimation.
-        tmp_ff <- flowCore::flowFrame(exprs = raw_mat[, sig_chs, drop = FALSE])
-
-        logicle_exprs <- tryCatch({
-          trans  <- flowCore::estimateLogicle(tmp_ff, channels = sig_chs)
-          tmp_ft <- flowCore::transform(tmp_ff, trans)
-          flowCore::exprs(tmp_ft)[, sig_chs, drop = FALSE]
-        }, error = function(e) {
-          message("  logicle failed (", conditionMessage(e),
-                  "); using arcsinh/150 fallback for signal channels")
-          asinh(raw_mat[, sig_chs, drop = FALSE] / 150)
-        })
-        exprs_mat[, sig_chs] <- logicle_exprs
-        if (i == 1)
-          message("  Flow: logicle on ", sum(signal_mask), " signal channel(s)")
-      }
-
-      # 2. Scatter channels (FSC/SSC) → arcsinh(x / 150)
-      if (any(scatter_mask)) {
-        exprs_mat[, scatter_mask] <- asinh(raw_mat[, scatter_mask] / 150)
-        if (i == 1)
-          message("  Flow: arcsinh/150 on ", sum(scatter_mask),
-                  " scatter channel(s): ",
-                  paste(channel_names[scatter_mask], collapse = ", "))
-      }
-
-      # 3. QC/timing channels → left as raw
-      if (any(qc_mask) && i == 1) {
-        message("  Flow: ", sum(qc_mask), " QC channel(s) left raw: ",
-                paste(channel_names[qc_mask], collapse = ", "))
-      }
-    }
+    exprs_mat <- transform_matrix_by_instrument(
+      raw_mat = raw_mat,
+      channel_names = channel_names,
+      instrument_type = instrument_type,
+      cofactor = cofactor,
+      verbose = (i == 1)
+    )
 
     all_counts[[i]]  <- raw_mat
     all_exprs[[i]]   <- exprs_mat
@@ -248,9 +675,17 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5) {
   # Store provenance in SCE metadata
   S4Vectors::metadata(sce)$experiment_info <- exp_info
   S4Vectors::metadata(sce)$instrument_type <- instrument_type
+  S4Vectors::metadata(sce)$instrument_type_detected <-
+    if (!is.null(detected_type)) detected_type else instrument_type
+  S4Vectors::metadata(sce)$instrument_type_source <-
+    if (instrument_mode == "auto") "auto_detected" else "manual_override"
+  S4Vectors::metadata(sce)$instrument_mode_choice <- instrument_mode
   S4Vectors::metadata(sce)$transform_type  <-
     if (instrument_type == "cytof") "arcsinh" else "logicle"
   S4Vectors::metadata(sce)$cofactor <- cofactor
+  if (!is.null(pnn_to_channel) && length(pnn_to_channel) > 0) {
+    S4Vectors::metadata(sce)$pnn_to_channel <- as.list(pnn_to_channel)
+  }
 
   message("Done: ", ncol(sce), " events, ", nrow(sce),
           " channels, ", length(sample_names), " sample(s) [", instrument_type, "]")
@@ -269,4 +704,209 @@ make_sce_name <- function(file_paths) {
   clean <- sub("^_", "", clean)
   if (length(file_paths) > 1) clean <- paste0(clean, "_merged")
   paste0("sce_", clean)
+}
+
+#' Recompute exprs assay from counts using selected instrument mode
+#'
+#' Useful for SCE objects loaded from workspace/RDS where the mode needs to be
+#' corrected or forced manually.
+rebuild_sce_exprs_from_counts <- function(sce,
+                                          instrument_type = c("cytof", "flow"),
+                                          cofactor = 5,
+                                          verbose = FALSE) {
+  if (!methods::is(sce, "SingleCellExperiment")) {
+    stop("Input object must be a SingleCellExperiment")
+  }
+
+  instrument_type <- match.arg(instrument_type)
+  assays <- SummarizedExperiment::assayNames(sce)
+  if (!"counts" %in% assays) {
+    stop("SCE does not contain a 'counts' assay; cannot recompute 'exprs'.")
+  }
+
+  raw_mat <- as.matrix(t(SummarizedExperiment::assay(sce, "counts")))
+  channel_names <- rownames(sce)
+  if (is.null(channel_names) || length(channel_names) != ncol(raw_mat)) {
+    channel_names <- colnames(raw_mat)
+  }
+
+  exprs_mat <- transform_matrix_by_instrument(
+    raw_mat = raw_mat,
+    channel_names = channel_names,
+    instrument_type = instrument_type,
+    cofactor = cofactor,
+    verbose = verbose
+  )
+
+  SummarizedExperiment::assay(sce, "exprs") <- t(exprs_mat)
+  S4Vectors::metadata(sce)$instrument_type <- instrument_type
+  S4Vectors::metadata(sce)$transform_type <-
+    if (instrument_type == "cytof") "arcsinh" else "logicle"
+  S4Vectors::metadata(sce)$cofactor <- cofactor
+
+  sce
+}
+
+#' Append additional FCS files into an existing SCE
+#'
+#' Re-imports incoming FCS files using the same transform pathway as
+#' import_fcs_files(), then appends events to the existing SCE while preserving
+#' workspace and other metadata fields already present on the original object.
+append_fcs_to_sce <- function(sce,
+                              file_paths,
+                              sample_names = NULL,
+                              cofactor = NULL,
+                              instrument_mode = c("auto", "cytof", "flow")) {
+  if (!methods::is(sce, "SingleCellExperiment")) {
+    stop("Input object must be a SingleCellExperiment")
+  }
+  if (length(file_paths) == 0) {
+    stop("No FCS file paths provided")
+  }
+
+  required_assays <- c("counts", "exprs")
+  missing_assays <- setdiff(required_assays, SummarizedExperiment::assayNames(sce))
+  if (length(missing_assays) > 0) {
+    stop("SCE is missing required assay(s): ", paste(missing_assays, collapse = ", "))
+  }
+
+  instrument_mode <- match.arg(instrument_mode)
+
+  md_existing <- S4Vectors::metadata(sce)
+  instrument_existing <- md_existing$instrument_type
+  if (is.null(instrument_existing) || !instrument_existing %in% c("cytof", "flow")) {
+    instrument_existing <- detect_instrument_type(rownames(sce))
+  }
+
+  # Keep appended files on the current instrument transform unless user forces.
+  append_mode <- instrument_mode
+  if (append_mode == "auto") append_mode <- instrument_existing
+
+  if (is.null(cofactor) || length(cofactor) == 0 || !is.finite(cofactor) || cofactor <= 0) {
+    cofactor <- suppressWarnings(as.numeric(md_existing$cofactor))
+    if (length(cofactor) == 0 || !is.finite(cofactor) || cofactor <= 0) {
+      cofactor <- 5
+    }
+  }
+
+  if (is.null(sample_names)) {
+    sample_names <- tools::file_path_sans_ext(basename(file_paths))
+  }
+  if (length(sample_names) != length(file_paths)) {
+    stop("sample_names length must match file_paths length")
+  }
+
+  # Avoid sample_id collisions with existing IDs.
+  existing_sample_ids <- as.character(SummarizedExperiment::colData(sce)$sample_id)
+  if (length(existing_sample_ids) > 0) {
+    sample_names <- utils::tail(
+      make.unique(c(unique(existing_sample_ids), as.character(sample_names)), sep = "_"),
+      length(sample_names)
+    )
+  }
+
+  incoming <- import_fcs_files(
+    file_paths = file_paths,
+    sample_names = sample_names,
+    cofactor = cofactor,
+    instrument_mode = append_mode
+  )
+
+  existing_channels <- rownames(sce)
+  incoming_channels <- rownames(incoming)
+
+  missing_in_incoming <- setdiff(existing_channels, incoming_channels)
+  if (length(missing_in_incoming) > 0) {
+    stop(
+      "Cannot append: incoming files are missing ", length(missing_in_incoming),
+      " existing channel(s), e.g. ", paste(utils::head(missing_in_incoming, 5), collapse = ", "),
+      "."
+    )
+  }
+
+  # Keep existing channel basis to avoid breaking saved gates/workspaces.
+  incoming <- incoming[existing_channels, , drop = FALSE]
+
+  counts_existing <- SummarizedExperiment::assay(sce, "counts")
+  exprs_existing <- SummarizedExperiment::assay(sce, "exprs")
+  counts_new <- SummarizedExperiment::assay(incoming, "counts")
+  exprs_new <- SummarizedExperiment::assay(incoming, "exprs")
+
+  combined_counts <- cbind(counts_existing[existing_channels, , drop = FALSE],
+                           counts_new[existing_channels, , drop = FALSE])
+  combined_exprs <- cbind(exprs_existing[existing_channels, , drop = FALSE],
+                          exprs_new[existing_channels, , drop = FALSE])
+
+  cd_existing <- as.data.frame(SummarizedExperiment::colData(sce))
+  cd_new <- as.data.frame(SummarizedExperiment::colData(incoming))
+  all_cd_cols <- union(colnames(cd_existing), colnames(cd_new))
+  for (nm in setdiff(all_cd_cols, colnames(cd_existing))) cd_existing[[nm]] <- NA
+  for (nm in setdiff(all_cd_cols, colnames(cd_new))) cd_new[[nm]] <- NA
+  cd_existing <- cd_existing[, all_cd_cols, drop = FALSE]
+  cd_new <- cd_new[, all_cd_cols, drop = FALSE]
+  cd_combined <- S4Vectors::DataFrame(rbind(cd_existing, cd_new), check.names = FALSE)
+
+  sce_out <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(
+      counts = combined_counts,
+      exprs = combined_exprs
+    ),
+    rowData = SummarizedExperiment::rowData(sce),
+    colData = cd_combined
+  )
+
+  # Merge experiment_info tables by row-binding with column fill.
+  exp_existing <- md_existing$experiment_info
+  exp_new <- S4Vectors::metadata(incoming)$experiment_info
+  if (is.null(exp_existing) || !is.data.frame(exp_existing)) {
+    exp_combined <- exp_new
+  } else if (is.null(exp_new) || !is.data.frame(exp_new)) {
+    exp_combined <- exp_existing
+  } else {
+    exp_cols <- union(colnames(exp_existing), colnames(exp_new))
+    for (nm in setdiff(exp_cols, colnames(exp_existing))) exp_existing[[nm]] <- NA
+    for (nm in setdiff(exp_cols, colnames(exp_new))) exp_new[[nm]] <- NA
+    exp_combined <- rbind(
+      exp_existing[, exp_cols, drop = FALSE],
+      exp_new[, exp_cols, drop = FALSE]
+    )
+    rownames(exp_combined) <- NULL
+  }
+
+  md_out <- md_existing
+  md_out$experiment_info <- exp_combined
+  md_out$instrument_type <- instrument_existing
+  md_out$instrument_type_detected <- if (!is.null(md_existing$instrument_type_detected)) {
+    md_existing$instrument_type_detected
+  } else {
+    instrument_existing
+  }
+  md_out$instrument_mode_choice <- if (!is.null(md_existing$instrument_mode_choice)) {
+    md_existing$instrument_mode_choice
+  } else {
+    append_mode
+  }
+  md_out$instrument_type_source <- if (!is.null(md_existing$instrument_type_source)) {
+    md_existing$instrument_type_source
+  } else {
+    "auto_detected"
+  }
+  md_out$transform_type <- if (instrument_existing == "cytof") "arcsinh" else "logicle"
+  md_out$cofactor <- cofactor
+
+  existing_append_history <- md_existing$fcs_append_history
+  if (is.null(existing_append_history)) existing_append_history <- list()
+
+  md_out$fcs_append_history <- c(
+    existing_append_history,
+    list(list(
+      appended_at = as.character(Sys.time()),
+      n_files = length(file_paths),
+      file_names = basename(file_paths),
+      sample_names = as.character(sample_names)
+    ))
+  )
+
+  S4Vectors::metadata(sce_out) <- md_out
+  sce_out
 }

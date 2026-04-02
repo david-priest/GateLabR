@@ -3,12 +3,14 @@
 #' Save the gating workspace into SCE metadata
 #' @return The modified SCE object
 save_workspace <- function(sce, gates, gate_order, populations,
-                           root_population_id) {
+                           root_population_id,
+                           gate_value_space = "display") {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
     populations = populations,
     root_population_id = root_population_id,
+    gate_value_space = gate_value_space,
     version = 1L,
     saved_at = as.character(Sys.time())
   )

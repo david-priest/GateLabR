@@ -37,16 +37,18 @@ transform_for_display <- function(values, assay_name) {
 #' Stride-based downsampling (deterministic, fast, order-preserving)
 fast_downsample <- function(mat, max_events) {
   n <- nrow(mat)
-  if (n <= max_events) return(mat)
-  idx <- round(seq(1, n, length.out = max_events))
+  max_events_num <- suppressWarnings(as.numeric(max_events))
+  if (!is.finite(max_events_num) || max_events_num <= 0 || n <= max_events_num) return(mat)
+  idx <- round(seq(1, n, length.out = as.integer(max_events_num)))
   mat[idx, , drop = FALSE]
 }
 
 #' Downsample a logical mask
 fast_downsample_mask <- function(mask, max_events) {
   n <- length(mask)
-  if (n <= max_events) return(mask)
-  idx <- round(seq(1, n, length.out = max_events))
+  max_events_num <- suppressWarnings(as.numeric(max_events))
+  if (!is.finite(max_events_num) || max_events_num <= 0 || n <= max_events_num) return(mask)
+  idx <- round(seq(1, n, length.out = as.integer(max_events_num)))
   mask[idx]
 }
 
@@ -97,8 +99,9 @@ build_plot_data <- function(assay_data, x_channel, y_channel, assay_name,
 
   # Downsample for display
   n_total <- length(x_vals)
-  if (n_total > max_events) {
-    idx <- round(seq(1, n_total, length.out = max_events))
+  max_events_num <- suppressWarnings(as.numeric(max_events))
+  if (is.finite(max_events_num) && max_events_num > 0 && n_total > max_events_num) {
+    idx <- round(seq(1, n_total, length.out = as.integer(max_events_num)))
     x_vals <- x_vals[idx]
     y_vals <- y_vals[idx]
   }
@@ -190,8 +193,9 @@ build_plot_data_overlay <- function(assay_data, x_channel, y_channel, assay_name
 
   # Downsample
   n_total <- length(x_vals)
-  if (n_total > max_events) {
-    idx <- round(seq(1, n_total, length.out = max_events))
+  max_events_num <- suppressWarnings(as.numeric(max_events))
+  if (is.finite(max_events_num) && max_events_num > 0 && n_total > max_events_num) {
+    idx <- round(seq(1, n_total, length.out = as.integer(max_events_num)))
     x_vals <- x_vals[idx]
     y_vals <- y_vals[idx]
     color_indices <- color_indices[idx]
