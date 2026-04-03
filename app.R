@@ -23,6 +23,7 @@ source("R/gate_engine.R")
 source("R/workspace.R")
 source("R/fcs_import.R")
 source("R/gatingml_import.R")
+source("R/gatingml_export.R")
 source("R/fcs_export.R")
 source("R/strategy_utils.R")
 
@@ -396,6 +397,11 @@ ui <- fluidPage(
                   buttonLabel = "Import GatingML...",
                   placeholder = "No file selected",
                   multiple = FALSE),
+
+        # Export Cytobank Gating-ML
+        downloadButton("export_gatingml_dl", "Export GatingML...",
+                       class = "btn-default btn-block",
+                       style = "margin-bottom:4px; text-align:left;"),
 
         tags$div(class = "status-bar",
           textOutput("status_text", inline = TRUE)
@@ -831,7 +837,10 @@ server <- function(input, output, session) {
     old_w <- rv$flow_logicle_w[[ch]]
     if (!is.null(old_w) && abs(new_w - as.numeric(old_w)) < 1e-6) return()
     rv$flow_logicle_w[[ch]] <- new_w
-    persist_flow_transform_state()
+    # Do NOT call persist_flow_transform_state() here — it mutates rv$sce, which
+    # triggers the renderUI that recreates these sliders, which re-fires this
+    # observer mid-drag, causing back-and-forth oscillation. Persistence happens
+    # in the channel-change observer (low-frequency, safe checkpoint).
     refresh_assay_data(reset_cache = FALSE,
                       channels_to_update = c(input$x_channel, input$y_channel))
     send_full_plot(reset_view = TRUE)
@@ -847,7 +856,7 @@ server <- function(input, output, session) {
     old_w <- rv$flow_logicle_w[[ch]]
     if (!is.null(old_w) && abs(new_w - as.numeric(old_w)) < 1e-6) return()
     rv$flow_logicle_w[[ch]] <- new_w
-    persist_flow_transform_state()
+    # Do NOT call persist_flow_transform_state() here — see comment in x_logicle_w observer.
     refresh_assay_data(reset_cache = FALSE,
                       channels_to_update = c(input$x_channel, input$y_channel))
     send_full_plot(reset_view = TRUE)
@@ -1683,6 +1692,10 @@ server <- function(input, output, session) {
 
   observeEvent(list(input$x_channel, input$y_channel), {
     req(rv$assay_data, input$x_channel, input$y_channel)
+    # Persist logicle W params when the user navigates to a new channel pair.
+    # This is the safe low-frequency checkpoint (replaces per-tick persist in
+    # the slider observers, which caused renderUI → slider recreation → loop).
+    persist_flow_transform_state()
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
@@ -2858,6 +2871,38 @@ server <- function(input, output, session) {
     output$status_text <- renderText(msg)
   })
 
+  # ── Export GatingML ──────────────────────────────────────────────────────────
+  output$export_gatingml_dl <- downloadHandler(
+    filename = function() {
+      sce_nm <- isolate(rv$sce_name) %||% "workspace"
+      paste0(gsub("[^A-Za-z0-9_.-]", "_", sce_nm), "_gates_",
+             format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
+    },
+    content = function(file) {
+      req(rv$sce, rv$gates)
+      if (length(rv$gates) == 0) {
+        showNotification("No gates to export.", type = "warning", duration = 4)
+        return()
+      }
+      tryCatch({
+        export_gatingml_to_cytobank(
+          gates                   = isolate(rv$gates),
+          gate_order              = isolate(rv$gate_order),
+          populations             = isolate(rv$populations),
+          root_population_id      = isolate(rv$root_population_id),
+          sce                     = isolate(rv$sce),
+          file_path               = file,
+          logicle_w_params        = isolate(rv$flow_logicle_w),
+          scatter_cofactor_params = isolate(rv$flow_scatter_cofactor),
+          counts_mat              = isolate(rv$flow_raw_data)
+        )
+      }, error = function(e) {
+        showNotification(paste("GatingML export error:", e$message),
+                         type = "error", duration = 8)
+      })
+    }
+  )
+
   # ── Export FCS — modal then download ────────────────────────────────────────
   observeEvent(input$export_fcs_btn, {
     req(rv$sce)
@@ -2952,6 +2997,7 @@ ui_with_runjs <- tagList(
         'save_rds_dl':        'Download the SCE with embedded workspace as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
         'import_gatingml_upload': 'Import Cytobank Gating-ML XML and replace current gates/populations',
+        'export_gatingml_dl':     'Export current gates and populations as Cytobank Gating-ML 2.0 XML',
         // Mode toolbar
         'mode_navigate': 'Navigate mode — pan and zoom (no drawing)',
         'mode_rect':     'Draw a rectangle gate',

@@ -76,10 +76,31 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     if (!identical(.gml_local_name(el), "transformation")) next
     tr_id <- .gml_attr_local(el, "id")
     if (is.null(tr_id) || !nzchar(tr_id)) next
-    fasinh <- .gml_first_child_local(el, "fasinh")
+
+    # logicle transform (GateLabR flow export and FlowJo/BD exports)
+    logicle_el <- .gml_first_child_local(el, "logicle")
+    if (!is.null(logicle_el)) {
+      t_v <- .gml_num(.gml_attr_local(logicle_el, "T"))
+      w_v <- .gml_num(.gml_attr_local(logicle_el, "W"))
+      m_v <- .gml_num(.gml_attr_local(logicle_el, "M"))
+      a_v <- .gml_num(.gml_attr_local(logicle_el, "A"))
+      if (.gml_has_num(t_v) && .gml_has_num(w_v)) {
+        out[[tr_id]] <- list(
+          type = "logicle",
+          T    = t_v,
+          W    = w_v,
+          M    = if (.gml_has_num(m_v)) m_v else 4.5,
+          A    = if (.gml_has_num(a_v)) a_v else 0.0
+        )
+        next
+      }
+    }
+
+    # fasinh / arcsinh — store T as a plain scalar (backward-compatible)
+    fasinh  <- .gml_first_child_local(el, "fasinh")
     arcsinh <- .gml_first_child_local(el, "arcsinh")
-    t_val <- NULL
-    if (!is.null(fasinh)) t_val <- .gml_num(.gml_attr_local(fasinh, "T"))
+    t_val   <- NULL
+    if (!is.null(fasinh))  t_val <- .gml_num(.gml_attr_local(fasinh,  "T"))
     if (!.gml_has_num(t_val)) {
       if (!is.null(arcsinh)) t_val <- .gml_num(.gml_attr_local(arcsinh, "T"))
     }
@@ -202,6 +223,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   if (is.null(trans_ref) || !nzchar(trans_ref)) return(function(v) v)
   if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(function(v) v)
 
+  # CyTOF metal channels: gate coordinates are stored in exprs (arcsinh) space,
+  # so no inversion is needed — return identity.
   is_signal <- if (exists(".is_metal_channel", mode = "function")) {
     isTRUE(.is_metal_channel(resolved_channel))
   } else {
@@ -209,13 +232,32 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   }
   if (is_signal) return(function(v) v)
 
+  # QC / instrument channels: always raw space, no inversion.
   if (grepl("^(time|event_length|cell_length|barcode)$", resolved_channel, ignore.case = TRUE)) {
     return(function(v) v)
   }
 
-  cf <- suppressWarnings(as.numeric(transforms_map[[trans_ref]]))
-  if (!.gml_has_num(cf) || cf <= 0) return(function(v) v)
+  tr_def <- transforms_map[[trans_ref]]
+  if (is.null(tr_def)) return(function(v) v)
 
+  # Logicle transform (from GateLabR flow export or FlowJo): apply logicle inverse.
+  if (is.list(tr_def) && identical(tr_def$type, "logicle")) {
+    t_v <- tr_def$T;  w_v <- tr_def$W
+    m_v <- tr_def$M %||% 4.5;  a_v <- tr_def$A %||% 0.0
+    if (!is.finite(t_v) || !is.finite(w_v) || t_v <= 0 || w_v < 0) return(function(v) v)
+    return(function(v) {
+      if (!requireNamespace("flowCore", quietly = TRUE)) return(v)
+      tryCatch({
+        lg     <- flowCore::logicleTransform("lg_fwd", w = w_v, t = t_v, m = m_v, a = a_v)
+        inv_lg <- flowCore::inverseLogicleTransform(lg, transformationId = "lg_inv")
+        as.numeric(inv_lg(as.numeric(v)))
+      }, error = function(e) as.numeric(v))
+    })
+  }
+
+  # fasinh / arcsinh: inverse is T * sinh(v)
+  cf <- suppressWarnings(as.numeric(if (is.list(tr_def)) tr_def$T else tr_def))
+  if (!.gml_has_num(cf) || cf <= 0) return(function(v) v)
   function(v) cf * sinh(v)
 }
 

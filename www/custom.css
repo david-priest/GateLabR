@@ -372,6 +372,7 @@ body { font-size: 13px; }
   cursor: pointer;
   font-size: 13px;
   border: 1px solid transparent;
+  border-bottom: 1px solid #e0e0e0;
   gap: 6px;
 }
 
