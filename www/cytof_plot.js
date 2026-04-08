@@ -5,7 +5,7 @@
  *             SVG overlay for axes, gate overlays, and interaction
  *
  * Interaction modes:
- *   navigate  — D3 zoom/pan
+ *   navigate  — static view (no pan/zoom)
  *   draw-rect — mousedown/drag/mouseup rubber-band rectangle
  *   draw-poly — click-to-vertex polygon; click near first vertex to close
  *
@@ -62,7 +62,7 @@
     let _channelPickerEl = null;  // floating searchable channel-picker overlay
 
     // requestAnimationFrame handles for throttling
-    let _zoomRafId = null;   // zoom/pan redraw
+    let _zoomRafId = null;   // retained for compatibility; zoom is disabled
     let _drawRafId = null;   // rubber-band + poly-preview redraws
 
     // Drag guard: true while a gate vertex/move drag is active.
@@ -77,10 +77,12 @@
     // vertex positions that are newer than what the server has confirmed yet.
     let _pendingEdits = {};
     let _editSeq      = 0;
+    let _lastPlotSeq  = 0;
+    let _deferredPlot = null;
 
     // ── Helpers ─────────────────────────────────────────────────────────────
-    function _zx() { return _zt.rescaleX(_xBase); }
-    function _zy() { return _zt.rescaleY(_yBase); }
+    function _zx() { return _xBase; }
+    function _zy() { return _yBase; }
 
     function _ptr(event) {
         return d3.pointer(event, _g.node());
@@ -207,21 +209,10 @@
             .attr('x', M.left + W / 2).attr('y', 16)
             .style('font-size', '11px').style('fill', '#555');
 
-        // Zoom (filter = only in navigate mode)
-        _zoom = d3.zoom()
-            .scaleExtent([0.5, 100])
-            .filter(function (event) {
-                return _mode === 'navigate' && !event.button;
-            })
-            .on('zoom', function (event) {
-                _zt = event.transform;
-                if (_zoomRafId) return;
-                _zoomRafId = requestAnimationFrame(function () {
-                    _zoomRafId = null;
-                    _redraw();
-                });
-            });
-        _svg.call(_zoom);
+        // Hard-disable viewport zoom/pan interactions.
+        // Any existing d3-zoom listeners are removed explicitly.
+        _zoom = null;
+        _svg.on('.zoom', null);
 
         // SVG pointer events (rect draw + poly click + poly mousemove)
         _svg.on('mousedown.draw', _onMousedown)
@@ -241,7 +232,7 @@
 
         if (!_g) return;
         _g.select('.cytof-overlay').style('cursor',
-            newMode === 'navigate' ? 'grab' : 'crosshair');
+            newMode === 'navigate' ? 'default' : 'crosshair');
     }
 
     // ── Pointer events — rect gate ───────────────────────────────────────────
@@ -450,6 +441,7 @@
     // ── Full redraw ───────────────────────────────────────────────────────────
     function _redraw() {
         if (!_xBase) return;
+        _zt = d3.zoomIdentity;
         var zx = _zx(), zy = _zy();
         var xIsLog = _plotData && _plotData.x_is_log;
         var yIsLog = _plotData && _plotData.y_is_log;
@@ -1099,6 +1091,7 @@
                     .on('end', function () {
                         _dragging = false;
                         _notifyLabelMove(g_ref.gate_id, g_ref.label_offset);
+                        _flushDeferredPlot();
                     });
                 labelG.style('cursor', 'move')
                       .style('pointer-events', 'all')
@@ -1197,6 +1190,7 @@
                 // If not moved (pure click): the Tier-1 render queued during 'start'
                 // will fire now that _dragging is false and call _drawGates to visually
                 // highlight the newly-selected gate and show vertex handles.
+                _flushDeferredPlot();
             });
     }
 
@@ -1230,6 +1224,7 @@
             .on('end', function () {
                 _dragging = false;
                 _notifyGateEdit(gate);
+                _flushDeferredPlot();
             });
     }
 
@@ -1270,6 +1265,7 @@
             .on('end', function () {
                 _dragging = false;
                 _notifyGateEdit(gate);
+                _flushDeferredPlot();
             });
     }
 
@@ -1311,19 +1307,14 @@
     function _notifyNewGate(gateType, verts) {
         if (!_plotData) return;
 
-        // Compute initial label offset so the label starts just outside the gate.
-        // Rectangle: centred above the top edge.  Polygon: top-right outside.
+        // Compute initial label offset so the label starts centered above the gate.
         var xs = verts.map(function(v) { return v[0]; });
         var ys = verts.map(function(v) { return v[1]; });
         var cx     = (d3.min(xs) + d3.max(xs)) / 2;
         var cy     = (d3.min(ys) + d3.max(ys)) / 2;
         var yMax   = d3.max(ys);
-        var xMax   = d3.max(xs);
         var yMargin = (d3.max(ys) - d3.min(ys)) * 0.20;
-        var xMargin = (d3.max(xs) - d3.min(xs)) * 0.20;
-        var labelOffset = gateType === 'rectangle'
-            ? [0, (yMax - cy) + yMargin]
-            : [(xMax - cx) + xMargin, (yMax - cy) + yMargin];
+        var labelOffset = [0, (yMax - cy) + yMargin];
 
         _shinyInput('new_gate', {
             gate_type:    gateType,
@@ -1360,6 +1351,42 @@
         });
     }
 
+    function _getPlotSeq(plotData) {
+        if (!plotData || plotData._plot_seq == null) return null;
+        var seq = Number(plotData._plot_seq);
+        return Number.isFinite(seq) ? seq : null;
+    }
+
+    function _isStalePlot(plotData) {
+        var seq = _getPlotSeq(plotData);
+        return seq != null && seq < _lastPlotSeq;
+    }
+
+    function _recordPlotSeq(plotData) {
+        var seq = _getPlotSeq(plotData);
+        if (seq != null && seq > _lastPlotSeq) _lastPlotSeq = seq;
+    }
+
+    function _mergePendingEditsIntoGates(gates) {
+        if (!gates || !gates.length) return gates;
+        if (Object.keys(_pendingEdits).length === 0) return gates;
+        return gates.map(function (g) {
+            var pe = _pendingEdits[g.gate_id];
+            if (!pe) return g;
+            return Object.assign({}, g, {
+                vertices:     pe.vertices,
+                label_offset: pe.label_offset,
+            });
+        });
+    }
+
+    function _flushDeferredPlot() {
+        if (_dragging || !_deferredPlot) return;
+        var next = _deferredPlot;
+        _deferredPlot = null;
+        render(next.plotData, next.mode);
+    }
+
     function _selectGate(gateId) {
         if (_plotData) _plotData.selected_gate_id = gateId;
         if (_xBase)    _drawGates(_zx(), _zy());
@@ -1387,10 +1414,27 @@
         _densityCache = null;
         _contourCache = null;
         _zt           = d3.zoomIdentity;
+        _pendingEdits = {};
+        _deferredPlot = null;
     }
 
     function render(plotData, mode) {
         if (!plotData) return;
+
+        if (_isStalePlot(plotData)) return;
+
+        if (_dragging) {
+            if (!_deferredPlot) {
+                _deferredPlot = { plotData: plotData, mode: mode };
+            } else {
+                var incomingSeq = _getPlotSeq(plotData);
+                var deferredSeq = _getPlotSeq(_deferredPlot.plotData);
+                if (deferredSeq == null || incomingSeq == null || incomingSeq >= deferredSeq) {
+                    _deferredPlot = { plotData: plotData, mode: mode };
+                }
+            }
+            return;
+        }
 
         var ctnr = document.getElementById(CTNR);
         if (!ctnr) return;
@@ -1411,33 +1455,16 @@
 
         // ── Fast path: only gate overlays changed, no canvas redraw needed ───
         if (plotData.gates_only && _ready && _xBase && _plotData) {
-            // Merge server gate data with any locally-pending edits.
-            // If we have a pending edit for a gate (drag ended but server hasn't acked yet),
-            // keep the local vertex positions and label_offset so stale server data
-            // from an earlier PUT cannot snap the gate back to an old position.
-            var hasPending = Object.keys(_pendingEdits).length > 0;
-            if (hasPending) {
-                _plotData.gates = plotData.gates.map(function (g) {
-                    var pe = _pendingEdits[g.gate_id];
-                    if (!pe) return g;
-                    // Keep local geometry; take server stats (counts, name, color).
-                    return Object.assign({}, g, {
-                        vertices:     pe.vertices,
-                        label_offset: pe.label_offset,
-                    });
-                });
-            } else {
-                _plotData.gates = plotData.gates;
-            }
+            _plotData.gates = _mergePendingEditsIntoGates(plotData.gates);
             _plotData.selected_gate_id = plotData.selected_gate_id;
+            _recordPlotSeq(plotData);
             // Skip _drawGates while a drag is active: calling it would destroy
             // the SVG element currently being dragged, detaching the D3 drag handler.
             if (!_dragging) _drawGates(_zx(), _zy());
             return;
         }
 
-        // Full render — clear all pending edits (server state is now authoritative).
-        _pendingEdits = {};
+        plotData.gates = _mergePendingEditsIntoGates(plotData.gates || []);
 
         // Decode binary event arrays (base64 float32 → Float32Array)
         if (plotData.x_b64) {
@@ -1468,7 +1495,6 @@
 
         if (axisChanged || plotData.reset_view || cofactorChanged) {
             _zt = d3.zoomIdentity;
-            _svg.call(_zoom.transform, d3.zoomIdentity);
         }
         // Always clear density cache (pseudocolor). For contour, only clear if data changed.
         _densityCache = null;
@@ -1479,6 +1505,7 @@
         }
 
         _plotData = plotData;
+        _recordPlotSeq(plotData);
 
         // Build base scales
         var xr = plotData.x_range;
@@ -1529,6 +1556,7 @@
         if (pe && (seq == null || pe.seq <= seq)) {
             delete _pendingEdits[gateId];
         }
+        _flushDeferredPlot();
     }
 
     window.CytofD3 = { render: render, setMode: setMode, clear: clear, clearPendingEdit: clearPendingEdit };

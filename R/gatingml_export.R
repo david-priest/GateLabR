@@ -40,11 +40,20 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   tr_defs  <- list()
 
   if (!is_flow) {
-    # CyTOF: one fasinh transform; metal channels reference it, QC channels don't
+    # CyTOF: one fasinh transform for all arcsinh-transformed channels.
+    # Gating-ML 2.0 fasinh: f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
+    # With M=log10(e), M*ln10=1, so f(x) = arcsinh(x*sinh(1)/T).
+    # To encode arcsinh(x/cofactor): T = cofactor * sinh(1).
+    gml_T <- cofactor * sinh(log10e * log(10))
     tr_id <- paste0("Tr_Arcsinh_", round(cofactor, 4))
-    tr_defs[[tr_id]] <- list(type = "fasinh", T = cofactor, M = log10e, A = 0.0)
+    tr_defs[[tr_id]] <- list(type = "fasinh", T = gml_T, M = log10e, A = 0.0)
+    raw_fn <- if (exists(".is_cytof_raw_channel", mode = "function")) {
+      .is_cytof_raw_channel
+    } else {
+      function(ch) grepl("^(time|event_length|cell_length|file_number)$", ch, ignore.case = TRUE)
+    }
     for (ch in channel_names) {
-      ch_to_tr[[ch]] <- if (.is_metal_channel(ch)) tr_id else NULL
+      ch_to_tr[[ch]] <- if (!raw_fn(ch)) tr_id else NULL
     }
   } else {
     # Flow: logicle for fluorescence channels, fasinh for scatter, none for QC
@@ -58,9 +67,10 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
           v <- suppressWarnings(as.numeric(scatter_cofactor_params[[ch]]))
           if (is.finite(v) && v > 0) cf_s <- v
         }
+        gml_T_s <- cf_s * sinh(log10e * log(10))
         tr_id_s <- paste0("Tr_Fasinh_", round(cf_s))
         if (is.null(tr_defs[[tr_id_s]])) {
-          tr_defs[[tr_id_s]] <- list(type = "fasinh", T = cf_s, M = log10e, A = 0.0)
+          tr_defs[[tr_id_s]] <- list(type = "fasinh", T = gml_T_s, M = log10e, A = 0.0)
         }
         ch_to_tr[[ch]] <- tr_id_s
 

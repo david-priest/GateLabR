@@ -14,6 +14,10 @@
 #' @param assay_name "exprs" (arcsinh-transformed) or "counts" (raw)
 #' @param split_by_sample  If TRUE, one FCS per sample_id; otherwise one combined file
 #' @param output_dir Directory to write FCS files into (default: tempdir())
+#' @param filename_prefix Optional prefix prepended to written filenames.
+#' @param filename_suffix Optional suffix appended before ".fcs".
+#' @param precomputed_masks Optional named list of population masks returned by
+#'   apply_gating_strategy(... )$masks to reuse across multiple exports.
 #' @return Character vector of written file paths
 export_population_as_fcs <- function(sce,
                                       population_id,
@@ -22,7 +26,10 @@ export_population_as_fcs <- function(sce,
                                       root_population_id,
                                       assay_name    = "exprs",
                                       split_by_sample = TRUE,
-                                      output_dir    = tempdir()) {
+                                      output_dir    = tempdir(),
+                                      filename_prefix = "",
+                                      filename_suffix = "",
+                                      precomputed_masks = NULL) {
 
   if (!requireNamespace("flowCore", quietly = TRUE)) {
     stop("Package 'flowCore' is required.\n",
@@ -36,9 +43,19 @@ export_population_as_fcs <- function(sce,
   gate_mat   <- t(SummarizedExperiment::assay(sce, gate_assay))   # events × channels
 
   # ── Compute population mask ───────────────────────────────────────────────
-  if (length(gates) == 0 || population_id == root_population_id) {
-    pop_mask <- rep(TRUE, nrow(gate_mat))
+  if (!is.null(precomputed_masks) && !is.null(precomputed_masks[[population_id]])) {
+    pop_mask <- precomputed_masks[[population_id]]
+    if (!is.logical(pop_mask) || length(pop_mask) != nrow(gate_mat)) {
+      warning("Ignoring invalid precomputed mask for population '", population_id, "'.")
+      pop_mask <- NULL
+    }
   } else {
+    pop_mask <- NULL
+  }
+
+  if (is.null(pop_mask) && (length(gates) == 0 || population_id == root_population_id)) {
+    pop_mask <- rep(TRUE, nrow(gate_mat))
+  } else if (is.null(pop_mask)) {
     result   <- apply_gating_strategy(gates, populations, root_population_id, gate_mat)
     pop_mask <- result$masks[[population_id]]
     if (is.null(pop_mask)) pop_mask <- rep(TRUE, nrow(gate_mat))
@@ -51,7 +68,30 @@ export_population_as_fcs <- function(sce,
   }
   export_mat <- t(SummarizedExperiment::assay(sce, assay_name))  # events × channels
 
-  channel_names <- colnames(export_mat)
+  display_channel_names <- colnames(export_mat)
+  channel_names <- display_channel_names
+  channel_desc <- display_channel_names
+
+  md <- S4Vectors::metadata(sce)
+  channel_to_pnn <- md$channel_to_pnn
+  if (!is.null(channel_to_pnn) && length(channel_to_pnn) > 0) {
+    mapped <- vapply(display_channel_names, function(ch) {
+      val <- channel_to_pnn[[ch]]
+      if (is.null(val) || !nzchar(as.character(val))) ch else as.character(val)
+    }, character(1))
+    channel_names <- mapped
+  } else {
+    pnn_to_channel <- md$pnn_to_channel
+    if (!is.null(pnn_to_channel) && length(pnn_to_channel) > 0) {
+      inv <- setNames(names(pnn_to_channel), as.character(unlist(pnn_to_channel, use.names = FALSE)))
+      inv <- inv[!duplicated(names(inv))]
+      mapped <- vapply(display_channel_names, function(ch) {
+        val <- inv[[ch]]
+        if (is.null(val) || !nzchar(as.character(val))) ch else as.character(val)
+      }, character(1))
+      channel_names <- mapped
+    }
+  }
 
   # ── Sample IDs ───────────────────────────────────────────────────────────
   cd         <- SummarizedExperiment::colData(sce)
@@ -68,6 +108,9 @@ export_population_as_fcs <- function(sce,
   } else "population"
 
   if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+  safe_suffix <- trimws(as.character(filename_suffix %||% ""))
+  safe_suffix <- gsub("[^A-Za-z0-9._-]", "_", safe_suffix)
+  safe_suffix <- if (nchar(safe_suffix) > 0) paste0("_", safe_suffix) else ""
 
   written_files <- character(0)
 
@@ -76,19 +119,20 @@ export_population_as_fcs <- function(sce,
       combined_mask <- pop_mask & (sample_ids == sid)
       if (sum(combined_mask) == 0L) next
       sub_mat <- export_mat[combined_mask, , drop = FALSE]
-      ff      <- .matrix_to_flowframe(sub_mat, channel_names)
+      ff      <- .matrix_to_flowframe(sub_mat, channel_names, channel_desc)
       fname   <- file.path(output_dir,
-                           paste0(gsub("[^A-Za-z0-9._-]", "_", sid),
-                                  "_", pop_name, ".fcs"))
+                  paste0(filename_prefix,
+                    gsub("[^A-Za-z0-9._-]", "_", sid),
+                    "_", pop_name, safe_suffix, ".fcs"))
       flowCore::write.FCS(ff, fname)
       written_files <- c(written_files, fname)
       message("Wrote ", nrow(sub_mat), " events → ", basename(fname))
     }
   } else {
     sub_mat <- export_mat[pop_mask, , drop = FALSE]
-    ff      <- .matrix_to_flowframe(sub_mat, channel_names)
+    ff      <- .matrix_to_flowframe(sub_mat, channel_names, channel_desc)
     fname   <- file.path(output_dir,
-                         paste0(pop_name, "_", assay_name, ".fcs"))
+                         paste0(filename_prefix, pop_name, "_", assay_name, safe_suffix, ".fcs"))
     flowCore::write.FCS(ff, fname)
     written_files <- fname
     message("Wrote ", nrow(sub_mat), " events → ", basename(fname))
@@ -99,17 +143,27 @@ export_population_as_fcs <- function(sce,
 
 
 #' Build a minimal flowFrame from a numeric matrix (events × channels)
-.matrix_to_flowframe <- function(mat, channel_names) {
-  storage.mode(mat) <- "numeric"
-  colnames(mat)     <- channel_names
+.matrix_to_flowframe <- function(mat, channel_names, channel_desc = NULL) {
+  # Use single-precision (float32) storage: FCS 3.0 writes 32-bit floats anyway,
+  # so converting here halves the working-memory footprint and avoids a second
+  # type conversion inside flowCore::write.FCS().
+  if (mode(mat) != "single") mode(mat) <- "single"
+  colnames(mat) <- channel_names
+
+  if (is.null(channel_desc) || length(channel_desc) != length(channel_names)) {
+    channel_desc <- channel_names
+  }
+
+  # Compute column ranges in a single pass instead of two separate apply() calls.
+  mat_rng  <- apply(mat, 2, range, na.rm = TRUE)  # 2 × n matrix
 
   n <- ncol(mat)
   params_df <- data.frame(
     name     = channel_names,
-    desc     = channel_names,
+    desc     = channel_desc,
     range    = rep(2^18, n),
-    minRange = apply(mat, 2, min, na.rm = TRUE),
-    maxRange = apply(mat, 2, max, na.rm = TRUE),
+    minRange = mat_rng[1L, ],
+    maxRange = mat_rng[2L, ],
     stringsAsFactors = FALSE,
     row.names = paste0("$P", seq_len(n))
   )

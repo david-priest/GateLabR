@@ -107,9 +107,9 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js"),
-    tags$script(src = "mini_plot.js"),
-    tags$link(rel = "stylesheet", href = "custom.css")
+    tags$script(src = "cytof_plot.js?v=20260403"),
+    tags$script(src = "mini_plot.js?v=20260408e"),
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260408a")
   ),
 
   titlePanel("GateLabR"),
@@ -172,191 +172,7 @@ ui <- fluidPage(
           tags$div(class = "sample-filter-subheader",
                    "Use column filters or click rows to select samples"),
           DT::dataTableOutput("sample_filter_table")
-        )
-      )
-    ),
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # CENTER COLUMN: tabbed (Gating | Strategy | Illustration)
-    # ═══════════════════════════════════════════════════════════════════════════
-    column(5,
-      tabsetPanel(id = "main_tabs", type = "tabs",
-
-        # ── Tab 1: Gating (biplot) ────────────────────────────────────────────
-        tabPanel("Gating",
-          tags$div(class = "plot-controls-bar",
-            tags$div(class = "mode-toolbar",
-              actionButton("mode_navigate", "Nav", class = "btn-sm btn-default active-mode"),
-              actionButton("mode_rect", "Rect", class = "btn-sm btn-default"),
-              actionButton("mode_poly", "Poly", class = "btn-sm btn-default"),
-              actionButton("mode_cancel", "Cancel", class = "btn-sm btn-warning")
-            ),
-            tags$div(style = "display:flex; gap:4px; margin-left: auto;",
-              actionButton("flip_axes", "", icon = icon("arrows-h"),
-                           class = "btn-xs btn-default"),
-              actionButton("reset_view_btn", "Reset", class = "btn-xs btn-default"),
-              actionButton("refresh_plot_btn", "Refresh", class = "btn-xs btn-default")
-            )
-          ),
-          tags$div(id = "cytof-plot-container",
-                   style = "width: 100%;"),
-
-          # Hidden X/Y selects: axis-label clicks update these; UI is on the plot
-          tags$div(style = "display:none;",
-            selectInput("x_channel", NULL, choices = NULL),
-            selectInput("y_channel", NULL, choices = NULL)
-          ),
-
-          tags$div(class = "below-plot-controls",
-            # Display mode + opacity on one compact row
-            tags$div(style = "display:flex; align-items:center; gap:8px; flex-wrap:wrap;",
-              radioButtons("display_mode", NULL,
-                           choices = c("Scatter" = "scatter",
-                                       "Pseudo" = "pseudocolor",
-                                       "Contour" = "contour"),
-                           selected = "pseudocolor", inline = TRUE),
-              tags$div(style = "display:flex; align-items:center; gap:4px; min-width:140px;",
-                tags$span("Opacity:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                tags$div(class = "opacity-slider-wrap", style = "width:150px;",
-                  sliderInput("point_alpha", NULL,
-                              min = 0.05, max = 1.0, value = 0.35, step = 0.05,
-                              width = "100%")
-                )
-              ),
-              tags$div(class = "gating-max-events",
-                style = "display:flex; align-items:center; gap:4px; min-width:170px;",
-                tags$span("Max events:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                numericInput("gating_max_events", NULL,
-                             value = 50000, min = 0, step = 5000, width = "110px"),
-                tags$span("0 = all", style = "font-size:10px; color:#888; white-space:nowrap;")
-              ),
-              conditionalPanel(
-                "input.display_mode == 'contour'",
-                tags$div(style = "display:flex; align-items:center; gap:4px;",
-                  tags$span("Outer:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                  selectInput("contour_threshold", NULL,
-                              choices = c("1%" = 1, "2%" = 2, "5%" = 5,
-                                          "10%" = 10, "20%" = 20, "30%" = 30),
-                              selected = 5, width = "80px")
-                )
-              )
-            ),
-
-            # Flow transform controls (conditional, directly below display row)
-            uiOutput("flow_transform_controls_ui"),
-
-            # Color by section
-            tags$div(class = "section-header", style = "margin-top:6px;",
-                     "Color by marker / metadata",
-                     actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default")),
-            selectInput("overlay_coldata", NULL,
-                        choices = c("(none)" = ""), selected = ""),
-            uiOutput("overlay_checkboxes_ui")
-          ),
-          uiOutput("subset_stats_ui")
         ),
-
-        # ── Tab 2: Gating Strategy ────────────────────────────────────────────
-        tabPanel("Strategy",
-          tags$div(class = "strategy-controls",
-            fluidRow(
-              column(6, selectInput("strategy_pop", "Population:", choices = NULL)),
-              column(3, numericInput("strategy_max_events", "Max events:",
-                                     value = 10000, min = 1000, max = 100000, step = 1000)),
-              column(3, numericInput("strategy_plot_size", "Plot size (px):",
-                                     value = 200, min = 150, max = 400, step = 25))
-            ),
-            fluidRow(
-              column(4,
-                radioButtons("strategy_display", NULL,
-                             choices = c("Scatter" = "scatter",
-                                         "Pseudo" = "pseudocolor"),
-                             selected = "pseudocolor", inline = TRUE)
-              ),
-              column(4, checkboxInput("strategy_full_path", "Full path from root", FALSE)),
-              column(4,
-                actionButton("strategy_export_png", "Export PNG",
-                             class = "btn-sm btn-default", icon = icon("download"))
-              )
-            )
-          ),
-          tags$div(id = "strategy-grid-container", class = "mini-plot-grid-container")
-        ),
-
-        # ── Tab 3: Illustration ───────────────────────────────────────────────
-        tabPanel("Illustration",
-          tags$div(class = "illustration-controls",
-            fluidRow(
-              column(4,
-                radioButtons("illust_plot_type", "Plot type:",
-                             choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
-                             selected = "biplot", inline = TRUE)
-              ),
-              column(4, selectInput("illust_y_channel", "Y channel:", choices = NULL)),
-              column(4,
-                radioButtons("illust_display", NULL,
-                             choices = c("Scatter" = "scatter",
-                                         "Pseudo" = "pseudocolor"),
-                             selected = "pseudocolor", inline = TRUE)
-              )
-            ),
-            fluidRow(
-              column(4, numericInput("illust_max_events", "Max events:",
-                                     value = 10000, min = 1000, max = 50000, step = 1000)),
-              column(4, numericInput("illust_plot_size", "Plot size (px):",
-                                     value = 200, min = 150, max = 400, step = 25)),
-              column(4,
-                actionButton("illust_export_png", "Export PNG",
-                             class = "btn-sm btn-default", icon = icon("download"))
-              )
-            ),
-            tags$div(class = "section-header", "X Channels"),
-            uiOutput("illust_x_channels_ui"),
-            tags$div(class = "section-header", "Populations"),
-            uiOutput("illust_populations_ui"),
-            actionButton("illust_render_btn", "Render Illustration",
-                         class = "btn-sm btn-primary", style = "margin-top: 6px;")
-          ),
-          tags$div(id = "illustration-grid-container", class = "mini-plot-grid-container")
-        )
-      )
-    ),
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # RIGHT COLUMN: gates + populations + color overlay
-    # ═══════════════════════════════════════════════════════════════════════════
-    column(4,
-      tags$div(class = "panel-section",
-
-        # ── Gate list ──
-        tags$div(class = "section-header",
-          "Gates",
-          tags$span(
-            actionButton("rename_gate_btn", "", icon = icon("pencil"),
-                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
-            actionButton("undo_btn", "", icon = icon("undo"),
-                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
-            actionButton("redo_btn", "", icon = icon("repeat"),
-                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
-            actionButton("delete_gate_btn", "", icon = icon("trash"),
-                         class = "btn-xs btn-danger", style = "padding: 1px 5px;")
-          )
-        ),
-        uiOutput("gate_list_ui"),
-
-        # ── Population tree ──
-        tags$div(class = "section-header",
-          "Populations",
-          tags$span(class = "population-header-actions",
-            actionButton("add_pop_btn", "", icon = icon("plus"),
-                         class = "btn-xs btn-success", style = "padding: 1px 5px;"),
-            actionButton("edit_pop_btn", "", icon = icon("pencil"),
-                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
-            actionButton("delete_pop_btn", "", icon = icon("trash"),
-                         class = "btn-xs btn-danger", style = "padding: 1px 5px;")
-          )
-        ),
-        uiOutput("population_tree_ui"),
 
         # ── Workspace controls ──
         tags$div(class = "section-header", "Workspace"),
@@ -405,7 +221,374 @@ ui <- fluidPage(
 
         tags$div(class = "status-bar",
           textOutput("status_text", inline = TRUE)
+        ),
+
+        tags$hr(style = "margin: 8px 0;"),
+        actionButton("close_app_btn", "Close App",
+                     class = "btn-sm btn-danger btn-block",
+                     icon = icon("power-off"))
+      )
+    ),
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # CENTER COLUMN: tabbed (Gating | Strategy | Illustration)
+    # ═══════════════════════════════════════════════════════════════════════════
+    column(5,
+      tabsetPanel(id = "main_tabs", type = "tabs",
+
+        # ── Tab 1: Gating (biplot) ────────────────────────────────────────────
+        tabPanel("Gating",
+          tags$div(class = "plot-controls-bar",
+            tags$div(class = "mode-toolbar",
+              actionButton("mode_navigate", "Nav", class = "btn-sm btn-default active-mode"),
+              actionButton("mode_rect", "Rect", class = "btn-sm btn-default"),
+              actionButton("mode_poly", "Poly", class = "btn-sm btn-default"),
+              actionButton("mode_cancel", "Cancel", class = "btn-sm btn-warning")
+            ),
+            tags$div(style = "display:flex; gap:4px; margin-left: auto;",
+              actionButton("flip_axes", "", icon = icon("arrows-h"),
+                           class = "btn-xs btn-default"),
+              actionButton("reset_view_btn", "Reset", class = "btn-xs btn-default"),
+              actionButton("rescale_view_btn", "Rescale", class = "btn-xs btn-default"),
+              actionButton("refresh_plot_btn", "Refresh", class = "btn-xs btn-default")
+            )
+          ),
+          tags$div(id = "cytof-plot-container",
+                   style = "width: 100%;"),
+
+          # Hidden X/Y selects: axis-label clicks update these; UI is on the plot
+          tags$div(style = "display:none;",
+            selectInput("x_channel", NULL, choices = NULL),
+            selectInput("y_channel", NULL, choices = NULL)
+          ),
+
+          tags$div(class = "below-plot-controls",
+            # Display mode + opacity on one compact row
+            tags$div(style = "display:flex; align-items:center; gap:8px; flex-wrap:wrap;",
+              radioButtons("display_mode", NULL,
+                           choices = c("Scatter" = "scatter",
+                                       "Pseudo" = "pseudocolor",
+                                       "Contour" = "contour"),
+                           selected = "pseudocolor", inline = TRUE),
+              tags$div(style = "display:flex; align-items:center; gap:4px; min-width:140px;",
+                tags$span("Opacity:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                tags$div(class = "opacity-slider-wrap", style = "width:150px;",
+                  sliderInput("point_alpha", NULL,
+                              min = 0.05, max = 1.0, value = 0.35, step = 0.05,
+                              width = "100%")
+                )
+              ),
+              tags$div(class = "gating-max-events",
+                style = "display:flex; align-items:center; gap:4px; min-width:170px;",
+                tags$span("Max events:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                numericInput("gating_max_events", NULL,
+                             value = 50000, min = 0, step = 5000, width = "110px"),
+                tags$span("0 = all", style = "font-size:10px; color:#888; white-space:nowrap;")
+              ),
+              tags$div(class = "gating-plot-scope",
+                style = "display:flex; align-items:center; gap:5px; min-width:210px;",
+                tags$span("Plot data:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                selectInput("plot_data_scope", NULL,
+                            choices = c("Subset" = "subset", "Full data" = "full"),
+                            selected = "subset", width = "130px")
+              ),
+              tags$div(class = "gating-axis-span",
+                style = "display:flex; align-items:center; gap:5px; min-width:190px;",
+                tags$span("Axis span %:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                numericInput("axis_span_percent", NULL,
+                             value = 120, min = 100, max = 200, step = 5, width = "90px")
+              ),
+              tags$div(class = "gating-count-mode",
+                style = "display:flex; align-items:center; gap:5px; min-width:430px;",
+                tags$span("Counts:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                selectInput("count_compute_mode", NULL,
+                            choices = c("Fast subset" = "subset", "Full data" = "full"),
+                            selected = "subset", width = "120px"),
+                tags$span("Subset cap:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                numericInput("subset_count_events", NULL,
+                             value = 30000, min = 1000, step = 5000, width = "105px"),
+                actionButton("recompute_full_counts_btn", "Run Full", class = "btn-xs btn-default"),
+                tags$span("fast mode uses approximate counts for smoother edits",
+                          style = "font-size:10px; color:#888; white-space:nowrap;")
+              ),
+              conditionalPanel(
+                "input.display_mode == 'contour'",
+                tags$div(style = "display:flex; align-items:center; gap:4px;",
+                  tags$span("Outer:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                  selectInput("contour_threshold", NULL,
+                              choices = c("1%" = 1, "2%" = 2, "5%" = 5,
+                                          "10%" = 10, "20%" = 20, "30%" = 30),
+                              selected = 5, width = "80px")
+                )
+              )
+            ),
+
+            # Flow transform controls (conditional, directly below display row)
+            uiOutput("flow_transform_controls_ui"),
+
+            # Color by section
+            tags$div(class = "section-header", style = "margin-top:6px;",
+                     "Color by marker / metadata",
+                     actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default")),
+            selectInput("overlay_coldata", NULL,
+                        choices = c("(none)" = ""), selected = ""),
+            uiOutput("overlay_checkboxes_ui")
+          ),
+          uiOutput("subset_stats_ui")
+        ),
+
+        # ── Tab 2: Gating Strategy ────────────────────────────────────────────
+        tabPanel("Strategy",
+          tags$div(class = "strategy-controls",
+            tags$div(class = "strategy-top-actions",
+              actionButton("strategy_render_btn", "Render Strategy",
+                           class = "btn-sm btn-primary"),
+              tags$div(class = "strategy-top-export-actions",
+                actionButton("strategy_export_png", "PNG",
+                             class = "btn-sm btn-default", icon = icon("download")),
+                actionButton("strategy_export_svg", "SVG",
+                             class = "btn-sm btn-default", icon = icon("file-image-o")),
+                actionButton("strategy_export_pdf", "PDF",
+                             class = "btn-sm btn-default", icon = icon("file-pdf-o"))
+              )
+            ),
+
+            tags$div(class = "strategy-control-grid",
+              tags$div(class = "strategy-block strategy-pop-block",
+                selectInput("strategy_pop", "Population:", choices = NULL),
+                checkboxInput("strategy_full_path", "Use full path from root", FALSE)
+              ),
+              tags$div(class = "strategy-block",
+                checkboxGroupInput("strategy_gate_view", "Gate view:",
+                                   choices = c("Forward gated" = "forward",
+                                               "Back-gated" = "back"),
+                                   selected = "forward", inline = TRUE)
+              ),
+              tags$div(class = "strategy-block",
+                radioButtons("strategy_display", "Display mode:",
+                             choices = c("Scatter" = "scatter",
+                                         "Pseudo" = "pseudocolor",
+                                         "Contour" = "contour"),
+                             selected = "pseudocolor", inline = TRUE)
+              )
+            ),
+
+            tags$div(class = "strategy-params-grid",
+              style = "display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;",
+              tags$div(class = "strategy-param-card",
+                numericInput("strategy_max_events", "Max events / panel (0 = all):",
+                             value = 10000, min = 0, max = 100000, step = 1000),
+                checkboxInput("strategy_all_events", "Plot all events", value = FALSE)
+              ),
+              tags$div(class = "strategy-param-card",
+                numericInput("strategy_plot_size", "Plot size (px):",
+                             value = 200, min = 150, max = 500, step = 25),
+                numericInput("strategy_n_columns", "Columns:",
+                             value = 4, min = 1, max = 12, step = 1),
+                checkboxInput("strategy_fit_to_columns", "Fit panels to columns", value = TRUE)
+              ),
+              tags$div(class = "strategy-param-card",
+                numericInput("strategy_axis_span_percent", "Axis span %:",
+                             value = 120, min = 100, max = 300, step = 5, width = "130px"),
+                tags$div(class = "strategy-axis-actions",
+                  actionButton("strategy_rescale_axes_btn", "Rescale Axes",
+                               class = "btn-sm btn-default"),
+                  actionButton("strategy_reset_axes_btn", "Reset Axes",
+                               class = "btn-sm btn-default")
+                )
+              ),
+              tags$div(class = "strategy-param-card strategy-font-card",
+                tags$div(class = "strategy-font-grid",
+                  style = "display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 8px;",
+                  numericInput("strategy_tick_font_size", "Tick labels (px):",
+                               value = 8, min = 6, max = 24, step = 1),
+                  numericInput("strategy_axis_label_font_size", "Axis labels (px):",
+                               value = 10, min = 6, max = 28, step = 1),
+                  numericInput("strategy_title_font_size", "Titles (px):",
+                               value = 10, min = 6, max = 28, step = 1),
+                  numericInput("strategy_gate_label_font_size", "Gate labels (px):",
+                               value = 8, min = 6, max = 24, step = 1)
+                )
+              )
+            ),
+
+            conditionalPanel(
+              "input.strategy_display == 'contour'",
+              tags$div(class = "strategy-contour-controls",
+                tags$span("Outer:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                selectInput("strategy_contour_threshold", NULL,
+                            choices = c("1%" = 1, "2%" = 2, "5%" = 5,
+                                        "10%" = 10, "20%" = 20, "30%" = 30),
+                            selected = 5, width = "90px"),
+                tags$span("Contour smoothing:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                tags$div(style = "width:220px;",
+                  sliderInput("strategy_kde_bandwidth", NULL,
+                              min = 0, max = 14, value = 0, step = 0.2, width = "100%")
+                ),
+                tags$span("0 = auto", style = "font-size:10px; color:#888; white-space:nowrap;")
+              )
+            ),
+
+            tags$div(style = "font-size:11px; color:#666; margin:4px 0 6px 2px;",
+                     textOutput("strategy_sample_contrib", inline = TRUE))
+          ),
+          tags$div(id = "strategy-grid-container", class = "mini-plot-grid-container")
+        ),
+
+        # ── Tab 3: Illustration ───────────────────────────────────────────────
+        tabPanel("Illustration",
+          tags$div(class = "illustration-controls",
+            tags$div(class = "illust-top-actions",
+              actionButton("illust_render_btn", "Render Illustration",
+                           class = "btn-sm btn-primary"),
+              tags$div(class = "illust-top-export-actions",
+                actionButton("illust_export_png", "PNG",
+                             class = "btn-sm btn-default", icon = icon("download")),
+                actionButton("illust_export_svg", "SVG",
+                             class = "btn-sm btn-default", icon = icon("file-image-o")),
+                actionButton("illust_export_pdf", "PDF",
+                             class = "btn-sm btn-default", icon = icon("file-pdf-o"))
+              )
+            ),
+
+            tags$div(class = "illust-control-grid",
+              tags$div(class = "illust-block",
+                radioButtons("illust_plot_type", "Plot type:",
+                             choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
+                             selected = "biplot", inline = TRUE),
+                selectInput("illust_y_channel", "Y channel:", choices = NULL)
+              ),
+              tags$div(class = "illust-block",
+                radioButtons("illust_display", "Display mode:",
+                             choices = c("Scatter" = "scatter",
+                                         "Pseudo" = "pseudocolor",
+                                         "Contour" = "contour"),
+                             selected = "pseudocolor", inline = TRUE)
+              ),
+              tags$div(class = "illust-block",
+                numericInput("illust_axis_span_percent", "Axis span %:",
+                             value = 120, min = 100, max = 300, step = 5, width = "130px"),
+                tags$div(class = "illust-axis-actions",
+                  actionButton("illust_rescale_axes_btn", "Rescale Axes",
+                               class = "btn-sm btn-default"),
+                  actionButton("illust_reset_axes_btn", "Reset Axes",
+                               class = "btn-sm btn-default")
+                )
+              )
+            ),
+
+            tags$div(class = "illust-params-grid",
+              tags$div(class = "illust-param-card",
+                numericInput("illust_max_events", "Max events / panel (0 = all):",
+                             value = 10000, min = 0, max = 50000, step = 1000),
+                checkboxInput("illust_all_events", "Plot all events", value = FALSE)
+              ),
+              tags$div(class = "illust-param-card",
+                numericInput("illust_plot_size", "Plot size (px):",
+                             value = 200, min = 150, max = 400, step = 25),
+                numericInput("illust_n_columns", "Columns:",
+                             value = 4, min = 1, max = 12, step = 1),
+                checkboxInput("illust_fit_to_columns", "Fit panels to columns", value = TRUE)
+              ),
+              tags$div(class = "illust-param-card illust-font-card",
+                tags$div(class = "illust-font-grid",
+                  numericInput("illust_tick_font_size", "Tick labels (px):",
+                               value = 8, min = 6, max = 24, step = 1),
+                  numericInput("illust_axis_label_font_size", "Axis labels (px):",
+                               value = 10, min = 6, max = 28, step = 1),
+                  numericInput("illust_title_font_size", "Titles (px):",
+                               value = 10, min = 6, max = 28, step = 1),
+                  numericInput("illust_gate_label_font_size", "Gate labels (px):",
+                               value = 8, min = 6, max = 24, step = 1)
+                )
+              )
+            ),
+
+            conditionalPanel(
+              "input.illust_display == 'contour'",
+              tags$div(class = "illust-contour-controls",
+                tags$span("Contour smoothing:", style = "font-size:11px; color:#555; white-space:nowrap;"),
+                tags$div(style = "width:220px;",
+                  sliderInput("illust_kde_bandwidth", NULL,
+                              min = 0, max = 14, value = 0, step = 0.2, width = "100%")
+                ),
+                tags$span("0 = auto", style = "font-size:10px; color:#888; white-space:nowrap;")
+              )
+            ),
+            tags$div(style = "font-size:11px; color:#666; margin:4px 0 0 2px;",
+                     "Max events applies to each population x channel panel."),
+            tags$div(class = "section-header", "X Channels"),
+            uiOutput("illust_x_channels_ui"),
+            tags$div(class = "section-header", "Populations"),
+            uiOutput("illust_populations_ui")
+          ),
+          tags$div(id = "illustration-grid-container", class = "mini-plot-grid-container")
         )
+      )
+    ),
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # RIGHT COLUMN: gates + populations + color overlay
+    # ═══════════════════════════════════════════════════════════════════════════
+    column(4,
+      tags$div(class = "panel-section",
+
+        # ── Gate list ──
+        tags$div(class = "section-header",
+          "Gates",
+          tags$span(
+            actionButton("toggle_gate_list_btn", "", icon = icon("chevron-up"),
+                         title = "Collapse gates list",
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("sort_gates_alpha_btn", "", icon = icon("sort-alpha-asc"),
+                         title = "Sort gates alphabetically",
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("rename_gate_btn", "", icon = icon("pencil"),
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("undo_btn", "", icon = icon("undo"),
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("redo_btn", "", icon = icon("repeat"),
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("delete_gate_btn", "", icon = icon("trash"),
+                         class = "btn-xs btn-danger", style = "padding: 1px 5px;")
+          )
+        ),
+        tags$div(id = "gate_list_container", uiOutput("gate_list_ui")),
+
+        # ── Population tree ──
+        tags$div(class = "section-header",
+          "Populations",
+          tags$span(class = "population-header-actions",
+            actionButton("add_pop_btn", "", icon = icon("plus"),
+                         class = "btn-xs btn-success", style = "padding: 1px 5px;"),
+            actionButton("edit_pop_btn", "", icon = icon("pencil"),
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("duplicate_selected_pops_btn", "", icon = icon("clone"),
+                         title = "Duplicate selected populations",
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("delete_selected_pops_btn", "", icon = icon("trash"),
+                         title = "Delete selected populations",
+                         class = "btn-xs btn-danger", style = "padding: 1px 5px;")
+          )
+        ),
+        tags$div(id = "population_tree_container", uiOutput("population_tree_ui")),
+
+        tags$div(class = "section-header", "Bulk Rename Populations"),
+        tags$div(class = "fcs-inline-controls",
+          tags$div(class = "fcs-inline-item",
+            fileInput("bulk_pop_rename_upload", NULL,
+                      accept = c(".csv", ".xlsx", ".xls"),
+                      buttonLabel = "Choose .csv/.xlsx...",
+                      placeholder = "No file selected",
+                      multiple = FALSE)
+          ),
+          tags$div(class = "fcs-inline-action",
+            actionButton("apply_bulk_pop_rename_btn", "Apply Bulk Rename",
+                         class = "btn-sm btn-default")
+          )
+        ),
+        tags$div(style = "font-size:11px; color:#888; margin-top:4px;",
+                 "Required columns: old_population, new_population")
 
       )
     )
@@ -427,13 +610,28 @@ server <- function(input, output, session) {
     selected_gate_id = NULL, active_population_id = NULL,
     gate_version = 0L,
     cache_version = -1L, pop_events_map = list(),
+    assay_version = 0L,
     current_plot_data = NULL, max_events = 50000L,
     undo_stack = list(), redo_stack = list(),
     overlay_factor = NULL, overlay_selected = NULL,
-    sample_info = NULL, sample_mask = NULL,
+    sample_info = NULL, sample_mask = NULL, sample_filter_key = "all",
+    .range_cache = list(),
+    .gate_counts_cache_key = NULL, .gate_counts_cache = NULL,
+    .population_tree_cache_key = NULL, .population_tree_cache = NULL,
+    .illustration_cache_key = NULL, .illustration_cache_payload = NULL,
+    .last_combined_pop_mask = NULL,
+    .plot_range_override = NULL,
+    strategy_axis_mode = "default",
+    strategy_axis_override = NULL,
+    illustration_axis_mode = "default",
+    illustration_axis_override = NULL,
+    .last_gate_edit_seq = list(),
+    .plot_msg_seq = 0L,
     .gate_pop_name_manual = NULL,
     .pending_delete_gate_id = NULL,
     .pending_delete_pop_id = NULL,
+    .pending_bulk_delete_pop_ids = character(0),
+    .selected_pop_ids = character(0),
     .pending_gatingml_import = NULL,
     flow_logicle_w = list(),
     flow_logicle_w_auto = list(),
@@ -748,7 +946,15 @@ server <- function(input, output, session) {
       rv$cache_version <- -1L
       rv$pop_events_map <- list()
       rv$gate_version <- rv$gate_version + 1L
+      rv$.gate_counts_cache_key <- NULL
+      rv$.gate_counts_cache <- NULL
+      rv$.population_tree_cache_key <- NULL
+      rv$.population_tree_cache <- NULL
+      rv$.last_combined_pop_mask <- NULL
     }
+
+    rv$assay_version <- rv$assay_version + 1L
+    rv$.range_cache <- list()
   }
 
   # ── Instrument type badge ──────────────────────────────────────────────────
@@ -768,7 +974,7 @@ server <- function(input, output, session) {
       "auto-detected"
     }
     detail <- if (inst == "cytof") {
-      paste0("arcsinh/", cofactor, " on metal channels")
+      paste0("arcsinh/", cofactor, " on metal + Gaussian channels")
     } else {
       "logicle on signal, arcsinh/150 on scatter"
     }
@@ -1071,6 +1277,8 @@ server <- function(input, output, session) {
 
     rv$sample_info <- build_sample_table(sce)
     rv$sample_mask <- NULL
+    rv$sample_filter_key <- "all"
+    rv$.last_combined_pop_mask <- NULL
     # Clear any DT row selections from the previous SCE
     proxy <- DT::dataTableProxy("sample_filter_table")
     DT::selectRows(proxy, NULL)
@@ -1164,6 +1372,8 @@ server <- function(input, output, session) {
 
       rv$sample_info <- build_sample_table(rv$sce)
       rv$sample_mask <- NULL
+      rv$sample_filter_key <- "all"
+      rv$.last_combined_pop_mask <- NULL
       DT::selectRows(DT::dataTableProxy("sample_filter_table"), NULL)
 
       cd_names <- get_coldata_names(rv$sce)
@@ -1254,6 +1464,71 @@ server <- function(input, output, session) {
     sample_keys_from_table_filter(info)
   }
 
+  sample_filter_signature <- function(selected_keys, all_keys) {
+    if (length(selected_keys) == 0) return("none")
+    if (length(selected_keys) == length(all_keys)) return("all")
+
+    keys <- sort(unique(as.character(selected_keys)))
+    key_lengths <- nchar(keys, type = "bytes")
+    checksum <- sum(vapply(keys, function(k) sum(utf8ToInt(k)), numeric(1)))
+    paste0(
+      "subset:", length(keys), ":", sum(key_lengths), ":", checksum,
+      ":", keys[[1]], ":", keys[[length(keys)]]
+    )
+  }
+
+  current_sample_filter_key <- function() {
+    key <- rv$sample_filter_key
+    if (!is.null(key) && nzchar(key)) return(key)
+    if (is.null(rv$sample_mask)) return("all")
+    paste0("mask:", sum(rv$sample_mask), ":", length(rv$sample_mask))
+  }
+
+  is_full_plot_mode <- function() {
+    identical(input$plot_data_scope %||% "subset", "full")
+  }
+
+  get_effective_sample_mask <- function(for_plot = FALSE) {
+    if (!for_plot) return(rv$sample_mask)
+    if (is_full_plot_mode()) return(NULL)
+    rv$sample_mask
+  }
+
+  current_plot_scope_key <- function() {
+    if (is_full_plot_mode()) return("full")
+    paste0("subset:", current_sample_filter_key())
+  }
+
+  axis_span_scale <- function() {
+    val <- suppressWarnings(as.numeric(input$axis_span_percent %||% 120))
+    if (!is.finite(val) || val < 100) val <- 120
+    val / 100
+  }
+
+  axis_span_scale_from_input <- function(value, default_percent = 120) {
+    val <- suppressWarnings(as.numeric(value %||% default_percent))
+    if (!is.finite(val) || val < 100) val <- default_percent
+    val / 100
+  }
+
+  is_gaussian_qc_channel <- function(channel) {
+    if (is.null(channel) || !nzchar(channel)) return(FALSE)
+    # Keep Gaussian/QC channels on their legacy robust axis behavior.
+    # These channels are not metal-marker signal dimensions.
+    pattern_hit <- grepl(
+      "gaussian|amplitude|beaddist|^width$|^center$|^offset$|^residual$|^time$|event_length|cell_length",
+      channel,
+      ignore.case = TRUE
+    )
+    if (isTRUE(pattern_hit)) return(TRUE)
+
+    qc_fn <- get0(".is_qc_channel", mode = "function")
+    if (is.function(qc_fn)) {
+      return(isTRUE(qc_fn(channel)))
+    }
+    FALSE
+  }
+
   output$sample_filter_table <- DT::renderDataTable({
     req(rv$sample_info)
     DT::datatable(
@@ -1280,25 +1555,54 @@ server <- function(input, output, session) {
     info <- rv$sample_info
     if (is.null(info) || is.null(rv$assay_data)) {
       rv$sample_mask <- NULL
+      rv$sample_filter_key <- "all"
       return()
     }
 
     selected_keys <- resolve_filtered_sample_keys(info)
-    if (length(selected_keys) == length(info$keys)) {
-      if (!is.null(rv$sample_mask)) { rv$sample_mask <- NULL; send_full_plot() }
-      return()
-    }
-
-    if (length(selected_keys) == 0) {
-      rv$sample_mask <- rep(FALSE, nrow(rv$assay_data))
+    new_key <- sample_filter_signature(selected_keys, info$keys)
+    if (identical(new_key, "all")) {
+      if (is.null(rv$sample_mask) && identical(rv$sample_filter_key, "all")) return()
+      rv$sample_mask <- NULL
+      rv$sample_filter_key <- "all"
+      rv$.gate_counts_cache_key <- NULL
+      rv$.gate_counts_cache <- NULL
+      rv$.population_tree_cache_key <- NULL
+      rv$.population_tree_cache <- NULL
+      rv$.range_cache <- list()
+      rv$.last_combined_pop_mask <- NULL
       send_full_plot()
       return()
     }
+
+    if (identical(new_key, "none")) {
+      if (identical(rv$sample_filter_key, "none") && !is.null(rv$sample_mask) &&
+          length(rv$sample_mask) == nrow(rv$assay_data) && !any(rv$sample_mask)) return()
+      rv$sample_mask <- rep(FALSE, nrow(rv$assay_data))
+      rv$sample_filter_key <- "none"
+      rv$.gate_counts_cache_key <- NULL
+      rv$.gate_counts_cache <- NULL
+      rv$.population_tree_cache_key <- NULL
+      rv$.population_tree_cache <- NULL
+      rv$.range_cache <- list()
+      rv$.last_combined_pop_mask <- rv$sample_mask
+      send_full_plot()
+      return()
+    }
+
+    if (identical(rv$sample_filter_key, new_key)) return()
 
     event_indices <- unlist(info$group_map[selected_keys], use.names = FALSE)
     mask <- rep(FALSE, nrow(rv$assay_data))
     mask[event_indices] <- TRUE
     rv$sample_mask <- mask
+    rv$sample_filter_key <- new_key
+    rv$.gate_counts_cache_key <- NULL
+    rv$.gate_counts_cache <- NULL
+    rv$.population_tree_cache_key <- NULL
+    rv$.population_tree_cache <- NULL
+    rv$.range_cache <- list()
+    rv$.last_combined_pop_mask <- mask
     send_full_plot()
   })
 
@@ -1357,10 +1661,18 @@ server <- function(input, output, session) {
     vals <- as.character(cd[[cd_col]])
     rv$overlay_factor <- vals
     all_levels <- sort(unique(vals))
+
+    level_defaults <- all_levels
+    if (!is.null(rv$sample_mask) && length(rv$sample_mask) == length(vals)) {
+      level_defaults <- sort(unique(vals[rv$sample_mask]))
+      level_defaults <- level_defaults[is.finite(match(level_defaults, all_levels))]
+      if (length(level_defaults) == 0) level_defaults <- all_levels
+    }
+
     output$overlay_checkboxes_ui <- renderUI({
       checkboxGroupInput("overlay_levels", "Select levels:",
                          choices = all_levels,
-                         selected = all_levels[1:min(3, length(all_levels))],
+                         selected = level_defaults,
                          inline = FALSE)
     })
   }, ignoreInit = TRUE)
@@ -1382,6 +1694,15 @@ server <- function(input, output, session) {
     if (is.null(rv$assay_data)) return(NULL)
     if (is.null(rv$sample_mask)) return(rv$assay_data)
     rv$assay_data[rv$sample_mask, , drop = FALSE]
+  }
+
+  get_filtered_channel_values <- function(channel, for_plot = FALSE) {
+    if (is.null(rv$assay_data) || !channel %in% colnames(rv$assay_data)) return(numeric(0))
+    vals <- rv$assay_data[, channel]
+    mask <- get_effective_sample_mask(for_plot = for_plot)
+    if (is.null(mask)) return(vals)
+    if (length(mask) != length(vals)) return(vals)
+    vals[mask]
   }
 
   is_flow_display_context <- function() {
@@ -1546,21 +1867,61 @@ server <- function(input, output, session) {
 
   get_combined_pop_mask <- function(pop_id = NULL) {
     pop_mask <- get_pop_mask(pop_id)
-    if (!is.null(rv$sample_mask)) {
-      pop_mask <- if (!is.null(pop_mask)) pop_mask & rv$sample_mask else rv$sample_mask
+    sample_mask <- get_effective_sample_mask(for_plot = FALSE)
+    if (!is.null(sample_mask)) {
+      pop_mask <- if (!is.null(pop_mask)) pop_mask & sample_mask else sample_mask
     }
+    rv$.last_combined_pop_mask <- pop_mask
     pop_mask
   }
 
-  get_gate_counts <- function() {
+  is_subset_count_mode <- function() {
+    identical(input$count_compute_mode %||% "subset", "subset")
+  }
+
+  subset_count_cap <- function() {
+    cap <- suppressWarnings(as.numeric(input$subset_count_events %||% 30000))
+    if (!is.finite(cap) || cap <= 0) return(Inf)
+    as.integer(round(cap))
+  }
+
+  get_gate_counts <- function(force_full = FALSE) {
     gating_data <- get_gating_data()
     if (is.null(gating_data) || length(rv$gates) == 0) return(list())
-    pop_mask <- get_combined_pop_mask()
-    # Cache gate counts keyed by gate_version + active population + sample mask hash
-    sample_hash <- if (is.null(rv$sample_mask)) "all" else sum(rv$sample_mask)
+    use_subset <- is_subset_count_mode() && !isTRUE(force_full)
+    pop_mask <- if (use_subset) {
+      rv$.last_combined_pop_mask %||% rv$sample_mask
+    } else {
+      get_combined_pop_mask()
+    }
+
+    if (!is.null(pop_mask) && length(pop_mask) != nrow(gating_data)) {
+      pop_mask <- NULL
+    }
+
+    cap <- if (use_subset) subset_count_cap() else Inf
+
+    if (is.finite(cap) && cap > 0) {
+      idx <- if (!is.null(pop_mask)) which(pop_mask) else seq_len(nrow(gating_data))
+      if (length(idx) > cap) {
+        keep <- idx[round(seq(1, length(idx), length.out = cap))]
+        gating_data <- gating_data[keep, , drop = FALSE]
+        pop_mask <- rep(TRUE, length(keep))
+      } else if (!is.null(pop_mask)) {
+        gating_data <- gating_data[idx, , drop = FALSE]
+        pop_mask <- rep(TRUE, length(idx))
+      }
+    }
+
+    # Cache gate counts keyed by gate state + assay state + sample filter signature.
     cache_key <- paste(rv$gate_version,
+                       rv$assay_version,
                        rv$active_population_id %||% "root",
-                       sample_hash, sep = "|")
+                       current_sample_filter_key(),
+                       if (use_subset) "subset" else "full",
+                       if (is.finite(cap)) as.integer(cap) else "all",
+                       if (is.null(pop_mask)) "nomask" else "masked",
+                       sep = "|")
     if (!is.null(rv$.gate_counts_cache_key) &&
         identical(rv$.gate_counts_cache_key, cache_key) &&
         !is.null(rv$.gate_counts_cache)) {
@@ -1572,37 +1933,197 @@ server <- function(input, output, session) {
     counts
   }
 
-  compute_stable_range <- function(channel) {
-    assay_for_range <- get_filtered_assay_data()
-    if (is.null(assay_for_range) || nrow(assay_for_range) == 0 || !channel %in% colnames(assay_for_range)) {
+  compute_stable_range <- function(channel, for_plot = FALSE) {
+    filter_key <- if (for_plot) current_plot_scope_key() else current_sample_filter_key()
+    span_scale <- axis_span_scale()
+    cache_key <- paste(rv$assay_version, channel, filter_key, span_scale, sep = "|")
+    if (!is.null(rv$.range_cache[[cache_key]])) return(rv$.range_cache[[cache_key]])
+
+    vals <- get_filtered_channel_values(channel, for_plot = for_plot)
+    vals <- vals[is.finite(vals)]
+    if (length(vals) == 0) {
+      rv$.range_cache[[cache_key]] <- c(0, 1)
       return(c(0, 1))
     }
-    vals <- assay_for_range[, channel]
-    p_high <- as.numeric(quantile(vals, 0.999, na.rm = TRUE))
-    p_low <- as.numeric(quantile(vals, 0.001, na.rm = TRUE))
-    low <- min(0, p_low)
-    span <- p_high - low
+
+    if (is_gaussian_qc_channel(channel)) {
+      out <- compute_axis_range(vals)
+      rv$.range_cache[[cache_key]] <- out
+      return(out)
+    }
+
+    low <- min(vals, na.rm = TRUE)
+    high <- max(vals, na.rm = TRUE)
+    span <- high - low
     if (span < 1e-10) span <- 1
-    padding <- span * 0.05
-    c(low - padding, p_high + padding)
+
+    # Axis span is configurable, default 120% of data range.
+    pad_frac <- max(0, (span_scale - 1) / 2)
+    padding <- span * pad_frac
+    out <- c(low - padding, high + padding)
+    if (low >= 0) out[1] <- min(0, out[1])
+
+    rv$.range_cache[[cache_key]] <- out
+    out
+  }
+
+  compute_range_from_values <- function(vals, channel = NULL, span_scale = axis_span_scale()) {
+    vals <- as.numeric(vals)
+    vals <- vals[is.finite(vals)]
+    if (length(vals) == 0) return(c(0, 1))
+
+    if (!is.null(channel) && is_gaussian_qc_channel(channel)) {
+      return(compute_axis_range(vals))
+    }
+
+    low <- min(vals, na.rm = TRUE)
+    high <- max(vals, na.rm = TRUE)
+    span <- high - low
+    if (!is.finite(span) || span < 1e-10) span <- 1
+
+    pad_frac <- max(0, (span_scale - 1) / 2)
+    padding <- span * pad_frac
+    out <- c(low - padding, high + padding)
+    if (low >= 0) out[1] <- min(0, out[1])
+    out
+  }
+
+  current_overlay_signature <- function() {
+    overlay_active <- !is.null(rv$overlay_factor) && !is.null(rv$overlay_selected) && length(rv$overlay_selected) > 0
+    if (!isTRUE(overlay_active)) return("none")
+    paste(sort(as.character(rv$overlay_selected)), collapse = "|")
+  }
+
+  get_active_plot_range_override <- function(x_ch, y_ch) {
+    ov <- rv$.plot_range_override
+    if (is.null(ov)) return(NULL)
+
+    if (!identical(ov$x_channel, x_ch) || !identical(ov$y_channel, y_ch)) return(NULL)
+
+    x_range <- suppressWarnings(as.numeric(ov$x_range %||% numeric(0)))
+    y_range <- suppressWarnings(as.numeric(ov$y_range %||% numeric(0)))
+    if (length(x_range) != 2 || length(y_range) != 2 || !all(is.finite(c(x_range, y_range)))) return(NULL)
+
+    list(x_range = x_range, y_range = y_range)
+  }
+
+  compute_rescaled_plot_ranges <- function(x_ch, y_ch, pop_mask = NULL, plot_sample_mask = NULL) {
+    req(rv$assay_data)
+    if (!x_ch %in% colnames(rv$assay_data) || !y_ch %in% colnames(rv$assay_data)) return(NULL)
+
+    n <- nrow(rv$assay_data)
+    if (n <= 0) return(NULL)
+
+    include_mask <- rep(TRUE, n)
+    if (!is.null(pop_mask) && length(pop_mask) == n) include_mask <- include_mask & as.logical(pop_mask)
+    if (!is.null(plot_sample_mask) && length(plot_sample_mask) == n) include_mask <- include_mask & as.logical(plot_sample_mask)
+
+    overlay_active <- !is.null(rv$overlay_factor) && !is.null(rv$overlay_selected) && length(rv$overlay_selected) > 0
+    if (isTRUE(overlay_active) && length(rv$overlay_factor) == n) {
+      include_mask <- include_mask & (rv$overlay_factor %in% rv$overlay_selected)
+    }
+
+    if (!any(include_mask, na.rm = TRUE)) return(NULL)
+
+    span_scale <- axis_span_scale()
+    xv <- rv$assay_data[include_mask, x_ch]
+    yv <- rv$assay_data[include_mask, y_ch]
+
+    list(
+      x_range = compute_range_from_values(xv, channel = x_ch, span_scale = span_scale),
+      y_range = compute_range_from_values(yv, channel = y_ch, span_scale = span_scale),
+      n_events = sum(include_mask, na.rm = TRUE)
+    )
+  }
+
+  get_population_tree_stats <- function() {
+    if (length(rv$populations) == 0 || is.null(rv$root_population_id)) {
+      return(list(event_count = list(), percent_of_parent = list()))
+    }
+
+    # With no sample filter, reuse counts computed during full-data strategy apply.
+    if (is.null(rv$sample_mask)) {
+      event_count <- lapply(rv$populations, function(pop) pop$event_count)
+      percent_of_parent <- lapply(rv$populations, function(pop) pop$percent_of_parent)
+      return(list(event_count = event_count, percent_of_parent = percent_of_parent))
+    }
+
+    root_mask <- get_pop_mask(rv$root_population_id)
+    if (is.null(root_mask) || length(rv$pop_events_map) == 0) {
+      return(list(event_count = list(), percent_of_parent = list()))
+    }
+
+    cache_key <- paste(
+      rv$gate_version,
+      rv$assay_version,
+      current_sample_filter_key(),
+      sep = "|"
+    )
+    if (!is.null(rv$.population_tree_cache_key) &&
+        identical(rv$.population_tree_cache_key, cache_key) &&
+        !is.null(rv$.population_tree_cache)) {
+      return(rv$.population_tree_cache)
+    }
+
+    event_count <- list()
+    for (pid in names(rv$populations)) {
+      pop_mask <- rv$pop_events_map[[pid]]
+      if (is.null(pop_mask)) next
+      event_count[[pid]] <- sum(pop_mask & rv$sample_mask)
+    }
+
+    percent_of_parent <- list()
+    for (pid in names(rv$populations)) {
+      pop <- rv$populations[[pid]]
+      if (is.null(pop)) next
+      if (identical(pid, rv$root_population_id)) {
+        percent_of_parent[[pid]] <- 100
+      } else {
+        parent_count <- as.numeric(event_count[[pop$parent_id]] %||% 0)
+        child_count <- as.numeric(event_count[[pid]] %||% 0)
+        percent_of_parent[[pid]] <- if (parent_count > 0) round(child_count / parent_count * 100, 2) else 0
+      }
+    }
+
+    out <- list(event_count = event_count, percent_of_parent = percent_of_parent)
+    rv$.population_tree_cache_key <- cache_key
+    rv$.population_tree_cache <- out
+    out
   }
 
   # ══════════════════════════════════════════════════════════════════════════════
   # PLOT RENDERING (Gating Tab)
   # ══════════════════════════════════════════════════════════════════════════════
 
-  send_full_plot <- function(reset_view = FALSE) {
+  send_full_plot <- function(reset_view = FALSE, refresh_pop_masks = TRUE) {
     req(rv$assay_data, input$x_channel, input$y_channel)
     x_ch <- input$x_channel; y_ch <- input$y_channel
     if (!x_ch %in% colnames(rv$assay_data) || !y_ch %in% colnames(rv$assay_data)) return()
 
-    pop_mask <- get_pop_mask()
-    combined_mask <- get_combined_pop_mask()
+    pop_mask <- if (isTRUE(refresh_pop_masks)) {
+      get_pop_mask()
+    } else {
+      pid <- rv$active_population_id %||% rv$root_population_id
+      rv$pop_events_map[[pid]] %||% rv$.last_combined_pop_mask
+    }
+    plot_sample_mask <- get_effective_sample_mask(for_plot = TRUE)
+    combined_mask <- if (!is.null(plot_sample_mask)) {
+      if (!is.null(pop_mask)) pop_mask & plot_sample_mask else plot_sample_mask
+    } else {
+      pop_mask
+    }
+    rv$.last_combined_pop_mask <- combined_mask
     gate_counts <- get_gate_counts()
     plot_gates <- get_plot_gates(x_ch, y_ch)
     alpha <- input$point_alpha %||% 0.35
-    x_range <- compute_stable_range(x_ch)
-    y_range <- compute_stable_range(y_ch)
+    active_override <- get_active_plot_range_override(x_ch, y_ch)
+    if (!is.null(active_override)) {
+      x_range <- active_override$x_range
+      y_range <- active_override$y_range
+    } else {
+      x_range <- compute_stable_range(x_ch, for_plot = TRUE)
+      y_range <- compute_stable_range(y_ch, for_plot = TRUE)
+    }
 
     overlay_active <- !is.null(rv$overlay_factor) && !is.null(rv$overlay_selected) && length(rv$overlay_selected) > 0
 
@@ -1654,18 +2175,23 @@ server <- function(input, output, session) {
       plot_data$y_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[y_ch]] %||% 150)
     }
 
+    rv$.plot_msg_seq <- as.integer(rv$.plot_msg_seq %||% 0L) + 1L
+    plot_data$`_plot_seq` <- rv$.plot_msg_seq
+
     rv$current_plot_data <- plot_data
     session$sendCustomMessage("updatePlot", plot_data)
   }
 
-  send_gates_only <- function() {
+  send_gates_only <- function(force_full_counts = FALSE) {
     req(rv$current_plot_data)
-    gate_counts <- get_gate_counts()
+    gate_counts <- get_gate_counts(force_full = force_full_counts)
     x_ch <- rv$current_plot_data$x_label
     y_ch <- rv$current_plot_data$y_label
     plot_gates <- get_plot_gates(x_ch, y_ch)
     plot_data <- build_gates_only_data(rv$current_plot_data, plot_gates, rv$gate_order,
                                         gate_counts, rv$selected_gate_id)
+    rv$.plot_msg_seq <- as.integer(rv$.plot_msg_seq %||% 0L) + 1L
+    plot_data$`_plot_seq` <- rv$.plot_msg_seq
     rv$current_plot_data <- plot_data
     session$sendCustomMessage("updatePlot", plot_data)
   }
@@ -1696,12 +2222,52 @@ server <- function(input, output, session) {
     # This is the safe low-frequency checkpoint (replaces per-tick persist in
     # the slider observers, which caused renderUI → slider recreation → loop).
     persist_flow_transform_state()
+    rv$.plot_range_override <- NULL
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   observeEvent(input$display_mode, { req(rv$assay_data); send_full_plot() }, ignoreInit = TRUE)
+  observeEvent(input$plot_data_scope, {
+    req(rv$assay_data)
+    rv$.range_cache <- list()
+    rv$.plot_range_override <- NULL
+    send_full_plot(reset_view = TRUE)
+  }, ignoreInit = TRUE)
+  observeEvent(input$axis_span_percent, {
+    req(rv$assay_data)
+    rv$.range_cache <- list()
+    rv$.plot_range_override <- NULL
+    send_full_plot(reset_view = TRUE)
+  }, ignoreInit = TRUE)
   observeEvent(input$contour_threshold, { req(rv$assay_data); send_full_plot() }, ignoreInit = TRUE)
-  observeEvent(input$reset_view_btn, { req(rv$assay_data); send_full_plot(reset_view = TRUE) })
+  observeEvent(input$reset_view_btn, {
+    req(rv$assay_data)
+    rv$.plot_range_override <- NULL
+    send_full_plot(reset_view = TRUE)
+  })
+
+  observeEvent(input$rescale_view_btn, {
+    req(rv$assay_data, input$x_channel, input$y_channel)
+    x_ch <- input$x_channel
+    y_ch <- input$y_channel
+    pop_mask <- get_pop_mask()
+    plot_sample_mask <- get_effective_sample_mask(for_plot = TRUE)
+    ranges <- compute_rescaled_plot_ranges(x_ch, y_ch, pop_mask = pop_mask, plot_sample_mask = plot_sample_mask)
+
+    if (is.null(ranges)) {
+      rv$.plot_range_override <- NULL
+      send_full_plot(reset_view = TRUE)
+      return()
+    }
+
+    rv$.plot_range_override <- list(
+      x_channel = x_ch,
+      y_channel = y_ch,
+      x_range = ranges$x_range,
+      y_range = ranges$y_range
+    )
+    send_full_plot(reset_view = TRUE)
+  }, ignoreInit = TRUE)
 
   # Axis-label clicks → update the hidden channel selects (which trigger send_full_plot)
   observeEvent(input$axis_label_click, {
@@ -1718,8 +2284,45 @@ server <- function(input, output, session) {
   observeEvent(input$refresh_plot_btn, {
     req(rv$assay_data); rv$cache_version <- -1L; rv$pop_events_map <- list()
     rv$.gate_counts_cache_key <- NULL; rv$.gate_counts_cache <- NULL
+    rv$.population_tree_cache_key <- NULL; rv$.population_tree_cache <- NULL
+    rv$.range_cache <- list()
+    rv$.last_combined_pop_mask <- NULL
+    rv$.plot_range_override <- NULL
     send_full_plot()
   })
+
+  observeEvent(input$recompute_full_counts_btn, {
+    req(rv$assay_data)
+    updateSelectInput(session, "count_compute_mode", selected = "full")
+    rv$cache_version <- -1L
+    rv$pop_events_map <- list()
+    rv$.last_combined_pop_mask <- NULL
+    rv$.gate_counts_cache_key <- NULL
+    rv$.gate_counts_cache <- NULL
+    rv$.population_tree_cache_key <- NULL
+    rv$.population_tree_cache <- NULL
+    send_full_plot(reset_view = FALSE, refresh_pop_masks = TRUE)
+    showNotification("Full-data gate/population recompute complete.", type = "message", duration = 3)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$count_compute_mode, {
+    req(rv$assay_data)
+    rv$.gate_counts_cache_key <- NULL
+    rv$.gate_counts_cache <- NULL
+    if (is_subset_count_mode()) {
+      if (!is.null(rv$current_plot_data)) send_gates_only(force_full_counts = FALSE)
+    } else {
+      send_full_plot(reset_view = FALSE, refresh_pop_masks = TRUE)
+    }
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$subset_count_events, {
+    req(rv$assay_data)
+    if (!is_subset_count_mode()) return()
+    rv$.gate_counts_cache_key <- NULL
+    rv$.gate_counts_cache <- NULL
+    if (!is.null(rv$current_plot_data)) send_gates_only(force_full_counts = FALSE)
+  }, ignoreInit = TRUE)
 
   # ══════════════════════════════════════════════════════════════════════════════
   # GATE DRAWING + CREATION + EDITING
@@ -1737,6 +2340,26 @@ server <- function(input, output, session) {
       else runjs(sprintf("$('#%s').removeClass('active-mode')", btn_id))
     }
   }
+
+  observeEvent(input$toggle_gate_list_btn, {
+    runjs(
+      "(function(){
+        var panel = $('#gate_list_container');
+        var btn = $('#toggle_gate_list_btn');
+        var icon = btn.find('i.fa');
+        if(!panel.length) return;
+        if(panel.is(':visible')) {
+          panel.slideUp(120);
+          icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+          btn.attr('title', 'Expand gates list');
+        } else {
+          panel.slideDown(120);
+          icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+          btn.attr('title', 'Collapse gates list');
+        }
+      })();"
+    )
+  }, ignoreInit = TRUE)
 
   observeEvent(input$new_gate, {
     gate_data <- input$new_gate; req(gate_data)
@@ -1845,6 +2468,14 @@ server <- function(input, output, session) {
   observeEvent(input$gate_edit, {
     edit <- input$gate_edit; req(edit, edit$gate_id)
     if (!is.null(rv$gates[[edit$gate_id]])) {
+      seq_in <- suppressWarnings(as.integer(edit$seq %||% 0L))
+      seq_last <- suppressWarnings(as.integer(rv$.last_gate_edit_seq[[edit$gate_id]] %||% 0L))
+      if (is.finite(seq_in) && is.finite(seq_last) && seq_in <= seq_last) {
+        session$sendCustomMessage("clearPendingEdit", list(gate_id = edit$gate_id, seq = edit$seq))
+        return()
+      }
+      rv$.last_gate_edit_seq[[edit$gate_id]] <- seq_in
+
       save_undo_snapshot()
       gate_vertices <- edit$vertices
       if (is_flow_display_context()) {
@@ -1859,7 +2490,15 @@ server <- function(input, output, session) {
       rv$cache_version <- -1L      # invalidate population cache
       rv$pop_events_map <- list()
       session$sendCustomMessage("clearPendingEdit", list(gate_id = edit$gate_id, seq = edit$seq))
-      autosave(); send_full_plot()
+      autosave()
+
+      if (is_subset_count_mode() && !is.null(rv$current_plot_data) &&
+          identical(rv$current_plot_data$x_label, input$x_channel) &&
+          identical(rv$current_plot_data$y_label, input$y_channel)) {
+        send_gates_only(force_full_counts = FALSE)
+      } else {
+        send_full_plot(reset_view = FALSE, refresh_pop_masks = TRUE)
+      }
     }
   })
 
@@ -1948,6 +2587,31 @@ server <- function(input, output, session) {
       autosave(); send_gates_only()
     }
   })
+
+  observeEvent(input$sort_gates_alpha_btn, {
+    if (length(rv$gates) == 0) return()
+
+    ordered_ids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
+    ordered_ids <- ordered_ids[ordered_ids %in% names(rv$gates)]
+    if (length(ordered_ids) == 0) return()
+
+    gate_names <- vapply(ordered_ids, function(gid) {
+      nm <- as.character(rv$gates[[gid]]$name %||% "")
+      if (!nzchar(nm)) gid else nm
+    }, character(1))
+
+    new_order <- ordered_ids[order(tolower(gate_names), gate_names, ordered_ids)]
+    if (identical(new_order, rv$gate_order)) {
+      showNotification("Gate list already sorted alphabetically.", type = "message", duration = 2)
+      return()
+    }
+
+    save_undo_snapshot()
+    rv$gate_order <- new_order
+    rv$gate_version <- rv$gate_version + 1L
+    autosave()
+    send_gates_only(force_full_counts = FALSE)
+  }, ignoreInit = TRUE)
 
   # ══════════════════════════════════════════════════════════════════════════════
   # GATE LIST UI
@@ -2060,7 +2724,8 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "Delete Population",
       tags$p(sprintf("Are you sure you want to delete this population: %s?", pop$name)),
-      tags$p("All child populations will be removed too.", style = "color:#777;"),
+      tags$p("Child populations will be kept and moved up to this population's parent.",
+             style = "color:#777;"),
       footer = tagList(
         modalButton("Cancel"),
         actionButton("confirm_delete_pop_btn", "OK", class = "btn-danger")
@@ -2073,19 +2738,38 @@ server <- function(input, output, session) {
     req(pop_id, pop_id != rv$root_population_id)
     if (is.null(rv$populations[[pop_id]])) return()
     save_undo_snapshot()
-    rv$populations <- remove_population_subtree(rv$populations, pop_id)
+    rv$populations <- remove_population_reparent_children(rv$populations, pop_id)
     sort_population_tree_state()
     if (identical(rv$active_population_id, pop_id) || is.null(rv$populations[[rv$active_population_id]])) {
       rv$active_population_id <- rv$root_population_id
     }
+    rv$.selected_pop_ids <- setdiff(rv$.selected_pop_ids, pop_id)
     rv$gate_version <- rv$gate_version + 1L
     autosave()
     send_full_plot()
   }
 
-  observeEvent(input$delete_pop_btn, {
-    request_population_delete(rv$active_population_id)
-  })
+  delete_populations_by_ids <- function(pop_ids) {
+    pop_ids <- unique(as.character(pop_ids %||% character(0)))
+    pop_ids <- pop_ids[pop_ids %in% names(rv$populations)]
+    pop_ids <- setdiff(pop_ids, rv$root_population_id)
+    if (length(pop_ids) == 0) return()
+
+    save_undo_snapshot()
+    for (pid in pop_ids) {
+      if (!is.null(rv$populations[[pid]])) {
+        rv$populations <- remove_population_reparent_children(rv$populations, pid)
+      }
+    }
+    sort_population_tree_state()
+    if (is.null(rv$populations[[rv$active_population_id]])) {
+      rv$active_population_id <- rv$root_population_id
+    }
+    rv$.selected_pop_ids <- intersect(rv$.selected_pop_ids, names(rv$populations))
+    rv$gate_version <- rv$gate_version + 1L
+    autosave()
+    send_full_plot()
+  }
 
   observeEvent(input$delete_pop_click, {
     request_population_delete(input$delete_pop_click)
@@ -2099,24 +2783,223 @@ server <- function(input, output, session) {
     delete_population_by_id(pop_id)
   })
 
+  observeEvent(input$pop_tree_toggle_select, {
+    evt <- input$pop_tree_toggle_select
+    req(evt, evt$pop_id)
+    pid <- as.character(evt$pop_id)
+    if (!pid %in% names(rv$populations) || identical(pid, rv$root_population_id)) return()
+    checked <- isTRUE(evt$checked)
+    if (checked) {
+      rv$.selected_pop_ids <- unique(c(rv$.selected_pop_ids, pid))
+    } else {
+      rv$.selected_pop_ids <- setdiff(rv$.selected_pop_ids, pid)
+    }
+  })
+
+  observeEvent(input$delete_selected_pops_btn, {
+    selected <- setdiff(intersect(rv$.selected_pop_ids, names(rv$populations)), rv$root_population_id)
+    if (length(selected) == 0) {
+      showNotification("No populations selected.", type = "message", duration = 2)
+      return()
+    }
+    rv$.pending_bulk_delete_pop_ids <- selected
+    showModal(modalDialog(
+      title = "Delete Selected Populations",
+      tags$p(sprintf("Delete %d selected population(s)?", length(selected))),
+      tags$p("Children of deleted populations will be kept and reparented upward.",
+             style = "color:#777;"),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_delete_selected_pops_btn", "OK", class = "btn-danger")
+      ),
+      easyClose = TRUE
+    ))
+  })
+
+  observeEvent(input$duplicate_selected_pops_btn, {
+    selected <- setdiff(intersect(rv$.selected_pop_ids, names(rv$populations)), rv$root_population_id)
+    if (length(selected) == 0) {
+      showNotification("No populations selected.", type = "message", duration = 2)
+      return()
+    }
+
+    make_copy_name <- function(base_name, taken_names) {
+      candidate <- paste0(base_name, " copy")
+      if (!candidate %in% taken_names) return(candidate)
+      i <- 2L
+      while (paste0(candidate, " ", i) %in% taken_names) i <- i + 1L
+      paste0(candidate, " ", i)
+    }
+
+    save_undo_snapshot()
+    existing_names <- vapply(names(rv$populations), function(pid) {
+      as.character(rv$populations[[pid]]$name %||% "")
+    }, character(1))
+
+    created_ids <- character(0)
+    for (pid in selected) {
+      pop <- rv$populations[[pid]]
+      if (is.null(pop)) next
+
+      base_name <- as.character(pop$name %||% pid)
+      new_name <- make_copy_name(base_name, existing_names)
+      gate_refs_copy <- lapply(pop$gate_refs %||% list(), function(ref) {
+        new_gate_ref(ref$gate_id, include = isTRUE(ref$include))
+      })
+
+      dup_pop <- new_population(
+        name = new_name,
+        gate_refs = gate_refs_copy,
+        parent_id = pop$parent_id,
+        gate_logic = pop$gate_logic %||% "and"
+      )
+
+      rv$populations[[dup_pop$population_id]] <- dup_pop
+      if (!is.null(pop$parent_id) && !is.null(rv$populations[[pop$parent_id]])) {
+        rv$populations <- link_child_to_parent(rv$populations, dup_pop$population_id, pop$parent_id)
+      }
+
+      existing_names <- c(existing_names, new_name)
+      created_ids <- c(created_ids, dup_pop$population_id)
+    }
+
+    if (length(created_ids) == 0) {
+      showNotification("No populations duplicated.", type = "warning", duration = 3)
+      return()
+    }
+
+    rv$.selected_pop_ids <- unique(c(rv$.selected_pop_ids, created_ids))
+    sort_population_tree_state()
+    rv$active_population_id <- created_ids[[1]]
+    rv$gate_version <- rv$gate_version + 1L
+    autosave()
+    send_full_plot()
+    showNotification(sprintf("Duplicated %d population(s).", length(created_ids)),
+                     type = "message", duration = 3)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$confirm_delete_selected_pops_btn, {
+    removeModal()
+    selected <- rv$.pending_bulk_delete_pop_ids
+    rv$.pending_bulk_delete_pop_ids <- character(0)
+    delete_populations_by_ids(selected)
+  })
+
+  observeEvent(input$apply_bulk_pop_rename_btn, {
+    req(rv$populations, input$bulk_pop_rename_upload)
+
+    upload <- input$bulk_pop_rename_upload
+    ext <- tolower(tools::file_ext(upload$name %||% ""))
+
+    rename_tbl <- tryCatch({
+      if (ext == "csv") {
+        utils::read.csv(upload$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+      } else if (ext %in% c("xlsx", "xls")) {
+        if (!requireNamespace("readxl", quietly = TRUE)) {
+          stop("Package 'readxl' is required for Excel uploads. Please install it or use CSV.")
+        }
+        as.data.frame(readxl::read_excel(upload$datapath), stringsAsFactors = FALSE)
+      } else {
+        stop("Unsupported file type. Please upload a .csv or .xlsx file.")
+      }
+    }, error = function(e) {
+      showNotification(paste("Could not read rename file:", conditionMessage(e)),
+                       type = "error", duration = 6)
+      NULL
+    })
+    if (is.null(rename_tbl)) return()
+
+    col_keys <- tolower(trimws(colnames(rename_tbl)))
+    old_idx <- match("old_population", col_keys)
+    new_idx <- match("new_population", col_keys)
+    if (is.na(old_idx) || is.na(new_idx)) {
+      showNotification("Rename file must contain headers: old_population and new_population.",
+                       type = "error", duration = 6)
+      return()
+    }
+
+    old_vals <- trimws(as.character(rename_tbl[[old_idx]]))
+    new_vals <- trimws(as.character(rename_tbl[[new_idx]]))
+
+    keep <- !is.na(old_vals) & nzchar(old_vals)
+    old_vals <- old_vals[keep]
+    new_vals <- new_vals[keep]
+
+    if (length(old_vals) == 0) {
+      showNotification("No valid old_population values found.", type = "warning", duration = 4)
+      return()
+    }
+
+    if (any(is.na(new_vals) | !nzchar(new_vals))) {
+      showNotification("new_population cannot be empty for rows with old_population.",
+                       type = "error", duration = 6)
+      return()
+    }
+
+    dup_old <- unique(old_vals[duplicated(old_vals)])
+    if (length(dup_old) > 0) {
+      conflict <- vapply(dup_old, function(o) {
+        length(unique(new_vals[old_vals == o])) > 1
+      }, logical(1))
+      if (any(conflict)) {
+        bad <- dup_old[conflict]
+        showNotification(
+          paste0("Conflicting new_population values for: ", paste(utils::head(bad, 5), collapse = ", ")),
+          type = "error", duration = 7
+        )
+        return()
+      }
+      keep_first <- !duplicated(old_vals)
+      old_vals <- old_vals[keep_first]
+      new_vals <- new_vals[keep_first]
+    }
+
+    rename_map <- setNames(new_vals, old_vals)
+    pop_ids <- names(rv$populations)
+    current_names <- vapply(pop_ids, function(pid) {
+      as.character(rv$populations[[pid]]$name %||% "")
+    }, character(1))
+
+    hits <- current_names %in% names(rename_map)
+    if (!any(hits)) {
+      showNotification("No matching population names found in the uploaded file.",
+                       type = "warning", duration = 5)
+      return()
+    }
+
+    save_undo_snapshot()
+    changed_ids <- pop_ids[hits]
+    changed_old <- current_names[hits]
+    for (k in seq_along(changed_ids)) {
+      pid <- changed_ids[[k]]
+      rv$populations[[pid]]$name <- rename_map[[changed_old[[k]]]]
+    }
+
+    sort_population_tree_state()
+    rv$gate_version <- rv$gate_version + 1L
+    autosave()
+
+    if (!is.null(rv$current_plot_data)) send_gates_only(force_full_counts = FALSE)
+
+    not_found <- setdiff(names(rename_map), current_names)
+    msg <- paste0("Renamed ", length(changed_ids), " population(s).")
+    if (length(not_found) > 0) {
+      msg <- paste0(msg, " Not found: ", length(not_found), ".")
+    }
+    output$status_text <- renderText(msg)
+    showNotification(msg, type = "message", duration = 5)
+  })
+
   observeEvent(input$pop_tree_click, { rv$active_population_id <- input$pop_tree_click; send_full_plot() })
 
   output$population_tree_ui <- renderUI({
-    rv$populations; rv$root_population_id; rv$active_population_id; rv$gate_version; rv$selected_gate_id
+    rv$populations; rv$root_population_id; rv$active_population_id
+    rv$gate_version; rv$selected_gate_id; rv$sample_filter_key; rv$assay_version; rv$.selected_pop_ids
     if (is.null(rv$root_population_id) || length(rv$populations) == 0) {
       return(tags$div(class = "population-tree-panel",
                       tags$em("No data loaded.", style = "color:#999; font-size:12px;")))
     }
-    assay_for_counts <- get_gating_data()
-    if (!is.null(assay_for_counts) && nrow(assay_for_counts) > 0) {
-      if (!is.null(rv$sample_mask)) {
-        assay_for_counts <- assay_for_counts[rv$sample_mask, , drop = FALSE]
-      }
-    }
-    if (!is.null(assay_for_counts) && nrow(assay_for_counts) > 0) {
-      result <- apply_gating_strategy(rv$gates, rv$populations, rv$root_population_id, assay_for_counts)
-      rv$populations <- result$populations
-    }
+    pop_stats <- get_population_tree_stats()
     rows <- list()
     visited <- character(0)
 
@@ -2129,8 +3012,11 @@ server <- function(input, output, session) {
 
       is_active <- identical(pop_id, rv$active_population_id)
       is_root <- identical(pop_id, rv$root_population_id)
-      count_text <- if (!is.null(pop$event_count)) format(pop$event_count, big.mark = ",") else "?"
-      pct_text <- if (!is.null(pop$percent_of_parent) && !is_root) paste0("(", pop$percent_of_parent, "%)") else ""
+      is_checked <- pop_id %in% rv$.selected_pop_ids
+      count_val <- pop_stats$event_count[[pop_id]] %||% pop$event_count
+      pct_val <- pop_stats$percent_of_parent[[pop_id]] %||% pop$percent_of_parent
+      count_text <- if (!is.null(count_val)) format(count_val, big.mark = ",") else "?"
+      pct_text <- if (!is.null(pct_val) && !is_root) paste0("(", pct_val, "%)") else ""
       badges <- lapply(pop$gate_refs, function(ref) {
         gate <- rv$gates[[ref$gate_id]]
         if (is.null(gate)) return(NULL)
@@ -2153,6 +3039,18 @@ server <- function(input, output, session) {
       rows[[length(rows) + 1L]] <<- tags$div(
         class = paste("pop-row", if (is_active) "active" else ""),
         onclick = sprintf("Shiny.setInputValue('pop_tree_click', '%s', {priority:'event'})", pop_id),
+        tags$span(
+          class = "pop-row-select-col",
+          tags$input(
+            type = "checkbox",
+            class = "pop-row-select",
+            checked = if (is_checked) "checked" else NULL,
+            onclick = sprintf(
+              "event.stopPropagation(); Shiny.setInputValue('pop_tree_toggle_select', {pop_id:'%s', checked:this.checked, nonce:Date.now()}, {priority:'event'})",
+              pop_id
+            )
+          )
+        ),
         tags$span(
           class = "pop-row-name-col",
           tags$span(class = "pop-row-indent", style = paste0("width:", indent_px, "px")),
@@ -2445,18 +3343,159 @@ server <- function(input, output, session) {
     }
   })
 
-  # Render strategy when population/settings change
-  observeEvent(list(input$strategy_pop, input$strategy_display,
-                    input$strategy_max_events, input$strategy_plot_size,
-                    input$strategy_full_path, rv$sample_mask), {
+  output$strategy_sample_contrib <- renderText({
+    info <- rv$sample_info
+    if (is.null(info) || is.null(info$table)) return("Contributing samples: all loaded samples")
+
+    selected_keys <- resolve_filtered_sample_keys(info)
+    all_keys <- as.character(info$keys %||% character(0))
+    if (length(all_keys) == 0) return("Contributing samples: all loaded samples")
+
+    selected_keys <- as.character(selected_keys %||% character(0))
+    if (length(selected_keys) == 0) return("Contributing samples: none (current filter excludes all samples)")
+
+    tbl <- info$table
+    pick_col <- function(df, choices) {
+      cn <- tolower(colnames(df))
+      for (nm in choices) {
+        idx <- match(tolower(nm), cn)
+        if (!is.na(idx)) return(colnames(df)[idx])
+      }
+      NULL
+    }
+
+    label_col <- pick_col(tbl, c("file_name", "filename", "sample_name", "sample_id"))
+    key_col <- pick_col(tbl, c("sample_id"))
+
+    labels <- selected_keys
+    if (!is.null(label_col) && !is.null(key_col) && key_col %in% colnames(tbl)) {
+      key_vals <- as.character(tbl[[key_col]])
+      label_vals <- as.character(tbl[[label_col]])
+      lut <- setNames(label_vals, key_vals)
+      mapped <- unname(lut[selected_keys])
+      keep_mapped <- !is.na(mapped) & nzchar(mapped)
+      labels <- ifelse(keep_mapped, mapped, selected_keys)
+    }
+
+    labels <- unique(as.character(labels))
+    show_n <- min(6L, length(labels))
+    preview <- paste(utils::head(labels, show_n), collapse = ", ")
+    suffix <- if (length(labels) > show_n) paste0(" +", length(labels) - show_n, " more") else ""
+
+    paste0("Contributing samples (", length(selected_keys), "/", length(all_keys), "): ", preview, suffix)
+  })
+
+  observeEvent(input$strategy_gate_view, {
+    vals <- as.character(input$strategy_gate_view %||% character(0))
+    show_forward <- "forward" %in% vals
+    show_back <- "back" %in% vals
+    if (!show_forward && !show_back) {
+      updateCheckboxGroupInput(session, "strategy_gate_view", selected = "forward")
+      vals <- "forward"
+      show_forward <- TRUE
+      show_back <- FALSE
+    }
+
+    if (show_forward && show_back) {
+      choices <- c("Scatter" = "scatter", "Contour" = "contour")
+      selected <- input$strategy_display %||% "scatter"
+      if (!selected %in% unname(choices)) selected <- "scatter"
+      updateRadioButtons(session, "strategy_display", choices = choices, selected = selected)
+    } else {
+      choices <- c("Scatter" = "scatter", "Pseudo" = "pseudocolor", "Contour" = "contour")
+      selected <- input$strategy_display %||% "pseudocolor"
+      if (!selected %in% unname(choices)) selected <- "scatter"
+      updateRadioButtons(session, "strategy_display", choices = choices, selected = selected)
+    }
+  }, ignoreInit = TRUE)
+
+  render_strategy_tab <- function() {
     pop_id <- input$strategy_pop
     assay_for_strategy <- get_filtered_assay_data()
     req(pop_id, nchar(pop_id) > 0, assay_for_strategy)
 
+    strategy_max_events <- suppressWarnings(as.integer(input$strategy_max_events %||% 10000L))
+    if (is.na(strategy_max_events)) strategy_max_events <- 10000L
+    if (isTRUE(input$strategy_all_events) || strategy_max_events <= 0L) {
+      strategy_max_events <- Inf
+    }
+
+    strategy_plot_size <- suppressWarnings(as.integer(input$strategy_plot_size %||% 200L))
+    if (is.na(strategy_plot_size)) strategy_plot_size <- 200L
+    strategy_plot_size <- max(120L, min(800L, strategy_plot_size))
+
+    strategy_n_columns <- suppressWarnings(as.integer(input$strategy_n_columns %||% 4L))
+    if (is.na(strategy_n_columns)) strategy_n_columns <- 4L
+    strategy_n_columns <- max(1L, min(12L, strategy_n_columns))
+    strategy_fit_to_columns <- isTRUE(input$strategy_fit_to_columns)
+    strategy_span_scale <- axis_span_scale_from_input(input$strategy_axis_span_percent, default_percent = 120)
+    strategy_axis_mode <- if (identical(rv$strategy_axis_mode, "rescaled")) "rescaled" else "default"
+
+    strategy_tick_font <- suppressWarnings(as.integer(input$strategy_tick_font_size %||% 8L))
+    if (is.na(strategy_tick_font)) strategy_tick_font <- 8L
+    strategy_tick_font <- max(6L, min(24L, strategy_tick_font))
+    strategy_axis_font <- suppressWarnings(as.integer(input$strategy_axis_label_font_size %||% 10L))
+    if (is.na(strategy_axis_font)) strategy_axis_font <- 10L
+    strategy_axis_font <- max(6L, min(28L, strategy_axis_font))
+    strategy_title_font <- suppressWarnings(as.integer(input$strategy_title_font_size %||% 10L))
+    if (is.na(strategy_title_font)) strategy_title_font <- 10L
+    strategy_title_font <- max(6L, min(28L, strategy_title_font))
+    strategy_gate_label_font <- suppressWarnings(as.integer(input$strategy_gate_label_font_size %||% 8L))
+    if (is.na(strategy_gate_label_font)) strategy_gate_label_font <- 8L
+    strategy_gate_label_font <- max(6L, min(24L, strategy_gate_label_font))
+    strategy_font_sizes <- list(
+      axis_label = strategy_axis_font,
+      tick = strategy_tick_font,
+      gate_label = strategy_gate_label_font,
+      title = strategy_title_font
+    )
+
+    strategy_contour_threshold <- suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5))
+    if (!is.finite(strategy_contour_threshold)) strategy_contour_threshold <- 5
+    strategy_contour_threshold <- max(0, min(100, strategy_contour_threshold))
+
+    strategy_point_alpha <- suppressWarnings(as.numeric(input$point_alpha %||% 0.6))
+    if (!is.finite(strategy_point_alpha)) strategy_point_alpha <- 0.6
+    strategy_point_alpha <- max(0.05, min(1, strategy_point_alpha))
+
+    strategy_kde_bandwidth <- suppressWarnings(as.numeric(input$strategy_kde_bandwidth %||% 0))
+    if (!is.finite(strategy_kde_bandwidth) || strategy_kde_bandwidth < 0) strategy_kde_bandwidth <- 0
+    strategy_kde_bandwidth <- min(20, strategy_kde_bandwidth)
+
+    strategy_mode_raw <- tolower(as.character(input$strategy_display %||% "pseudocolor"))
+    strategy_mode <- switch(
+      strategy_mode_raw,
+      pseudo = "pseudocolor",
+      pseudocolour = "pseudocolor",
+      pseudocolor = "pseudocolor",
+      contour = "contour",
+      scatter = "scatter",
+      "scatter"
+    )
+
+    strategy_gate_view <- as.character(input$strategy_gate_view %||% "forward")
+    show_forward <- "forward" %in% strategy_gate_view
+    show_back <- "back" %in% strategy_gate_view
+    if (!show_forward && !show_back) {
+      show_forward <- TRUE
+      strategy_gate_view <- "forward"
+    }
+    if (show_forward && show_back && identical(strategy_mode, "pseudocolor")) {
+      strategy_mode <- "scatter"
+    }
+
     if (nrow(assay_for_strategy) == 0) {
       session$sendCustomMessage("renderStrategyGrid", list(
         containerId = "strategy-grid-container",
-        steps = list()
+        steps = list(),
+        plot_size = strategy_plot_size,
+        n_columns = strategy_n_columns,
+        fit_to_columns = strategy_fit_to_columns,
+        display_mode = strategy_mode,
+        contour_threshold = strategy_contour_threshold,
+        point_alpha = strategy_point_alpha,
+        kde_bandwidth = strategy_kde_bandwidth,
+        font_sizes = strategy_font_sizes
       ))
       return()
     }
@@ -2467,19 +3506,73 @@ server <- function(input, output, session) {
       display_gates, rv$populations, rv$root_population_id,
       assay_for_strategy, pop_id,
       full_path = input$strategy_full_path %||% FALSE,
-      max_events = input$strategy_max_events %||% 10000L
+      max_events = strategy_max_events
     )
+
+    back_events <- NULL
+    if (show_back) {
+      strategy_result <- apply_gating_strategy(display_gates, rv$populations, rv$root_population_id, assay_for_strategy)
+      back_mask <- strategy_result$masks[[pop_id]]
+      if (!is.null(back_mask) && length(back_mask) == nrow(assay_for_strategy) && any(back_mask)) {
+        back_events <- assay_for_strategy[back_mask, , drop = FALSE]
+      }
+    }
 
     if (length(steps) == 0) {
       session$sendCustomMessage("renderStrategyGrid", list(
         containerId = "strategy-grid-container",
-        steps = list()
+        steps = list(),
+        plot_size = strategy_plot_size,
+        n_columns = strategy_n_columns,
+        fit_to_columns = strategy_fit_to_columns,
+        display_mode = strategy_mode,
+        contour_threshold = strategy_contour_threshold,
+        point_alpha = strategy_point_alpha,
+        kde_bandwidth = strategy_kde_bandwidth,
+        font_sizes = strategy_font_sizes
       ))
       return()
     }
 
+    strategy_channels <- unique(c(
+      vapply(steps, function(s) as.character(s$x_channel %||% ""), character(1)),
+      vapply(steps, function(s) as.character(s$y_channel %||% ""), character(1))
+    ))
+    strategy_channels <- strategy_channels[nzchar(strategy_channels)]
+    stable_range_by_channel <- setNames(lapply(strategy_channels, function(ch) {
+      compute_range_from_values(
+        get_filtered_channel_values(ch, for_plot = TRUE),
+        channel = ch,
+        span_scale = strategy_span_scale
+      )
+    }), strategy_channels)
+
     # Convert R lists to JSON-friendly format
     steps_json <- lapply(steps, function(s) {
+      x_forward <- unname(as.numeric(s$x))
+      y_forward <- unname(as.numeric(s$y))
+
+      x_back <- numeric(0)
+      y_back <- numeric(0)
+      if (show_back && !is.null(back_events) && nrow(back_events) > 0) {
+        x_back <- as.numeric(back_events[, s$x_channel])
+        y_back <- as.numeric(back_events[, s$y_channel])
+        if (is.finite(strategy_max_events) && length(x_back) > strategy_max_events) {
+          idx <- unique(as.integer(round(seq.int(1L, length(x_back), length.out = as.integer(strategy_max_events)))))
+          idx <- idx[idx >= 1L & idx <= length(x_back)]
+          if (length(idx) > 0) {
+            x_back <- x_back[idx]
+            y_back <- y_back[idx]
+          }
+        }
+      }
+
+      x_main <- if (show_forward) x_forward else unname(as.numeric(x_back))
+      y_main <- if (show_forward) y_forward else unname(as.numeric(y_back))
+
+      x_range_step <- stable_range_by_channel[[as.character(s$x_channel)]] %||% s$x_range
+      y_range_step <- stable_range_by_channel[[as.character(s$y_channel)]] %||% s$y_range
+
       list(
         gate_id = s$gate_id,
         gate_name = s$gate_name,
@@ -2490,27 +3583,130 @@ server <- function(input, output, session) {
         color = s$color,
         label_offset = s$label_offset,
         include = s$include,
-        x = as.list(s$x),
-        y = as.list(s$y),
-        x_range = s$x_range,
-        y_range = s$y_range,
+        x = x_main,
+        y = y_main,
+        x_back = if (show_forward && show_back) unname(as.numeric(x_back)) else numeric(0),
+        y_back = if (show_forward && show_back) unname(as.numeric(y_back)) else numeric(0),
+        x_range = x_range_step,
+        y_range = y_range_step,
         n_before = s$n_before,
         n_after = s$n_after,
         pct_pass = s$pct_pass
       )
     })
 
+    if (identical(strategy_axis_mode, "rescaled") && length(steps_json) > 0) {
+      existing_override <- rv$strategy_axis_override
+      override_ranges <- if (is.list(existing_override$ranges)) existing_override$ranges else (existing_override %||% list())
+      updated_ranges <- list()
+      override_changed <- FALSE
+
+      for (i in seq_along(steps_json)) {
+        st <- steps_json[[i]]
+        step_key <- paste0(as.character(st$gate_id %||% ""), "|",
+                           as.character(st$x_channel %||% ""), "|",
+                           as.character(st$y_channel %||% ""))
+        ov <- override_ranges[[step_key]]
+
+        has_ov <- is.list(ov) &&
+          length(ov$x_range %||% numeric(0)) == 2 &&
+          length(ov$y_range %||% numeric(0)) == 2 &&
+          all(is.finite(as.numeric(ov$x_range))) &&
+          all(is.finite(as.numeric(ov$y_range)))
+
+        if (isTRUE(has_ov)) {
+          st$x_range <- unname(as.numeric(ov$x_range))
+          st$y_range <- unname(as.numeric(ov$y_range))
+        } else {
+          x_for_range <- as.numeric(st$x %||% numeric(0))
+          y_for_range <- as.numeric(st$y %||% numeric(0))
+          if (show_forward && show_back) {
+            x_for_range <- c(x_for_range, as.numeric(st$x_back %||% numeric(0)))
+            y_for_range <- c(y_for_range, as.numeric(st$y_back %||% numeric(0)))
+          }
+
+          if (sum(is.finite(x_for_range)) > 0) {
+            st$x_range <- compute_range_from_values(
+              x_for_range,
+              channel = st$x_channel,
+              span_scale = strategy_span_scale
+            )
+          }
+          if (sum(is.finite(y_for_range)) > 0) {
+            st$y_range <- compute_range_from_values(
+              y_for_range,
+              channel = st$y_channel,
+              span_scale = strategy_span_scale
+            )
+          }
+          override_changed <- TRUE
+        }
+
+        updated_ranges[[step_key]] <- list(
+          x_range = unname(as.numeric(st$x_range)),
+          y_range = unname(as.numeric(st$y_range))
+        )
+        steps_json[[i]] <- st
+      }
+
+      if (isTRUE(override_changed) || length(updated_ranges) != length(override_ranges)) {
+        rv$strategy_axis_override <- list(ranges = updated_ranges)
+      }
+    }
+
     session$sendCustomMessage("renderStrategyGrid", list(
       containerId = "strategy-grid-container",
       steps = steps_json,
-      plot_size = input$strategy_plot_size %||% 200,
-      display_mode = input$strategy_display %||% "pseudocolor",
-      font_sizes = list(axis_label = 10, tick = 8, gate_label = 8, title = 10)
+      plot_size = strategy_plot_size,
+      n_columns = strategy_n_columns,
+      fit_to_columns = strategy_fit_to_columns,
+      gate_view = strategy_gate_view,
+      display_mode = strategy_mode,
+      contour_threshold = strategy_contour_threshold,
+      point_alpha = strategy_point_alpha,
+      kde_bandwidth = strategy_kde_bandwidth,
+      font_sizes = strategy_font_sizes
     ))
+  }
+
+  observeEvent(input$strategy_all_events, {
+    if (isTRUE(input$strategy_all_events)) {
+      updateNumericInput(session, "strategy_max_events", value = 0)
+    }
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$strategy_render_btn, {
+    render_strategy_tab()
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$strategy_rescale_axes_btn, {
+    rv$strategy_axis_mode <- "rescaled"
+    rv$strategy_axis_override <- NULL
+    render_strategy_tab()
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$strategy_reset_axes_btn, {
+    rv$strategy_axis_mode <- "default"
+    rv$strategy_axis_override <- NULL
+    render_strategy_tab()
   }, ignoreInit = TRUE)
 
   observeEvent(input$strategy_export_png, {
     session$sendCustomMessage("exportMiniPlotPNG", list(
+      gridId = "strategy-grid-container-grid",
+      filename = "gating_strategy"
+    ))
+  })
+
+  observeEvent(input$strategy_export_svg, {
+    session$sendCustomMessage("exportMiniPlotSVG", list(
+      gridId = "strategy-grid-container-grid",
+      filename = "gating_strategy"
+    ))
+  })
+
+  observeEvent(input$strategy_export_pdf, {
+    session$sendCustomMessage("exportMiniPlotPDF", list(
       gridId = "strategy-grid-container-grid",
       filename = "gating_strategy"
     ))
@@ -2523,11 +3719,105 @@ server <- function(input, output, session) {
   # Dynamic checkboxes for X channels
   output$illust_x_channels_ui <- renderUI({
     req(rv$channels)
-    checkboxGroupInput("illust_x_channels", NULL,
-                       choices = rv$channels,
-                       selected = rv$channels[1:min(3, length(rv$channels))],
-                       inline = TRUE)
+
+    chs <- as.character(rv$channels)
+    marker_assigned <- grepl("_", chs)
+    simple_channels <- chs[!marker_assigned]
+    marker_channels <- chs[marker_assigned]
+
+    current_simple <- isolate(as.character(input$illust_x_channels_simple %||% character(0)))
+    current_marker <- isolate(as.character(input$illust_x_channels_marker %||% character(0)))
+    default_sel <- character(0)
+    default_simple <- if (length(current_simple) > 0) {
+      intersect(current_simple, simple_channels)
+    } else {
+      character(0)
+    }
+    default_marker <- if (length(current_marker) > 0) {
+      intersect(current_marker, marker_channels)
+    } else {
+      character(0)
+    }
+
+    tagList(
+      if (length(simple_channels) > 0) {
+        tags$div(class = "illust-channel-group",
+          tags$div(class = "illust-channel-group-header",
+            tags$span("Simple / isotope channels"),
+            tags$span(class = "illust-channel-group-actions",
+              actionButton("illust_simple_select_all_btn", "All",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;"),
+              actionButton("illust_simple_clear_btn", "Clear",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;"),
+              actionButton(
+                "illust_toggle_simple_btn", "", icon = icon("chevron-right"),
+                class = "btn-xs btn-default", style = "padding:1px 6px;",
+                onclick = "(function(btn){var body=$('#illust_simple_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
+              )
+            )
+          ),
+          tags$div(id = "illust_simple_body", class = "illust-channel-group-body", style = "display:none;",
+            checkboxGroupInput("illust_x_channels_simple", NULL,
+                               choices = setNames(simple_channels, simple_channels),
+                               selected = default_simple,
+                               inline = FALSE)
+          )
+        )
+      },
+      if (length(marker_channels) > 0) {
+        tags$div(class = "illust-channel-group",
+          tags$div(class = "illust-channel-group-header",
+            tags$span("Marker-assigned channels"),
+            tags$span(class = "illust-channel-group-actions",
+              actionButton("illust_marker_select_all_btn", "All",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;"),
+              actionButton("illust_marker_clear_btn", "Clear",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;"),
+              actionButton(
+                "illust_toggle_marker_btn", "", icon = icon("chevron-right"),
+                class = "btn-xs btn-default", style = "padding:1px 6px;",
+                onclick = "(function(btn){var body=$('#illust_marker_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
+              )
+            )
+          ),
+          tags$div(id = "illust_marker_body", class = "illust-channel-group-body", style = "display:none;",
+            checkboxGroupInput("illust_x_channels_marker", NULL,
+                               choices = setNames(marker_channels, marker_channels),
+                               selected = default_marker,
+                               inline = FALSE)
+          )
+        )
+      },
+      if (length(simple_channels) == 0 && length(marker_channels) == 0) {
+        checkboxGroupInput("illust_x_channels_simple", NULL,
+                           choices = setNames(chs, chs),
+                           selected = default_sel,
+                           inline = FALSE)
+      }
+    )
   })
+
+  observeEvent(input$illust_simple_select_all_btn, {
+    req(rv$channels)
+    chs <- as.character(rv$channels)
+    simple_channels <- chs[!grepl("_", chs)]
+    updateCheckboxGroupInput(session, "illust_x_channels_simple", selected = simple_channels)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$illust_simple_clear_btn, {
+    updateCheckboxGroupInput(session, "illust_x_channels_simple", selected = character(0))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$illust_marker_select_all_btn, {
+    req(rv$channels)
+    chs <- as.character(rv$channels)
+    marker_channels <- chs[grepl("_", chs)]
+    updateCheckboxGroupInput(session, "illust_x_channels_marker", selected = marker_channels)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$illust_marker_clear_btn, {
+    updateCheckboxGroupInput(session, "illust_x_channels_marker", selected = character(0))
+  }, ignoreInit = TRUE)
 
   # Dynamic checkboxes for populations
   output$illust_populations_ui <- renderUI({
@@ -2542,110 +3832,298 @@ server <- function(input, output, session) {
   })
 
   render_illustration_tab <- function() {
-    assay_for_illustration <- get_filtered_assay_data()
-    req(assay_for_illustration)
+    illust_mode_raw <- tolower(as.character(input$illust_display %||% "pseudocolor"))
+    illust_mode <- switch(
+      illust_mode_raw,
+      pseudo = "pseudocolor",
+      pseudocolour = "pseudocolor",
+      pseudocolor = "pseudocolor",
+      contour = "contour",
+      scatter = "scatter",
+      "scatter"
+    )
+    illust_plot_size <- suppressWarnings(as.integer(input$illust_plot_size %||% 200L))
+    if (is.na(illust_plot_size)) illust_plot_size <- 200L
+    illust_plot_size <- max(120L, min(800L, illust_plot_size))
+    illust_tick_font <- suppressWarnings(as.integer(input$illust_tick_font_size %||% 8L))
+    if (is.na(illust_tick_font)) illust_tick_font <- 8L
+    illust_tick_font <- max(6L, min(24L, illust_tick_font))
+    illust_axis_font <- suppressWarnings(as.integer(input$illust_axis_label_font_size %||% 10L))
+    if (is.na(illust_axis_font)) illust_axis_font <- 10L
+    illust_axis_font <- max(6L, min(28L, illust_axis_font))
+    illust_title_font <- suppressWarnings(as.integer(input$illust_title_font_size %||% 10L))
+    if (is.na(illust_title_font)) illust_title_font <- 10L
+    illust_title_font <- max(6L, min(28L, illust_title_font))
+    illust_gate_label_font <- suppressWarnings(as.integer(input$illust_gate_label_font_size %||% 8L))
+    if (is.na(illust_gate_label_font)) illust_gate_label_font <- 8L
+    illust_gate_label_font <- max(6L, min(24L, illust_gate_label_font))
+    illust_font_sizes <- list(
+      axis_label = illust_axis_font,
+      tick = illust_tick_font,
+      gate_label = illust_gate_label_font,
+      title = illust_title_font
+    )
+    illust_contour_threshold <- suppressWarnings(as.numeric(input$contour_threshold %||% 5))
+    if (!is.finite(illust_contour_threshold)) illust_contour_threshold <- 5
+    illust_contour_threshold <- max(0, min(100, illust_contour_threshold))
+    illust_point_alpha <- suppressWarnings(as.numeric(input$point_alpha %||% 0.6))
+    if (!is.finite(illust_point_alpha)) illust_point_alpha <- 0.6
+    illust_point_alpha <- max(0.05, min(1, illust_point_alpha))
+    illust_kde_bandwidth <- suppressWarnings(as.numeric(input$illust_kde_bandwidth %||% 0))
+    if (!is.finite(illust_kde_bandwidth) || illust_kde_bandwidth < 0) illust_kde_bandwidth <- 0
+    illust_kde_bandwidth <- min(20, illust_kde_bandwidth)
+    illust_n_columns <- suppressWarnings(as.integer(input$illust_n_columns %||% 4L))
+    if (is.na(illust_n_columns)) illust_n_columns <- 4L
+    illust_n_columns <- max(1L, min(12L, illust_n_columns))
+    illust_fit_to_columns <- isTRUE(input$illust_fit_to_columns)
+    illust_span_scale <- axis_span_scale_from_input(input$illust_axis_span_percent, default_percent = 120)
+    illust_axis_mode <- if (identical(rv$illustration_axis_mode, "rescaled")) "rescaled" else "default"
 
-    if (nrow(assay_for_illustration) == 0) {
-      session$sendCustomMessage("renderIllustrationGrid", list(
-        containerId = "illustration-grid-container",
-        plots = list(),
-        gate_overlays = list(),
-        pop_ids = list(),
-        pop_names = list(),
-        pop_counts = list(),
-        x_channels = list(),
-        y_channel = NULL,
-        plot_size = input$illust_plot_size %||% 200,
-        display_mode = input$illust_display %||% "pseudocolor",
-        font_sizes = list(axis_label = 10, tick = 8, gate_label = 8, title = 10)
-      ))
-      return()
+    illust_max_events <- suppressWarnings(as.integer(input$illust_max_events %||% 10000L))
+    if (is.na(illust_max_events)) illust_max_events <- 10000L
+    if (isTRUE(input$illust_all_events) || illust_max_events <= 0L) {
+      illust_max_events <- Inf
     }
 
     pop_ids <- input$illust_populations
-    x_channels <- input$illust_x_channels
+    x_channels <- unique(c(
+      as.character(input$illust_x_channels_simple %||% character(0)),
+      as.character(input$illust_x_channels_marker %||% character(0))
+    ))
+    x_channels <- x_channels[x_channels %in% rv$channels]
     y_channel <- if (input$illust_plot_type == "biplot") input$illust_y_channel else NULL
 
-    req(length(pop_ids) > 0, length(x_channels) > 0)
+    max_events_key <- if (is.finite(illust_max_events)) as.integer(illust_max_events) else "all"
+    mask_sig <- if (is.null(rv$sample_mask)) {
+      "none"
+    } else {
+      paste0(length(rv$sample_mask), ":", sum(rv$sample_mask, na.rm = TRUE))
+    }
+    illustration_cache_key <- jsonlite::toJSON(list(
+      assay_version = rv$assay_version %||% 0L,
+      gate_version = rv$gate_version %||% 0L,
+      sample_filter_key = rv$sample_filter_key %||% "all",
+      sample_mask_sig = mask_sig,
+      axis_mode = illust_axis_mode,
+      axis_span_scale = illust_span_scale,
+      pop_ids = sort(as.character(pop_ids %||% character(0))),
+      x_channels = sort(as.character(x_channels)),
+      y_channel = y_channel %||% "",
+      plot_type = input$illust_plot_type %||% "biplot",
+      max_events = max_events_key
+    ), auto_unbox = TRUE, null = "null")
 
-    # Use display-space gate vertices so they match assay_data (display coords)
-    display_gates <- get_plot_gates()
-    batch <- compute_illustration_batch(
-      assay_for_illustration, display_gates, rv$gate_order,
-      rv$populations, rv$root_population_id,
-      pop_ids, x_channels, y_channel,
-      plot_type = input$illust_plot_type,
-      max_events = input$illust_max_events %||% 10000L
-    )
+    base_payload <- NULL
+    cache_hit <- identical(rv$.illustration_cache_key, illustration_cache_key) &&
+      !is.null(rv$.illustration_cache_payload)
 
-    # Convert plot data to JSON-friendly lists
-    plots_json <- list()
-    gate_overlays_json <- list()
-    for (key in names(batch$plots)) {
-      pd <- batch$plots[[key]]
-      plots_json[[key]] <- list(
-        x = as.list(pd$x),
-        y = if (!is.null(pd$y)) as.list(pd$y) else list(),
-        x_range = pd$x_range,
-        y_range = pd$y_range,
-        n_events = pd$n_events,
-        x_label = pd$x_label,
-        y_label = pd$y_label
-      )
+    if (cache_hit) {
+      base_payload <- rv$.illustration_cache_payload
+    } else {
+      assay_for_illustration <- get_filtered_assay_data()
+      req(assay_for_illustration)
 
-      # Build gate overlays for this channel pair
-      parts <- strsplit(key, "\\|")[[1]]
-      pop_id <- parts[1]; x_ch <- parts[2]
-      if (!is.null(y_channel) && input$illust_plot_type == "biplot") {
-        pop_gc <- batch$gate_counts[[pop_id]] %||% list()
-        gate_ovl <- build_gates_for_channels(display_gates, rv$gate_order, pop_gc, x_ch, y_channel)
-        gate_overlays_json[[key]] <- gate_ovl
+      if (nrow(assay_for_illustration) == 0) {
+        base_payload <- list(
+          plots = list(),
+          gate_overlays = list(),
+          pop_ids = character(0),
+          pop_names = list(),
+          pop_counts = list(),
+          x_channels = character(0),
+          y_channel = NULL
+        )
+      } else {
+        req(length(pop_ids) > 0, length(x_channels) > 0)
+
+        # Use display-space gate vertices so they match assay_data (display coords)
+        display_gates <- get_plot_gates()
+        batch <- compute_illustration_batch(
+          assay_for_illustration, display_gates, rv$gate_order,
+          rv$populations, rv$root_population_id,
+          pop_ids, x_channels, y_channel,
+          plot_type = input$illust_plot_type,
+          max_events = illust_max_events
+        )
+
+        x_range_by_channel <- setNames(lapply(x_channels, function(ch) {
+          compute_range_from_values(
+            get_filtered_channel_values(ch, for_plot = TRUE),
+            channel = ch,
+            span_scale = illust_span_scale
+          )
+        }), x_channels)
+        y_range_fixed <- if (!is.null(y_channel) && y_channel %in% rv$channels) {
+          compute_range_from_values(
+            get_filtered_channel_values(y_channel, for_plot = TRUE),
+            channel = y_channel,
+            span_scale = illust_span_scale
+          )
+        } else {
+          NULL
+        }
+
+        # Convert plot data to JSON-friendly lists
+        plots_json <- list()
+        gate_overlays_json <- list()
+        for (key in names(batch$plots)) {
+          pd <- batch$plots[[key]]
+          x_range_panel <- x_range_by_channel[[pd$x_label]] %||% pd$x_range
+          y_range_panel <- if (!is.null(pd$y_label)) y_range_fixed %||% pd$y_range else NULL
+
+          plots_json[[key]] <- list(
+            x = unname(as.numeric(pd$x)),
+            y = if (!is.null(pd$y)) unname(as.numeric(pd$y)) else numeric(0),
+            x_range = x_range_panel,
+            y_range = y_range_panel,
+            n_events = pd$n_events,
+            x_label = pd$x_label,
+            y_label = pd$y_label
+          )
+
+          # Build gate overlays for this channel pair
+          parts <- strsplit(key, "\\|")[[1]]
+          pop_id <- parts[1]; x_ch <- parts[2]
+          if (!is.null(y_channel) && input$illust_plot_type == "biplot") {
+            pop_gc <- batch$gate_counts[[pop_id]] %||% list()
+            gate_ovl <- build_gates_for_channels(display_gates, rv$gate_order, pop_gc, x_ch, y_channel)
+            gate_overlays_json[[key]] <- gate_ovl
+          }
+        }
+
+        pop_names <- list()
+        pop_counts <- list()
+        for (pid in pop_ids) {
+          pop <- batch$populations[[pid]] %||% rv$populations[[pid]]
+          pop_names[[pid]] <- if (!is.null(pop)) pop$name else "Unknown"
+          pop_counts[[pid]] <- if (!is.null(pop) && !is.null(pop$event_count)) pop$event_count else 0L
+        }
+
+        base_payload <- list(
+          plots = plots_json,
+          gate_overlays = gate_overlays_json,
+          pop_ids = as.character(pop_ids),
+          pop_names = pop_names,
+          pop_counts = pop_counts,
+          x_channels = as.character(x_channels),
+          y_channel = y_channel
+        )
+      }
+
+      rv$.illustration_cache_key <- illustration_cache_key
+      rv$.illustration_cache_payload <- base_payload
+    }
+
+    if (identical(illust_axis_mode, "rescaled") && length(base_payload$plots %||% list()) > 0) {
+      existing_override <- rv$illustration_axis_override
+      override_ranges <- if (is.list(existing_override$ranges)) existing_override$ranges else (existing_override %||% list())
+      updated_ranges <- list()
+      override_changed <- FALSE
+
+      for (key in names(base_payload$plots)) {
+        pd <- base_payload$plots[[key]]
+        ov <- override_ranges[[key]]
+
+        has_ov <- is.list(ov) &&
+          length(ov$x_range %||% numeric(0)) == 2 &&
+          all(is.finite(as.numeric(ov$x_range))) &&
+          (is.null(pd$y_range) || (
+            length(ov$y_range %||% numeric(0)) == 2 &&
+              all(is.finite(as.numeric(ov$y_range)))
+          ))
+
+        if (isTRUE(has_ov)) {
+          pd$x_range <- unname(as.numeric(ov$x_range))
+          if (!is.null(pd$y_range)) pd$y_range <- unname(as.numeric(ov$y_range))
+        } else {
+          x_vals <- as.numeric(pd$x %||% numeric(0))
+          if (sum(is.finite(x_vals)) > 0) {
+            pd$x_range <- compute_range_from_values(
+              x_vals,
+              channel = pd$x_label,
+              span_scale = illust_span_scale
+            )
+          }
+          if (!is.null(pd$y_label) && !is.null(pd$y) && !is.null(pd$y_range)) {
+            y_vals <- as.numeric(pd$y %||% numeric(0))
+            if (sum(is.finite(y_vals)) > 0) {
+              pd$y_range <- compute_range_from_values(
+                y_vals,
+                channel = pd$y_label,
+                span_scale = illust_span_scale
+              )
+            }
+          }
+          override_changed <- TRUE
+        }
+
+        updated_ranges[[key]] <- list(
+          x_range = unname(as.numeric(pd$x_range)),
+          y_range = if (!is.null(pd$y_range)) unname(as.numeric(pd$y_range)) else NULL
+        )
+        base_payload$plots[[key]] <- pd
+      }
+
+      if (isTRUE(override_changed) || length(updated_ranges) != length(override_ranges)) {
+        rv$illustration_axis_override <- list(ranges = updated_ranges)
       }
     }
 
-    pop_names <- list()
-    pop_counts <- list()
-    for (pid in pop_ids) {
-      pop <- batch$populations[[pid]] %||% rv$populations[[pid]]
-      pop_names[[pid]] <- if (!is.null(pop)) pop$name else "Unknown"
-      pop_counts[[pid]] <- if (!is.null(pop) && !is.null(pop$event_count)) pop$event_count else 0L
-    }
-
-    session$sendCustomMessage("renderIllustrationGrid", list(
-      containerId = "illustration-grid-container",
-      plots = plots_json,
-      gate_overlays = gate_overlays_json,
-      pop_ids = as.list(pop_ids),
-      pop_names = pop_names,
-      pop_counts = pop_counts,
-      x_channels = as.list(x_channels),
-      y_channel = y_channel,
-      plot_size = input$illust_plot_size %||% 200,
-      display_mode = input$illust_display %||% "pseudocolor",
-      font_sizes = list(axis_label = 10, tick = 8, gate_label = 8, title = 10)
+    session$sendCustomMessage("renderIllustrationGrid", c(
+      list(
+        containerId = "illustration-grid-container",
+        plot_size = illust_plot_size,
+        n_columns = illust_n_columns,
+        fit_to_columns = illust_fit_to_columns,
+        display_mode = illust_mode,
+        contour_threshold = illust_contour_threshold,
+        point_alpha = illust_point_alpha,
+        kde_bandwidth = illust_kde_bandwidth,
+        font_sizes = illust_font_sizes
+      ),
+      base_payload
     ))
   }
+
+  observeEvent(input$illust_all_events, {
+    if (isTRUE(input$illust_all_events)) {
+      updateNumericInput(session, "illust_max_events", value = 0)
+    }
+  }, ignoreInit = TRUE)
 
   # Render illustration on button click
   observeEvent(input$illust_render_btn, {
     render_illustration_tab()
   })
 
-  # Keep illustration synchronized with sample filtering/settings after first render.
-  observeEvent(list(rv$sample_mask,
-                    input$illust_plot_type,
-                    input$illust_y_channel,
-                    input$illust_x_channels,
-                    input$illust_populations,
-                    input$illust_max_events,
-                    input$illust_display,
-                    input$illust_plot_size), {
-    req(!is.null(input$illust_render_btn), input$illust_render_btn > 0)
+  observeEvent(input$illust_rescale_axes_btn, {
+    rv$illustration_axis_mode <- "rescaled"
+    rv$illustration_axis_override <- NULL
     render_illustration_tab()
-  })
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$illust_reset_axes_btn, {
+    rv$illustration_axis_mode <- "default"
+    rv$illustration_axis_override <- NULL
+    render_illustration_tab()
+  }, ignoreInit = TRUE)
 
   observeEvent(input$illust_export_png, {
     session$sendCustomMessage("exportMiniPlotPNG", list(
+      gridId = "illustration-grid-container-grid",
+      filename = "illustration"
+    ))
+  })
+
+  observeEvent(input$illust_export_svg, {
+    session$sendCustomMessage("exportMiniPlotSVG", list(
+      gridId = "illustration-grid-container-grid",
+      filename = "illustration"
+    ))
+  })
+
+  observeEvent(input$illust_export_pdf, {
+    session$sendCustomMessage("exportMiniPlotPDF", list(
       gridId = "illustration-grid-container-grid",
       filename = "illustration"
     ))
@@ -2910,6 +4388,10 @@ server <- function(input, output, session) {
       names(rv$populations),
       vapply(rv$populations, function(p) p$name, character(1))
     )
+    default_pop_ids <- intersect(rv$.selected_pop_ids, names(rv$populations))
+    if (length(default_pop_ids) == 0) {
+      default_pop_ids <- rv$root_population_id
+    }
     available_assays <- SummarizedExperiment::assayNames(rv$sce)
     assay_choices <- setNames(
       available_assays,
@@ -2919,9 +4401,12 @@ server <- function(input, output, session) {
     )
     showModal(modalDialog(
       title = "Export FCS Files",
-      selectInput("fcs_export_pop_id", "Population to export:",
-                  choices  = pop_choices,
-                  selected = rv$active_population_id %||% rv$root_population_id),
+      checkboxGroupInput("fcs_export_pop_ids", "Populations to export:",
+                         choices = pop_choices,
+                         selected = default_pop_ids,
+                         inline = FALSE),
+      tags$p(tags$em("Checked populations in the tree are preselected here. If none are checked, export defaults to All Events.",
+                     style = "color:#888; font-size:11px; margin-top:-4px;")),
       radioButtons("fcs_export_assay", "Data to include:",
                    choices  = assay_choices,
                    selected = if ("exprs" %in% available_assays) "exprs" else available_assays[1]),
@@ -2929,53 +4414,159 @@ server <- function(input, output, session) {
                    choices  = c("One FCS file per sample" = "per_sample",
                                 "Single combined FCS file" = "combined"),
                    selected = "per_sample"),
+      radioButtons("fcs_zip_mode", "Zip compression:",
+                   choices = c("Fast (no compression, larger zip)" = "fast",
+                               "Smaller file (slower)" = "small"),
+                   selected = "fast"),
+      textInput("fcs_filename_suffix", "Filename suffix (optional):", value = ""),
       tags$p(tags$em("Gates are always evaluated in transformed (exprs) space.",
                      style = "color:#888; font-size:11px;")),
       footer = tagList(
         modalButton("Cancel"),
-        downloadButton("do_export_fcs_dl", "Download FCS", class = "btn-primary")
+        downloadButton("do_export_fcs_dl", "Download FCS", class = "btn-primary",
+                       onclick = "setTimeout(function(){ if(window.jQuery){ $('.modal').modal('hide'); } }, 50);")
       )
     ))
   })
 
   output$do_export_fcs_dl <- downloadHandler(
     filename = function() {
-      pop_id   <- isolate(input$fcs_export_pop_id) %||% rv$root_population_id
-      pop      <- rv$populations[[pop_id]]
-      pop_name <- if (!is.null(pop)) gsub("[^A-Za-z0-9_]", "_", pop$name) else "population"
-      paste0(pop_name, "_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".zip")
+      pop_ids <- isolate(input$fcs_export_pop_ids)
+      pop_ids <- as.character(pop_ids %||% character(0))
+      pop_ids <- intersect(pop_ids, names(rv$populations))
+      if (length(pop_ids) == 0) pop_ids <- rv$root_population_id
+      suffix_raw <- trimws(as.character(isolate(input$fcs_filename_suffix) %||% ""))
+      suffix <- gsub("[^A-Za-z0-9._-]", "_", suffix_raw)
+      if (nchar(suffix) > 0) suffix <- paste0("_", suffix)
+
+      ts <- format(Sys.time(), "%Y%m%d_%H%M%S")
+      if (length(pop_ids) == 1) {
+        pop <- rv$populations[[pop_ids[[1]]]]
+        pop_name <- if (!is.null(pop)) gsub("[^A-Za-z0-9_]", "_", pop$name) else "population"
+        paste0(pop_name, suffix, "_", ts, ".zip")
+      } else {
+        paste0("populations_", length(pop_ids), suffix, "_", ts, ".zip")
+      }
     },
     content = function(file) {
       req(rv$sce)
-      pop_id     <- isolate(input$fcs_export_pop_id) %||% rv$root_population_id
-      assay_nm   <- isolate(input$fcs_export_assay)  %||% "exprs"
-      split_by   <- (isolate(input$fcs_export_split) %||% "per_sample") == "per_sample"
+      tryCatch({
+        pop_ids    <- isolate(input$fcs_export_pop_ids)
+        pop_ids    <- as.character(pop_ids %||% character(0))
+        pop_ids    <- intersect(pop_ids, names(rv$populations))
+        if (length(pop_ids) == 0) pop_ids <- rv$root_population_id
+        assay_nm   <- isolate(input$fcs_export_assay)  %||% "exprs"
+        split_by   <- (isolate(input$fcs_export_split) %||% "per_sample") == "per_sample"
+        zip_mode   <- isolate(input$fcs_zip_mode) %||% "fast"
+        zip_flags  <- if (identical(zip_mode, "small")) "-9" else "-0"
+        suffix_raw <- trimws(as.character(isolate(input$fcs_filename_suffix) %||% ""))
+        file_suffix <- gsub("[^A-Za-z0-9._-]", "_", suffix_raw)
 
-      tmp_dir <- tempfile("fcs_export_")
-      dir.create(tmp_dir)
-      on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+        tmp_dir <- tempfile("fcs_export_")
+        dir.create(tmp_dir)
+        on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+        zip_folder_name <- "FCS"
+        zip_staging_dir <- file.path(tmp_dir, zip_folder_name)
+        dir.create(zip_staging_dir, showWarnings = FALSE, recursive = TRUE)
 
-      written <- export_population_as_fcs(
-        sce              = rv$sce,
-        population_id    = pop_id,
-        populations      = rv$populations,
-        gates            = rv$gates,
-        root_population_id = rv$root_population_id,
-        assay_name       = assay_nm,
-        split_by_sample  = split_by,
-        output_dir       = tmp_dir
-      )
+        written <- character(0)
+        precomputed_masks <- NULL
+        if (length(rv$populations) > 0 && !is.null(rv$root_population_id)) {
+          # Reuse the display-context mask cache when it is still valid (same gate
+          # version and covers the full SCE — no sample filter applied).  This avoids
+          # re-running apply_gating_strategy on the full dataset at export time.
+          cache_valid <- rv$cache_version == rv$gate_version &&
+                         length(rv$pop_events_map) > 0 &&
+                         is.null(rv$sample_mask)
+          if (cache_valid) {
+            precomputed_masks <- rv$pop_events_map
+          } else {
+            available_assays <- SummarizedExperiment::assayNames(rv$sce)
+            gate_assay <- if ("exprs" %in% available_assays) "exprs" else available_assays[1]
+            gate_mat <- t(SummarizedExperiment::assay(rv$sce, gate_assay))
+            gate_result <- apply_gating_strategy(
+              gates = rv$gates,
+              populations = rv$populations,
+              root_population_id = rv$root_population_id,
+              assay_data = gate_mat
+            )
+            precomputed_masks <- gate_result$masks
+          }
+        }
 
-      if (length(written) == 0) stop("No events found in selected population/samples.")
+        withProgress(message = "Exporting FCS files", value = 0, {
+          n_steps <- length(pop_ids) + 1
+          step <- 0
 
-      # Zip all files, stripping directory paths
-      owd <- setwd(tmp_dir)
-      on.exit(setwd(owd), add = TRUE)
-      utils::zip(file, files = basename(written), flags = "-9")
+          for (pid in pop_ids) {
+            step <- step + 1
+            pop <- rv$populations[[pid]]
+            pop_label <- if (!is.null(pop)) pop$name else as.character(pid)
+            incProgress(1 / n_steps, detail = paste0("Population ", step, "/", length(pop_ids), ": ", pop_label))
+
+            file_prefix <- ""
+
+            pop_written <- export_population_as_fcs(
+              sce                = rv$sce,
+              population_id      = pid,
+              populations        = rv$populations,
+              gates              = rv$gates,
+              root_population_id = rv$root_population_id,
+              assay_name         = assay_nm,
+              split_by_sample    = split_by,
+              output_dir         = zip_staging_dir,
+              filename_prefix    = file_prefix,
+              filename_suffix    = file_suffix,
+              precomputed_masks  = precomputed_masks
+            )
+            if (length(pop_written) > 0) written <- c(written, pop_written)
+          }
+
+          if (length(written) == 0) stop("No events found in selected population/samples.")
+
+          step <- step + 1
+          incProgress(1 / n_steps,
+                      detail = if (identical(zip_mode, "small")) {
+                        "Creating zip archive (smaller, slower)"
+                      } else {
+                        "Creating zip archive (fast, no compression)"
+                      })
+
+          # Zip all files into a single folder inside the archive.
+          norm_tmp <- normalizePath(tmp_dir, winslash = "/", mustWork = FALSE)
+          norm_written <- normalizePath(written, winslash = "/", mustWork = FALSE)
+          tmp_prefix <- paste0(norm_tmp, "/")
+          rel_written <- ifelse(
+            startsWith(norm_written, tmp_prefix),
+            substring(norm_written, nchar(tmp_prefix) + 1L),
+            basename(norm_written)
+          )
+          file_path <- as.character(file)
+          if (!grepl("^(/|[A-Za-z]:[/\\\\])", file_path)) {
+            file_path <- file.path(getwd(), file_path)
+          }
+          zip_target <- normalizePath(file_path, winslash = "/", mustWork = FALSE)
+          owd <- setwd(tmp_dir)
+          on.exit(setwd(owd), add = TRUE)
+          utils::zip(zip_target, files = rel_written, flags = paste(zip_flags, "-q"))
+          if (!file.exists(zip_target)) {
+            stop("Failed to create zip archive.")
+          }
+        })
+      }, error = function(e) {
+        showNotification(paste("FCS export failed:", conditionMessage(e)),
+                         type = "error", duration = 8)
+        stop(conditionMessage(e))
+      })
     }
   )
 
   output$status_text <- renderText("Select an SCE object to begin")
+
+  # ── Close app ─────────────────────────────────────────────────────────────
+  observeEvent(input$close_app_btn, {
+    shiny::stopApp()
+  })
 }
 
 # ── Add custom JS handler for runjs ───────────────────────────────────────────
@@ -3004,7 +4595,8 @@ ui_with_runjs <- tagList(
         'mode_poly':     'Draw a freehand polygon gate',
         'mode_cancel':   'Cancel the current drawing and return to navigate mode',
         'flip_axes':     'Swap the X and Y channels',
-        'reset_view_btn':   'Reset zoom to the full data range',
+        'reset_view_btn':   'Reset axis ranges to the default range for the current plot scope',
+        'rescale_view_btn': 'Rescale axes to the current plotted data span (honors Axis span %)',
         'refresh_plot_btn': 'Force a full re-render of the plot',
         'gating_max_events': 'Cap events rendered in the gating plot (0 = no downsampling)',
         // Right panel
@@ -3012,13 +4604,46 @@ ui_with_runjs <- tagList(
         'undo_btn':         'Undo the last gate or population change',
         'redo_btn':         'Redo the last undone change',
         'delete_gate_btn':  'Delete the selected gate',
+        'sort_gates_alpha_btn': 'Sort the gate list alphabetically',
         'add_pop_btn':      'Define a new population using gate references',
         'edit_pop_btn':     'Open the population editor for the selected population',
-        'delete_pop_btn':   'Delete the selected population',
+        'duplicate_selected_pops_btn': 'Duplicate checked populations',
+        'delete_selected_pops_btn': 'Delete checked populations',
         // Strategy / Illustration
+        'strategy_gate_view': 'Choose whether to display forward-gated events, back-gated events, or both overlays',
+        'strategy_max_events': 'Maximum events per strategy panel (0 = all events)',
+        'strategy_all_events': 'When checked, render all events in each strategy panel',
+        'strategy_tick_font_size': 'Font size for axis tick labels in Strategy plots',
+        'strategy_axis_label_font_size': 'Font size for axis labels in Strategy plots',
+        'strategy_title_font_size': 'Font size for the panel title text in Strategy plots',
+        'strategy_gate_label_font_size': 'Font size for gate labels in Strategy plots',
+        'strategy_contour_threshold': 'Outer contour level as a percentage of peak density',
+        'strategy_kde_bandwidth': 'Contour smoothing bandwidth for Strategy contour mode (0 = auto)',
+        'strategy_n_columns': 'Number of plot columns in the Strategy grid',
+        'strategy_fit_to_columns': 'Scale strategy panels to fit the chosen number of columns',
+        'strategy_axis_span_percent': 'Axis span percentage padding applied to Strategy axes',
+        'strategy_rescale_axes_btn': 'Fit Strategy panel axes to the currently displayed data while honoring Axis span %',
+        'strategy_reset_axes_btn': 'Reset Strategy panel axes to channel-wide ranges using Axis span %',
+        'strategy_render_btn':   'Render the strategy mini-plot grid',
+        'illust_max_events':   'Maximum events per panel (0 = all events)',
+        'illust_all_events':   'When checked, render all events in each panel',
+        'illust_tick_font_size': 'Font size for axis tick labels in Illustration plots',
+        'illust_axis_label_font_size': 'Font size for axis labels in Illustration plots',
+        'illust_title_font_size': 'Font size for the panel title text in Illustration plots',
+        'illust_gate_label_font_size': 'Font size for gate labels in Illustration plots',
+        'illust_kde_bandwidth': 'Contour smoothing bandwidth for Illustration contour mode (0 = auto)',
+        'illust_n_columns': 'Number of plot columns per population row in Illustration grid',
+        'illust_fit_to_columns': 'Scale panel size to fit the chosen number of columns',
+        'illust_axis_span_percent': 'Axis span percentage padding applied to Illustration axes',
+        'illust_rescale_axes_btn': 'Fit Illustration panel axes to displayed data while honoring Axis span %',
+        'illust_reset_axes_btn': 'Reset Illustration panel axes to channel-wide ranges using Axis span %',
         'strategy_export_png': 'Export the gating strategy grid as a PNG',
+        'strategy_export_svg': 'Export the gating strategy grid as an SVG file',
+        'strategy_export_pdf': 'Export the gating strategy grid as a PDF file',
         'illust_render_btn':   'Render the illustration mini-plot grid',
-        'illust_export_png':   'Export the illustration grid as a PNG'
+        'illust_export_png':   'Export the illustration grid as a PNG',
+        'illust_export_svg':   'Export the illustration grid as an SVG file',
+        'illust_export_pdf':   'Export the illustration grid as a PDF file'
       };
       Object.entries(tips).forEach(function([id, tip]) {
         var el = $('#' + id);

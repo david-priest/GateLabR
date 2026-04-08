@@ -25,6 +25,15 @@
   in_exact | in_pattern
 }
 
+#' Channels that stay raw (no arcsinh) in CyTOF exprs assay.
+#' Only acquisition-level parameters: Time and event geometry.
+#' Gaussian parameters (Center, Width, Offset, Residual, Amplitude, etc.)
+#' are now arcsinh-transformed to match Cytobank's display/gating space.
+.is_cytof_raw_channel <- function(channel_names) {
+  raw_exact <- c("time", "event_length", "cell_length", "file_number")
+  tolower(channel_names) %in% raw_exact
+}
+
 #' Flow-like acquisition suffixes used in channel names
 .has_flow_suffix <- function(channel_names) {
   grepl("-(A|H|W|T)(\\b|\\)|\\s|$)", channel_names, ignore.case = TRUE)
@@ -433,16 +442,24 @@ transform_matrix_by_instrument <- function(raw_mat, channel_names,
   exprs_mat <- raw_mat
 
   if (instrument_type == "cytof") {
-    metal_mask <- .is_metal_channel(channel_names)
-    if (any(metal_mask)) {
-      exprs_mat[, metal_mask] <- asinh(raw_mat[, metal_mask] / cofactor)
+    # Arcsinh-transform ALL channels except acquisition-level raw params
+    # (Time, Event_length, Cell_length, file_number).  This matches Cytobank's
+    # display/gating space: both metal AND Gaussian parameter channels are
+    # arcsinh-transformed, so imported GatingML gate vertices can be used
+    # directly without coordinate conversion.
+    raw_mask <- .is_cytof_raw_channel(channel_names)
+    transform_mask <- !raw_mask
+    if (any(transform_mask)) {
+      exprs_mat[, transform_mask] <- asinh(raw_mat[, transform_mask] / cofactor)
       if (verbose) {
+        n_metal <- sum(.is_metal_channel(channel_names))
+        n_other <- sum(transform_mask) - n_metal
         message("  CyTOF: arcsinh/", cofactor, " on ",
-                sum(metal_mask), " metal channel(s); ",
-                sum(!metal_mask), " channel(s) left raw")
+                n_metal, " metal + ", n_other, " Gaussian/QC channel(s); ",
+                sum(raw_mask), " channel(s) left raw")
       }
     } else {
-      warning("No metal channels detected; arcsinh/", cofactor,
+      warning("No transformable channels detected; arcsinh/", cofactor,
               " applied to all channels as fallback.")
       exprs_mat <- asinh(raw_mat / cofactor)
     }
@@ -566,6 +583,7 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
   instrument_type <- NULL
   detected_type <- NULL
   pnn_to_channel <- NULL
+  channel_to_pnn <- NULL
 
   for (i in seq_along(file_paths)) {
 
@@ -612,11 +630,18 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
 
     if (!is.null(pnn_names) && length(pnn_names) == length(display_names)) {
       map_now <- setNames(as.character(display_names), as.character(pnn_names))
+      inv_now <- setNames(as.character(pnn_names), as.character(display_names))
       if (is.null(pnn_to_channel)) {
         pnn_to_channel <- map_now
       } else {
         pnn_to_channel <- c(pnn_to_channel, map_now)
         pnn_to_channel <- pnn_to_channel[!duplicated(names(pnn_to_channel))]
+      }
+      if (is.null(channel_to_pnn)) {
+        channel_to_pnn <- inv_now
+      } else {
+        channel_to_pnn <- c(channel_to_pnn, inv_now)
+        channel_to_pnn <- channel_to_pnn[!duplicated(names(channel_to_pnn))]
       }
     }
 
@@ -689,6 +714,9 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
   S4Vectors::metadata(sce)$cofactor <- cofactor
   if (!is.null(pnn_to_channel) && length(pnn_to_channel) > 0) {
     S4Vectors::metadata(sce)$pnn_to_channel <- as.list(pnn_to_channel)
+  }
+  if (!is.null(channel_to_pnn) && length(channel_to_pnn) > 0) {
+    S4Vectors::metadata(sce)$channel_to_pnn <- as.list(channel_to_pnn)
   }
 
   message("Done: ", ncol(sce), " events, ", nrow(sce),
@@ -897,6 +925,25 @@ append_fcs_to_sce <- function(sce,
   }
   md_out$transform_type <- if (instrument_existing == "cytof") "arcsinh" else "logicle"
   md_out$cofactor <- cofactor
+
+  incoming_md <- S4Vectors::metadata(incoming)
+  existing_ch_to_pnn <- md_existing$channel_to_pnn
+  incoming_ch_to_pnn <- incoming_md$channel_to_pnn
+  if (is.null(existing_ch_to_pnn) || length(existing_ch_to_pnn) == 0) {
+    md_out$channel_to_pnn <- incoming_ch_to_pnn
+  } else if (!is.null(incoming_ch_to_pnn) && length(incoming_ch_to_pnn) > 0) {
+    merged <- c(existing_ch_to_pnn, incoming_ch_to_pnn)
+    md_out$channel_to_pnn <- merged[!duplicated(names(merged))]
+  }
+
+  existing_pnn_to_ch <- md_existing$pnn_to_channel
+  incoming_pnn_to_ch <- incoming_md$pnn_to_channel
+  if (is.null(existing_pnn_to_ch) || length(existing_pnn_to_ch) == 0) {
+    md_out$pnn_to_channel <- incoming_pnn_to_ch
+  } else if (!is.null(incoming_pnn_to_ch) && length(incoming_pnn_to_ch) > 0) {
+    merged <- c(existing_pnn_to_ch, incoming_pnn_to_ch)
+    md_out$pnn_to_channel <- merged[!duplicated(names(merged))]
+  }
 
   existing_append_history <- md_existing$fcs_append_history
   if (is.null(existing_append_history)) existing_append_history <- list()

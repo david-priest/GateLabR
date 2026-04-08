@@ -39,11 +39,10 @@ launchGatingApp <- function(sce = NULL, port = NULL, launch.browser = TRUE) {
   .cytof_gate_env$sce_names <- sce_names
 
   if (length(sce_names) == 0) {
-    stop("No SingleCellExperiment objects found in the global environment.\n",
-         "Load an SCE first, then call launchGatingApp().")
+    message("No SingleCellExperiment objects found. Launching GateLabR in blank mode; use Import FCS to load data.")
+  } else {
+    message("Found SCE objects: ", paste(sce_names, collapse = ", "))
   }
-
-  message("Found SCE objects: ", paste(sce_names, collapse = ", "))
 
   shiny::runApp(
     appDir = app_dir,

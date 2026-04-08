@@ -76,18 +76,30 @@ apply_gating_strategy <- function(gates, populations, root_population_id,
       if (is.null(child)) next
 
       if (length(child$gate_refs) > 0) {
-        # Boolean AND: intersect each gate_ref against the running set
-        child_mask <- parent_mask
-        for (ref in child$gate_refs) {
-          gate_def <- gates[[ref$gate_id]]
-          if (is.null(gate_def)) next
+        gate_logic <- child$gate_logic %||% "and"
 
-          gate_mask <- get_gate_mask(gate_def, assay_data)
-
-          if (isTRUE(ref$include)) {
-            child_mask <- child_mask & gate_mask
-          } else {
-            child_mask <- child_mask & !gate_mask
+        if (identical(gate_logic, "or")) {
+          # Boolean OR: union of all gate masks, then intersect with parent
+          or_mask <- rep(FALSE, n_events)
+          for (ref in child$gate_refs) {
+            gate_def <- gates[[ref$gate_id]]
+            if (is.null(gate_def)) next
+            gate_mask <- get_gate_mask(gate_def, assay_data)
+            or_mask <- or_mask | if (isTRUE(ref$include)) gate_mask else !gate_mask
+          }
+          child_mask <- parent_mask & or_mask
+        } else {
+          # Boolean AND (default): intersect each gate_ref against the running set
+          child_mask <- parent_mask
+          for (ref in child$gate_refs) {
+            gate_def <- gates[[ref$gate_id]]
+            if (is.null(gate_def)) next
+            gate_mask <- get_gate_mask(gate_def, assay_data)
+            if (isTRUE(ref$include)) {
+              child_mask <- child_mask & gate_mask
+            } else {
+              child_mask <- child_mask & !gate_mask
+            }
           }
         }
       } else {

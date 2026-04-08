@@ -60,6 +60,26 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   tryCatch(jsonlite::fromJSON(txt), error = function(e) NULL)
 }
 
+#' Extract Cytobank gate_id (primitive gates) or gate_set_id (boolean gates)
+.gml_parse_cytobank_ids <- function(node) {
+  ci <- .gml_first_child_local(node, "custom_info")
+  if (is.null(ci)) return(list())
+  cb <- .gml_first_child_local(ci, "cytobank")
+  if (is.null(cb)) return(list())
+  out <- list()
+  gid_el <- .gml_first_child_local(cb, "gate_id")
+  if (!is.null(gid_el)) {
+    v <- suppressWarnings(as.integer(trimws(xml2::xml_text(gid_el))))
+    if (length(v) == 1 && !is.na(v)) out$gate_id <- v
+  }
+  gsid_el <- .gml_first_child_local(cb, "gate_set_id")
+  if (!is.null(gsid_el)) {
+    v <- suppressWarnings(as.integer(trimws(xml2::xml_text(gsid_el))))
+    if (length(v) == 1 && !is.na(v)) out$gate_set_id <- v
+  }
+  out
+}
+
 .gml_parse_pop_parent_indices <- function(node) {
   defn <- .gml_parse_cytobank_definition(node)
   if (is.null(defn) || is.null(defn$booleanExpression)) return(integer(0))
@@ -96,15 +116,26 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       }
     }
 
-    # fasinh / arcsinh — store T as a plain scalar (backward-compatible)
-    fasinh  <- .gml_first_child_local(el, "fasinh")
-    arcsinh <- .gml_first_child_local(el, "arcsinh")
-    t_val   <- NULL
-    if (!is.null(fasinh))  t_val <- .gml_num(.gml_attr_local(fasinh,  "T"))
-    if (!.gml_has_num(t_val)) {
-      if (!is.null(arcsinh)) t_val <- .gml_num(.gml_attr_local(arcsinh, "T"))
+    # fasinh / arcsinh — store full {type, T, M, A} for correct inversion.
+    # Gating-ML 2.0: f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
+    fasinh_el  <- .gml_first_child_local(el, "fasinh")
+    arcsinh_el <- .gml_first_child_local(el, "arcsinh")
+    src_el <- fasinh_el %||% arcsinh_el
+    t_val  <- NULL
+    if (!is.null(fasinh_el))  t_val <- .gml_num(.gml_attr_local(fasinh_el,  "T"))
+    if (!.gml_has_num(t_val) && !is.null(arcsinh_el)) {
+      t_val <- .gml_num(.gml_attr_local(arcsinh_el, "T"))
     }
-    if (.gml_has_num(t_val)) out[[tr_id]] <- t_val
+    if (.gml_has_num(t_val)) {
+      m_val <- .gml_num(.gml_attr_local(src_el, "M"))
+      a_val <- .gml_num(.gml_attr_local(src_el, "A"))
+      out[[tr_id]] <- list(
+        type = "fasinh",
+        T    = t_val,
+        M    = if (.gml_has_num(m_val)) m_val else log10(exp(1)),
+        A    = if (.gml_has_num(a_val)) a_val else 0
+      )
+    }
   }
   out
 }
@@ -223,15 +254,6 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   if (is.null(trans_ref) || !nzchar(trans_ref)) return(function(v) v)
   if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(function(v) v)
 
-  # CyTOF metal channels: gate coordinates are stored in exprs (arcsinh) space,
-  # so no inversion is needed — return identity.
-  is_signal <- if (exists(".is_metal_channel", mode = "function")) {
-    isTRUE(.is_metal_channel(resolved_channel))
-  } else {
-    grepl("([0-9]{2,3}[A-Za-z]{1,2}|[A-Za-z]{1,2}[0-9]{2,3})", resolved_channel)
-  }
-  if (is_signal) return(function(v) v)
-
   # QC / instrument channels: always raw space, no inversion.
   if (grepl("^(time|event_length|cell_length|barcode)$", resolved_channel, ignore.case = TRUE)) {
     return(function(v) v)
@@ -240,7 +262,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   tr_def <- transforms_map[[trans_ref]]
   if (is.null(tr_def)) return(function(v) v)
 
-  # Logicle transform (from GateLabR flow export or FlowJo): apply logicle inverse.
+  # Logicle transform (from GateLabR flow export or FlowJo): apply logicle inverse
+  # to convert vertices from logicle display space to raw space for evaluation.
   if (is.list(tr_def) && identical(tr_def$type, "logicle")) {
     t_v <- tr_def$T;  w_v <- tr_def$W
     m_v <- tr_def$M %||% 4.5;  a_v <- tr_def$A %||% 0.0
@@ -255,10 +278,24 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     })
   }
 
-  # fasinh / arcsinh: inverse is T * sinh(v)
+  # fasinh / arcsinh: GateLabR now arcsinh-transforms ALL CyTOF channels
+  # except Time/Event_length/Cell_length (which have no transform ref in
+  # GatingML and are caught by the is.null(trans_ref) check above).
+  # Both metal AND Gaussian parameter channels are in arcsinh space in exprs,
+  # matching GatingML vertex coordinates.  No conversion needed — identity.
+  if (is.list(tr_def) && identical(tr_def$type, "fasinh")) {
+    return(function(v) v)
+  }
+
+  # Legacy fallback: plain numeric T (old saved state or unknown format).
+  # Compute the proper Gating-ML 2.0 inverse just in case.
   cf <- suppressWarnings(as.numeric(if (is.list(tr_def)) tr_def$T else tr_def))
-  if (!.gml_has_num(cf) || cf <= 0) return(function(v) v)
-  function(v) cf * sinh(v)
+  if (.gml_has_num(cf) && cf > 0) {
+    # For legacy data where Gaussian channels might still be raw in exprs,
+    # compute the effective cofactor = T / sinh(M * ln(10)) and invert.
+    return(function(v) cf * sinh(v))
+  }
+  function(v) v
 }
 
 .gml_parse_gate_node <- function(node) {
@@ -340,6 +377,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       refs[[length(refs) + 1L]] <- list(gate_id = rid, complement = comp)
     }
 
+    cb_ids <- .gml_parse_cytobank_ids(node)
     return(list(
       gml_id = gml_id,
       name = nm,
@@ -347,7 +385,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       operation = op,
       refs = refs,
       channels = character(0),
-      pop_parent_indices = .gml_parse_pop_parent_indices(node)
+      pop_parent_indices = .gml_parse_pop_parent_indices(node),
+      gate_set_id = cb_ids$gate_set_id
     ))
   }
 
@@ -499,9 +538,11 @@ import_gatingml_from_cytobank <- function(file_path,
       if (!nzchar(pop_name)) pop_name <- "Population"
 
       gate_refs <- list()
+      gate_logic <- "and"
       if (!is.null(gate_ref_gml) && !is.null(gml_to_app[[gate_ref_gml]])) {
         ref_gate <- raw_gates[[gate_ref_gml]]
         if (!is.null(ref_gate) && identical(ref_gate$gate_type, "boolean")) {
+          if (identical(ref_gate$operation, "or")) gate_logic <- "or"
           seen <- character(0)
           refs <- ref_gate$refs %||% list()
           for (r in refs) {
@@ -521,7 +562,8 @@ import_gatingml_from_cytobank <- function(file_path,
 
       if (length(gate_refs) == 0) return(NULL)
 
-      pop <- new_population(pop_name, gate_refs = gate_refs, parent_id = parent_id)
+      pop <- new_population(pop_name, gate_refs = gate_refs, parent_id = parent_id,
+                            gate_logic = gate_logic)
       pid <- pop$population_id
       populations[[pid]] <<- pop
       populations <<- link_child_to_parent(populations, pid, parent_id)
@@ -540,6 +582,18 @@ import_gatingml_from_cytobank <- function(file_path,
     bool_prim <- list()
     bool_include <- list()
     bool_pop_indices <- list()
+
+    # Build a robust gate_set_id → GML ID mapping for parent resolution.
+    # Cytobank boolean expressions use "pop_X" where X = gate_set_id.
+    gsid_to_gml <- list()
+    for (bid in bool_order) {
+      g <- raw_gates[[bid]]
+      if (is.null(g) || !identical(g$gate_type, "boolean")) next
+      gsid <- g$gate_set_id
+      if (!is.null(gsid) && is.finite(gsid)) {
+        gsid_to_gml[[as.character(gsid)]] <- bid
+      }
+    }
 
     for (bid in bool_order) {
       g <- raw_gates[[bid]]
@@ -575,12 +629,27 @@ import_gatingml_from_cytobank <- function(file_path,
         populations <- link_child_to_parent(populations, pid, root_pop_id)
       }
     } else {
+      # ── Resolve parent for each boolean gate ────────────────────────────
       parents <- list()
       for (bid in names(bool_names)) {
         pidx <- bool_pop_indices[[bid]] %||% integer(0)
         parent_bid <- NULL
 
+        # Primary: resolve pop_X via explicit gate_set_id mapping (robust)
         if (length(pidx) > 0) {
+          for (idx in pidx) {
+            if (is.na(idx) || idx < 1) next
+            cand <- gsid_to_gml[[as.character(idx)]]
+            if (!is.null(cand) && !identical(cand, bid)) {
+              parent_bid <- cand
+              break
+            }
+          }
+        }
+
+        # Fallback 1: positional lookup in bool_order (for GatingML files
+        # that lack gate_set_id but have boolean gates in order)
+        if (is.null(parent_bid) && length(pidx) > 0) {
           for (idx in pidx) {
             if (is.na(idx) || idx < 1 || idx > length(bool_order)) next
             cand <- bool_order[[idx]]
@@ -591,6 +660,8 @@ import_gatingml_from_cytobank <- function(file_path,
           }
         }
 
+        # Fallback 2: heuristic — find the boolean gate whose primitive
+        # gate set is the largest proper subset of this gate's set
         if (is.null(parent_bid)) {
           my_set <- bool_prim[[bid]] %||% character(0)
           best <- NULL
@@ -652,6 +723,8 @@ import_gatingml_from_cytobank <- function(file_path,
           population_id = pid,
           name = pop_name,
           gate_refs = refs,
+          gate_logic = if (!is.null(raw_gates[[bid]]) &&
+                          identical(raw_gates[[bid]]$operation, "or")) "or" else "and",
           parent_id = parent_pid,
           children = character(0),
           event_count = NULL,

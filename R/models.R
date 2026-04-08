@@ -24,11 +24,13 @@ new_gate <- function(name, gate_type, x_channel, y_channel, vertices,
 }
 
 #' Create a new population node
-new_population <- function(name, gate_refs = list(), parent_id = NULL) {
+#' @param gate_logic "and" (default) or "or" — how multiple gate_refs are combined
+new_population <- function(name, gate_refs = list(), parent_id = NULL, gate_logic = "and") {
   list(
     population_id = uuid::UUIDgenerate(),
     name = name,
     gate_refs = gate_refs,
+    gate_logic = gate_logic,
     parent_id = parent_id,
     children = character(0),
     event_count = NULL,
@@ -137,6 +139,33 @@ remove_population_subtree <- function(populations, pop_id) {
     populations[[rid]] <- NULL
   }
 
+  populations
+}
+
+#' Remove one population but keep descendants by reparenting its direct children
+#' to the deleted population's parent.
+remove_population_reparent_children <- function(populations, pop_id) {
+  pop <- populations[[pop_id]]
+  if (is.null(pop)) return(populations)
+
+  parent_id <- pop$parent_id
+  child_ids <- unique(pop$children)
+  child_ids <- child_ids[child_ids %in% names(populations)]
+  child_ids <- child_ids[child_ids != pop_id]
+
+  if (!is.null(parent_id) && !is.null(populations[[parent_id]])) {
+    populations[[parent_id]]$children <- setdiff(populations[[parent_id]]$children, pop_id)
+    populations[[parent_id]]$children <- unique(c(populations[[parent_id]]$children, child_ids))
+    for (cid in child_ids) {
+      if (!is.null(populations[[cid]])) populations[[cid]]$parent_id <- parent_id
+    }
+  } else {
+    for (cid in child_ids) {
+      if (!is.null(populations[[cid]])) populations[[cid]]$parent_id <- NULL
+    }
+  }
+
+  populations[[pop_id]] <- NULL
   populations
 }
 

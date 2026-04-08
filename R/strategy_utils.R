@@ -15,6 +15,9 @@
 compute_gating_strategy <- function(gates, populations, root_pop_id,
                                      assay_data, population_id,
                                      full_path = FALSE, max_events = 10000L) {
+  max_events_int <- suppressWarnings(as.integer(max_events))
+  use_all_events <- is.na(max_events_int) || !is.finite(max_events) || max_events_int <= 0L
+
   pop <- populations[[population_id]]
   if (is.null(pop)) return(list())
 
@@ -81,9 +84,9 @@ compute_gating_strategy <- function(gates, populations, root_pop_id,
 
     # Downsample the PARENT events (before this gate) for plotting
     parent_indices <- which(running_mask)
-    if (length(parent_indices) > max_events) {
+    if (!use_all_events && length(parent_indices) > max_events_int) {
       sample_idx <- parent_indices[round(seq(1, length(parent_indices),
-                                              length.out = max_events))]
+                                              length.out = max_events_int))]
     } else {
       sample_idx <- parent_indices
     }
@@ -126,6 +129,13 @@ compute_illustration_batch <- function(assay_data, gates, gate_order,
                                         y_channel = NULL,
                                         plot_type = "biplot",
                                         max_events = 10000L) {
+  max_events_int <- suppressWarnings(as.integer(max_events))
+  use_all_events <- is.na(max_events_int) || !is.finite(max_events) || max_events_int <= 0L
+  valid_x_channels <- intersect(x_channels, colnames(assay_data))
+  if (length(valid_x_channels) == 0) {
+    return(list(plots = list(), gate_counts = list(), populations = list()))
+  }
+
   # Compute gating strategy once for all populations
   result <- apply_gating_strategy(gates, populations, root_pop_id, assay_data)
 
@@ -138,32 +148,34 @@ compute_illustration_batch <- function(assay_data, gates, gate_order,
 
     pop_events <- assay_data[pop_mask, , drop = FALSE]
     n_pop <- nrow(pop_events)
+    if (n_pop == 0) next
+
+    if (!use_all_events && n_pop > max_events_int) {
+      idx <- unique(as.integer(round(seq.int(1L, n_pop, length.out = max_events_int))))
+      idx <- idx[idx >= 1L & idx <= n_pop]
+      if (length(idx) == 0L) idx <- seq_len(n_pop)
+    } else {
+      idx <- seq_len(n_pop)
+    }
 
     # Compute gate counts for this population
     gate_counts_by_pop[[pop_id]] <- compute_gate_counts(gates, pop_mask, assay_data)
 
-    for (x_ch in x_channels) {
-      if (!x_ch %in% colnames(assay_data)) next
+    y_vals <- NULL
+    if (plot_type == "biplot" && !is.null(y_channel) && y_channel %in% colnames(assay_data)) {
+      y_vals <- as.numeric(pop_events[idx, y_channel])
+    }
 
-      # Downsample
-      if (n_pop > max_events) {
-        idx <- round(seq(1, n_pop, length.out = max_events))
-        plot_events <- pop_events[idx, , drop = FALSE]
-      } else {
-        plot_events <- pop_events
-      }
-
-      x_vals <- as.numeric(plot_events[, x_ch])
+    for (x_ch in valid_x_channels) {
+      x_vals <- as.numeric(pop_events[idx, x_ch])
       key <- paste0(pop_id, "|", x_ch)
 
-      if (plot_type == "biplot" && !is.null(y_channel) &&
-          y_channel %in% colnames(assay_data)) {
-        y_vals <- as.numeric(plot_events[, y_channel])
+      if (!is.null(y_vals)) {
         plots[[key]] <- list(
           x = x_vals,
           y = y_vals,
-          x_range = compute_axis_range(x_vals),
-          y_range = compute_axis_range(y_vals),
+          x_range = NULL,
+          y_range = NULL,
           n_events = n_pop,
           x_label = x_ch,
           y_label = y_channel
@@ -172,7 +184,7 @@ compute_illustration_batch <- function(assay_data, gates, gate_order,
         # Histogram (x only)
         plots[[key]] <- list(
           x = x_vals,
-          x_range = compute_axis_range(x_vals),
+          x_range = NULL,
           n_events = n_pop,
           x_label = x_ch,
           y_label = NULL

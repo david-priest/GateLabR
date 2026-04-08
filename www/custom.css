@@ -288,14 +288,22 @@ body { font-size: 13px; }
 
 /* ── Sidebar panels ──────────────────────────────────────────── */
 .gate-list-panel, .population-tree-panel {
-  min-height: 260px;
-  max-height: 520px;
   overflow-y: auto;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 4px;
   margin-bottom: 10px;
   background: #fafafa;
+}
+
+#gate_list_container .gate-list-panel {
+  min-height: 150px;
+  max-height: 220px;
+}
+
+#population_tree_container .population-tree-panel {
+  min-height: 380px;
+  max-height: 68vh;
 }
 
 /* ── Gate card ─────────────────────────────────────────────────── */
@@ -374,6 +382,21 @@ body { font-size: 13px; }
   border: 1px solid transparent;
   border-bottom: 1px solid #e0e0e0;
   gap: 6px;
+}
+
+.pop-row-select-col {
+  flex: 0 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 1px;
+}
+
+.pop-row-select {
+  margin: 0;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
 }
 
 .pop-row:hover {
@@ -648,3 +671,281 @@ body { font-size: 13px; }
 /* ── Conditional panel compact ──────────────────────────────── */
 .below-plot-controls .shiny-bound-output,
 .below-plot-controls .shiny-html-output { margin-bottom: 0; }
+
+/* ── Strategy controls compact layout ───────────────────────────────────── */
+.strategy-controls {
+  border: 1px solid #d9dfeb;
+  border-radius: 4px;
+  background: #f9fbfe;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.strategy-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.strategy-top-export-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.strategy-controls .form-group {
+  margin-bottom: 6px;
+}
+
+.strategy-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px;
+  align-items: start;
+}
+
+.strategy-block {
+  background: #ffffff;
+  border: 1px solid #e4e9f2;
+  border-radius: 4px;
+  padding: 6px 8px;
+  min-height: 72px;
+}
+
+.strategy-pop-block .checkbox {
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.strategy-actions-block {
+  min-width: 0;
+}
+
+.strategy-actions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.strategy-actions-row + .strategy-actions-row {
+  margin-top: 6px;
+}
+
+.strategy-params-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.strategy-param-card {
+  background: #ffffff;
+  border: 1px solid #e4e9f2;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.strategy-param-card .checkbox {
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.strategy-axis-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.strategy-font-card {
+  grid-column: auto;
+}
+
+.strategy-font-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 6px 8px;
+}
+
+.strategy-font-grid .form-group {
+  margin-bottom: 0;
+}
+
+.strategy-contour-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px 2px;
+  padding: 6px 8px;
+  border: 1px dashed #d7deeb;
+  border-radius: 4px;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .strategy-top-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Illustration controls compact layout ───────────────────────────────── */
+.illustration-controls {
+  border: 1px solid #d9dfeb;
+  border-radius: 4px;
+  background: #f9fbfe;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.illustration-controls .form-group {
+  margin-bottom: 6px;
+}
+
+.illust-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.illust-top-export-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.illust-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.illust-block {
+  background: #ffffff;
+  border: 1px solid #e4e9f2;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.illust-axis-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.illust-params-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.illust-param-card {
+  background: #ffffff;
+  border: 1px solid #e4e9f2;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.illust-param-card .checkbox {
+  margin-top: 2px;
+  margin-bottom: 0;
+}
+
+.illust-font-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+.illust-font-grid .form-group {
+  margin-bottom: 0;
+}
+
+.illust-contour-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px 2px;
+  padding: 6px 8px;
+  border: 1px dashed #d7deeb;
+  border-radius: 4px;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .illust-top-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Illustration X-channel grouped selectors ───────────────────────────── */
+.illust-channel-group {
+  border: 1px solid #dfe4ea;
+  border-radius: 4px;
+  background: #fcfdff;
+  margin-bottom: 8px;
+}
+
+.illust-channel-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #5f6673;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-bottom: 1px solid #e6ebf1;
+}
+
+.illust-channel-group-actions {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.illust-channel-group-body {
+  padding: 4px 6px 2px 6px;
+}
+
+#illust_simple_body .shiny-options-group,
+#illust_marker_body .shiny-options-group {
+  column-count: 3;
+  column-gap: 14px;
+}
+
+#illust_simple_body .checkbox,
+#illust_marker_body .checkbox {
+  break-inside: avoid;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+#illust_simple_body .checkbox label,
+#illust_marker_body .checkbox label {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+@media (max-width: 1200px) {
+  #illust_simple_body .shiny-options-group,
+  #illust_marker_body .shiny-options-group {
+    column-count: 2;
+  }
+}
+
+@media (max-width: 800px) {
+  #illust_simple_body .shiny-options-group,
+  #illust_marker_body .shiny-options-group {
+    column-count: 1;
+  }
+}
