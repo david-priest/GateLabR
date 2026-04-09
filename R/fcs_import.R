@@ -347,6 +347,105 @@ flow_inverse_channel_values <- function(display_vals,
   as.numeric(inv_lg(display_vals))
 }
 
+#' Generate FlowJo-style logicle axis ticks for a channel
+#'
+#' Returns flat vectors for easy JSON serialization:
+#'   major_pos, major_labels  — decade tick positions + labels
+#'   minor_pos                — intermediate tick positions (no labels)
+#'
+#' @param channel_name   channel name (to look up W / T)
+#' @param axis_range     length-2 numeric — visible [lo, hi] in display space
+#' @param raw_channel_vals  raw (untransformed) values for the channel (for T)
+#' @param logicle_w_params  named list of user/auto W values
+#' @return named list with major_pos (numeric), major_labels (character),
+#'   minor_pos (numeric), or NULL on error
+generate_logicle_ticks <- function(channel_name,
+                                   axis_range,
+                                   raw_channel_vals = NULL,
+                                   logicle_w_params = NULL) {
+  tryCatch({
+    t_val <- .resolve_logicle_t(raw_channel_vals)
+    w_val <- if (!is.null(logicle_w_params) && !is.null(logicle_w_params[[channel_name]])) {
+      as.numeric(logicle_w_params[[channel_name]])
+    } else {
+      if (!is.null(raw_channel_vals)) {
+        .estimate_logicle_w(raw_channel_vals, t_val = t_val)
+      } else 0.5
+    }
+    if (!is.finite(w_val)) w_val <- 0.5
+    w_val <- max(0.1, min(w_val, 2.0))
+
+    lg <- flowCore::logicleTransform(
+      transformationId = "lg_tick",
+      w = w_val, t = t_val, m = 4.5, a = 0
+    )
+
+    # ---- use inverse to find raw values at the axis edges -----------------
+    inv_lg <- flowCore::inverseLogicleTransform(
+      flowCore::logicleTransform("lg_inv_tick", w = w_val, t = t_val, m = 4.5, a = 0),
+      transformationId = "lg_inv_tick2"
+    )
+    lo <- axis_range[1];  hi <- axis_range[2]
+    raw_lo <- tryCatch(as.numeric(inv_lg(lo)), error = function(e) -t_val)
+    raw_hi <- tryCatch(as.numeric(inv_lg(hi)), error = function(e) t_val)
+    if (!is.finite(raw_lo)) raw_lo <- -t_val
+    if (!is.finite(raw_hi)) raw_hi <-  t_val
+
+    # ---- generate decade candidates spanning the full visible raw range ---
+    max_pos_exp <- ceiling(log10(max(raw_hi, 100)))
+    min_neg_exp <- if (raw_lo < -1) ceiling(log10(abs(raw_lo))) else 2L
+    min_neg_exp <- min(min_neg_exp, 5L)    # up to -100K on negative side
+
+    pos_decades <- 10^seq(2, max_pos_exp)  # 100 … raw_hi rounded up to decade
+    neg_decades <- -(10^seq(2, min_neg_exp))
+
+    major_raw <- sort(unique(c(neg_decades, 0, pos_decades)))
+
+    # Minor ticks: full 2–9 multipliers per decade (proper log spacing)
+    minor_raw <- numeric(0)
+    for (d in pos_decades) {
+      minor_raw <- c(minor_raw, d * 2:9)
+    }
+    for (d in abs(neg_decades)) {
+      minor_raw <- c(minor_raw, -(d * 2:9))
+    }
+    minor_raw <- sort(unique(minor_raw))
+    minor_raw <- minor_raw[!minor_raw %in% major_raw]
+
+    # ---- transform all candidates to display space ------------------------
+    safe_lg <- function(raw_vals) {
+      if (length(raw_vals) == 0) return(numeric(0))
+      tryCatch(as.numeric(lg(raw_vals)),
+               error = function(e) rep(NA_real_, length(raw_vals)))
+    }
+
+    major_disp <- safe_lg(major_raw)
+    minor_disp <- safe_lg(minor_raw)
+
+    # ---- format labels ----------------------------------------------------
+    fmt_label <- function(raw) {
+      vapply(raw, function(v) {
+        a <- abs(v); s <- if (v < 0) "-" else ""
+        if (a == 0)    "0"
+        else if (a >= 1e6) paste0(s, a / 1e6, "M")
+        else if (a >= 1e3) paste0(s, a / 1e3, "K")
+        else               paste0(s, a)
+      }, character(1))
+    }
+
+    # ---- filter to visible range -----------------------------------------
+    keep_m <- is.finite(major_disp) & major_disp >= lo & major_disp <= hi
+    keep_n <- is.finite(minor_disp) & minor_disp >= lo & minor_disp <= hi
+
+    list(
+      major_pos    = as.numeric(major_disp[keep_m]),
+      major_labels = as.character(fmt_label(major_raw[keep_m])),
+      minor_pos    = as.numeric(minor_disp[keep_n])
+    )
+
+  }, error = function(e) NULL)
+}
+
 flow_forward_vertices <- function(vertices,
                                   x_channel,
                                   y_channel,

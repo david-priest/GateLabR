@@ -2169,10 +2169,35 @@ server <- function(input, output, session) {
     if (!is.null(rv$sce) && is_flow_session(rv$sce) && rv$assay_name == "exprs") {
       x_is_scatter <- .is_scatter_channel(x_ch)
       y_is_scatter <- .is_scatter_channel(y_ch)
+      x_is_qc      <- .is_qc_channel(x_ch)
+      y_is_qc      <- .is_qc_channel(y_ch)
       plot_data$x_is_log <- isTRUE(x_is_scatter)
       plot_data$y_is_log <- isTRUE(y_is_scatter)
       plot_data$x_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[x_ch]] %||% 150)
       plot_data$y_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[y_ch]] %||% 150)
+
+      # Logicle ticks for signal channels (not scatter, not QC)
+      x_is_logicle <- !x_is_scatter && !x_is_qc
+      y_is_logicle <- !y_is_scatter && !y_is_qc
+      raw_mat <- rv$flow_raw_data
+if (x_is_logicle && !is.null(plot_data$x_range)) {
+        x_raw_vals <- if (!is.null(raw_mat) && x_ch %in% colnames(raw_mat)) raw_mat[, x_ch] else NULL
+        ticks <- generate_logicle_ticks(
+          x_ch, plot_data$x_range, x_raw_vals, rv$flow_logicle_w)
+        if (!is.null(ticks)) {
+          plot_data$x_logicle_ticks <- ticks
+          plot_data$x_is_logicle <- TRUE
+        }
+      }
+      if (y_is_logicle && !is.null(plot_data$y_range)) {
+        y_raw_vals <- if (!is.null(raw_mat) && y_ch %in% colnames(raw_mat)) raw_mat[, y_ch] else NULL
+        ticks <- generate_logicle_ticks(
+          y_ch, plot_data$y_range, y_raw_vals, rv$flow_logicle_w)
+        if (!is.null(ticks)) {
+          plot_data$y_logicle_ticks <- ticks
+          plot_data$y_is_logicle <- TRUE
+        }
+      }
     }
 
     rv$.plot_msg_seq <- as.integer(rv$.plot_msg_seq %||% 0L) + 1L

@@ -438,27 +438,104 @@
         return parts.join('|');
     }
 
+    // ── Build a D3 axis with logicle ticks (FlowJo-style) ──────────────────
+    // tickData = { major_pos: [num,...], major_labels: [str,...], minor_pos: [num,...] }
+    function _buildLogicleAxis(scale, tickData, axisFn) {
+        var majorPos    = tickData.major_pos    || [];
+        var majorLabels = tickData.major_labels || [];
+        var minorPos    = tickData.minor_pos    || [];
+        var labelMap = {}, majorSet = {}, i;
+        for (i = 0; i < majorPos.length; i++) {
+            labelMap[majorPos[i]] = majorLabels[i] || '';
+            majorSet[majorPos[i]] = true;
+        }
+        var allPositions = majorPos.concat(minorPos);
+        allPositions.sort(function(a, b) { return a - b; });
+        var axis = axisFn(scale)
+            .tickValues(allPositions)
+            .tickFormat(function(d) { return labelMap[d] || ''; })
+            .tickSizeOuter(0);
+        return { axis: axis, majorSet: majorSet };
+    }
+
+    // Style major (full-length) vs minor (short, no label) ticks
+    function _styleLogicleAxis(sel, majorSet, isBottom) {
+        sel.selectAll('.tick').each(function(d) {
+            var tick = d3.select(this);
+            var isMajor = majorSet[d];
+            tick.select('line').attr(isBottom ? 'y2' : 'x2',
+                isMajor ? (isBottom ? 6 : -6) : (isBottom ? 3 : -3));
+            if (!isMajor) tick.select('text').style('display', 'none');
+        });
+    }
+
+    // Hide major-tick labels that are too close together in pixel space
+    // (handles the compressed linear region when W is large)
+    function _hideCompressedLabels(sel, scale, minSpacingPx) {
+        var labeled = [];
+        sel.selectAll('.tick text').each(function(d) {
+            var el = d3.select(this);
+            if (el.style('display') !== 'none' && el.text() !== '') {
+                labeled.push({ el: el, px: scale(d) });
+            }
+        });
+        // Sort by pixel coordinate so we scan in screen order
+        labeled.sort(function(a, b) { return a.px - b.px; });
+        var lastPx = -Infinity;
+        for (var i = 0; i < labeled.length; i++) {
+            if (Math.abs(labeled[i].px - lastPx) < minSpacingPx) {
+                labeled[i].el.style('display', 'none');
+            } else {
+                lastPx = labeled[i].px;
+            }
+        }
+    }
+
     // ── Full redraw ───────────────────────────────────────────────────────────
     function _redraw() {
         if (!_xBase) return;
         _zt = d3.zoomIdentity;
         var zx = _zx(), zy = _zy();
-        var xIsLog = _plotData && _plotData.x_is_log;
-        var yIsLog = _plotData && _plotData.y_is_log;
-        var xScCf = (_plotData && _plotData.x_scatter_cofactor) || 150;
-        var yScCf = (_plotData && _plotData.y_scatter_cofactor) || 150;
-        _g.select('.x-axis').call(
-            xIsLog
-                ? d3.axisBottom(zx).ticks(5).tickFormat(_scatterTickFormat(xScCf))
-                : d3.axisBottom(zx).ticks(6)
-        );
+        var pd = _plotData || {};
+        var xIsLog     = pd.x_is_log;
+        var yIsLog     = pd.y_is_log;
+        var xIsLogicle = pd.x_is_logicle === true;
+        var yIsLogicle = pd.y_is_logicle === true;
+        var xScCf = pd.x_scatter_cofactor || 150;
+        var yScCf = pd.y_scatter_cofactor || 150;
+        var xTicks = pd.x_logicle_ticks;
+        var yTicks = pd.y_logicle_ticks;
+
+        // ── X axis ──
+        if (xIsLogicle && xTicks && xTicks.major_pos && xTicks.major_pos.length > 0) {
+            var xLg = _buildLogicleAxis(zx, xTicks, d3.axisBottom);
+            _g.select('.x-axis').call(xLg.axis);
+            _styleLogicleAxis(_g.select('.x-axis'), xLg.majorSet, true);
+            _hideCompressedLabels(_g.select('.x-axis'), zx, 28);
+        } else if (xIsLog) {
+            _g.select('.x-axis').call(
+                d3.axisBottom(zx).ticks(5).tickFormat(_scatterTickFormat(xScCf))
+            );
+        } else {
+            _g.select('.x-axis').call(d3.axisBottom(zx).ticks(6));
+        }
         _g.select('.x-axis').selectAll('.tick text').style('font-size', '12px');
-        _g.select('.y-axis').call(
-            yIsLog
-                ? d3.axisLeft(zy).ticks(5).tickFormat(_scatterTickFormat(yScCf))
-                : d3.axisLeft(zy).ticks(6)
-        );
+
+        // ── Y axis ──
+        if (yIsLogicle && yTicks && yTicks.major_pos && yTicks.major_pos.length > 0) {
+            var yLg = _buildLogicleAxis(zy, yTicks, d3.axisLeft);
+            _g.select('.y-axis').call(yLg.axis);
+            _styleLogicleAxis(_g.select('.y-axis'), yLg.majorSet, false);
+            _hideCompressedLabels(_g.select('.y-axis'), zy, 18);
+        } else if (yIsLog) {
+            _g.select('.y-axis').call(
+                d3.axisLeft(zy).ticks(5).tickFormat(_scatterTickFormat(yScCf))
+            );
+        } else {
+            _g.select('.y-axis').call(d3.axisLeft(zy).ticks(6));
+        }
         _g.select('.y-axis').selectAll('.tick text').style('font-size', '12px');
+
         _drawCanvas(zx, zy);
         _drawGates(zx, zy);
         if (_rectStart)          _drawInProgress();
