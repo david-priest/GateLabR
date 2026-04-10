@@ -264,84 +264,77 @@ ui <- fluidPage(
 
           tags$div(class = "below-plot-controls",
 
-            # Row 1 — Display box
-            tags$div(class = "gating-control-box",
-              tags$div(class = "gating-control-box-title", "Display"),
-              tags$div(style = "display:flex; align-items:center; gap:10px; flex-wrap:wrap;",
-                radioButtons("display_mode", NULL,
-                             choices = c("Scatter"="scatter","Pseudo"="pseudocolor","Contour"="contour"),
-                             selected = "pseudocolor", inline = TRUE),
-                tags$div(style = "display:flex; align-items:center; gap:4px;",
-                  tags$span("Opacity:", style="font-size:11px;color:#555;"),
-                  tags$div(class="opacity-slider-wrap", style="width:140px;",
-                    sliderInput("point_alpha", NULL, min=0.05, max=1.0, value=0.35, step=0.05, width="100%")
-                  )
-                ),
-                conditionalPanel("input.display_mode == 'contour'",
-                  tags$div(style="display:flex;align-items:center;gap:4px;",
-                    tags$span("Outer:",style="font-size:11px;color:#555;"),
-                    selectInput("contour_threshold",NULL,
-                                choices=c("1%"=1,"2%"=2,"5%"=5,"10%"=10,"20%"=20,"30%"=30),
-                                selected=5,width="80px")
-                  )
-                )
-              )
-            ),
+            # ── Gating controls panel (Strategy-style card) ─────────────────
+            tags$div(class = "strategy-controls",
 
-            # Row 2 — two-column grid: Sampling box + Axis box
-            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;",
-
-              # Sampling
-              tags$div(class="gating-control-box",
-                tags$div(class="gating-control-box-title","Sampling"),
-                tags$div(style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;",
-                  tags$div(style="display:flex;align-items:center;gap:4px;",
-                    tags$span("Events:",style="font-size:11px;color:#555;"),
-                    numericInput("gating_max_events",NULL,value=50000,min=0,step=5000,width="90px"),
-                    tags$span("(0=all)",style="font-size:10px;color:#999;")
+              # Top row: display mode + opacity (like strategy-top-actions)
+              tags$div(class = "strategy-top-actions",
+                tags$div(style = "display:flex; align-items:center; gap:10px; flex-wrap:wrap;",
+                  radioButtons("display_mode", NULL,
+                               choices = c("Scatter"="scatter","Pseudo"="pseudocolor","Contour"="contour"),
+                               selected = "pseudocolor", inline = TRUE),
+                  tags$div(style = "display:flex; align-items:center; gap:4px;",
+                    tags$span("Opacity:", style = "font-size:11px; color:#555;"),
+                    tags$div(class = "opacity-slider-wrap", style = "width:130px;",
+                      sliderInput("point_alpha", NULL, min=0.05, max=1.0, value=0.35, step=0.05, width="100%")
+                    )
                   ),
-                  tags$div(style="display:flex;align-items:center;gap:4px;",
-                    tags$span("Scope:",style="font-size:11px;color:#555;"),
-                    selectInput("plot_data_scope",NULL,
-                                choices=c("Selected samples"="subset","All data"="full"),
-                                selected="subset",width="140px")
+                  conditionalPanel("input.display_mode == 'contour'",
+                    tags$div(style = "display:flex; align-items:center; gap:4px;",
+                      tags$span("Outer:", style = "font-size:11px; color:#555;"),
+                      selectInput("contour_threshold", NULL,
+                                  choices = c("1%"=1,"2%"=2,"5%"=5,"10%"=10,"20%"=20,"30%"=30),
+                                  selected = 5, width = "80px")
+                    )
                   )
                 )
               ),
 
-              # Axis — contents rendered server-side so CyTOF/flow can differ
-              tags$div(class="gating-control-box",
-                tags$div(class="gating-control-box-title","Axis"),
-                uiOutput("axis_controls_ui")
+              # Parameter grid: 2-column, strategy-block cards
+              tags$div(class = "strategy-control-grid",
+
+                # Card 1: Sampling
+                tags$div(class = "strategy-block",
+                  tags$div(class = "gating-control-box-title", "Sampling"),
+                  numericInput("gating_max_events", "Max events (0 = all):",
+                               value = 50000, min = 0, step = 5000),
+                  selectInput("plot_data_scope", "Data scope:",
+                              choices = c("Selected samples" = "subset", "All data" = "full"),
+                              selected = "subset")
+                ),
+
+                # Card 2: Axis
+                tags$div(class = "strategy-block",
+                  tags$div(class = "gating-control-box-title", "Axis"),
+                  uiOutput("axis_controls_ui")
+                )
+              ),
+
+              # Gate Counts — full-width card below the grid
+              tags$div(class = "strategy-block", style = "margin-top:8px;",
+                tags$div(class = "gating-control-box-title", "Gate Counts"),
+                tags$div(style = "display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;",
+                  selectInput("count_compute_mode", "Mode:",
+                              choices = c("Fast (sampled)" = "subset", "Exact (full data)" = "full"),
+                              selected = "subset", width = "170px"),
+                  tags$div(style = "display:flex; align-items:center; gap:4px;",
+                    tags$span("Cap:", style = "font-size:11px; color:#555;"),
+                    numericInput("subset_count_events", NULL, value = 30000,
+                                 min = 1000, step = 5000, width = "90px")
+                  ),
+                  actionButton("recompute_full_counts_btn", "Run Full", class = "btn-xs btn-default"),
+                  tags$span("Fast mode uses approximate counts for smoother edits",
+                            style = "font-size:10px; color:#999;")
+                )
               )
             ),
 
-            # Row 3 — Gate Counts box
-            tags$div(class="gating-control-box",style="margin-top:8px;",
-              tags$div(class="gating-control-box-title","Gate Counts"),
-              tags$div(style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;",
-                tags$div(style="display:flex;align-items:center;gap:4px;",
-                  tags$span("Mode:",style="font-size:11px;color:#555;"),
-                  selectInput("count_compute_mode",NULL,
-                              choices=c("Fast (sampled)"="subset","Exact (full data)"="full"),
-                              selected="subset",width="160px")
-                ),
-                tags$div(style="display:flex;align-items:center;gap:4px;",
-                  tags$span("Cap:",style="font-size:11px;color:#555;"),
-                  numericInput("subset_count_events",NULL,value=30000,min=1000,step=5000,width="90px")
-                ),
-                actionButton("recompute_full_counts_btn","Run Full",class="btn-xs btn-default"),
-                tags$span("Fast mode uses approximate counts for smoother edits",
-                          style="font-size:10px;color:#999;")
-              )
-            ),
-
-            # Row 4 — Flow transform controls + Color by
+            # Flow transform controls + Color by (outside the card — only shown for flow)
             uiOutput("flow_transform_controls_ui"),
-            tags$div(class="section-header",style="margin-top:6px;",
+            tags$div(class = "section-header", style = "margin-top:6px;",
                      "Color by marker / metadata",
-                     actionButton("clear_overlay_btn","Clear",class="btn-xs btn-default")),
-            selectInput("overlay_coldata",NULL,choices=c("(none)"=""),selected=""),
+                     actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default")),
+            selectInput("overlay_coldata", NULL, choices = c("(none)" = ""), selected = ""),
             uiOutput("overlay_checkboxes_ui")
           ),
           uiOutput("subset_stats_ui")
@@ -1070,15 +1063,19 @@ server <- function(input, output, session) {
       y_ch  <- input$y_channel %||% ""
       x_rng <- get_cytof_axis_range(x_ch)
       y_rng <- get_cytof_axis_range(y_ch)
-      tags$div(class = "cytof-axis-row",
-        tags$span("X:", style = "font-size:11px;color:#555;font-weight:600;white-space:nowrap;"),
-        numericInput("cytof_x_lo", NULL, value = x_rng[1], step = 0.5, width = "70px"),
-        tags$span("–", style = "font-size:11px;color:#999;"),
-        numericInput("cytof_x_hi", NULL, value = x_rng[2], step = 0.5, width = "70px"),
-        tags$span("Y:", style = "font-size:11px;color:#555;font-weight:600;white-space:nowrap;margin-left:8px;"),
-        numericInput("cytof_y_lo", NULL, value = y_rng[1], step = 0.5, width = "70px"),
-        tags$span("–", style = "font-size:11px;color:#999;"),
-        numericInput("cytof_y_hi", NULL, value = y_rng[2], step = 0.5, width = "70px")
+      tags$div(
+        tags$div(class = "cytof-axis-row",
+          tags$span("X:", style = "font-size:11px;color:#555;font-weight:600;width:14px;"),
+          numericInput("cytof_x_lo", NULL, value = x_rng[1], step = 0.5, width = "68px"),
+          tags$span("–", style = "font-size:11px;color:#999;"),
+          numericInput("cytof_x_hi", NULL, value = x_rng[2], step = 0.5, width = "68px")
+        ),
+        tags$div(class = "cytof-axis-row",
+          tags$span("Y:", style = "font-size:11px;color:#555;font-weight:600;width:14px;"),
+          numericInput("cytof_y_lo", NULL, value = y_rng[1], step = 0.5, width = "68px"),
+          tags$span("–", style = "font-size:11px;color:#999;"),
+          numericInput("cytof_y_hi", NULL, value = y_rng[2], step = 0.5, width = "68px")
+        )
       )
     } else {
       tags$div(style = "display:flex;align-items:center;gap:4px;",

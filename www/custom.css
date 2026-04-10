@@ -1047,11 +1047,24 @@ body { font-size: 13px; }
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: nowrap;   /* keep X and Y on one line */
-  margin-top: 2px;
+  flex-wrap: nowrap;
+  margin-top: 4px;
 }
 .cytof-axis-row .form-group { margin-bottom: 0; }
-.cytof-axis-row input.form-control { height: 24px; font-size: 11px; padding: 1px 4px; }
+.cytof-axis-row input.form-control { height: 26px; font-size: 11px; padding: 2px 4px; }
+
+/* ── Below-plot strategy-block label reuse ─────────────────────── */
+.below-plot-controls .strategy-controls { margin-top: 8px; }
+.below-plot-controls .strategy-block { min-height: unset; }
+.below-plot-controls .strategy-controls .strategy-top-actions {
+  margin-bottom: 6px;
+  justify-content: flex-start;
+}
+/* Compact form elements inside gating strategy-blocks */
+.below-plot-controls .strategy-block .form-group { margin-bottom: 4px; }
+.below-plot-controls .strategy-block .selectize-input { min-height:26px; font-size:11px; padding:2px 6px; }
+.below-plot-controls .strategy-block input.form-control { height:26px; font-size:11px; padding:2px 6px; }
+.below-plot-controls .strategy-block label.control-label { font-size:11px; margin-bottom:1px; color:#555; }
 
 /* ── Workspace panel redesign ───────────────────────────────────── */
 .workspace-panel {
