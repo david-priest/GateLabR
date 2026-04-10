@@ -127,9 +127,12 @@ ui <- fluidPage(
           column(6, selectInput("sce_select", "SCE:", choices = NULL)),
           column(6, selectInput("assay_select", "Assay:", choices = NULL))
         ),
-        tags$div(style = "margin: -4px 0 6px 0;",
+        tags$div(style = "margin: -4px 0 6px 0; display:flex; gap:6px; align-items:center;",
           actionButton("rename_sce_btn", "Rename Loaded SCE",
-                       class = "btn-xs btn-default")
+                       class = "btn-xs btn-default"),
+          actionButton("refresh_sce_btn", "↺ Refresh SCEs",
+                       class = "btn-xs btn-default",
+                       title = "Re-scan global environment for SCE objects")
         ),
 
         # ── FCS import ──
@@ -185,8 +188,7 @@ ui <- fluidPage(
             tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;",
               actionButton("save_workspace_btn","💾 Save WS",class="btn-sm btn-primary",style="width:100%"),
               actionButton("load_workspace_btn","📂 Load WS",class="btn-sm btn-default",style="width:100%"),
-              actionButton("export_pop_btn","→ colData",class="btn-sm btn-info",style="width:100%"),
-              actionButton("refresh_sce_btn","↺ Refresh",class="btn-sm btn-default",style="width:100%")
+              actionButton("export_pop_btn","→ colData",class="btn-sm btn-info",style="width:100%")
             )
           ),
 
@@ -565,7 +567,12 @@ ui <- fluidPage(
               )
             ),
 
-            tags$div(class = "section-header", "Channels"),
+            tags$div(class = "section-header", "Channels",
+              tags$span(
+                actionButton("stats_channels_all_btn",  "All",  class = "btn-xs btn-default"),
+                actionButton("stats_channels_none_btn", "None", class = "btn-xs btn-default")
+              )
+            ),
             uiOutput("stats_channels_ui"),
             tags$div(class = "section-header", "Populations"),
             uiOutput("stats_populations_ui")
@@ -1528,7 +1535,12 @@ server <- function(input, output, session) {
   observeEvent(input$assay_select, {
     req(rv$sce)
     rv$assay_name <- input$assay_select
+    # Reset cytof axis range — different assay means a completely different scale
+    rv$cytof_axis_range <- list()
+    rv$.plot_range_override <- NULL
     refresh_assay_data(reset_cache = TRUE)
+    req(rv$assay_data)
+    send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   observeEvent(input$flip_axes, {
@@ -4309,6 +4321,14 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
                        choices = all_chs,
                        selected = default_selected,
                        inline = FALSE)
+  })
+
+  observeEvent(input$stats_channels_all_btn, {
+    req(rv$channels)
+    updateCheckboxGroupInput(session, "stats_channels", selected = rv$channels)
+  })
+  observeEvent(input$stats_channels_none_btn, {
+    updateCheckboxGroupInput(session, "stats_channels", selected = character(0))
   })
 
   # Dynamic population checkboxes
