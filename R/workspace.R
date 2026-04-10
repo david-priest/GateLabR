@@ -4,13 +4,15 @@
 #' @return The modified SCE object
 save_workspace <- function(sce, gates, gate_order, populations,
                            root_population_id,
-                           gate_value_space = "display") {
+                           gate_value_space = "display",
+                           cytof_axis_range = list()) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
     populations = populations,
     root_population_id = root_population_id,
     gate_value_space = gate_value_space,
+    cytof_axis_range = cytof_axis_range,
     version = 1L,
     saved_at = as.character(Sys.time())
   )

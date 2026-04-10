@@ -26,6 +26,7 @@ source("R/gatingml_import.R")
 source("R/gatingml_export.R")
 source("R/fcs_export.R")
 source("R/strategy_utils.R")
+source("R/stats_utils.R")
 
 # ── Discover SCE objects in global environment ──────────────────────────────
 find_sce_objects <- function() {
@@ -175,58 +176,45 @@ ui <- fluidPage(
         ),
 
         # ── Workspace controls ──
-        tags$div(class = "section-header", "Workspace"),
+        tags$div(class = "workspace-panel",
+          tags$div(class = "section-header", "Workspace"),
 
-        # Row 1: in-memory workspace operations
-        fluidRow(
-          column(3, actionButton("save_workspace_btn", "Save WS",
-                                 class = "btn-sm btn-primary", style = "width:100%")),
-          column(3, actionButton("load_workspace_btn", "Load WS",
-                                 class = "btn-sm btn-default", style = "width:100%")),
-          column(3, actionButton("export_pop_btn", "→colData",
-                                 class = "btn-sm btn-info", style = "width:100%")),
-          column(3, actionButton("refresh_sce_btn", "Refresh",
-                                 class = "btn-sm btn-default", style = "width:100%"))
-        ),
+          # ── In-memory ops ──
+          tags$div(class = "workspace-block",
+            tags$div(class = "workspace-block-title", "SCE workspace"),
+            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;",
+              actionButton("save_workspace_btn","💾 Save WS",class="btn-sm btn-primary",style="width:100%"),
+              actionButton("load_workspace_btn","📂 Load WS",class="btn-sm btn-default",style="width:100%"),
+              actionButton("export_pop_btn","→ colData",class="btn-sm btn-info",style="width:100%"),
+              actionButton("refresh_sce_btn","↺ Refresh",class="btn-sm btn-default",style="width:100%")
+            )
+          ),
 
-        # Row 2: file persistence + FCS export
-        tags$div(style = "margin-top: 4px;",
-          fluidRow(
-            column(6, downloadButton("save_rds_dl", "Save RDS",
-                                     class = "btn-sm btn-success",
-                                     style = "width:100%; padding: 5px 8px;")),
-            column(6, actionButton("export_fcs_btn", "Export FCS",
-                                   class = "btn-sm btn-warning", style = "width:100%"))
-          )
-        ),
+          # ── File persistence ──
+          tags$div(class = "workspace-block",style="margin-top:6px;",
+            tags$div(class = "workspace-block-title", "File"),
+            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;",
+              downloadButton("save_rds_dl","⬇ Save RDS",class="btn-sm btn-success",style="width:100%;padding:5px 8px;"),
+              actionButton("export_fcs_btn","⬆ Export FCS",class="btn-sm btn-warning",style="width:100%")
+            ),
+            fileInput("load_rds_upload",NULL,accept=c(".rds",".RDS"),
+                      buttonLabel="Load RDS...",placeholder="No file selected",multiple=FALSE)
+          ),
 
-        # Load RDS — standard file input
-        fileInput("load_rds_upload", NULL,
-                  accept = c(".rds", ".RDS"),
-                  buttonLabel = "Load RDS...",
-                  placeholder = "No file selected",
-                  multiple = FALSE),
+          # ── GatingML ──
+          tags$div(class="workspace-block",style="margin-top:6px;",
+            tags$div(class="workspace-block-title","GatingML"),
+            fileInput("import_gatingml_upload",NULL,
+                      accept=c(".xml",".gatingml",".Gating-ML"),
+                      buttonLabel="Import GatingML...",placeholder="No file selected",multiple=FALSE),
+            downloadButton("export_gatingml_dl","Export GatingML...",
+                           class="btn-default btn-block",style="margin-bottom:4px;text-align:left;")
+          ),
 
-        # Import Cytobank Gating-ML
-        fileInput("import_gatingml_upload", NULL,
-                  accept = c(".xml", ".gatingml", ".Gating-ML"),
-                  buttonLabel = "Import GatingML...",
-                  placeholder = "No file selected",
-                  multiple = FALSE),
-
-        # Export Cytobank Gating-ML
-        downloadButton("export_gatingml_dl", "Export GatingML...",
-                       class = "btn-default btn-block",
-                       style = "margin-bottom:4px; text-align:left;"),
-
-        tags$div(class = "status-bar",
-          textOutput("status_text", inline = TRUE)
-        ),
-
-        tags$hr(style = "margin: 8px 0;"),
-        actionButton("close_app_btn", "Close App",
-                     class = "btn-sm btn-danger btn-block",
-                     icon = icon("power-off"))
+          tags$div(class="status-bar", textOutput("status_text",inline=TRUE)),
+          tags$hr(style="margin:8px 0;"),
+          actionButton("close_app_btn","⏻ Close App",class="btn-sm btn-danger btn-block",icon=icon("power-off"))
+        )
       )
     ),
 
@@ -240,10 +228,14 @@ ui <- fluidPage(
         tabPanel("Gating",
           tags$div(class = "plot-controls-bar",
             tags$div(class = "mode-toolbar",
-              actionButton("mode_navigate", "Nav", class = "btn-sm btn-default active-mode"),
-              actionButton("mode_rect", "Rect", class = "btn-sm btn-default"),
-              actionButton("mode_poly", "Poly", class = "btn-sm btn-default"),
-              actionButton("mode_cancel", "Cancel", class = "btn-sm btn-warning")
+              tags$span("Gating:", style="font-size:11px;color:#555;font-weight:600;margin-right:2px;"),
+              actionButton("mode_rect",
+                HTML('<svg width="14" height="10" viewBox="0 0 14 10"><rect x="1" y="1" width="12" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Rect'),
+                class = "btn-sm btn-default", title = "Draw rectangle gate"),
+              actionButton("mode_poly",
+                HTML('<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,1 13,5 11,12 3,12 1,5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Poly'),
+                class = "btn-sm btn-default", title = "Draw polygon gate"),
+              actionButton("mode_cancel", "✕ Cancel", class = "btn-sm btn-warning")
             ),
             tags$div(style = "display:flex; gap:4px; margin-left: auto;",
               actionButton("flip_axes", "", icon = icon("arrows-h"),
@@ -263,75 +255,91 @@ ui <- fluidPage(
           ),
 
           tags$div(class = "below-plot-controls",
-            # Display mode + opacity on one compact row
-            tags$div(style = "display:flex; align-items:center; gap:8px; flex-wrap:wrap;",
-              radioButtons("display_mode", NULL,
-                           choices = c("Scatter" = "scatter",
-                                       "Pseudo" = "pseudocolor",
-                                       "Contour" = "contour"),
-                           selected = "pseudocolor", inline = TRUE),
-              tags$div(style = "display:flex; align-items:center; gap:4px; min-width:140px;",
-                tags$span("Opacity:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                tags$div(class = "opacity-slider-wrap", style = "width:150px;",
-                  sliderInput("point_alpha", NULL,
-                              min = 0.05, max = 1.0, value = 0.35, step = 0.05,
-                              width = "100%")
-                )
-              ),
-              tags$div(class = "gating-max-events",
-                style = "display:flex; align-items:center; gap:4px; min-width:170px;",
-                tags$span("Max events:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                numericInput("gating_max_events", NULL,
-                             value = 50000, min = 0, step = 5000, width = "110px"),
-                tags$span("0 = all", style = "font-size:10px; color:#888; white-space:nowrap;")
-              ),
-              tags$div(class = "gating-plot-scope",
-                style = "display:flex; align-items:center; gap:5px; min-width:210px;",
-                tags$span("Plot data:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                selectInput("plot_data_scope", NULL,
-                            choices = c("Subset" = "subset", "Full data" = "full"),
-                            selected = "subset", width = "130px")
-              ),
-              tags$div(class = "gating-axis-span",
-                style = "display:flex; align-items:center; gap:5px; min-width:190px;",
-                tags$span("Axis span %:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                numericInput("axis_span_percent", NULL,
-                             value = 120, min = 100, max = 200, step = 5, width = "90px")
-              ),
-              tags$div(class = "gating-count-mode",
-                style = "display:flex; align-items:center; gap:5px; min-width:430px;",
-                tags$span("Counts:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                selectInput("count_compute_mode", NULL,
-                            choices = c("Fast subset" = "subset", "Full data" = "full"),
-                            selected = "subset", width = "120px"),
-                tags$span("Subset cap:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                numericInput("subset_count_events", NULL,
-                             value = 30000, min = 1000, step = 5000, width = "105px"),
-                actionButton("recompute_full_counts_btn", "Run Full", class = "btn-xs btn-default"),
-                tags$span("fast mode uses approximate counts for smoother edits",
-                          style = "font-size:10px; color:#888; white-space:nowrap;")
-              ),
-              conditionalPanel(
-                "input.display_mode == 'contour'",
+
+            # Row 1 — Display box
+            tags$div(class = "gating-control-box",
+              tags$div(class = "gating-control-box-title", "Display"),
+              tags$div(style = "display:flex; align-items:center; gap:10px; flex-wrap:wrap;",
+                radioButtons("display_mode", NULL,
+                             choices = c("Scatter"="scatter","Pseudo"="pseudocolor","Contour"="contour"),
+                             selected = "pseudocolor", inline = TRUE),
                 tags$div(style = "display:flex; align-items:center; gap:4px;",
-                  tags$span("Outer:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                  selectInput("contour_threshold", NULL,
-                              choices = c("1%" = 1, "2%" = 2, "5%" = 5,
-                                          "10%" = 10, "20%" = 20, "30%" = 30),
-                              selected = 5, width = "80px")
+                  tags$span("Opacity:", style="font-size:11px;color:#555;"),
+                  tags$div(class="opacity-slider-wrap", style="width:140px;",
+                    sliderInput("point_alpha", NULL, min=0.05, max=1.0, value=0.35, step=0.05, width="100%")
+                  )
+                ),
+                conditionalPanel("input.display_mode == 'contour'",
+                  tags$div(style="display:flex;align-items:center;gap:4px;",
+                    tags$span("Outer:",style="font-size:11px;color:#555;"),
+                    selectInput("contour_threshold",NULL,
+                                choices=c("1%"=1,"2%"=2,"5%"=5,"10%"=10,"20%"=20,"30%"=30),
+                                selected=5,width="80px")
+                  )
                 )
               )
             ),
 
-            # Flow transform controls (conditional, directly below display row)
-            uiOutput("flow_transform_controls_ui"),
+            # Row 2 — two-column grid: Sampling box + Axis box
+            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;",
 
-            # Color by section
-            tags$div(class = "section-header", style = "margin-top:6px;",
+              # Sampling
+              tags$div(class="gating-control-box",
+                tags$div(class="gating-control-box-title","Sampling"),
+                tags$div(style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;",
+                  tags$div(style="display:flex;align-items:center;gap:4px;",
+                    tags$span("Events:",style="font-size:11px;color:#555;"),
+                    numericInput("gating_max_events",NULL,value=50000,min=0,step=5000,width="90px"),
+                    tags$span("(0=all)",style="font-size:10px;color:#999;")
+                  ),
+                  tags$div(style="display:flex;align-items:center;gap:4px;",
+                    tags$span("Scope:",style="font-size:11px;color:#555;"),
+                    selectInput("plot_data_scope",NULL,
+                                choices=c("Selected samples"="subset","All data"="full"),
+                                selected="subset",width="140px")
+                  )
+                )
+              ),
+
+              # Axis
+              tags$div(class="gating-control-box",
+                tags$div(class="gating-control-box-title","Axis"),
+                tags$div(style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;",
+                  tags$div(style="display:flex;align-items:center;gap:4px;",
+                    tags$span("Span %:",style="font-size:11px;color:#555;"),
+                    numericInput("axis_span_percent",NULL,value=120,min=100,max=200,step=5,width="80px")
+                  )
+                ),
+                uiOutput("cytof_axis_range_ui")
+              )
+            ),
+
+            # Row 3 — Gate Counts box
+            tags$div(class="gating-control-box",style="margin-top:8px;",
+              tags$div(class="gating-control-box-title","Gate Counts"),
+              tags$div(style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;",
+                tags$div(style="display:flex;align-items:center;gap:4px;",
+                  tags$span("Mode:",style="font-size:11px;color:#555;"),
+                  selectInput("count_compute_mode",NULL,
+                              choices=c("Fast (sampled)"="subset","Exact (full data)"="full"),
+                              selected="subset",width="160px")
+                ),
+                tags$div(style="display:flex;align-items:center;gap:4px;",
+                  tags$span("Cap:",style="font-size:11px;color:#555;"),
+                  numericInput("subset_count_events",NULL,value=30000,min=1000,step=5000,width="90px")
+                ),
+                actionButton("recompute_full_counts_btn","Run Full",class="btn-xs btn-default"),
+                tags$span("Fast mode uses approximate counts for smoother edits",
+                          style="font-size:10px;color:#999;")
+              )
+            ),
+
+            # Row 4 — Flow transform controls + Color by
+            uiOutput("flow_transform_controls_ui"),
+            tags$div(class="section-header",style="margin-top:6px;",
                      "Color by marker / metadata",
-                     actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default")),
-            selectInput("overlay_coldata", NULL,
-                        choices = c("(none)" = ""), selected = ""),
+                     actionButton("clear_overlay_btn","Clear",class="btn-xs btn-default")),
+            selectInput("overlay_coldata",NULL,choices=c("(none)"=""),selected=""),
             uiOutput("overlay_checkboxes_ui")
           ),
           uiOutput("subset_stats_ui")
@@ -523,6 +531,54 @@ ui <- fluidPage(
             uiOutput("illust_populations_ui")
           ),
           tags$div(id = "illustration-grid-container", class = "mini-plot-grid-container")
+        ),
+
+        # ── Tab 4: Statistics ────────────────────────────────────────────────
+        tabPanel("Statistics",
+          tags$div(class = "stats-controls",
+            tags$div(class = "stats-top-actions",
+              actionButton("stats_compute_btn", "Compute Statistics",
+                           class = "btn-sm btn-primary"),
+              downloadButton("stats_export_csv", "Export CSV",
+                             class = "btn-sm btn-default")
+            ),
+
+            tags$div(class = "stats-options-grid",
+              tags$div(class = "stats-block",
+                tags$div(class = "section-header", "Statistics"),
+                checkboxGroupInput("stats_stat_types", NULL,
+                  choices = c("Count" = "count",
+                              "% of Parent" = "pct_parent",
+                              "% of Total"  = "pct_total",
+                              "Median MFI"  = "median",
+                              "Mean MFI"    = "mean",
+                              "Geometric Mean" = "geomean",
+                              "Std Dev"     = "sd",
+                              "CV%"         = "cv"),
+                  selected = c("count", "pct_parent", "pct_total", "median"),
+                  inline = FALSE)
+              ),
+              tags$div(class = "stats-block",
+                tags$div(class = "section-header", "Value Space (MFI)"),
+                radioButtons("stats_value_space", NULL,
+                  choices = c("Raw (linear)" = "raw",
+                              "Transformed (display)" = "transformed"),
+                  selected = "raw", inline = FALSE),
+                tags$div(style = "font-size:10px; color:#888; margin-top:4px;",
+                  "Raw = untransformed fluorescence/mass values.",
+                  tags$br(),
+                  "Transformed = arcsinh (CyTOF) or logicle (flow).")
+              )
+            ),
+
+            tags$div(class = "section-header", "Channels"),
+            uiOutput("stats_channels_ui"),
+            tags$div(class = "section-header", "Populations"),
+            uiOutput("stats_populations_ui")
+          ),
+          tags$div(class = "stats-table-container",
+            DT::dataTableOutput("stats_table")
+          )
         )
       )
     ),
@@ -584,7 +640,9 @@ ui <- fluidPage(
           ),
           tags$div(class = "fcs-inline-action",
             actionButton("apply_bulk_pop_rename_btn", "Apply Bulk Rename",
-                         class = "btn-sm btn-default")
+                         class = "btn-sm btn-default"),
+            downloadButton("bulk_rename_template_dl", "Download Template",
+                           class = "btn-sm btn-default")
           )
         ),
         tags$div(style = "font-size:11px; color:#888; margin-top:4px;",
@@ -636,7 +694,8 @@ server <- function(input, output, session) {
     flow_logicle_w = list(),
     flow_logicle_w_auto = list(),
     flow_scatter_cofactor = list(),
-    flow_raw_data = NULL
+    flow_raw_data = NULL,
+    cytof_axis_range = list()
   )
 
   runjs <- function(code) {
@@ -768,7 +827,8 @@ server <- function(input, output, session) {
     }
     rv$sce <- save_workspace(
       rv$sce, rv$gates, rv$gate_order, rv$populations, rv$root_population_id,
-      gate_value_space = gate_value_space
+      gate_value_space = gate_value_space,
+      cytof_axis_range = rv$cytof_axis_range %||% list()
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -839,6 +899,15 @@ server <- function(input, output, session) {
   is_flow_session <- function(sce = rv$sce) {
     if (is.null(sce)) return(FALSE)
     identical(S4Vectors::metadata(sce)$instrument_type, "flow")
+  }
+
+  get_cytof_axis_range <- function(channel) {
+    stored <- rv$cytof_axis_range[[channel]]
+    lo <- suppressWarnings(as.numeric(stored$lo %||% -0.5))
+    hi <- suppressWarnings(as.numeric(stored$hi %||% 7.0))
+    if (!is.finite(lo)) lo <- -0.5
+    if (!is.finite(hi) || hi <= lo) hi <- 7.0
+    c(lo, hi)
   }
 
   init_flow_transform_state <- function(sce) {
@@ -985,6 +1054,47 @@ server <- function(input, output, session) {
       tags$span(paste0(detail, " | ", source_note), style = "font-size:10px; color:#888;")
     )
   })
+
+  output$cytof_axis_range_ui <- renderUI({
+    req(rv$sce)
+    if (is_flow_session(rv$sce)) return(NULL)
+    x_ch <- input$x_channel %||% ""
+    y_ch <- input$y_channel %||% ""
+    x_rng <- get_cytof_axis_range(x_ch)
+    y_rng <- get_cytof_axis_range(y_ch)
+    tags$div(
+      tags$div(class="cytof-axis-row",
+        tags$span("X:", style="font-size:11px;color:#555;font-weight:600;"),
+        numericInput("cytof_x_lo", NULL, value=x_rng[1], step=0.5, width="70px"),
+        tags$span("–", style="font-size:11px;color:#777;"),
+        numericInput("cytof_x_hi", NULL, value=x_rng[2], step=0.5, width="70px")
+      ),
+      tags$div(class="cytof-axis-row",
+        tags$span("Y:", style="font-size:11px;color:#555;font-weight:600;"),
+        numericInput("cytof_y_lo", NULL, value=y_rng[1], step=0.5, width="70px"),
+        tags$span("–", style="font-size:11px;color:#777;"),
+        numericInput("cytof_y_hi", NULL, value=y_rng[2], step=0.5, width="70px")
+      )
+    )
+  })
+
+  observeEvent(list(input$cytof_x_lo, input$cytof_x_hi), {
+    req(rv$sce, !is_flow_session(rv$sce))
+    ch <- input$x_channel %||% ""; if (!nzchar(ch)) return()
+    lo <- suppressWarnings(as.numeric(input$cytof_x_lo)); if (!is.finite(lo)) return()
+    hi <- suppressWarnings(as.numeric(input$cytof_x_hi)); if (!is.finite(hi) || hi <= lo) return()
+    rv$cytof_axis_range[[ch]] <- list(lo=lo, hi=hi)
+    send_full_plot()
+  }, ignoreInit = TRUE)
+
+  observeEvent(list(input$cytof_y_lo, input$cytof_y_hi), {
+    req(rv$sce, !is_flow_session(rv$sce))
+    ch <- input$y_channel %||% ""; if (!nzchar(ch)) return()
+    lo <- suppressWarnings(as.numeric(input$cytof_y_lo)); if (!is.finite(lo)) return()
+    hi <- suppressWarnings(as.numeric(input$cytof_y_hi)); if (!is.finite(hi) || hi <= lo) return()
+    rv$cytof_axis_range[[ch]] <- list(lo=lo, hi=hi)
+    send_full_plot()
+  }, ignoreInit = TRUE)
 
   output$flow_transform_controls_ui <- renderUI({
     req(rv$sce, input$x_channel, input$y_channel)
@@ -1305,6 +1415,7 @@ server <- function(input, output, session) {
       sort_population_tree_state()
       rv$active_population_id <- ws$root_population_id
       rv$gate_version <- rv$gate_version + 1L
+      if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
       output$status_text <- renderText(paste("Loaded workspace from", sce_name))
     } else {
       rv$gates <- list()
@@ -1315,6 +1426,7 @@ server <- function(input, output, session) {
       rv$active_population_id <- root$population_id
       rv$selected_gate_id <- NULL
       rv$gate_version <- 0L
+      rv$cytof_axis_range <- list()
       output$status_text <- renderText(paste("Loaded", sce_name, "-",
                                              ncol(sce), "events,",
                                              length(channels), "channels"))
@@ -1958,9 +2070,9 @@ server <- function(input, output, session) {
     if (span < 1e-10) span <- 1
 
     # Axis span is configurable, default 120% of data range.
-    pad_frac <- max(0, (span_scale - 1) / 2)
-    padding <- span * pad_frac
-    out <- c(low - padding, high + padding)
+    lower_pad <- span * 0.05
+    upper_pad <- span * max(0, span_scale - 1)
+    out <- c(low - lower_pad, high + upper_pad)
     if (low >= 0) out[1] <- min(0, out[1])
 
     rv$.range_cache[[cache_key]] <- out
@@ -1981,9 +2093,9 @@ server <- function(input, output, session) {
     span <- high - low
     if (!is.finite(span) || span < 1e-10) span <- 1
 
-    pad_frac <- max(0, (span_scale - 1) / 2)
-    padding <- span * pad_frac
-    out <- c(low - padding, high + padding)
+    lower_pad <- span * 0.05
+    upper_pad <- span * max(0, span_scale - 1)
+    out <- c(low - lower_pad, high + upper_pad)
     if (low >= 0) out[1] <- min(0, out[1])
     out
   }
@@ -2120,6 +2232,9 @@ server <- function(input, output, session) {
     if (!is.null(active_override)) {
       x_range <- active_override$x_range
       y_range <- active_override$y_range
+    } else if (!is.null(rv$sce) && !is_flow_session(rv$sce) && !is_gaussian_qc_channel(x_ch) && !is_gaussian_qc_channel(y_ch)) {
+      x_range <- get_cytof_axis_range(x_ch)
+      y_range <- get_cytof_axis_range(y_ch)
     } else {
       x_range <- compute_stable_range(x_ch, for_plot = TRUE)
       y_range <- compute_stable_range(y_ch, for_plot = TRUE)
@@ -2353,13 +2468,12 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
   # GATE DRAWING + CREATION + EDITING
   # ══════════════════════════════════════════════════════════════════════════════
 
-  observeEvent(input$mode_navigate, { session$sendCustomMessage("setMode", "navigate"); update_mode_buttons("navigate") })
-  observeEvent(input$mode_rect,     { session$sendCustomMessage("setMode", "draw-rect"); update_mode_buttons("draw-rect") })
-  observeEvent(input$mode_poly,     { session$sendCustomMessage("setMode", "draw-poly"); update_mode_buttons("draw-poly") })
-  observeEvent(input$mode_cancel,   { session$sendCustomMessage("setMode", "navigate"); update_mode_buttons("navigate") })
+  observeEvent(input$mode_rect,   { session$sendCustomMessage("setMode", "draw-rect"); update_mode_buttons("draw-rect") })
+  observeEvent(input$mode_poly,   { session$sendCustomMessage("setMode", "draw-poly"); update_mode_buttons("draw-poly") })
+  observeEvent(input$mode_cancel, { session$sendCustomMessage("setMode", "navigate");  update_mode_buttons("navigate")   })
 
   update_mode_buttons <- function(active_mode) {
-    modes <- list(mode_navigate = "navigate", mode_rect = "draw-rect", mode_poly = "draw-poly")
+    modes <- list(mode_rect = "draw-rect", mode_poly = "draw-poly")
     for (btn_id in names(modes)) {
       if (modes[[btn_id]] == active_mode) runjs(sprintf("$('#%s').addClass('active-mode')", btn_id))
       else runjs(sprintf("$('#%s').removeClass('active-mode')", btn_id))
@@ -3014,6 +3128,31 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     output$status_text <- renderText(msg)
     showNotification(msg, type = "message", duration = 5)
   })
+
+  output$bulk_rename_template_dl <- downloadHandler(
+    filename = function() "population_rename_template.csv",
+    content = function(file) {
+      req(rv$populations)
+      pop_ids <- if (!is.null(rv$root_population_id) &&
+                     exists("sort_pop_ids_tree", mode = "function")) {
+        tryCatch(
+          sort_pop_ids_tree(rv$populations, rv$root_population_id),
+          error = function(e) names(rv$populations)
+        )
+      } else {
+        names(rv$populations)
+      }
+      pop_names <- vapply(pop_ids, function(pid) {
+        as.character(rv$populations[[pid]]$name %||% pid)
+      }, character(1))
+      tpl <- data.frame(
+        old_population = pop_names,
+        new_population = pop_names,
+        stringsAsFactors = FALSE
+      )
+      utils::write.csv(tpl, file, row.names = FALSE)
+    }
+  )
 
   observeEvent(input$pop_tree_click, { rv$active_population_id <- input$pop_tree_click; send_full_plot() })
 
@@ -4155,6 +4294,142 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
   })
 
   # ══════════════════════════════════════════════════════════════════════════════
+  # STATISTICS TAB
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  # Dynamic channel checkboxes (exclude QC channels by default)
+  output$stats_channels_ui <- renderUI({
+    rv$channels
+    if (is.null(rv$channels) || length(rv$channels) == 0) return(NULL)
+    all_chs <- rv$channels
+    # Pre-select signal channels (not QC, not scatter for flow)
+    default_selected <- all_chs[!.is_qc_channel(all_chs)]
+    checkboxGroupInput("stats_channels", NULL,
+                       choices = all_chs,
+                       selected = default_selected,
+                       inline = FALSE)
+  })
+
+  # Dynamic population checkboxes
+  output$stats_populations_ui <- renderUI({
+    rv$populations; rv$root_population_id; rv$gate_version
+    if (is.null(rv$root_population_id) || length(rv$populations) == 0) return(NULL)
+    pop_choices <- setNames(names(rv$populations),
+                            vapply(rv$populations, function(p) p$name, character(1)))
+    checkboxGroupInput("stats_populations", NULL,
+                       choices = pop_choices,
+                       selected = names(rv$populations),
+                       inline = FALSE)
+  })
+
+  # Reactive: computed statistics data.frame (computed on button press)
+  rv_stats_df <- reactiveVal(NULL)
+
+  observeEvent(input$stats_compute_btn, {
+    req(rv$sce, rv$assay_data, rv$populations, rv$root_population_id)
+    req(input$stats_channels, input$stats_populations, input$stats_stat_types)
+
+    # Ensure gating strategy is up to date
+    get_pop_mask(rv$root_population_id)
+
+    # Choose value space for MFI calculations
+    use_raw <- identical(input$stats_value_space, "raw")
+    has_channel_stats <- any(c("median", "mean", "geomean", "sd", "cv") %in% input$stats_stat_types)
+
+    raw_data <- NULL
+    if (use_raw && has_channel_stats) {
+      if (is_flow_session() && !is.null(rv$flow_raw_data)) {
+        raw_data <- rv$flow_raw_data
+      } else if ("counts" %in% SummarizedExperiment::assayNames(rv$sce)) {
+        raw_data <- extract_assay_data(rv$sce, "counts")
+      }
+    }
+    # Fall back to display-space data
+    if (is.null(raw_data)) raw_data <- rv$assay_data
+
+    # Filter populations to selected only
+    selected_pops <- rv$populations[intersect(input$stats_populations, names(rv$populations))]
+    if (length(selected_pops) == 0) {
+      showNotification("No populations selected", type = "warning")
+      return()
+    }
+
+    df <- tryCatch(
+      compute_population_stats(
+        assay_data  = rv$assay_data,
+        raw_data    = raw_data,
+        populations = selected_pops,
+        root_pop_id = rv$root_population_id,
+        pop_masks   = rv$pop_events_map,
+        channels    = input$stats_channels,
+        stat_types  = input$stats_stat_types,
+        sample_mask = rv$sample_mask
+      ),
+      error = function(e) {
+        showNotification(paste("Error computing stats:", e$message), type = "error")
+        NULL
+      }
+    )
+
+    if (!is.null(df) && nrow(df) > 0) {
+      rv_stats_df(df)
+    } else {
+      rv_stats_df(NULL)
+      if (is.null(df)) return()
+      showNotification("No data to display", type = "warning")
+    }
+  })
+
+  # Render DT table
+  output$stats_table <- DT::renderDataTable({
+    df <- rv_stats_df()
+    if (is.null(df) || nrow(df) == 0) return(NULL)
+
+    # Format numeric columns with commas for counts
+    DT::datatable(df,
+      options = list(
+        pageLength = 50,
+        scrollX = TRUE,
+        scrollY = "500px",
+        dom = "tip",
+        autoWidth = FALSE
+      ),
+      rownames = FALSE,
+      class = "compact stripe hover"
+    ) |>
+      DT::formatRound(
+        columns = intersect(c("Count"), colnames(df)),
+        digits = 0, mark = ","
+      ) |>
+      DT::formatRound(
+        columns = grep("Median|Mean|GeoMean|SD", colnames(df), value = TRUE),
+        digits = 1, mark = ","
+      ) |>
+      DT::formatRound(
+        columns = grep("% Parent|% Total|CV%", colnames(df), value = TRUE),
+        digits = 2
+      )
+  })
+
+  # CSV export
+  output$stats_export_csv <- downloadHandler(
+    filename = function() {
+      sce_name <- rv$sce_name %||% "data"
+      paste0(sce_name, "_statistics_", format(Sys.Date(), "%Y%m%d"), ".csv")
+    },
+    content = function(file) {
+      df <- rv_stats_df()
+      if (is.null(df) || nrow(df) == 0) {
+        showNotification("No statistics computed yet. Click 'Compute Statistics' first.",
+                        type = "warning")
+        write.csv(data.frame(Message = "No data"), file, row.names = FALSE)
+        return()
+      }
+      write.csv(df, file, row.names = FALSE)
+    }
+  )
+
+  # ══════════════════════════════════════════════════════════════════════════════
   # WORKSPACE SAVE / LOAD / EXPORT
   # ══════════════════════════════════════════════════════════════════════════════
 
@@ -4206,6 +4481,7 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     sort_population_tree_state()
     rv$active_population_id <- ws$root_population_id; rv$selected_gate_id <- NULL
     rv$gate_version <- rv$gate_version + 1L
+    if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
     autosave(); send_full_plot()
     showNotification(paste("Loaded workspace from", source_name), type = "message", duration = 3)
   })
@@ -4615,7 +4891,6 @@ ui_with_runjs <- tagList(
         'import_gatingml_upload': 'Import Cytobank Gating-ML XML and replace current gates/populations',
         'export_gatingml_dl':     'Export current gates and populations as Cytobank Gating-ML 2.0 XML',
         // Mode toolbar
-        'mode_navigate': 'Navigate mode — pan and zoom (no drawing)',
         'mode_rect':     'Draw a rectangle gate',
         'mode_poly':     'Draw a freehand polygon gate',
         'mode_cancel':   'Cancel the current drawing and return to navigate mode',

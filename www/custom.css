@@ -949,3 +949,136 @@ body { font-size: 13px; }
     column-count: 1;
   }
 }
+
+/* ── Statistics Tab ───────────────────────────────────────────────────────── */
+
+.stats-controls {
+  padding: 10px 12px;
+  background: #f8f9fb;
+  border-bottom: 1px solid #e4e9f2;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.stats-top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.stats-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stats-block {
+  background: #ffffff;
+  border: 1px solid #e4e9f2;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.stats-block .shiny-options-group {
+  font-size: 12px;
+}
+
+.stats-block .shiny-options-group label {
+  font-weight: normal;
+  margin-bottom: 2px;
+}
+
+.stats-table-container {
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.stats-table-container table.dataTable {
+  font-size: 12px;
+}
+
+.stats-table-container table.dataTable th {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Multi-column layout for channel/population checkboxes */
+.stats-controls #stats_channels .shiny-options-group,
+.stats-controls #stats_populations .shiny-options-group {
+  column-count: 2;
+  font-size: 12px;
+}
+
+.stats-controls #stats_channels .shiny-options-group label,
+.stats-controls #stats_populations .shiny-options-group label {
+  font-weight: normal;
+  margin-bottom: 1px;
+  break-inside: avoid;
+}
+
+/* ── Gating control boxes (below-plot redesign) ─────────────────── */
+.gating-control-box {
+  border: 1px solid #d9dfeb;
+  border-radius: 4px;
+  background: #f9fbfe;
+  padding: 6px 8px;
+}
+
+.gating-control-box-title {
+  font-weight: 600;
+  font-size: 11px;
+  color: #4a6fa5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+
+/* Compact inputs inside gating control boxes */
+.gating-control-box .form-group { margin-bottom: 0; }
+.gating-control-box .selectize-input { min-height: 26px; font-size: 11px; padding: 2px 6px; }
+.gating-control-box input.form-control { height: 26px; font-size: 11px; padding: 2px 6px; }
+.gating-control-box .radio-inline { font-size: 12px; padding-left: 18px; margin-right: 2px; }
+
+/* ── CyTOF axis range row ───────────────────────────────────────── */
+.cytof-axis-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.cytof-axis-row .form-group { margin-bottom: 0; }
+.cytof-axis-row input.form-control { height: 24px; font-size: 11px; padding: 1px 4px; }
+
+/* ── Workspace panel redesign ───────────────────────────────────── */
+.workspace-panel {
+  border: 1px solid #d9dfeb;
+  border-radius: 4px;
+  background: #f9fbfe;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.workspace-block {
+  background: #ffffff;
+  border: 1px solid #e4e9f2;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.workspace-block-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4a6fa5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.workspace-panel .section-header {
+  margin-top: 0;
+  margin-bottom: 6px;
+}
