@@ -122,15 +122,21 @@ ui <- fluidPage(
     column(3,
       tags$div(class = "panel-section",
 
-        # ── SCE + Assay on one row ──
-        fluidRow(
-          column(6, selectInput("sce_select", "SCE:", choices = NULL)),
-          column(6, selectInput("assay_select", "Assay:", choices = NULL))
+        # ── SCE + Assay on one row (plain CSS grid – avoids Bootstrap float issues) ──
+        tags$div(style = "display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:4px;",
+          tags$div(
+            tags$label("SCE:", class = "control-label", style = "font-size:12px; margin-bottom:2px;"),
+            selectInput("sce_select", NULL, choices = NULL, width = "100%")
+          ),
+          tags$div(
+            tags$label("Assay:", class = "control-label", style = "font-size:12px; margin-bottom:2px;"),
+            selectInput("assay_select", NULL, choices = NULL, width = "100%")
+          )
         ),
-        tags$div(style = "margin: -4px 0 6px 0; display:flex; gap:6px; align-items:center;",
+        tags$div(style = "display:flex; gap:6px; align-items:center; margin-bottom:6px;",
           actionButton("rename_sce_btn", "Rename Loaded SCE",
                        class = "btn-xs btn-default"),
-          actionButton("refresh_sce_btn", "↺ Refresh SCEs",
+          actionButton("refresh_sce_btn", "\u21ba Refresh SCEs",
                        class = "btn-xs btn-default",
                        title = "Re-scan global environment for SCE objects")
         ),
