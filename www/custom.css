@@ -1047,8 +1047,8 @@ body { font-size: 13px; }
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;   /* keep X and Y on one line */
+  margin-top: 2px;
 }
 .cytof-axis-row .form-group { margin-bottom: 0; }
 .cytof-axis-row input.form-control { height: 24px; font-size: 11px; padding: 1px 4px; }

@@ -1070,12 +1070,12 @@
                 .style('pointer-events', 'stroke')
                 .style('cursor', 'move');
 
-            // ── Fill area: tiny-opacity fill so pointer-events:all works ──
+            // ── Fill area: near-zero opacity fill so pointer-events:all works ──
             // fill-opacity:0 is unreliable for hit-testing; use 0.001 instead.
             var fillEl = gg.append('path').attr('class', 'gate-fill')
                 .datum(pts).attr('d', line)
                 .attr('fill',         color)
-                .attr('fill-opacity', isSel ? 0.05 : 0.02)
+                .attr('fill-opacity', 0.001)
                 .attr('stroke', 'none')
                 .style('pointer-events', 'all')
                 .style('cursor', 'move');
@@ -1120,7 +1120,7 @@
                 .attr('rx', 3).attr('fill', color).attr('fill-opacity', 0.85);
             var txt = labelG.append('text')
                 .attr('text-anchor', 'middle')
-                .attr('fill', 'white').style('font-size', '10px');
+                .attr('fill', 'white').style('font-size', '12px');
             txt.append('tspan')
                 .attr('x', 0)
                 .attr('dy', pctLine ? '-0.55em' : '0.35em')
@@ -1128,7 +1128,7 @@
             if (pctLine) {
                 txt.append('tspan')
                     .attr('x', 0).attr('dy', '1.3em')
-                    .style('font-size', '9px')
+                    .style('font-size', '11px')
                     .text(pctLine);
             }
             var bb = txt.node().getBBox();

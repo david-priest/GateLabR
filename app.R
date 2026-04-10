@@ -301,16 +301,10 @@ ui <- fluidPage(
                 )
               ),
 
-              # Axis
+              # Axis — contents rendered server-side so CyTOF/flow can differ
               tags$div(class="gating-control-box",
                 tags$div(class="gating-control-box-title","Axis"),
-                tags$div(style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;",
-                  tags$div(style="display:flex;align-items:center;gap:4px;",
-                    tags$span("Span %:",style="font-size:11px;color:#555;"),
-                    numericInput("axis_span_percent",NULL,value=120,min=100,max=200,step=5,width="80px")
-                  )
-                ),
-                uiOutput("cytof_axis_range_ui")
+                uiOutput("axis_controls_ui")
               )
             ),
 
@@ -1055,45 +1049,52 @@ server <- function(input, output, session) {
     )
   })
 
-  output$cytof_axis_range_ui <- renderUI({
-    req(rv$sce)
-    if (is_flow_session(rv$sce)) return(NULL)
-    x_ch <- input$x_channel %||% ""
-    y_ch <- input$y_channel %||% ""
-    x_rng <- get_cytof_axis_range(x_ch)
-    y_rng <- get_cytof_axis_range(y_ch)
-    tags$div(
-      tags$div(class="cytof-axis-row",
-        tags$span("X:", style="font-size:11px;color:#555;font-weight:600;"),
-        numericInput("cytof_x_lo", NULL, value=x_rng[1], step=0.5, width="70px"),
-        tags$span("–", style="font-size:11px;color:#777;"),
-        numericInput("cytof_x_hi", NULL, value=x_rng[2], step=0.5, width="70px")
-      ),
-      tags$div(class="cytof-axis-row",
-        tags$span("Y:", style="font-size:11px;color:#555;font-weight:600;"),
-        numericInput("cytof_y_lo", NULL, value=y_rng[1], step=0.5, width="70px"),
-        tags$span("–", style="font-size:11px;color:#777;"),
-        numericInput("cytof_y_hi", NULL, value=y_rng[2], step=0.5, width="70px")
+  # Axis box contents: CyTOF → per-channel min/max on one line; flow → span %
+  output$axis_controls_ui <- renderUI({
+    is_cytof <- !is.null(rv$sce) && !is_flow_session(rv$sce)
+    if (is_cytof) {
+      x_ch  <- input$x_channel %||% ""
+      y_ch  <- input$y_channel %||% ""
+      x_rng <- get_cytof_axis_range(x_ch)
+      y_rng <- get_cytof_axis_range(y_ch)
+      tags$div(class = "cytof-axis-row",
+        tags$span("X:", style = "font-size:11px;color:#555;font-weight:600;white-space:nowrap;"),
+        numericInput("cytof_x_lo", NULL, value = x_rng[1], step = 0.5, width = "70px"),
+        tags$span("–", style = "font-size:11px;color:#999;"),
+        numericInput("cytof_x_hi", NULL, value = x_rng[2], step = 0.5, width = "70px"),
+        tags$span("Y:", style = "font-size:11px;color:#555;font-weight:600;white-space:nowrap;margin-left:8px;"),
+        numericInput("cytof_y_lo", NULL, value = y_rng[1], step = 0.5, width = "70px"),
+        tags$span("–", style = "font-size:11px;color:#999;"),
+        numericInput("cytof_y_hi", NULL, value = y_rng[2], step = 0.5, width = "70px")
       )
-    )
+    } else {
+      tags$div(style = "display:flex;align-items:center;gap:4px;",
+        tags$span("Span %:", style = "font-size:11px;color:#555;"),
+        numericInput("axis_span_percent", NULL, value = 120, min = 100, max = 200, step = 5, width = "80px")
+      )
+    }
   })
 
   observeEvent(list(input$cytof_x_lo, input$cytof_x_hi), {
-    req(rv$sce, !is_flow_session(rv$sce))
+    req(rv$sce); if (is_flow_session(rv$sce)) return()
     ch <- input$x_channel %||% ""; if (!nzchar(ch)) return()
     lo <- suppressWarnings(as.numeric(input$cytof_x_lo)); if (!is.finite(lo)) return()
     hi <- suppressWarnings(as.numeric(input$cytof_x_hi)); if (!is.finite(hi) || hi <= lo) return()
-    rv$cytof_axis_range[[ch]] <- list(lo=lo, hi=hi)
-    send_full_plot()
+    rv$cytof_axis_range[[ch]] <- list(lo = lo, hi = hi)
+    rv$.plot_range_override <- NULL
+    rv$.range_cache <- list()
+    send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   observeEvent(list(input$cytof_y_lo, input$cytof_y_hi), {
-    req(rv$sce, !is_flow_session(rv$sce))
+    req(rv$sce); if (is_flow_session(rv$sce)) return()
     ch <- input$y_channel %||% ""; if (!nzchar(ch)) return()
     lo <- suppressWarnings(as.numeric(input$cytof_y_lo)); if (!is.finite(lo)) return()
     hi <- suppressWarnings(as.numeric(input$cytof_y_hi)); if (!is.finite(hi) || hi <= lo) return()
-    rv$cytof_axis_range[[ch]] <- list(lo=lo, hi=hi)
-    send_full_plot()
+    rv$cytof_axis_range[[ch]] <- list(lo = lo, hi = hi)
+    rv$.plot_range_override <- NULL
+    rv$.range_cache <- list()
+    send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   output$flow_transform_controls_ui <- renderUI({
