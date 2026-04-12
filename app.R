@@ -239,11 +239,14 @@ ui <- fluidPage(
               tags$span("Gating:", style="font-size:11px;color:#555;font-weight:600;margin-right:2px;"),
               actionButton("mode_rect",
                 HTML('<svg width="14" height="10" viewBox="0 0 14 10"><rect x="1" y="1" width="12" height="8" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Rect'),
-                class = "btn-sm btn-default", title = "Draw rectangle gate"),
+                class = "btn-sm btn-default", title = "Draw rectangle gate",
+                onclick = "window.CytofD3 && window.CytofD3.setMode('draw-rect')"),
               actionButton("mode_poly",
                 HTML('<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,1 13,5 11,12 3,12 1,5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Poly'),
-                class = "btn-sm btn-default", title = "Draw polygon gate"),
-              actionButton("mode_cancel", "✕ Cancel", class = "btn-sm btn-warning")
+                class = "btn-sm btn-default", title = "Draw polygon gate",
+                onclick = "window.CytofD3 && window.CytofD3.setMode('draw-poly')"),
+              actionButton("mode_cancel", "✕ Cancel", class = "btn-sm btn-warning",
+                           onclick = "window.CytofD3 && window.CytofD3.setMode('navigate')")
             ),
             tags$div(style = "display:flex; gap:4px; margin-left: auto;",
               actionButton("flip_axes", "", icon = icon("arrows-h"),
@@ -344,7 +347,11 @@ ui <- fluidPage(
         tabPanel("Strategy",
           tags$div(class = "strategy-controls",
             tags$div(class = "strategy-top-actions",
-              actionButton("strategy_render_btn", "Render Strategy",
+              selectInput("strategy_mode", NULL,
+                          choices = c("Single population" = "single",
+                                      "Multiple populations" = "multi"),
+                          selected = "single", width = "200px"),
+              actionButton("strategy_render_btn", "Render",
                            class = "btn-sm btn-primary"),
               tags$div(class = "strategy-top-export-actions",
                 actionButton("strategy_export_png", "PNG",
@@ -356,17 +363,36 @@ ui <- fluidPage(
               )
             ),
 
+            conditionalPanel("input.strategy_mode === 'single'",
+              tags$div(class = "strategy-control-grid",
+                tags$div(class = "strategy-block strategy-pop-block",
+                  selectInput("strategy_pop", "Population:", choices = NULL),
+                  checkboxInput("strategy_full_path", "Use full path from root", FALSE)
+                ),
+                tags$div(class = "strategy-block",
+                  checkboxGroupInput("strategy_gate_view", "Gate view:",
+                                     choices = c("Forward gated" = "forward",
+                                                 "Back-gated" = "back"),
+                                     selected = "forward", inline = TRUE)
+                )
+              )
+            ),
+
+            conditionalPanel("input.strategy_mode === 'multi'",
+              tags$div(class = "strategy-multi-hint-row",
+                style = "font-size:11px; color:#555; padding:4px 2px 2px 2px; display:flex; align-items:center; gap:6px;",
+                icon("info-circle"),
+                tags$span("Select populations to trace their full gating hierarchy. Shared parent gates are shown once."),
+                tags$span(style = "margin-left:6px; font-weight:600; color:#3182ce;",
+                          textOutput("strategy_multi_pop_hint", inline = TRUE))
+              ),
+              selectizeInput("strategy_multi_pop_select", NULL,
+                choices = NULL, multiple = TRUE,
+                options = list(placeholder = "Select populations...", plugins = list("remove_button")),
+                width = "100%")
+            ),
+
             tags$div(class = "strategy-control-grid",
-              tags$div(class = "strategy-block strategy-pop-block",
-                selectInput("strategy_pop", "Population:", choices = NULL),
-                checkboxInput("strategy_full_path", "Use full path from root", FALSE)
-              ),
-              tags$div(class = "strategy-block",
-                checkboxGroupInput("strategy_gate_view", "Gate view:",
-                                   choices = c("Forward gated" = "forward",
-                                               "Back-gated" = "back"),
-                                   selected = "forward", inline = TRUE)
-              ),
               tags$div(class = "strategy-block",
                 radioButtons("strategy_display", "Display mode:",
                              choices = c("Scatter" = "scatter",
@@ -386,18 +412,22 @@ ui <- fluidPage(
               tags$div(class = "strategy-param-card",
                 numericInput("strategy_plot_size", "Plot size (px):",
                              value = 200, min = 150, max = 500, step = 25),
-                numericInput("strategy_n_columns", "Columns:",
-                             value = 4, min = 1, max = 12, step = 1),
-                checkboxInput("strategy_fit_to_columns", "Fit panels to columns", value = TRUE)
+                conditionalPanel("input.strategy_mode === 'single'",
+                  numericInput("strategy_n_columns", "Columns:",
+                               value = 4, min = 1, max = 12, step = 1),
+                  checkboxInput("strategy_fit_to_columns", "Fit panels to columns", value = TRUE)
+                )
               ),
               tags$div(class = "strategy-param-card",
                 numericInput("strategy_axis_span_percent", "Axis span %:",
                              value = 120, min = 100, max = 300, step = 5, width = "130px"),
-                tags$div(class = "strategy-axis-actions",
-                  actionButton("strategy_rescale_axes_btn", "Rescale Axes",
-                               class = "btn-sm btn-default"),
-                  actionButton("strategy_reset_axes_btn", "Reset Axes",
-                               class = "btn-sm btn-default")
+                conditionalPanel("input.strategy_mode === 'single'",
+                  tags$div(class = "strategy-axis-actions",
+                    actionButton("strategy_rescale_axes_btn", "Rescale Axes",
+                                 class = "btn-sm btn-default"),
+                    actionButton("strategy_reset_axes_btn", "Reset Axes",
+                                 class = "btn-sm btn-default")
+                  )
                 )
               ),
               tags$div(class = "strategy-param-card strategy-font-card",
@@ -828,7 +858,8 @@ server <- function(input, output, session) {
     rv$sce <- save_workspace(
       rv$sce, rv$gates, rv$gate_order, rv$populations, rv$root_population_id,
       gate_value_space = gate_value_space,
-      cytof_axis_range = rv$cytof_axis_range %||% list()
+      cytof_axis_range = rv$cytof_axis_range %||% list(),
+      plot_range_override = rv$.plot_range_override
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -899,6 +930,31 @@ server <- function(input, output, session) {
   is_flow_session <- function(sce = rv$sce) {
     if (is.null(sce)) return(FALSE)
     identical(S4Vectors::metadata(sce)$instrument_type, "flow")
+  }
+
+  # Generate display-space ticks for a single channel/axis.
+  # Dispatches: flow signal → logicle;  flow/cytof scatter → asinh(cofactor);
+  # cytof signal → asinh(cofactor=5).  QC channels → NULL (linear default).
+  # Returns list(ticks = ..., is_logicle = TRUE/FALSE) or NULL.
+  generate_channel_ticks <- function(channel, axis_range) {
+    if (is.null(rv$sce)) return(NULL)
+    if (!identical(rv$assay_name, "exprs")) return(NULL)
+    if (!nzchar(channel %||% "")) return(NULL)
+    if (is.null(axis_range) || length(axis_range) != 2) return(NULL)
+    if (.is_qc_channel(channel)) return(NULL)
+    # Scatter channels stay on their existing arcsinh-scatter tick path
+    if (.is_scatter_channel(channel)) return(NULL)
+
+    if (is_flow_session(rv$sce)) {
+      raw_mat <- rv$flow_raw_data
+      raw_vals <- if (!is.null(raw_mat) && channel %in% colnames(raw_mat)) raw_mat[, channel] else NULL
+      ticks <- generate_logicle_ticks(channel, axis_range, raw_vals, rv$flow_logicle_w)
+      if (is.null(ticks)) return(NULL)
+      return(ticks)
+    }
+
+    # CyTOF — metal channels use asinh(cofactor = 5)
+    generate_asinh_ticks(axis_range, cofactor = 5)
   }
 
   get_cytof_axis_range <- function(channel) {
@@ -1092,6 +1148,7 @@ server <- function(input, output, session) {
     hi <- suppressWarnings(as.numeric(input$cytof_x_hi)); if (!is.finite(hi) || hi <= lo) return()
     rv$cytof_axis_range[[ch]] <- list(lo = lo, hi = hi)
     rv$.plot_range_override <- NULL
+    update_rescale_btn(FALSE)
     rv$.range_cache <- list()
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
@@ -1103,6 +1160,7 @@ server <- function(input, output, session) {
     hi <- suppressWarnings(as.numeric(input$cytof_y_hi)); if (!is.finite(hi) || hi <= lo) return()
     rv$cytof_axis_range[[ch]] <- list(lo = lo, hi = hi)
     rv$.plot_range_override <- NULL
+    update_rescale_btn(FALSE)
     rv$.range_cache <- list()
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
@@ -1427,6 +1485,8 @@ server <- function(input, output, session) {
       rv$active_population_id <- ws$root_population_id
       rv$gate_version <- rv$gate_version + 1L
       if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
+      rv$.plot_range_override <- ws$plot_range_override %||% NULL
+      update_rescale_btn(!is.null(rv$.plot_range_override))
       output$status_text <- renderText(paste("Loaded workspace from", sce_name))
     } else {
       rv$gates <- list()
@@ -1438,6 +1498,8 @@ server <- function(input, output, session) {
       rv$selected_gate_id <- NULL
       rv$gate_version <- 0L
       rv$cytof_axis_range <- list()
+      rv$.plot_range_override <- NULL
+      update_rescale_btn(FALSE)
       output$status_text <- renderText(paste("Loaded", sce_name, "-",
                                              ncol(sce), "events,",
                                              length(channels), "channels"))
@@ -1541,6 +1603,7 @@ server <- function(input, output, session) {
     # Reset cytof axis range — different assay means a completely different scale
     rv$cytof_axis_range <- list()
     rv$.plot_range_override <- NULL
+    update_rescale_btn(FALSE)
     refresh_assay_data(reset_cache = TRUE)
     req(rv$assay_data)
     send_full_plot(reset_view = TRUE)
@@ -2116,6 +2179,22 @@ server <- function(input, output, session) {
     out
   }
 
+  # Expand a [lo, hi] range to also cover the supplied vertex coordinate values.
+  # Used to ensure gate boundaries are always visible in strategy/illustration plots.
+  expand_range_for_vertices <- function(range_vals, vertex_coords) {
+    if (length(range_vals) != 2) return(range_vals)
+    coords <- as.numeric(vertex_coords)
+    coords <- coords[is.finite(coords)]
+    if (length(coords) == 0) return(range_vals)
+    c(min(range_vals[1], min(coords)), max(range_vals[2], max(coords)))
+  }
+
+  # Extract x (idx=1) or y (idx=2) scalar from a vertex [[x,y]] list element.
+  .vertex_coord <- function(v, idx) {
+    tryCatch({ val <- as.numeric(v[[idx]]); if (length(val) == 1L) val else NA_real_ },
+             error = function(e) NA_real_)
+  }
+
   current_overlay_signature <- function() {
     overlay_active <- !is.null(rv$overlay_factor) && !is.null(rv$overlay_selected) && length(rv$overlay_selected) > 0
     if (!isTRUE(overlay_active)) return("none")
@@ -2166,19 +2245,27 @@ server <- function(input, output, session) {
 
   get_population_tree_stats <- function() {
     if (length(rv$populations) == 0 || is.null(rv$root_population_id)) {
-      return(list(event_count = list(), percent_of_parent = list()))
+      return(list(event_count = list(), percent_of_parent = list(), percent_of_total = list()))
     }
 
     # With no sample filter, reuse counts computed during full-data strategy apply.
     if (is.null(rv$sample_mask)) {
       event_count <- lapply(rv$populations, function(pop) pop$event_count)
       percent_of_parent <- lapply(rv$populations, function(pop) pop$percent_of_parent)
-      return(list(event_count = event_count, percent_of_parent = percent_of_parent))
+      root_count <- as.numeric(event_count[[rv$root_population_id]] %||% 0)
+      percent_of_total <- lapply(names(rv$populations), function(pid) {
+        if (identical(pid, rv$root_population_id)) return(100)
+        child_count <- as.numeric(event_count[[pid]] %||% 0)
+        if (root_count > 0) round(child_count / root_count * 100, 2) else 0
+      })
+      names(percent_of_total) <- names(rv$populations)
+      return(list(event_count = event_count, percent_of_parent = percent_of_parent,
+                  percent_of_total = percent_of_total))
     }
 
     root_mask <- get_pop_mask(rv$root_population_id)
     if (is.null(root_mask) || length(rv$pop_events_map) == 0) {
-      return(list(event_count = list(), percent_of_parent = list()))
+      return(list(event_count = list(), percent_of_parent = list(), percent_of_total = list()))
     }
 
     cache_key <- paste(
@@ -2213,7 +2300,20 @@ server <- function(input, output, session) {
       }
     }
 
-    out <- list(event_count = event_count, percent_of_parent = percent_of_parent)
+    root_count <- as.numeric(event_count[[rv$root_population_id]] %||% 0)
+    percent_of_total <- list()
+    for (pid in names(rv$populations)) {
+      if (is.null(rv$populations[[pid]])) next
+      if (identical(pid, rv$root_population_id)) {
+        percent_of_total[[pid]] <- 100
+      } else {
+        child_count <- as.numeric(event_count[[pid]] %||% 0)
+        percent_of_total[[pid]] <- if (root_count > 0) round(child_count / root_count * 100, 2) else 0
+      }
+    }
+
+    out <- list(event_count = event_count, percent_of_parent = percent_of_parent,
+                percent_of_total = percent_of_total)
     rv$.population_tree_cache_key <- cache_key
     rv$.population_tree_cache <- out
     out
@@ -2254,6 +2354,30 @@ server <- function(input, output, session) {
     } else {
       x_range <- compute_stable_range(x_ch, for_plot = TRUE)
       y_range <- compute_stable_range(y_ch, for_plot = TRUE)
+    }
+
+    # When no user-locked override is active, expand axis ranges so that
+    # all gate boundaries on the current channel pair remain in view.
+    if (is.null(active_override)) {
+      for (gid in rv$gate_order) {
+        gate <- plot_gates[[gid]]
+        if (is.null(gate)) next
+        verts <- gate$vertices %||% list()
+        if (length(verts) == 0) next
+        if (identical(gate$x_channel, x_ch) && identical(gate$y_channel, y_ch)) {
+          # Normal orientation — vertex[1]=x, vertex[2]=y
+          gvx <- vapply(verts, .vertex_coord, numeric(1), idx = 1L)
+          gvy <- vapply(verts, .vertex_coord, numeric(1), idx = 2L)
+          x_range <- expand_range_for_vertices(x_range, gvx)
+          y_range <- expand_range_for_vertices(y_range, gvy)
+        } else if (identical(gate$x_channel, y_ch) && identical(gate$y_channel, x_ch)) {
+          # Flipped gate: gate's x-coords map to plot y-axis and vice versa
+          gvx <- vapply(verts, .vertex_coord, numeric(1), idx = 1L)
+          gvy <- vapply(verts, .vertex_coord, numeric(1), idx = 2L)
+          x_range <- expand_range_for_vertices(x_range, gvy)
+          y_range <- expand_range_for_vertices(y_range, gvx)
+        }
+      }
     }
 
     overlay_active <- !is.null(rv$overlay_factor) && !is.null(rv$overlay_selected) && length(rv$overlay_selected) > 0
@@ -2297,37 +2421,22 @@ server <- function(input, output, session) {
     # Attach channel list + contour threshold so JS can build axis pickers
     plot_data$channels          <- as.list(rv$channels)
     plot_data$contour_threshold <- as.numeric(input$contour_threshold %||% 5)
-    if (!is.null(rv$sce) && is_flow_session(rv$sce) && rv$assay_name == "exprs") {
-      x_is_scatter <- .is_scatter_channel(x_ch)
-      y_is_scatter <- .is_scatter_channel(y_ch)
-      x_is_qc      <- .is_qc_channel(x_ch)
-      y_is_qc      <- .is_qc_channel(y_ch)
-      plot_data$x_is_log <- isTRUE(x_is_scatter)
-      plot_data$y_is_log <- isTRUE(y_is_scatter)
-      plot_data$x_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[x_ch]] %||% 150)
-      plot_data$y_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[y_ch]] %||% 150)
-
-      # Logicle ticks for signal channels (not scatter, not QC)
-      x_is_logicle <- !x_is_scatter && !x_is_qc
-      y_is_logicle <- !y_is_scatter && !y_is_qc
-      raw_mat <- rv$flow_raw_data
-if (x_is_logicle && !is.null(plot_data$x_range)) {
-        x_raw_vals <- if (!is.null(raw_mat) && x_ch %in% colnames(raw_mat)) raw_mat[, x_ch] else NULL
-        ticks <- generate_logicle_ticks(
-          x_ch, plot_data$x_range, x_raw_vals, rv$flow_logicle_w)
-        if (!is.null(ticks)) {
-          plot_data$x_logicle_ticks <- ticks
-          plot_data$x_is_logicle <- TRUE
-        }
+    if (!is.null(rv$sce) && rv$assay_name == "exprs") {
+      if (is_flow_session(rv$sce)) {
+        plot_data$x_is_log <- isTRUE(.is_scatter_channel(x_ch))
+        plot_data$y_is_log <- isTRUE(.is_scatter_channel(y_ch))
+        plot_data$x_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[x_ch]] %||% 150)
+        plot_data$y_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[y_ch]] %||% 150)
       }
-      if (y_is_logicle && !is.null(plot_data$y_range)) {
-        y_raw_vals <- if (!is.null(raw_mat) && y_ch %in% colnames(raw_mat)) raw_mat[, y_ch] else NULL
-        ticks <- generate_logicle_ticks(
-          y_ch, plot_data$y_range, y_raw_vals, rv$flow_logicle_w)
-        if (!is.null(ticks)) {
-          plot_data$y_logicle_ticks <- ticks
-          plot_data$y_is_logicle <- TRUE
-        }
+      xt <- generate_channel_ticks(x_ch, plot_data$x_range)
+      if (!is.null(xt)) {
+        plot_data$x_logicle_ticks <- xt
+        plot_data$x_is_logicle <- TRUE
+      }
+      yt <- generate_channel_ticks(y_ch, plot_data$y_range)
+      if (!is.null(yt)) {
+        plot_data$y_logicle_ticks <- yt
+        plot_data$y_is_logicle <- TRUE
       }
     }
 
@@ -2379,6 +2488,7 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     # the slider observers, which caused renderUI → slider recreation → loop).
     persist_flow_transform_state()
     rv$.plot_range_override <- NULL
+    update_rescale_btn(FALSE)
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
@@ -2386,19 +2496,18 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
   observeEvent(input$plot_data_scope, {
     req(rv$assay_data)
     rv$.range_cache <- list()
-    rv$.plot_range_override <- NULL
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
   observeEvent(input$axis_span_percent, {
     req(rv$assay_data)
     rv$.range_cache <- list()
-    rv$.plot_range_override <- NULL
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
   observeEvent(input$contour_threshold, { req(rv$assay_data); send_full_plot() }, ignoreInit = TRUE)
   observeEvent(input$reset_view_btn, {
     req(rv$assay_data)
     rv$.plot_range_override <- NULL
+    update_rescale_btn(FALSE)
     send_full_plot(reset_view = TRUE)
   })
 
@@ -2412,6 +2521,7 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
 
     if (is.null(ranges)) {
       rv$.plot_range_override <- NULL
+      update_rescale_btn(FALSE)
       send_full_plot(reset_view = TRUE)
       return()
     }
@@ -2422,6 +2532,7 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
       x_range = ranges$x_range,
       y_range = ranges$y_range
     )
+    update_rescale_btn(TRUE)
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
@@ -2443,7 +2554,6 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     rv$.population_tree_cache_key <- NULL; rv$.population_tree_cache <- NULL
     rv$.range_cache <- list()
     rv$.last_combined_pop_mask <- NULL
-    rv$.plot_range_override <- NULL
     send_full_plot()
   })
 
@@ -2493,6 +2603,16 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     for (btn_id in names(modes)) {
       if (modes[[btn_id]] == active_mode) runjs(sprintf("$('#%s').addClass('active-mode')", btn_id))
       else runjs(sprintf("$('#%s').removeClass('active-mode')", btn_id))
+    }
+  }
+
+  update_rescale_btn <- function(active) {
+    if (active) {
+      runjs("$('#rescale_view_btn').removeClass('btn-default').addClass('btn-warning')
+               .attr('title', 'Rescale locked \u2014 click Reset to release')")
+    } else {
+      runjs("$('#rescale_view_btn').removeClass('btn-warning').addClass('btn-default')
+               .attr('title', 'Rescale axes to fit plotted data')")
     }
   }
 
@@ -2857,15 +2977,21 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
   observeEvent(input$edit_pop_btn, {
     pop_id <- rv$active_population_id
     req(pop_id, !is.null(rv$populations[[pop_id]]))
-    pop_name <- rv$populations[[pop_id]]$name %||% pop_id
     showModal(modalDialog(
-      title = paste("Edit Population:", pop_name),
+      title = "Edit Population",
       uiOutput("population_editor_ui"),
       footer = modalButton("Close"),
       easyClose = TRUE,
       size = "l"
     ))
   })
+
+  observeEvent(input$edit_pop_selector, {
+    req(input$edit_pop_selector)
+    if (!is.null(rv$populations[[input$edit_pop_selector]])) {
+      rv$active_population_id <- input$edit_pop_selector
+    }
+  }, ignoreInit = TRUE)
 
   request_population_delete <- function(pop_id) {
     req(pop_id)
@@ -3183,7 +3309,56 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     rows <- list()
     visited <- character(0)
 
-    append_tree_rows <- function(pop_id, depth) {
+    # ── Tree-line connector SVG ───────────────────────────────────────────────
+    # Returns a single SVG exactly depth*16 px wide — the same footprint as the
+    # old pop-row-indent blank spacer — with tree lines drawn inside it.
+    # is_last_path: logical[depth] where [i]=TRUE means the ancestor at depth i
+    #   was the last child of its parent (draw blank at that column, not a │).
+    make_tree_connectors <- function(depth, is_last_path) {
+      if (depth == 0L) return(NULL)
+
+      seg   <- 16L          # px per depth level
+      total <- depth * seg  # total SVG width == old indent width
+      h     <- 20L          # SVG height (matches typical row height)
+      mid   <- h %/% 2L
+      col   <- "#bfc5cf"
+      ls    <- sprintf('stroke="%s" stroke-width="1.5" stroke-linecap="square"', col)
+
+      ln <- function(x1, y1, x2, y2)
+        sprintf('<line x1="%d" y1="%d" x2="%d" y2="%d" %s/>', x1, y1, x2, y2, ls)
+
+      paths <- character(0)
+      for (i in seq_len(depth)) {
+        cx      <- (i - 1L) * seg + seg %/% 2L   # horizontal centre of column i
+        is_last <- isTRUE(is_last_path[[i]])
+        is_leaf <- (i == depth)
+
+        if (is_leaf) {
+          # draw the elbow that connects to this node's name
+          # horizontal arm runs from cx all the way to the right edge (total)
+          if (is_last) {
+            paths <- c(paths,
+              ln(cx, 0L, cx, mid),        # vertical top → mid  (└)
+              ln(cx, mid, total, mid))    # horizontal mid → right edge
+          } else {
+            paths <- c(paths,
+              ln(cx, 0L, cx, h),          # vertical full height  (├)
+              ln(cx, mid, total, mid))    # horizontal mid → right edge
+          }
+        } else {
+          # ancestor column: draw │ if more siblings remain, blank if last child
+          if (!is_last)
+            paths <- c(paths, ln(cx, 0L, cx, h))
+        }
+      }
+
+      HTML(sprintf(
+        '<svg width="%d" height="%d" viewBox="0 0 %d %d" style="flex-shrink:0;overflow:visible;">%s</svg>',
+        total, h, total, h, paste(paths, collapse = "")
+      ))
+    }
+
+    append_tree_rows <- function(pop_id, depth, is_last_path = logical(0)) {
       if (pop_id %in% visited) return()
       visited <<- c(visited, pop_id)
 
@@ -3193,10 +3368,16 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
       is_active <- identical(pop_id, rv$active_population_id)
       is_root <- identical(pop_id, rv$root_population_id)
       is_checked <- pop_id %in% rv$.selected_pop_ids
-      count_val <- pop_stats$event_count[[pop_id]] %||% pop$event_count
-      pct_val <- pop_stats$percent_of_parent[[pop_id]] %||% pop$percent_of_parent
+      count_val      <- pop_stats$event_count[[pop_id]] %||% pop$event_count
+      pct_parent_val <- pop_stats$percent_of_parent[[pop_id]] %||% pop$percent_of_parent
+      pct_total_val  <- pop_stats$percent_of_total[[pop_id]]
       count_text <- if (!is.null(count_val)) format(count_val, big.mark = ",") else "?"
-      pct_text <- if (!is.null(pct_val) && !is_root) paste0("(", pct_val, "%)") else ""
+      pct_text <- if (!is_root) {
+        parts <- character(0)
+        if (!is.null(pct_parent_val)) parts <- c(parts, paste0(pct_parent_val, "% pnt"))
+        if (!is.null(pct_total_val))  parts <- c(parts, paste0(pct_total_val,  "% tot"))
+        if (length(parts) > 0) paste0("(", paste(parts, collapse = ", "), ")") else ""
+      } else ""
       badges <- lapply(pop$gate_refs, function(ref) {
         gate <- rv$gates[[ref$gate_id]]
         if (is.null(gate)) return(NULL)
@@ -3215,7 +3396,9 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
         )
       })
 
-      indent_px <- depth * 16
+      tree_svg  <- make_tree_connectors(depth, is_last_path)
+      indent_px <- depth * 16L   # kept for the gates column spacer
+
       rows[[length(rows) + 1L]] <<- tags$div(
         class = paste("pop-row", if (is_active) "active" else ""),
         onclick = sprintf("Shiny.setInputValue('pop_tree_click', '%s', {priority:'event'})", pop_id),
@@ -3233,7 +3416,7 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
         ),
         tags$span(
           class = "pop-row-name-col",
-          tags$span(class = "pop-row-indent", style = paste0("width:", indent_px, "px")),
+          tree_svg,
           tags$span(class = "pop-row-name", pop$name)
         ),
         tags$span(
@@ -3252,10 +3435,13 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
         child_ids <- child_ids[order(tolower(child_names), child_ids)]
       }
 
-      for (child_id in child_ids) append_tree_rows(child_id, depth + 1)
+      for (i in seq_along(child_ids)) {
+        is_last <- (i == length(child_ids))
+        append_tree_rows(child_ids[[i]], depth + 1L, c(is_last_path, is_last))
+      }
     }
 
-    append_tree_rows(rv$root_population_id, 0)
+    append_tree_rows(rv$root_population_id, 0L)
     tags$div(class = "population-tree-panel", rows)
   })
 
@@ -3271,6 +3457,17 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     }
     pop <- rv$populations[[pop_id]]
     is_root <- identical(pop_id, rv$root_population_id)
+
+    # ── Population selector at top of dialog ─────────────────────────────────
+    pop_choices <- setNames(
+      names(rv$populations),
+      vapply(rv$populations, function(p) p$name %||% p$id, character(1))
+    )
+    selector_ui <- tags$div(
+      class = "pop-editor-selector-row",
+      selectInput("edit_pop_selector", "Population to edit:",
+                  choices = pop_choices, selected = pop_id, width = "100%")
+    )
 
     top_controls <- if (!is_root) {
       # Valid new parents: any population that is not the current pop, not a descendant of it
@@ -3369,11 +3566,10 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
         ref_rows <- lapply(editable_gids, function(gid) {
           gate <- rv$gates[[gid]]; current_val <- current_refs[[gid]] %||% "off"
           tags$div(class = "gate-ref-edit-row",
-                   style = "margin: 2px 0; display: flex; align-items: center; gap: 6px;",
             tags$span(class = "gate-color-swatch",
                       style = paste0("background:", gate$color,
-                                     "; width:10px; height:10px; border-radius:2px; flex-shrink:0;")),
-            tags$span(gate$name, style = "font-size:12px; min-width: 80px;"),
+                                     "; width:10px; height:10px; border-radius:2px;")),
+            tags$span(class = "gate-ref-name", gate$name),
             radioButtons(paste0("edit_ref_", gid), NULL,
                          choices = c("Off" = "off", "Include" = "include", "Exclude" = "exclude"),
                          selected = current_val, inline = TRUE))
@@ -3402,7 +3598,7 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
         )
       }
     }
-    tags$div(class = "pop-editor-panel", top_controls, count_ui,
+    tags$div(class = "pop-editor-panel", selector_ui, top_controls, count_ui,
              inherited_ui, gate_refs_ui)
   })
 
@@ -3753,6 +3949,15 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
       x_range_step <- stable_range_by_channel[[as.character(s$x_channel)]] %||% s$x_range
       y_range_step <- stable_range_by_channel[[as.character(s$y_channel)]] %||% s$y_range
 
+      # Expand to include gate vertices so boundaries stay in view on any sample
+      step_verts <- s$vertices %||% list()
+      if (length(step_verts) > 0) {
+        vx_s <- vapply(step_verts, .vertex_coord, numeric(1), idx = 1L)
+        vy_s <- vapply(step_verts, .vertex_coord, numeric(1), idx = 2L)
+        x_range_step <- expand_range_for_vertices(x_range_step, vx_s)
+        y_range_step <- expand_range_for_vertices(y_range_step, vy_s)
+      }
+
       list(
         gate_id = s$gate_id,
         gate_name = s$gate_name,
@@ -3819,6 +4024,14 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
               span_scale = strategy_span_scale
             )
           }
+          # Expand for gate vertices in rescaled initial computation too
+          ov_verts <- st$vertices %||% list()
+          if (length(ov_verts) > 0) {
+            vx_ov <- vapply(ov_verts, .vertex_coord, numeric(1), idx = 1L)
+            vy_ov <- vapply(ov_verts, .vertex_coord, numeric(1), idx = 2L)
+            st$x_range <- expand_range_for_vertices(st$x_range, vx_ov)
+            st$y_range <- expand_range_for_vertices(st$y_range, vy_ov)
+          }
           override_changed <- TRUE
         }
 
@@ -3832,6 +4045,22 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
       if (isTRUE(override_changed) || length(updated_ranges) != length(override_ranges)) {
         rv$strategy_axis_override <- list(ranges = updated_ranges)
       }
+    }
+
+    # Attach log-style decade ticks (logicle for flow, asinh for CyTOF)
+    if (!is.null(rv$sce) && rv$assay_name == "exprs" && length(steps_json) > 0) {
+      steps_json <- lapply(steps_json, function(st) {
+        for (axis in c("x", "y")) {
+          ch <- as.character(st[[paste0(axis, "_channel")]] %||% "")
+          ax_range <- st[[paste0(axis, "_range")]]
+          ticks <- generate_channel_ticks(ch, ax_range)
+          if (!is.null(ticks)) {
+            st[[paste0(axis, "_logicle_ticks")]] <- ticks
+            st[[paste0(axis, "_is_logicle")]] <- TRUE
+          }
+        }
+        st
+      })
     }
 
     session$sendCustomMessage("renderStrategyGrid", list(
@@ -3849,6 +4078,372 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     ))
   }
 
+  # ── Multi-population strategy hint ────────────────────────────────────────
+  output$strategy_multi_pop_hint <- renderText({
+    # Count combined selection from selectizeInput + checkboxes
+    sel_ids <- unique(c(
+      as.character(input$strategy_multi_pop_select %||% character(0)),
+      rv$.selected_pop_ids %||% character(0)
+    ))
+    sel_ids <- intersect(sel_ids, setdiff(names(rv$populations %||% list()), rv$root_population_id %||% character(0)))
+    n <- length(sel_ids)
+    if (n == 0) "None selected." else paste0(n, " population", if (n != 1) "s" else "", " selected.")
+  })
+
+  # ── Update multi-pop selectize choices when populations change ────────────
+  observe({
+    # Depend on populations reactively WITHOUT req() so the observer still runs
+    # (and clears choices) when populations become empty.
+    pops <- rv$populations
+    root <- rv$root_population_id
+    rv$gate_version  # retrigger when gates/populations mutate
+    pop_ids <- setdiff(names(pops %||% list()), root %||% character(0))
+    if (length(pop_ids) == 0) {
+      updateSelectizeInput(session, "strategy_multi_pop_select",
+                           choices = character(0), selected = character(0))
+      return()
+    }
+    pop_names <- vapply(pop_ids, function(id) pops[[id]]$name %||% id, character(1))
+    pop_choices <- setNames(pop_ids, pop_names)
+    pop_choices <- pop_choices[order(tolower(pop_names))]
+    # Preserve any existing selection that is still valid
+    current_sel <- isolate(as.character(input$strategy_multi_pop_select %||% character(0)))
+    valid_sel <- intersect(current_sel, pop_ids)
+    updateSelectizeInput(session, "strategy_multi_pop_select",
+                         choices = pop_choices, selected = valid_sel)
+  })
+
+  # Sync selectizeInput with checkbox selections (when user checks boxes on Gating tab)
+  observe({
+    ids <- rv$.selected_pop_ids %||% character(0)
+    cur <- as.character(input$strategy_multi_pop_select %||% character(0))
+    combined <- unique(c(cur, ids))
+    combined <- intersect(combined, setdiff(names(rv$populations %||% list()), rv$root_population_id %||% character(0)))
+    if (!setequal(combined, cur)) {
+      updateSelectizeInput(session, "strategy_multi_pop_select", selected = combined)
+    }
+  })
+
+  # ── Multi-population strategy computation ─────────────────────────────────
+  # Builds a merged strategy tree for multiple populations.
+  # Returns a named list of nodes: each node = one scatter plot panel,
+  # covering a unique (parent_pop × x_channel × y_channel) combination.
+  compute_multi_pop_strategy <- function(gates, populations, root_pop_id,
+                                          assay_data, selected_pop_ids,
+                                          max_events = 10000L,
+                                          span_scale = 1.2) {
+    if (length(selected_pop_ids) == 0 || nrow(assay_data) == 0) return(list())
+    max_events_int <- suppressWarnings(as.integer(max_events))
+    use_all <- is.na(max_events_int) || !is.finite(max_events) || max_events_int <= 0L
+
+    gating_result <- apply_gating_strategy(gates, populations, root_pop_id, assay_data)
+
+    # Collect all relevant population IDs (selected pops + all their ancestors)
+    relevant_ids <- character(0)
+    for (sel_id in selected_pop_ids) {
+      if (!sel_id %in% names(populations)) next
+      current <- sel_id
+      repeat {
+        relevant_ids <- c(relevant_ids, current)
+        if (identical(current, root_pop_id)) break
+        parent <- populations[[current]]$parent_id
+        if (is.null(parent)) break
+        current <- parent
+      }
+    }
+    relevant_ids <- unique(relevant_ids)
+
+    # Build raw node map: key = "parent_id|x_ch|y_ch"
+    # Each node collects gate overlays from all relevant child populations
+    nodes_raw <- list()
+    for (pop_id in relevant_ids) {
+      if (identical(pop_id, root_pop_id)) next
+      pop <- populations[[pop_id]]
+      if (is.null(pop)) next
+      parent_id <- pop$parent_id
+      if (is.null(parent_id)) next
+      if (!parent_id %in% relevant_ids && !identical(parent_id, root_pop_id)) next
+      for (ref in (pop$gate_refs %||% list())) {
+        gate <- gates[[ref$gate_id]]
+        if (is.null(gate)) next
+        node_key <- paste0(parent_id, "|", gate$x_channel, "|", gate$y_channel)
+        if (is.null(nodes_raw[[node_key]])) {
+          nodes_raw[[node_key]] <- list(
+            parent_id = parent_id,
+            x_channel = gate$x_channel,
+            y_channel = gate$y_channel,
+            gate_entries = list()
+          )
+        }
+        existing_ids <- vapply(nodes_raw[[node_key]]$gate_entries,
+                               function(g) g$gate_id, character(1))
+        if (!ref$gate_id %in% existing_ids) {
+          nodes_raw[[node_key]]$gate_entries <- c(
+            nodes_raw[[node_key]]$gate_entries,
+            list(list(
+              gate_id = ref$gate_id,
+              name    = pop$name %||% pop_id,
+              gate_type   = gate$gate_type,
+              vertices    = gate$vertices,
+              color       = gate$color,
+              label_offset = gate$label_offset,
+              include     = ref$include
+            ))
+          )
+        }
+      }
+    }
+    if (length(nodes_raw) == 0) return(list())
+
+    # Column = total gates applied from root to reach parent_id's events
+    get_gate_depth <- function(pop_id) {
+      if (identical(pop_id, root_pop_id)) return(0L)
+      depth <- 0L
+      current <- pop_id
+      while (!is.null(current) && !identical(current, root_pop_id)) {
+        pp <- populations[[current]]
+        if (is.null(pp)) break
+        depth <- depth + length(pp$gate_refs %||% list())
+        current <- pp$parent_id
+      }
+      depth
+    }
+
+    # Row = DFS order of selected populations in the tree
+    ordered_selected <- character(0)
+    visit_pop <- function(pid) {
+      if (pid %in% selected_pop_ids) ordered_selected <<- c(ordered_selected, pid)
+      children <- names(populations)[vapply(populations, function(p)
+        identical(p$parent_id %||% "", pid), logical(1))]
+      if (length(children) > 1) {
+        cn <- vapply(children, function(cid) populations[[cid]]$name %||% cid, character(1))
+        children <- children[order(tolower(cn))]
+      }
+      for (child in children) if (child %in% relevant_ids) visit_pop(child)
+    }
+    visit_pop(root_pop_id)
+    if (length(ordered_selected) == 0) ordered_selected <- selected_pop_ids
+
+    sel_row <- setNames(seq_along(ordered_selected) - 1L, ordered_selected)
+
+    get_pop_row <- function(pop_id) {
+      if (pop_id %in% names(sel_row)) return(sel_row[[pop_id]])
+      desc_rows <- integer(0)
+      for (sid in names(sel_row)) {
+        cur <- sid
+        while (!is.null(cur)) {
+          if (identical(cur, pop_id)) { desc_rows <- c(desc_rows, sel_row[[sid]]); break }
+          cur <- populations[[cur]]$parent_id
+        }
+      }
+      if (length(desc_rows) > 0) min(desc_rows) else 0L
+    }
+
+    # Compact rows (remove gaps)
+    all_raw_rows <- vapply(names(nodes_raw),
+                           function(k) get_pop_row(nodes_raw[[k]]$parent_id), integer(1))
+    unique_rows  <- sort(unique(all_raw_rows))
+    row_map      <- setNames(seq_along(unique_rows) - 1L, as.character(unique_rows))
+
+    # Build result nodes with event data
+    result_nodes <- list()
+    for (node_key in names(nodes_raw)) {
+      nr        <- nodes_raw[[node_key]]
+      parent_id <- nr$parent_id
+      parent_pop <- populations[[parent_id]] %||% list(name = parent_id)
+
+      parent_mask <- if (identical(parent_id, root_pop_id)) {
+        rep(TRUE, nrow(assay_data))
+      } else {
+        gating_result$masks[[parent_id]]
+      }
+      if (is.null(parent_mask) || !any(parent_mask, na.rm = TRUE)) next
+      n_total <- sum(parent_mask, na.rm = TRUE)
+
+      pidx <- which(parent_mask)
+      if (!use_all && length(pidx) > max_events_int) {
+        pidx <- pidx[round(seq(1, length(pidx), length.out = max_events_int))]
+      }
+      x_ch <- nr$x_channel; y_ch <- nr$y_channel
+      if (!x_ch %in% colnames(assay_data) || !y_ch %in% colnames(assay_data)) next
+
+      pd     <- assay_data[pidx, , drop = FALSE]
+      x_vals <- as.numeric(pd[, x_ch])
+      y_vals <- as.numeric(pd[, y_ch])
+
+      x_range <- compute_range_from_values(x_vals, channel = x_ch, span_scale = span_scale)
+      y_range <- compute_range_from_values(y_vals, channel = y_ch, span_scale = span_scale)
+      for (ge in nr$gate_entries) {
+        verts <- ge$vertices %||% list()
+        if (length(verts) > 0) {
+          gvx <- vapply(verts, .vertex_coord, numeric(1), idx = 1L)
+          gvy <- vapply(verts, .vertex_coord, numeric(1), idx = 2L)
+          x_range <- expand_range_for_vertices(x_range, gvx)
+          y_range <- expand_range_for_vertices(y_range, gvy)
+        }
+      }
+
+      raw_row     <- get_pop_row(parent_id)
+      compact_row <- row_map[[as.character(raw_row)]] %||% raw_row
+
+      result_nodes[[node_key]] <- list(
+        node_id         = node_key,
+        parent_pop_id   = parent_id,
+        parent_pop_name = parent_pop$name %||% parent_id,
+        x_channel       = x_ch,
+        y_channel       = y_ch,
+        x               = x_vals,
+        y               = y_vals,
+        x_range         = x_range,
+        y_range         = y_range,
+        gates           = nr$gate_entries,
+        col             = get_gate_depth(parent_id),
+        row             = compact_row,
+        n_events        = n_total
+      )
+    }
+    result_nodes
+  }
+
+  render_multi_strategy_tab <- function() {
+    # Combine selectizeInput selection with checkbox-based selection from Gating tab
+    selectize_sel <- as.character(input$strategy_multi_pop_select %||% character(0))
+    checkbox_sel  <- as.character(rv$.selected_pop_ids %||% character(0))
+    selected_pop_ids <- unique(c(selectize_sel, checkbox_sel))
+    selected_pop_ids <- intersect(selected_pop_ids, names(rv$populations %||% list()))
+    selected_pop_ids <- setdiff(selected_pop_ids, rv$root_population_id %||% character(0))
+
+    message("[strategy multi] selectize=", length(selectize_sel),
+            " checkbox=", length(checkbox_sel),
+            " combined=", length(selected_pop_ids))
+
+    assay_data <- get_filtered_assay_data()
+
+    if (is.null(assay_data) || nrow(assay_data) == 0) {
+      message("[strategy multi] no assay data available")
+      session$sendCustomMessage("renderMultiStrategyGrid", list(
+        containerId = "strategy-grid-container",
+        nodes = list(), plot_size = 200L, display_mode = "pseudocolor",
+        error_msg = "No data available. Load a dataset first."
+      ))
+      return()
+    }
+
+    if (length(selected_pop_ids) == 0) {
+      message("[strategy multi] no populations selected")
+      session$sendCustomMessage("renderMultiStrategyGrid", list(
+        containerId = "strategy-grid-container",
+        nodes = list(), plot_size = 200L, display_mode = "pseudocolor",
+        error_msg = "No populations selected. Choose one or more populations from the dropdown above, or tick checkboxes in the Populations panel on the Gating tab, then click Render."
+      ))
+      return()
+    }
+
+    strategy_max_events <- suppressWarnings(as.integer(input$strategy_max_events %||% 10000L))
+    if (is.na(strategy_max_events)) strategy_max_events <- 10000L
+    if (isTRUE(input$strategy_all_events) || strategy_max_events <= 0L) strategy_max_events <- Inf
+
+    strategy_plot_size <- suppressWarnings(as.integer(input$strategy_plot_size %||% 200L))
+    if (is.na(strategy_plot_size)) strategy_plot_size <- 200L
+    strategy_plot_size <- max(120L, min(800L, strategy_plot_size))
+
+    strategy_span_scale <- axis_span_scale_from_input(input$strategy_axis_span_percent, default_percent = 120)
+
+    strategy_mode_raw <- tolower(as.character(input$strategy_display %||% "pseudocolor"))
+    strategy_mode <- switch(strategy_mode_raw,
+      pseudo = "pseudocolor", pseudocolour = "pseudocolor", pseudocolor = "pseudocolor",
+      contour = "contour", scatter = "scatter", "scatter")
+
+    strategy_tick_font <- max(6L, min(24L, suppressWarnings(as.integer(input$strategy_tick_font_size %||% 8L)) %||% 8L))
+    strategy_axis_font <- max(6L, min(28L, suppressWarnings(as.integer(input$strategy_axis_label_font_size %||% 10L)) %||% 10L))
+    strategy_title_font <- max(6L, min(28L, suppressWarnings(as.integer(input$strategy_title_font_size %||% 10L)) %||% 10L))
+    strategy_gate_label_font <- max(6L, min(24L, suppressWarnings(as.integer(input$strategy_gate_label_font_size %||% 8L)) %||% 8L))
+    strategy_font_sizes <- list(
+      axis_label = strategy_axis_font, tick = strategy_tick_font,
+      gate_label = strategy_gate_label_font, title = strategy_title_font
+    )
+    strategy_contour_threshold <- max(0, min(100, suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5)) %||% 5))
+    strategy_point_alpha <- max(0.05, min(1, suppressWarnings(as.numeric(input$point_alpha %||% 0.6)) %||% 0.6))
+    strategy_kde_bandwidth <- max(0, min(20, suppressWarnings(as.numeric(input$strategy_kde_bandwidth %||% 0)) %||% 0))
+
+    display_gates <- get_plot_gates()
+
+    nodes_list <- compute_multi_pop_strategy(
+      display_gates, rv$populations, rv$root_population_id,
+      assay_data, selected_pop_ids,
+      max_events  = strategy_max_events,
+      span_scale  = strategy_span_scale
+    )
+
+    if (length(nodes_list) == 0) {
+      message("[strategy multi] compute_multi_pop_strategy returned 0 nodes")
+      session$sendCustomMessage("renderMultiStrategyGrid", list(
+        containerId = "strategy-grid-container",
+        nodes = list(),
+        plot_size = strategy_plot_size,
+        display_mode = strategy_mode,
+        font_sizes = strategy_font_sizes,
+        error_msg = paste0(
+          "Could not build a strategy tree for the selected populations (",
+          paste(selected_pop_ids, collapse = ", "),
+          "). Ensure each population has at least one gate and a valid parent chain back to root."
+        )
+      ))
+      return()
+    }
+    message("[strategy multi] rendering ", length(nodes_list), " nodes")
+
+    nodes_json <- lapply(nodes_list, function(nd) {
+      list(
+        node_id         = nd$node_id,
+        parent_pop_name = nd$parent_pop_name,
+        x_channel       = nd$x_channel,
+        y_channel       = nd$y_channel,
+        x               = unname(as.numeric(nd$x)),
+        y               = unname(as.numeric(nd$y)),
+        x_range         = nd$x_range,
+        y_range         = nd$y_range,
+        gates           = nd$gates,
+        col             = nd$col,
+        row             = nd$row,
+        n_events        = nd$n_events
+      )
+    })
+
+    # Log-style decade ticks (logicle for flow, asinh for CyTOF)
+    if (!is.null(rv$sce) && rv$assay_name == "exprs" && length(nodes_json) > 0) {
+      nodes_json <- lapply(nodes_json, function(nd) {
+        for (axis in c("x", "y")) {
+          ch <- as.character(nd[[paste0(axis, "_channel")]] %||% "")
+          ax_range <- nd[[paste0(axis, "_range")]]
+          ticks <- generate_channel_ticks(ch, ax_range)
+          if (!is.null(ticks)) {
+            nd[[paste0(axis, "_logicle_ticks")]] <- ticks
+            nd[[paste0(axis, "_is_logicle")]] <- TRUE
+          }
+        }
+        nd
+      })
+    }
+
+    # CRITICAL: strip names so jsonlite serializes as a JSON array [...],
+    # not an object {...}.  Named R lists become JS objects, which break
+    # `nodes.forEach(...)` in renderMultiStrategyGrid and cause a silent
+    # "nothing happens" failure in the browser.
+    nodes_json <- unname(nodes_json)
+
+    session$sendCustomMessage("renderMultiStrategyGrid", list(
+      containerId     = "strategy-grid-container",
+      nodes           = nodes_json,
+      plot_size       = strategy_plot_size,
+      display_mode    = strategy_mode,
+      contour_threshold = strategy_contour_threshold,
+      point_alpha     = strategy_point_alpha,
+      kde_bandwidth   = strategy_kde_bandwidth,
+      font_sizes      = strategy_font_sizes
+    ))
+  }
+
   observeEvent(input$strategy_all_events, {
     if (isTRUE(input$strategy_all_events)) {
       updateNumericInput(session, "strategy_max_events", value = 0)
@@ -3856,7 +4451,23 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$strategy_render_btn, {
-    render_strategy_tab()
+    mode <- as.character(input$strategy_mode %||% "single")
+    message("[strategy] Render clicked — mode='", mode, "' sel_size=",
+            length(input$strategy_multi_pop_select %||% character(0)),
+            " checkbox_sel=", length(rv$.selected_pop_ids %||% character(0)))
+    showNotification(paste0("Rendering strategy (", mode, ")…"),
+                     duration = 2, type = "message")
+    tryCatch({
+      if (identical(mode, "multi")) {
+        render_multi_strategy_tab()
+      } else {
+        render_strategy_tab()
+      }
+    }, error = function(e) {
+      message("[strategy] render error: ", conditionMessage(e))
+      showNotification(paste0("Strategy render failed: ", conditionMessage(e)),
+                       duration = 10, type = "error")
+    })
   }, ignoreInit = TRUE)
 
   observeEvent(input$strategy_rescale_axes_btn, {
@@ -4143,6 +4754,34 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
           NULL
         }
 
+        # Expand x_range_by_channel / y_range_fixed to include all gate boundaries,
+        # so gates drawn outside the current data cloud remain visible.
+        for (gid in rv$gate_order) {
+          gdef <- display_gates[[gid]]
+          if (is.null(gdef)) next
+          iverts <- gdef$vertices %||% list()
+          if (length(iverts) == 0) next
+          gvx <- vapply(iverts, .vertex_coord, numeric(1), idx = 1L)
+          gvy <- vapply(iverts, .vertex_coord, numeric(1), idx = 2L)
+          # x_channel of this gate → expands the x range for that channel panel
+          if (!is.null(gdef$x_channel) && gdef$x_channel %in% x_channels) {
+            x_range_by_channel[[gdef$x_channel]] <- expand_range_for_vertices(
+              x_range_by_channel[[gdef$x_channel]], gvx)
+          }
+          # y_channel of this gate → expands x range if that channel is an x panel
+          if (!is.null(gdef$y_channel) && gdef$y_channel %in% x_channels) {
+            x_range_by_channel[[gdef$y_channel]] <- expand_range_for_vertices(
+              x_range_by_channel[[gdef$y_channel]], gvy)
+          }
+          # y_channel of this gate → expands y_range_fixed if it matches y_channel
+          if (!is.null(y_range_fixed) && !is.null(y_channel)) {
+            if (!is.null(gdef$y_channel) && gdef$y_channel == y_channel)
+              y_range_fixed <- expand_range_for_vertices(y_range_fixed, gvy)
+            if (!is.null(gdef$x_channel) && gdef$x_channel == y_channel)
+              y_range_fixed <- expand_range_for_vertices(y_range_fixed, gvx)
+          }
+        }
+
         # Convert plot data to JSON-friendly lists
         plots_json <- list()
         gate_overlays_json <- list()
@@ -4247,6 +4886,24 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
       if (isTRUE(override_changed) || length(updated_ranges) != length(override_ranges)) {
         rv$illustration_axis_override <- list(ranges = updated_ranges)
       }
+    }
+
+    # Log-style decade ticks (logicle for flow, asinh for CyTOF), applied to
+    # both biplots and histograms.  Re-computed each render to match final ranges.
+    if (!is.null(rv$sce) && rv$assay_name == "exprs" &&
+        length(base_payload$plots %||% list()) > 0) {
+      base_payload$plots <- lapply(base_payload$plots, function(pd) {
+        for (axis in c("x", "y")) {
+          ch <- as.character(pd[[paste0(axis, "_label")]] %||% "")
+          ax_range <- pd[[paste0(axis, "_range")]]
+          ticks <- generate_channel_ticks(ch, ax_range)
+          if (!is.null(ticks)) {
+            pd[[paste0(axis, "_logicle_ticks")]] <- ticks
+            pd[[paste0(axis, "_is_logicle")]] <- TRUE
+          }
+        }
+        pd
+      })
     }
 
     session$sendCustomMessage("renderIllustrationGrid", c(
@@ -4506,6 +5163,8 @@ if (x_is_logicle && !is.null(plot_data$x_range)) {
     rv$active_population_id <- ws$root_population_id; rv$selected_gate_id <- NULL
     rv$gate_version <- rv$gate_version + 1L
     if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
+    rv$.plot_range_override <- ws$plot_range_override %||% NULL
+    update_rescale_btn(!is.null(rv$.plot_range_override))
     autosave(); send_full_plot()
     showNotification(paste("Loaded workspace from", source_name), type = "message", duration = 3)
   })

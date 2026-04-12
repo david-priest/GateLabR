@@ -196,15 +196,31 @@
         }
 
         // ── Axes ────────────────────────────────────────────────────────────
-        g.append('g').attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + H + ')')
-            .call(d3.axisBottom(xScale).ticks(4))
-            .selectAll('text').style('font-size', tickFs);
+        var xAxisSel = g.append('g').attr('class', 'x-axis')
+            .attr('transform', 'translate(0,' + H + ')');
+        var xTicks = cfg.x_logicle_ticks;
+        if (cfg.x_is_logicle && xTicks && xTicks.major_pos && xTicks.major_pos.length > 0) {
+            var xLg = _buildLogicleAxis(xScale, xTicks, d3.axisBottom);
+            xAxisSel.call(xLg.axis);
+            _styleLogicleAxis(xAxisSel, xLg.majorSet, true);
+            _hideCompressedLabels(xAxisSel, xScale, 28);
+        } else {
+            xAxisSel.call(d3.axisBottom(xScale).ticks(4));
+        }
+        xAxisSel.selectAll('text').style('font-size', tickFs);
 
         if (y && y.length > 0) {
-            g.append('g').attr('class', 'y-axis')
-                .call(d3.axisLeft(yScale).ticks(4))
-                .selectAll('text').style('font-size', tickFs);
+            var yAxisSel = g.append('g').attr('class', 'y-axis');
+            var yTicks = cfg.y_logicle_ticks;
+            if (cfg.y_is_logicle && yTicks && yTicks.major_pos && yTicks.major_pos.length > 0) {
+                var yLg = _buildLogicleAxis(yScale, yTicks, d3.axisLeft);
+                yAxisSel.call(yLg.axis);
+                _styleLogicleAxis(yAxisSel, yLg.majorSet, false);
+                _hideCompressedLabels(yAxisSel, yScale, 18);
+            } else {
+                yAxisSel.call(d3.axisLeft(yScale).ticks(4));
+            }
+            yAxisSel.selectAll('text').style('font-size', tickFs);
         }
 
         // Axis labels
@@ -469,6 +485,55 @@
         ctx.restore();
     }
 
+    // ── Logicle axis helpers (FlowJo-style ticks, ported from cytof_plot.js) ──
+    // tickData = { major_pos: [num,...], major_labels: [str,...], minor_pos: [num,...] }
+    function _buildLogicleAxis(scale, tickData, axisFn) {
+        var majorPos    = tickData.major_pos    || [];
+        var majorLabels = tickData.major_labels || [];
+        var minorPos    = tickData.minor_pos    || [];
+        var labelMap = {}, majorSet = {}, i;
+        for (i = 0; i < majorPos.length; i++) {
+            labelMap[majorPos[i]] = majorLabels[i] || '';
+            majorSet[majorPos[i]] = true;
+        }
+        var allPositions = majorPos.concat(minorPos);
+        allPositions.sort(function (a, b) { return a - b; });
+        var axis = axisFn(scale)
+            .tickValues(allPositions)
+            .tickFormat(function (d) { return labelMap[d] || ''; })
+            .tickSizeOuter(0);
+        return { axis: axis, majorSet: majorSet };
+    }
+
+    function _styleLogicleAxis(sel, majorSet, isBottom) {
+        sel.selectAll('.tick').each(function (d) {
+            var tick = d3.select(this);
+            var isMajor = majorSet[d];
+            tick.select('line').attr(isBottom ? 'y2' : 'x2',
+                isMajor ? (isBottom ? 6 : -6) : (isBottom ? 3 : -3));
+            if (!isMajor) tick.select('text').style('display', 'none');
+        });
+    }
+
+    function _hideCompressedLabels(sel, scale, minSpacingPx) {
+        var labeled = [];
+        sel.selectAll('.tick text').each(function (d) {
+            var el = d3.select(this);
+            if (el.style('display') !== 'none' && el.text() !== '') {
+                labeled.push({ el: el, px: scale(d) });
+            }
+        });
+        labeled.sort(function (a, b) { return a.px - b.px; });
+        var lastPx = -Infinity;
+        for (var i = 0; i < labeled.length; i++) {
+            if (Math.abs(labeled[i].px - lastPx) < minSpacingPx) {
+                labeled[i].el.style('display', 'none');
+            } else {
+                lastPx = labeled[i].px;
+            }
+        }
+    }
+
     // ── Gate overlay rendering ──────────────────────────────────────────────
     function _drawGateOverlay(g, gate, xScale, yScale, W, H, gateFs) {
         var verts = gate.vertices;
@@ -659,6 +724,10 @@
                 y_range: step.y_range,
                 x_label: step.x_channel,
                 y_label: step.y_channel,
+                x_is_logicle: step.x_is_logicle,
+                x_logicle_ticks: step.x_logicle_ticks,
+                y_is_logicle: step.y_is_logicle,
+                y_logicle_ticks: step.y_logicle_ticks,
                 display_mode: displayMode,
                 plot_size: effectivePlotSize,
                 contour_threshold: contourThreshold,
@@ -789,6 +858,10 @@
                     y_range: plotData.y_range,
                     x_label: plotData.x_label || xCh,
                     y_label: plotData.y_label || yChannel,
+                    x_is_logicle: plotData.x_is_logicle,
+                    x_logicle_ticks: plotData.x_logicle_ticks,
+                    y_is_logicle: plotData.y_is_logicle,
+                    y_logicle_ticks: plotData.y_logicle_ticks,
                     display_mode: displayMode,
                     plot_size: effectivePlotSize,
                     contour_threshold: contourThreshold,
@@ -888,36 +961,49 @@
         return new Promise(function (resolve) {
             var plots = gridEl.querySelectorAll('.mini-plot-cell');
             var gridRect = gridEl.getBoundingClientRect();
+            var outW = Math.max(1, Math.ceil(gridRect.width  * scale));
+            var outH = Math.max(1, Math.ceil(gridRect.height * scale));
             var out = document.createElement('canvas');
-            out.width = Math.max(1, Math.ceil(gridRect.width * scale));
-            out.height = Math.max(1, Math.ceil(gridRect.height * scale));
+            out.width  = outW;
+            out.height = outH;
             var octx = out.getContext('2d');
             octx.fillStyle = '#ffffff';
-            octx.fillRect(0, 0, out.width, out.height);
-            octx.scale(scale, scale);
+            octx.fillRect(0, 0, outW, outH);
 
-            // Draw headers/arrows with their computed style.
+            // Draw row headers / strategy arrows scaled up
+            octx.save();
+            octx.scale(scale, scale);
             var textEls = gridEl.querySelectorAll('.illustration-row-header, .strategy-arrow');
             textEls.forEach(function (el) {
                 var rect = el.getBoundingClientRect();
                 var cs = window.getComputedStyle(el);
                 var font = cs.font;
                 if (!font || font === 'normal normal normal normal 16px / normal serif') {
-                    font = [cs.fontStyle, cs.fontVariant, cs.fontWeight, cs.fontSize + '/' + cs.lineHeight, cs.fontFamily].join(' ');
+                    font = [cs.fontStyle, cs.fontVariant, cs.fontWeight,
+                            cs.fontSize + '/' + cs.lineHeight, cs.fontFamily].join(' ');
                 }
                 octx.font = font || '13px sans-serif';
                 octx.fillStyle = cs.color || '#333';
                 octx.textBaseline = 'middle';
-                octx.fillText((el.textContent || '').trim(), rect.left - gridRect.left, rect.top - gridRect.top + rect.height / 2);
+                octx.fillText(
+                    (el.textContent || '').trim(),
+                    rect.left - gridRect.left,
+                    rect.top  - gridRect.top + rect.height / 2
+                );
             });
+            octx.restore();
 
+            // Render each plot cell at the requested scale so SVG axes/ticks are
+            // drawn natively at that resolution (not bilinearly upscaled).
             var jobs = [];
             plots.forEach(function (plotDiv) {
                 var rect = plotDiv.getBoundingClientRect();
-                var x = rect.left - gridRect.left;
-                var y = rect.top - gridRect.top;
-                var job = _rasterizePlotCell(plotDiv, 1).then(function (plotCanvas) {
-                    octx.drawImage(plotCanvas, x, y, rect.width, rect.height);
+                var dx = (rect.left - gridRect.left) * scale;
+                var dy = (rect.top  - gridRect.top)  * scale;
+                var dw = rect.width  * scale;
+                var dh = rect.height * scale;
+                var job = _rasterizePlotCell(plotDiv, scale).then(function (plotCanvas) {
+                    octx.drawImage(plotCanvas, dx, dy, dw, dh);
                 });
                 jobs.push(job);
             });
@@ -1020,6 +1106,89 @@
     }
 
     // ── Export helpers ──────────────────────────────────────────────────────
+
+    // ── Composite SVG builder (data points as embedded PNG, axes/gates as vectors) ─
+    function _buildCompositeSVG(gridEl) {
+        var ns = 'http://www.w3.org/2000/svg';
+        var gridRect = gridEl.getBoundingClientRect();
+        var W = gridRect.width, H = gridRect.height;
+
+        var master = document.createElementNS(ns, 'svg');
+        master.setAttribute('xmlns', ns);
+        master.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        master.setAttribute('width', W);
+        master.setAttribute('height', H);
+        master.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+        var bg = document.createElementNS(ns, 'rect');
+        bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%');
+        bg.setAttribute('fill', 'white');
+        master.appendChild(bg);
+
+        // Row headers / column headers (plain text elements)
+        var textEls = gridEl.querySelectorAll(
+            '.illustration-row-header, .strategy-arrow, .multi-strategy-col-header');
+        textEls.forEach(function (el) {
+            var r = el.getBoundingClientRect();
+            var cs = window.getComputedStyle(el);
+            var t = document.createElementNS(ns, 'text');
+            t.setAttribute('x', r.left - gridRect.left + r.width / 2);
+            t.setAttribute('y', r.top  - gridRect.top  + r.height / 2);
+            t.setAttribute('text-anchor', 'middle');
+            t.setAttribute('dominant-baseline', 'central');
+            t.setAttribute('style',
+                'font-size:' + cs.fontSize + ';font-family:' + cs.fontFamily +
+                ';fill:' + (cs.color || '#333') + ';font-weight:' + cs.fontWeight);
+            t.textContent = (el.textContent || '').trim();
+            master.appendChild(t);
+        });
+
+        // Each mini-plot cell: canvas → <image>, SVG overlay → cloned <g>
+        var cells = gridEl.querySelectorAll('.mini-plot-cell');
+        cells.forEach(function (cell) {
+            var cr = cell.getBoundingClientRect();
+            var ox = cr.left - gridRect.left;
+            var oy = cr.top  - gridRect.top;
+
+            var g = document.createElementNS(ns, 'g');
+            g.setAttribute('transform', 'translate(' + ox + ',' + oy + ')');
+
+            // Rasterised data points
+            var canvas = cell.querySelector('canvas');
+            if (canvas) {
+                var img = document.createElementNS(ns, 'image');
+                img.setAttribute('x', '0'); img.setAttribute('y', '0');
+                img.setAttribute('width',  cr.width);
+                img.setAttribute('height', cr.height);
+                img.setAttribute('href', canvas.toDataURL('image/png'));
+                g.appendChild(img);
+            }
+
+            // Vector overlay (axes, gate outlines, labels)
+            var svgEl = cell.querySelector('svg');
+            if (svgEl) {
+                var clone = svgEl.cloneNode(true);
+                // Inline computed styles so they survive serialisation
+                clone.querySelectorAll('text, line, path, rect[stroke], circle').forEach(function (el) {
+                    var cs = window.getComputedStyle(el);
+                    var s = (el.getAttribute('style') || '');
+                    if (cs.fontSize)   s += ';font-size:'   + cs.fontSize;
+                    if (cs.fontFamily) s += ';font-family:' + cs.fontFamily;
+                    if (cs.fill && cs.fill !== 'rgba(0, 0, 0, 0)')   s += ';fill:'   + cs.fill;
+                    if (cs.stroke && cs.stroke !== 'rgba(0, 0, 0, 0)') s += ';stroke:' + cs.stroke;
+                    if (cs.strokeWidth) s += ';stroke-width:' + cs.strokeWidth;
+                    el.setAttribute('style', s);
+                });
+                // Move SVG children into the group (drop the <svg> wrapper)
+                while (clone.firstChild) g.appendChild(clone.firstChild);
+            }
+
+            master.appendChild(g);
+        });
+
+        return master;
+    }
+
     function exportGridPNG(gridId, filename) {
         var gridEl = document.getElementById(gridId);
         if (!gridEl) { alert('Grid not found: ' + gridId); return; }
@@ -1033,19 +1202,12 @@
     function exportGridSVG(gridId, filename) {
         var gridEl = document.getElementById(gridId);
         if (!gridEl) { alert('Grid not found: ' + gridId); return; }
-        _rasterizeGridToCanvas(gridEl, 2).then(function (canvas) {
-            var w = canvas.width;
-            var h = canvas.height;
-            var pngUrl = canvas.toDataURL('image/png');
-            var svgText = [
-                '<?xml version="1.0" encoding="UTF-8"?>',
-                '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">',
-                '<rect width="100%" height="100%" fill="white"/>',
-                '<image href="' + pngUrl + '" x="0" y="0" width="' + w + '" height="' + h + '"/>',
-                '</svg>'
-            ].join('');
-            _downloadBlob(new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' }), (filename || 'export') + '.svg');
-        });
+        var master = _buildCompositeSVG(gridEl);
+        var svgData = '<?xml version="1.0" encoding="UTF-8"?>' +
+            new XMLSerializer().serializeToString(master);
+        _downloadBlob(
+            new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }),
+            (filename || 'export') + '.svg');
     }
 
     function _loadJsPdf() {
@@ -1067,27 +1229,301 @@
         });
     }
 
+    function _loadSvg2Pdf() {
+        return new Promise(function (resolve, reject) {
+            // svg2pdf is available as window.svg2pdf after the UMD bundle loads
+            if (typeof window.svg2pdf === 'function') { resolve(window.svg2pdf); return; }
+            var script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js';
+            script.onload = function () {
+                var fn = window.svg2pdf || (window.svg2pdf && window.svg2pdf.default);
+                if (typeof fn === 'function') resolve(fn);
+                else reject(new Error('svg2pdf loaded but function not found'));
+            };
+            script.onerror = function () { reject(new Error('Failed to load svg2pdf.js')); };
+            document.head.appendChild(script);
+        });
+    }
+
+    // Rasterise ONLY the canvas (data points) for each plot cell and return
+    // a map: cell element → data URL PNG at the requested scale.
+    function _rasterizeCanvasOnly(plotDiv, scale) {
+        var canvas = plotDiv.querySelector('canvas');
+        if (!canvas) return null;
+        var rect = plotDiv.getBoundingClientRect();
+        var w = Math.max(1, Math.ceil(rect.width  * scale));
+        var h = Math.max(1, Math.ceil(rect.height * scale));
+        var out = document.createElement('canvas');
+        out.width  = w;
+        out.height = h;
+        var octx = out.getContext('2d');
+        octx.fillStyle = '#ffffff';
+        octx.fillRect(0, 0, w, h);
+        octx.drawImage(canvas, 0, 0, w, h);
+        return out.toDataURL('image/png');
+    }
+
+    // Build a pure-vector SVG for PDF export where data-point canvases are
+    // embedded as high-resolution <image> elements and the rest (axes, ticks,
+    // gate outlines, labels, titles) stays as native SVG vector geometry.
+    function _buildCompositeSVGForPDF(gridEl, rasterScale) {
+        var ns = 'http://www.w3.org/2000/svg';
+        var gridRect = gridEl.getBoundingClientRect();
+        var W = gridRect.width, H = gridRect.height;
+
+        var master = document.createElementNS(ns, 'svg');
+        master.setAttribute('xmlns', ns);
+        master.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        master.setAttribute('width', W);
+        master.setAttribute('height', H);
+        master.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+        var bg = document.createElementNS(ns, 'rect');
+        bg.setAttribute('width', String(W));
+        bg.setAttribute('height', String(H));
+        bg.setAttribute('fill', 'white');
+        master.appendChild(bg);
+
+        // Header labels (row headers, strategy arrows, multi-strategy col headers)
+        var textEls = gridEl.querySelectorAll(
+            '.illustration-row-header, .strategy-arrow, .multi-strategy-col-header');
+        textEls.forEach(function (el) {
+            var r = el.getBoundingClientRect();
+            var cs = window.getComputedStyle(el);
+            var t = document.createElementNS(ns, 'text');
+            t.setAttribute('x', String(r.left - gridRect.left + r.width / 2));
+            t.setAttribute('y', String(r.top  - gridRect.top  + r.height / 2));
+            t.setAttribute('text-anchor', 'middle');
+            t.setAttribute('dominant-baseline', 'central');
+            t.setAttribute('font-size', cs.fontSize || '12px');
+            t.setAttribute('font-family', cs.fontFamily || 'sans-serif');
+            t.setAttribute('font-weight', cs.fontWeight || 'normal');
+            t.setAttribute('fill', cs.color || '#333');
+            t.textContent = (el.textContent || '').trim();
+            master.appendChild(t);
+        });
+
+        var cells = gridEl.querySelectorAll('.mini-plot-cell');
+        cells.forEach(function (cell) {
+            var cr = cell.getBoundingClientRect();
+            var ox = cr.left - gridRect.left;
+            var oy = cr.top  - gridRect.top;
+
+            var g = document.createElementNS(ns, 'g');
+            g.setAttribute('transform', 'translate(' + ox + ',' + oy + ')');
+
+            // Rasterised data (canvas only) as a high-res embedded PNG
+            var dataUrl = _rasterizeCanvasOnly(cell, rasterScale || 3);
+            if (dataUrl) {
+                var img = document.createElementNS(ns, 'image');
+                img.setAttribute('x', '0');
+                img.setAttribute('y', '0');
+                img.setAttribute('width',  String(cr.width));
+                img.setAttribute('height', String(cr.height));
+                img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
+                img.setAttribute('href', dataUrl);
+                g.appendChild(img);
+            }
+
+            // Vector overlay: clone the cell's SVG overlay with inlined styles
+            var svgEl = cell.querySelector('svg');
+            if (svgEl) {
+                var clone = svgEl.cloneNode(true);
+                // Promote computed styles to explicit attributes svg2pdf understands
+                clone.querySelectorAll('text').forEach(function (el) {
+                    var cs = window.getComputedStyle(el);
+                    if (cs.fontSize)   el.setAttribute('font-size',   cs.fontSize);
+                    if (cs.fontFamily) el.setAttribute('font-family', cs.fontFamily);
+                    if (cs.fontWeight) el.setAttribute('font-weight', cs.fontWeight);
+                    if (cs.fill && cs.fill !== 'none' && cs.fill !== 'rgba(0, 0, 0, 0)')
+                        el.setAttribute('fill', cs.fill);
+                });
+                clone.querySelectorAll('line, path, rect, circle, polygon, polyline').forEach(function (el) {
+                    var cs = window.getComputedStyle(el);
+                    if (cs.fill && cs.fill !== 'rgba(0, 0, 0, 0)')
+                        el.setAttribute('fill', cs.fill);
+                    if (cs.stroke && cs.stroke !== 'none' && cs.stroke !== 'rgba(0, 0, 0, 0)')
+                        el.setAttribute('stroke', cs.stroke);
+                    if (cs.strokeWidth)
+                        el.setAttribute('stroke-width', parseFloat(cs.strokeWidth) || 1);
+                });
+                // Move children into g, dropping the wrapping <svg>
+                while (clone.firstChild) g.appendChild(clone.firstChild);
+            }
+
+            master.appendChild(g);
+        });
+
+        return master;
+    }
+
     function exportGridPDF(gridId, filename) {
         var gridEl = document.getElementById(gridId);
         if (!gridEl) { alert('Grid not found: ' + gridId); return; }
 
-        _rasterizeGridToCanvas(gridEl, 2).then(function (canvas) {
+        var MM_PER_PX = 25.4 / 96;  // CSS px → mm at 96 DPI
+        var gridRect  = gridEl.getBoundingClientRect();
+        var wMm = gridRect.width  * MM_PER_PX;
+        var hMm = gridRect.height * MM_PER_PX;
+        var orientation = wMm >= hMm ? 'landscape' : 'portrait';
+
+        // Try the true-vector path first: jsPDF + svg2pdf.js
+        // Data points remain rasterised (inside the SVG as an <image>), while
+        // axes, ticks, gate outlines and all text stay as vector primitives.
+        Promise.all([_loadJsPdf(), _loadSvg2Pdf()]).then(function (libs) {
+            var jsPDF    = libs[0];
+            var svg2pdfFn = libs[1];
+            var svgEl = _buildCompositeSVGForPDF(gridEl, 3);
+            // svg2pdf.js v2 needs the SVG attached to the DOM to measure text
+            svgEl.style.position = 'fixed';
+            svgEl.style.left = '-10000px';
+            svgEl.style.top  = '0';
+            document.body.appendChild(svgEl);
+
+            var pdf = new jsPDF({
+                orientation: orientation,
+                unit: 'mm',
+                format: [wMm, hMm],
+                compress: true
+            });
+
+            var done = function () {
+                document.body.removeChild(svgEl);
+                pdf.save((filename || 'export') + '.pdf');
+            };
+
+            var fail = function (err) {
+                document.body.removeChild(svgEl);
+                console.warn('svg2pdf failed, falling back to raster PDF', err);
+                _exportGridPDFRaster(gridEl, wMm, hMm, orientation, filename);
+            };
+
+            try {
+                // svg2pdf v2 API: svg2pdf(svgNode, pdf, { x, y, width, height })
+                var result = svg2pdfFn(svgEl, pdf, {
+                    x: 0, y: 0, width: wMm, height: hMm
+                });
+                if (result && typeof result.then === 'function') {
+                    result.then(done).catch(fail);
+                } else {
+                    done();
+                }
+            } catch (e) {
+                fail(e);
+            }
+        }).catch(function (err) {
+            console.warn('PDF vector libraries unavailable, falling back to raster PDF', err);
+            _exportGridPDFRaster(gridEl, wMm, hMm, orientation, filename);
+        });
+    }
+
+    // Raster fallback for environments where svg2pdf.js cannot load.
+    function _exportGridPDFRaster(gridEl, wMm, hMm, orientation, filename) {
+        var PIXEL_RATIO = 3;
+        _rasterizeGridToCanvas(gridEl, PIXEL_RATIO).then(function (canvas) {
             _loadJsPdf().then(function (jsPDF) {
-                var orientation = canvas.width >= canvas.height ? 'landscape' : 'portrait';
                 var pdf = new jsPDF({
                     orientation: orientation,
-                    unit: 'pt',
-                    format: [canvas.width, canvas.height],
+                    unit: 'mm',
+                    format: [wMm, hMm],
                     compress: true
                 });
-                var imgData = canvas.toDataURL('image/png');
-                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height, undefined, 'FAST');
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG',
+                             0, 0, wMm, hMm, undefined, 'FAST');
                 pdf.save((filename || 'export') + '.pdf');
-            }).catch(function () {
-                canvas.toBlob(function (blob) {
-                    if (blob) _downloadBlob(blob, (filename || 'export') + '.png');
-                }, 'image/png');
+            }).catch(function (err) {
+                alert('PDF export failed: ' + err.message);
             });
+        });
+    }
+
+    function renderMultiStrategyGrid(containerId, data) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        _renderVersions.strategy += 1;
+        var renderVersion = String(_renderVersions.strategy);
+
+        var nodes = data.nodes;
+        if (!nodes || nodes.length === 0) {
+            var msg = data.error_msg ||
+                'Select populations using the selector above or the checkboxes in the Populations panel (Gating tab), then click Render.';
+            container.innerHTML = '<div style="padding:16px;color:#555;font-size:12px;">' + msg + '</div>';
+            return;
+        }
+
+        var plotSize    = _normalizePlotSize(data.plot_size);
+        var displayMode = _normalizeDisplayMode(data.display_mode);
+        var fontSizes   = data.font_sizes || {};
+        var contourThreshold = isFinite(Number(data.contour_threshold)) ? Number(data.contour_threshold) : 5;
+        var pointAlpha  = isFinite(Number(data.point_alpha)) ? Math.max(0.05, Math.min(1, Number(data.point_alpha))) : 0.6;
+        var kdeBandwidth = isFinite(Number(data.kde_bandwidth)) ? Math.max(0, Number(data.kde_bandwidth)) : 0;
+        var gapPx = 8;
+
+        var maxCol = 0, maxRow = 0;
+        nodes.forEach(function (n) {
+            if ((n.col || 0) > maxCol) maxCol = n.col || 0;
+            if ((n.row || 0) > maxRow) maxRow = n.row || 0;
+        });
+        var nCols = maxCol + 1;
+        var nRows = maxRow + 1;
+
+        container.style.overflowX = 'auto';
+        container.style.overflowY = 'visible';
+
+        var gridDiv = document.createElement('div');
+        gridDiv.className = 'mini-plot-grid multi-strategy-grid';
+        gridDiv.id = containerId + '-grid';
+        gridDiv.style.display = 'grid';
+        gridDiv.style.gridTemplateColumns = 'repeat(' + nCols + ', ' + plotSize + 'px)';
+        gridDiv.style.gridTemplateRows    = 'repeat(' + nRows + ', ' + plotSize + 'px)';
+        gridDiv.style.gap     = gapPx + 'px';
+        gridDiv.style.width   = 'max-content';
+        gridDiv.style.padding = '4px';
+        container.appendChild(gridDiv);
+
+        nodes.forEach(function (node) {
+            var plotDiv = document.createElement('div');
+            plotDiv.className = 'mini-plot-cell';
+            plotDiv.setAttribute('data-render-family',  'strategy');
+            plotDiv.setAttribute('data-plot-key',       String(node.node_id || ''));
+            plotDiv.setAttribute('data-render-version', renderVersion);
+            // Explicit CSS grid placement (1-indexed)
+            plotDiv.style.gridColumn = String((node.col || 0) + 1);
+            plotDiv.style.gridRow    = String((node.row || 0) + 1);
+            gridDiv.appendChild(plotDiv);
+
+            var n_fmt = node.n_events ? Number(node.n_events).toLocaleString() : '';
+            var title = (node.parent_pop_name || '') + (n_fmt ? ' (' + n_fmt + ')' : '');
+
+            renderMiniPlot(plotDiv, {
+                x:               node.x,
+                y:               node.y,
+                x_range:         node.x_range,
+                y_range:         node.y_range,
+                x_label:         node.x_channel,
+                y_label:         node.y_channel,
+                x_is_logicle:    node.x_is_logicle,
+                x_logicle_ticks: node.x_logicle_ticks,
+                y_is_logicle:    node.y_is_logicle,
+                y_logicle_ticks: node.y_logicle_ticks,
+                display_mode:    displayMode,
+                plot_size:       plotSize,
+                contour_threshold: contourThreshold,
+                point_alpha:     pointAlpha,
+                kde_bandwidth:   kdeBandwidth,
+                title:           title,
+                font_sizes:      fontSizes,
+                pop_color:       '#3182ce',
+                gates:           node.gates || []
+            });
+
+            plotDiv.oncontextmenu = function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                _showMiniContextMenu(event, this);
+                return false;
+            };
         });
     }
 
@@ -1095,6 +1531,7 @@
     window.CytofMiniPlot = {
         renderMiniPlot: renderMiniPlot,
         renderStrategyGrid: renderStrategyGrid,
+        renderMultiStrategyGrid: renderMultiStrategyGrid,
         renderIllustrationGrid: renderIllustrationGrid,
         exportGridPNG: exportGridPNG,
         exportGridSVG: exportGridSVG,
@@ -1107,6 +1544,10 @@
 
         Shiny.addCustomMessageHandler('renderStrategyGrid', function (data) {
             CytofMiniPlot.renderStrategyGrid(data.containerId, data);
+        });
+
+        Shiny.addCustomMessageHandler('renderMultiStrategyGrid', function (data) {
+            CytofMiniPlot.renderMultiStrategyGrid(data.containerId, data);
         });
 
         Shiny.addCustomMessageHandler('renderIllustrationGrid', function (data) {

@@ -446,6 +446,70 @@ generate_logicle_ticks <- function(channel_name,
   }, error = function(e) NULL)
 }
 
+#' Generate log-decade tick positions for an arcsinh-transformed axis
+#'
+#' For CyTOF data (or any arcsinh(x / cofactor) display space), returns
+#' decade ticks (0, ±10, ±100, ±1K, ±10K, ±100K, ±1M) in display space
+#' with intermediate 2–9 minor ticks per decade. Produces FlowJo-like
+#' "log" axes that stay in sync with the actual data transform.
+#'
+#' @param axis_range  length-2 numeric — visible [lo, hi] in display space
+#' @param cofactor    arcsinh cofactor (5 for metals, 150 for scatter)
+#' @return named list(major_pos, major_labels, minor_pos) or NULL on error
+generate_asinh_ticks <- function(axis_range, cofactor = 5) {
+  tryCatch({
+    cf <- suppressWarnings(as.numeric(cofactor))
+    if (!is.finite(cf) || cf <= 0) cf <- 5
+    if (is.null(axis_range) || length(axis_range) != 2) return(NULL)
+    lo <- as.numeric(axis_range[1]); hi <- as.numeric(axis_range[2])
+    if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+
+    fwd <- function(raw) asinh(raw / cf)
+    inv <- function(disp) cf * sinh(disp)
+
+    raw_lo <- inv(lo); raw_hi <- inv(hi)
+
+    # Decade range
+    max_pos_exp <- if (raw_hi > 1) ceiling(log10(max(raw_hi, 10))) else 1L
+    max_pos_exp <- max(1L, min(as.integer(max_pos_exp), 7L))
+    min_neg_exp <- if (raw_lo < -1) ceiling(log10(abs(raw_lo))) else 0L
+    min_neg_exp <- max(0L, min(as.integer(min_neg_exp), 7L))
+
+    pos_decades <- 10^seq(1, max_pos_exp)
+    neg_decades <- if (min_neg_exp >= 1) -(10^seq(1, min_neg_exp)) else numeric(0)
+
+    major_raw <- sort(unique(c(neg_decades, 0, pos_decades)))
+
+    minor_raw <- numeric(0)
+    for (d in pos_decades) minor_raw <- c(minor_raw, d * 2:9)
+    for (d in abs(neg_decades)) minor_raw <- c(minor_raw, -(d * 2:9))
+    minor_raw <- sort(unique(minor_raw))
+    minor_raw <- minor_raw[!minor_raw %in% major_raw]
+
+    major_disp <- fwd(major_raw)
+    minor_disp <- fwd(minor_raw)
+
+    fmt_label <- function(raw) {
+      vapply(raw, function(v) {
+        a <- abs(v); s <- if (v < 0) "-" else ""
+        if (a == 0)       "0"
+        else if (a >= 1e6) paste0(s, a / 1e6, "M")
+        else if (a >= 1e3) paste0(s, a / 1e3, "K")
+        else               paste0(s, a)
+      }, character(1))
+    }
+
+    keep_m <- is.finite(major_disp) & major_disp >= lo & major_disp <= hi
+    keep_n <- is.finite(minor_disp) & minor_disp >= lo & minor_disp <= hi
+
+    list(
+      major_pos    = as.numeric(major_disp[keep_m]),
+      major_labels = as.character(fmt_label(major_raw[keep_m])),
+      minor_pos    = as.numeric(minor_disp[keep_n])
+    )
+  }, error = function(e) NULL)
+}
+
 flow_forward_vertices <- function(vertices,
                                   x_channel,
                                   y_channel,
