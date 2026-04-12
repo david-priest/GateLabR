@@ -496,7 +496,12 @@ ui <- fluidPage(
                              choices = c("Scatter" = "scatter",
                                          "Pseudo" = "pseudocolor",
                                          "Contour" = "contour"),
-                             selected = "pseudocolor", inline = TRUE)
+                             selected = "pseudocolor", inline = TRUE),
+                checkboxInput("illust_color_by_pop", "Color each population differently",
+                              value = FALSE),
+                checkboxInput("illust_overlay_pops",
+                              "Overlay all populations per channel (one panel per channel)",
+                              value = FALSE)
               ),
               tags$div(class = "illust-block",
                 numericInput("illust_axis_span_percent", "Axis span %:",
@@ -4908,15 +4913,17 @@ server <- function(input, output, session) {
 
     session$sendCustomMessage("renderIllustrationGrid", c(
       list(
-        containerId = "illustration-grid-container",
-        plot_size = illust_plot_size,
-        n_columns = illust_n_columns,
-        fit_to_columns = illust_fit_to_columns,
-        display_mode = illust_mode,
-        contour_threshold = illust_contour_threshold,
-        point_alpha = illust_point_alpha,
-        kde_bandwidth = illust_kde_bandwidth,
-        font_sizes = illust_font_sizes
+        containerId          = "illustration-grid-container",
+        plot_size            = illust_plot_size,
+        n_columns            = illust_n_columns,
+        fit_to_columns       = illust_fit_to_columns,
+        display_mode         = illust_mode,
+        contour_threshold    = illust_contour_threshold,
+        point_alpha          = illust_point_alpha,
+        kde_bandwidth        = illust_kde_bandwidth,
+        font_sizes           = illust_font_sizes,
+        color_by_population  = isTRUE(input$illust_color_by_pop),
+        overlay_populations  = isTRUE(input$illust_overlay_pops)
       ),
       base_payload
     ))

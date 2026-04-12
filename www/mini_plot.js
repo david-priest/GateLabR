@@ -136,15 +136,19 @@
             // Dual overlays are intentionally limited to scatter/contour for readability.
             displayMode = 'scatter';
         }
+        var overlayTraces = cfg.overlay_traces;  // [{x,y,color,name}, ...]
+        var hasOverlay = !!(overlayTraces && overlayTraces.length > 0);
+        if (hasOverlay && displayMode === 'pseudocolor') displayMode = 'scatter';
+
         if (x && x.length > 0 && y && y.length > 0) {
             ctx.save();
             ctx.beginPath();
             ctx.rect(M.left, M.top, W, H);
             ctx.clip();
 
-            if (displayMode === 'pseudocolor') {
+            if (!hasOverlay && displayMode === 'pseudocolor') {
                 _drawPseudocolor(ctx, x, y, xScale, yScale, M, W, H);
-            } else if (displayMode === 'contour') {
+            } else if (!hasOverlay && displayMode === 'contour') {
                 _drawContour(ctx, x, y, xScale, yScale, M, W, H, {
                     contour_threshold: cfg.contour_threshold,
                     point_alpha: cfg.point_alpha,
@@ -162,9 +166,30 @@
                     });
                 }
             } else {
-                // Scatter
-                ctx.fillStyle = cfg.pop_color || '#1f77b4';
-                ctx.globalAlpha = hasDual ? 0.42 : 0.35;
+                // Scatter (including overlay biplot)
+                var alpha = hasOverlay ? 0.28 : (hasDual ? 0.42 : 0.35);
+
+                // Draw additional overlay traces first (underneath the main pop)
+                if (hasOverlay) {
+                    for (var oi = 0; oi < overlayTraces.length; oi++) {
+                        var tr = overlayTraces[oi];
+                        if (!tr.x || !tr.y) continue;
+                        ctx.fillStyle = tr.color;
+                        ctx.globalAlpha = alpha;
+                        for (var ti = 0; ti < tr.x.length; ti++) {
+                            var tpx = xScale(tr.x[ti]) + M.left;
+                            var tpy = yScale(tr.y[ti]) + M.top;
+                            if (tpx < M.left - 2 || tpx > M.left + W + 2 ||
+                                tpy < M.top  - 2 || tpy > M.top  + H + 2) continue;
+                            ctx.beginPath();
+                            ctx.arc(tpx, tpy, 1.2, 0, 6.2832);
+                            ctx.fill();
+                        }
+                    }
+                }
+
+                ctx.fillStyle = cfg.pop_color || '#444444';
+                ctx.globalAlpha = alpha;
                 for (var i = 0; i < x.length; i++) {
                     var px = xScale(x[i]) + M.left;
                     var py = yScale(y[i]) + M.top;
@@ -175,7 +200,7 @@
                     ctx.fill();
                 }
 
-                if (hasDual) {
+                if (hasDual && !hasOverlay) {
                     ctx.fillStyle = cfg.back_color || '#d95f02';
                     ctx.globalAlpha = 0.42;
                     for (var j = 0; j < xBack.length; j++) {
@@ -191,8 +216,21 @@
             }
             ctx.restore();
         } else if (x && x.length > 0 && (!y || y.length === 0)) {
-            // Histogram mode
-            _drawHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#1f77b4');
+            // Histogram mode — smooth KDE curves
+            var overlayTraces = cfg.overlay_traces;
+            if (overlayTraces && overlayTraces.length > 0) {
+                // Overlay: draw each population's KDE, main trace last for prominence
+                for (var oi = 0; oi < overlayTraces.length; oi++) {
+                    var tr = overlayTraces[oi];
+                    if (tr.x && tr.x.length > 0) {
+                        _drawKDEHistogram(ctx, tr.x, xScale, M, W, H, tr.color, 0.22);
+                    }
+                }
+                // Main trace on top
+                _drawKDEHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#444444', 0.22);
+            } else {
+                _drawKDEHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#444444', 0.35);
+            }
         }
 
         // ── Axes ────────────────────────────────────────────────────────────
@@ -260,6 +298,46 @@
         g.append('rect')
             .attr('width', W).attr('height', H)
             .attr('fill', 'none').attr('stroke', '#333').attr('stroke-width', 1);
+
+        // ── Overlay legend (drawn in SVG so text is always sharp) ───────────
+        // Shown when overlay_traces contains named entries.
+        if (hasOverlay && cfg.legend_entries && cfg.legend_entries.length > 0) {
+            var entries = cfg.legend_entries;   // [{color, name}, ...]
+            var legFs = Math.max(7, (fs.tick || 9) - 1);
+            var swatchSz = legFs;
+            var rowH = legFs + 4;
+            var legW = 0;
+            entries.forEach(function (e) {
+                var tw = (e.name || '').length * legFs * 0.6 + swatchSz + 6;
+                if (tw > legW) legW = tw;
+            });
+            legW = Math.min(legW + 6, W - 4);
+            var legH = entries.length * rowH + 6;
+            var legX = W - legW - 2;
+            var legY = 2;
+
+            var legG = g.append('g')
+                .attr('transform', 'translate(' + legX + ',' + legY + ')');
+            legG.append('rect')
+                .attr('width', legW).attr('height', legH)
+                .attr('rx', 3).attr('ry', 3)
+                .attr('fill', 'rgba(255,255,255,0.82)')
+                .attr('stroke', '#ccc').attr('stroke-width', 0.5);
+
+            entries.forEach(function (e, ei) {
+                var ey = 4 + ei * rowH;
+                legG.append('rect')
+                    .attr('x', 4).attr('y', ey)
+                    .attr('width', swatchSz).attr('height', swatchSz)
+                    .attr('fill', e.color).attr('rx', 2);
+                legG.append('text')
+                    .attr('x', 4 + swatchSz + 4)
+                    .attr('y', ey + swatchSz * 0.85)
+                    .style('font-size', legFs + 'px')
+                    .style('fill', '#222')
+                    .text(e.name || '');
+            });
+        }
     }
 
     // ── Pseudocolor rendering ───────────────────────────────────────────────
@@ -451,37 +529,86 @@
         ctx.restore();
     }
 
-    // ── Histogram rendering ─────────────────────────────────────────────────
-    function _drawHistogram(ctx, x, xScale, M, W, H, color) {
+    // ── KDE histogram rendering ─────────────────────────────────────────────
+    // Draws a smooth Gaussian KDE curve (filled + stroked) instead of bins.
+    // alpha: fill opacity (stroke is always more opaque).
+    function _drawKDEHistogram(ctx, x, xScale, M, W, H, color, alpha) {
         var n = x.length;
         if (n === 0) return;
+        if (alpha === undefined || !isFinite(alpha)) alpha = 0.35;
 
-        var nBins = 60;
-        var xMin = xScale.domain()[0], xMax = xScale.domain()[1];
-        var binWidth = (xMax - xMin) / nBins;
-        var bins = new Array(nBins).fill(0);
+        // Scott's bandwidth: 1.06 * σ * n^(-1/5)
+        var mean = 0;
+        for (var i = 0; i < n; i++) mean += x[i];
+        mean /= n;
+        var variance = 0;
+        for (var i = 0; i < n; i++) { var d = x[i] - mean; variance += d * d; }
+        variance /= n;
+        var std = Math.sqrt(variance);
+        var dom = xScale.domain();
+        var domSpan = dom[1] - dom[0];
+        var bw = (std > 0) ? 1.06 * std * Math.pow(n, -0.2)
+                           : domSpan / 20;
+        bw = Math.max(bw, domSpan / 200);   // floor to avoid razor-thin spike
 
-        for (var i = 0; i < n; i++) {
-            var bi = Math.floor((x[i] - xMin) / binWidth);
-            if (bi >= 0 && bi < nBins) bins[bi]++;
+        // Subsample for KDE evaluation when n is large
+        var evalX = x;
+        if (n > 3000) {
+            evalX = [];
+            var step = Math.ceil(n / 3000);
+            for (var i = 0; i < n; i += step) evalX.push(x[i]);
         }
+        var nEval = evalX.length;
 
-        var maxCount = Math.max.apply(null, bins);
-        if (!maxCount) return;
+        // Evaluate KDE at 300 equally-spaced points across the visible domain
+        var nPts = 300;
+        var pts = [];
+        var maxD = 0;
+        for (var i = 0; i < nPts; i++) {
+            var xi = dom[0] + (i / (nPts - 1)) * domSpan;
+            var density = 0;
+            for (var j = 0; j < nEval; j++) {
+                var u = (xi - evalX[j]) / bw;
+                density += Math.exp(-0.5 * u * u);
+            }
+            density /= (nEval * bw * 2.5066);  // 2.5066 ≈ sqrt(2π)
+            pts.push({ xi: xi, d: density });
+            if (density > maxD) maxD = density;
+        }
+        if (!maxD) return;
 
         ctx.save();
         ctx.beginPath();
         ctx.rect(M.left, M.top, W, H);
         ctx.clip();
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.4;
+        ctx.translate(M.left, M.top);
 
-        var barW = W / nBins;
-        for (var i = 0; i < nBins; i++) {
-            if (bins[i] === 0) continue;
-            var barH = (bins[i] / maxCount) * H;
-            ctx.fillRect(M.left + i * barW, M.top + H - barH, barW - 0.5, barH);
+        var scaleY = function (d) { return H - (d / maxD) * H * 0.92; };
+
+        // Filled area under the curve
+        ctx.beginPath();
+        ctx.moveTo(xScale(pts[0].xi), H);
+        for (var i = 0; i < nPts; i++) {
+            ctx.lineTo(xScale(pts[i].xi), scaleY(pts[i].d));
         }
+        ctx.lineTo(xScale(pts[nPts - 1].xi), H);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.fill();
+
+        // Outline
+        ctx.beginPath();
+        ctx.moveTo(xScale(pts[0].xi), scaleY(pts[0].d));
+        for (var i = 1; i < nPts; i++) {
+            ctx.lineTo(xScale(pts[i].xi), scaleY(pts[i].d));
+        }
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = Math.min(1, alpha + 0.45);
+        ctx.lineWidth = 1.8;
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
         ctx.restore();
     }
 
@@ -800,10 +927,23 @@
         }
         var rowTargetWidth = nColumns * effectivePlotSize + gapPx * (nColumns - 1);
 
+        // Colorblind-friendly palette used when color_by_population is true
         var POP_COLORS = [
-            '#3182ce', '#e6550d', '#31a354', '#756bb1', '#636363',
-            '#e7298a', '#66a61e', '#e7ba52', '#7570b3', '#d95f02'
+            '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
         ];
+        var colorByPop   = !!data.color_by_population;
+        var overlayPops  = !!data.overlay_populations;
+        // Overlay always forces per-pop colour so populations are distinguishable
+        if (overlayPops) colorByPop = true;
+
+        // Build per-population colour map
+        var popColorMap = {};
+        for (var pi2 = 0; pi2 < popIds.length; pi2++) {
+            popColorMap[popIds[pi2]] = colorByPop
+                ? POP_COLORS[pi2 % POP_COLORS.length]
+                : '#444444';
+        }
 
         var gridDiv = document.createElement('div');
         gridDiv.className = 'mini-plot-grid illustration-grid';
@@ -812,20 +952,13 @@
         gridDiv.style.minWidth = rowTargetWidth + 'px';
         container.appendChild(gridDiv);
 
-        for (var pi = 0; pi < popIds.length; pi++) {
-            var popId = popIds[pi];
-            var popName = popNames[popId] || 'Unknown';
-            var n = popCounts[popId] || 0;
-            var popColor = POP_COLORS[pi % POP_COLORS.length];
+        if (overlayPops) {
+            // ── OVERLAY MODE: one panel per x-channel, all populations overlaid ──
+            // Legend entries (always shown in overlay mode)
+            var legendEntries = popIds.map(function (pid) {
+                return { color: popColorMap[pid], name: popNames[pid] || pid };
+            });
 
-            // Row header
-            var headerDiv = document.createElement('div');
-            headerDiv.className = 'illustration-row-header';
-            headerDiv.textContent = popName + ' \u2014 ' + n.toLocaleString() + ' events';
-            headerDiv.style.minWidth = rowTargetWidth + 'px';
-            gridDiv.appendChild(headerDiv);
-
-            // Row of plots
             var rowDiv = document.createElement('div');
             rowDiv.className = 'illustration-row';
             rowDiv.style.display = 'grid';
@@ -837,48 +970,149 @@
 
             for (var ci = 0; ci < xChannels.length; ci++) {
                 var xCh = xChannels[ci];
-                var key = popId + '|' + xCh;
-                var plotData = plots[key];
-                if (!plotData) continue;
+
+                // Collect traces from all populations for this channel
+                // The first population is the "main" trace (pop_color); the rest
+                // become overlay_traces so existing per-trace drawing is reused.
+                var mainPid = null, mainData = null;
+                var extraTraces = [];
+
+                for (var pi = 0; pi < popIds.length; pi++) {
+                    var pid = popIds[pi];
+                    var key = pid + '|' + xCh;
+                    var pd = plots[key];
+                    if (!pd) continue;
+                    if (mainPid === null) {
+                        mainPid = pid;
+                        mainData = pd;
+                    } else {
+                        extraTraces.push({
+                            x: pd.x || [],
+                            y: pd.y || null,
+                            color: popColorMap[pid],
+                            name: popNames[pid] || pid
+                        });
+                    }
+                }
+                if (!mainData) continue;
 
                 var plotDiv = document.createElement('div');
                 plotDiv.className = 'mini-plot-cell';
                 plotDiv.style.justifySelf = 'start';
                 plotDiv.setAttribute('data-render-family', 'illustration');
-                plotDiv.setAttribute('data-plot-key', key);
+                plotDiv.setAttribute('data-plot-key', 'overlay|' + xCh);
                 plotDiv.setAttribute('data-render-version', renderVersion);
                 rowDiv.appendChild(plotDiv);
 
-                var gateOvl = gateOverlays[key] || [];
+                var dispMode = displayMode;
+                if (dispMode === 'pseudocolor') dispMode = 'scatter';
 
                 renderMiniPlot(plotDiv, {
-                    x: plotData.x,
-                    y: plotData.y || null,
-                    x_range: plotData.x_range,
-                    y_range: plotData.y_range,
-                    x_label: plotData.x_label || xCh,
-                    y_label: plotData.y_label || yChannel,
-                    x_is_logicle: plotData.x_is_logicle,
-                    x_logicle_ticks: plotData.x_logicle_ticks,
-                    y_is_logicle: plotData.y_is_logicle,
-                    y_logicle_ticks: plotData.y_logicle_ticks,
-                    display_mode: displayMode,
-                    plot_size: effectivePlotSize,
+                    x:               mainData.x,
+                    y:               mainData.y || null,
+                    x_range:         mainData.x_range,
+                    y_range:         mainData.y_range,
+                    x_label:         mainData.x_label || xCh,
+                    y_label:         mainData.y_label || yChannel,
+                    x_is_logicle:    mainData.x_is_logicle,
+                    x_logicle_ticks: mainData.x_logicle_ticks,
+                    y_is_logicle:    mainData.y_is_logicle,
+                    y_logicle_ticks: mainData.y_logicle_ticks,
+                    display_mode:    dispMode,
+                    plot_size:       effectivePlotSize,
                     contour_threshold: contourThreshold,
-                    point_alpha: pointAlpha,
-                    kde_bandwidth: kdeBandwidth,
-                    title: null,
-                    font_sizes: fontSizes,
-                    pop_color: popColor,
-                    gates: gateOvl
+                    point_alpha:     pointAlpha,
+                    kde_bandwidth:   kdeBandwidth,
+                    title:           xCh,
+                    font_sizes:      fontSizes,
+                    pop_color:       popColorMap[mainPid],
+                    overlay_traces:  extraTraces,
+                    legend_entries:  legendEntries,
+                    gates:           []
                 });
 
-                plotDiv.oncontextmenu = function (event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    _showMiniContextMenu(event, this);
-                    return false;
-                };
+                plotDiv.oncontextmenu = (function (div) {
+                    return function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        _showMiniContextMenu(event, div);
+                        return false;
+                    };
+                })(plotDiv);
+            }
+
+        } else {
+            // ── NORMAL MODE: one row per population ──────────────────────────
+            for (var pi = 0; pi < popIds.length; pi++) {
+                var popId = popIds[pi];
+                var popName = popNames[popId] || 'Unknown';
+                var n = popCounts[popId] || 0;
+                var popColor = popColorMap[popId];
+
+                // Row header
+                var headerDiv = document.createElement('div');
+                headerDiv.className = 'illustration-row-header';
+                headerDiv.textContent = popName + ' \u2014 ' + n.toLocaleString() + ' events';
+                headerDiv.style.minWidth = rowTargetWidth + 'px';
+                gridDiv.appendChild(headerDiv);
+
+                // Row of plots
+                var rowDiv = document.createElement('div');
+                rowDiv.className = 'illustration-row';
+                rowDiv.style.display = 'grid';
+                rowDiv.style.gridTemplateColumns = 'repeat(' + nColumns + ', ' + effectivePlotSize + 'px)';
+                rowDiv.style.gap = gapPx + 'px';
+                rowDiv.style.width = rowTargetWidth + 'px';
+                rowDiv.style.minWidth = rowTargetWidth + 'px';
+                gridDiv.appendChild(rowDiv);
+
+                for (var ci = 0; ci < xChannels.length; ci++) {
+                    var xCh = xChannels[ci];
+                    var key = popId + '|' + xCh;
+                    var plotData = plots[key];
+                    if (!plotData) continue;
+
+                    var plotDiv = document.createElement('div');
+                    plotDiv.className = 'mini-plot-cell';
+                    plotDiv.style.justifySelf = 'start';
+                    plotDiv.setAttribute('data-render-family', 'illustration');
+                    plotDiv.setAttribute('data-plot-key', key);
+                    plotDiv.setAttribute('data-render-version', renderVersion);
+                    rowDiv.appendChild(plotDiv);
+
+                    var gateOvl = gateOverlays[key] || [];
+
+                    renderMiniPlot(plotDiv, {
+                        x:               plotData.x,
+                        y:               plotData.y || null,
+                        x_range:         plotData.x_range,
+                        y_range:         plotData.y_range,
+                        x_label:         plotData.x_label || xCh,
+                        y_label:         plotData.y_label || yChannel,
+                        x_is_logicle:    plotData.x_is_logicle,
+                        x_logicle_ticks: plotData.x_logicle_ticks,
+                        y_is_logicle:    plotData.y_is_logicle,
+                        y_logicle_ticks: plotData.y_logicle_ticks,
+                        display_mode:    displayMode,
+                        plot_size:       effectivePlotSize,
+                        contour_threshold: contourThreshold,
+                        point_alpha:     pointAlpha,
+                        kde_bandwidth:   kdeBandwidth,
+                        title:           null,
+                        font_sizes:      fontSizes,
+                        pop_color:       popColor,
+                        gates:           gateOvl
+                    });
+
+                    plotDiv.oncontextmenu = (function (div) {
+                        return function (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            _showMiniContextMenu(event, div);
+                            return false;
+                        };
+                    })(plotDiv);
+                }
             }
         }
     }
