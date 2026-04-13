@@ -312,7 +312,12 @@ ui <- fluidPage(
                 # Card 2: Axis
                 tags$div(class = "strategy-block",
                   tags$div(class = "gating-control-box-title", "Axis"),
-                  uiOutput("axis_controls_ui")
+                  uiOutput("axis_controls_ui"),
+                  actionButton("apply_global_scales_gating_btn",
+                               "Apply global scales",
+                               class = "btn-xs btn-default",
+                               style = "margin-top:5px; width:100%;",
+                               title = "Set axis ranges for current X/Y channels from the Scales tab")
                 )
               ),
 
@@ -1329,6 +1334,66 @@ server <- function(input, output, session) {
     req(input$y_channel)
     w_auto <- as.numeric(rv$flow_logicle_w_auto[[input$y_channel]] %||% 0.5)
     updateSliderInput(session, "y_logicle_w", value = w_auto)
+  }, ignoreInit = TRUE)
+
+  # Apply global scales to the current gating-tab axis pair
+  observeEvent(input$apply_global_scales_gating_btn, {
+    req(rv$sce, input$x_channel, input$y_channel)
+    x_ch <- input$x_channel
+    y_ch <- input$y_channel
+
+    if (length(rv$global_scale_ranges) == 0) {
+      showNotification(
+        "No global scales defined yet. Go to the Scales tab and click \u2018Capture from data\u2019 first.",
+        type = "warning", duration = 5)
+      return()
+    }
+
+    .valid_gs <- function(ch) {
+      gs <- rv$global_scale_ranges[[ch]]
+      if (is.null(gs)) return(NULL)
+      lo <- suppressWarnings(as.numeric(gs$lo %||% NA))
+      hi <- suppressWarnings(as.numeric(gs$hi %||% NA))
+      if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+      c(lo, hi)
+    }
+    x_rng <- .valid_gs(x_ch)
+    y_rng <- .valid_gs(y_ch)
+
+    if (is.null(x_rng) && is.null(y_rng)) {
+      showNotification(
+        paste0("No global scales found for \u2018", x_ch, "\u2019 or \u2018", y_ch,
+               "\u2019. Capture scales first."),
+        type = "warning", duration = 5)
+      return()
+    }
+
+    if (!is_flow_session(rv$sce) && !is_gaussian_qc_channel(x_ch) && !is_gaussian_qc_channel(y_ch)) {
+      # CyTOF: update the persistent cytof_axis_range via the numeric inputs;
+      # the existing cytof_x_lo/hi observers will update rv$cytof_axis_range and re-plot.
+      if (!is.null(x_rng)) {
+        updateNumericInput(session, "cytof_x_lo", value = x_rng[1])
+        updateNumericInput(session, "cytof_x_hi", value = x_rng[2])
+      }
+      if (!is.null(y_rng)) {
+        updateNumericInput(session, "cytof_y_lo", value = y_rng[1])
+        updateNumericInput(session, "cytof_y_hi", value = y_rng[2])
+      }
+    } else {
+      # Flow / QC: use .plot_range_override (like the Rescale button does).
+      # Fall back to compute_stable_range for any channel without a global scale.
+      if (is.null(x_rng)) x_rng <- compute_stable_range(x_ch, for_plot = TRUE)
+      if (is.null(y_rng)) y_rng <- compute_stable_range(y_ch, for_plot = TRUE)
+      if (!is.null(x_rng) && !is.null(y_rng)) {
+        rv$.plot_range_override <- list(
+          x_channel = x_ch, y_channel = y_ch,
+          x_range   = x_rng, y_range = y_rng
+        )
+        update_rescale_btn(TRUE)
+        rv$.range_cache <- list()
+        send_full_plot(reset_view = TRUE)
+      }
+    }
   }, ignoreInit = TRUE)
 
   # ── SCE discovery ─────────────────────────────────────────────────────────
@@ -6055,6 +6120,7 @@ ui_with_runjs <- tagList(
         'illust_reset_axes_btn': 'Reset Illustration panel axes to channel-wide ranges using Axis span %',
         'strategy_use_global_scales': 'Use per-channel axis ranges defined in the Scales tab for all Strategy panels',
         'illust_use_global_scales': 'Use per-channel axis ranges defined in the Scales tab for all Illustration panels',
+        'apply_global_scales_gating_btn': 'Set the current X/Y axis ranges from the values defined in the Scales tab',
         'global_scale_capture_btn': 'Compute per-channel axis ranges from current filtered data and store them as global scales',
         'global_scale_reset_all_btn': 'Clear all global scale overrides and revert logicle W to auto-estimated values',
         'strategy_export_png': 'Export the gating strategy grid as a PNG',
