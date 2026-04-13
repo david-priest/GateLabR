@@ -926,6 +926,8 @@ server <- function(input, output, session) {
 
   autosave <- function() {
     if (is.null(rv$sce) || is.null(rv$sce_name)) return()
+    # Flush latest logicle W / scatter cofactor into SCE metadata before saving
+    persist_flow_transform_state()
     gate_value_space <- if (!is.null(rv$sce) && is_flow_session(rv$sce) &&
                             rv$assay_name == "exprs" && !is.null(rv$flow_raw_data)) {
       "raw"
@@ -936,6 +938,7 @@ server <- function(input, output, session) {
       rv$sce, rv$gates, rv$gate_order, rv$populations, rv$root_population_id,
       gate_value_space = gate_value_space,
       cytof_axis_range = rv$cytof_axis_range %||% list(),
+      global_scale_ranges = rv$global_scale_ranges %||% list(),
       plot_range_override = rv$.plot_range_override
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
@@ -1622,6 +1625,8 @@ server <- function(input, output, session) {
       rv$active_population_id <- ws$root_population_id
       rv$gate_version <- rv$gate_version + 1L
       if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
+      rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
+      rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
       rv$.plot_range_override <- ws$plot_range_override %||% NULL
       update_rescale_btn(!is.null(rv$.plot_range_override))
       output$status_text <- renderText(paste("Loaded workspace from", sce_name))
@@ -1635,6 +1640,8 @@ server <- function(input, output, session) {
       rv$selected_gate_id <- NULL
       rv$gate_version <- 0L
       rv$cytof_axis_range <- list()
+      rv$global_scale_ranges <- list()
+      rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
       rv$.plot_range_override <- NULL
       update_rescale_btn(FALSE)
       output$status_text <- renderText(paste("Loaded", sce_name, "-",
@@ -5662,6 +5669,8 @@ server <- function(input, output, session) {
     rv$active_population_id <- ws$root_population_id; rv$selected_gate_id <- NULL
     rv$gate_version <- rv$gate_version + 1L
     if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
+    rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
+    rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
     rv$.plot_range_override <- ws$plot_range_override %||% NULL
     update_rescale_btn(!is.null(rv$.plot_range_override))
     autosave(); send_full_plot()
