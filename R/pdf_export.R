@@ -894,7 +894,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   # Polygon fill + stroke (single path)
   gate_children[[1L]] <- polygonGrob(
     x = unit(screen_x, "points"), y = unit(screen_y, "points"),
-    gp = gpar(fill = adjustcolor(gate_color, alpha.f = 0.05),
+    gp = gpar(fill = NA,
               col = gate_color, lwd = 1.2),
     name = "polygon")
 
