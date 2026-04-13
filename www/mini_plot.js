@@ -1348,88 +1348,6 @@
 
     // ── Export helpers ──────────────────────────────────────────────────────
 
-    // ── Composite SVG builder (data points as embedded PNG, axes/gates as vectors) ─
-    function _buildCompositeSVG(gridEl) {
-        var ns = 'http://www.w3.org/2000/svg';
-        var gridRect = gridEl.getBoundingClientRect();
-        var W = gridRect.width, H = gridRect.height;
-
-        var master = document.createElementNS(ns, 'svg');
-        master.setAttribute('xmlns', ns);
-        master.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-        master.setAttribute('width', W);
-        master.setAttribute('height', H);
-        master.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-
-        var bg = document.createElementNS(ns, 'rect');
-        bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%');
-        bg.setAttribute('fill', 'white');
-        master.appendChild(bg);
-
-        // Row headers / column headers (plain text elements)
-        var textEls = gridEl.querySelectorAll(
-            '.illustration-row-header, .strategy-arrow, .multi-strategy-col-header');
-        textEls.forEach(function (el) {
-            var r = el.getBoundingClientRect();
-            var cs = window.getComputedStyle(el);
-            var t = document.createElementNS(ns, 'text');
-            t.setAttribute('x', r.left - gridRect.left + r.width / 2);
-            t.setAttribute('y', r.top  - gridRect.top  + r.height / 2);
-            t.setAttribute('text-anchor', 'middle');
-            t.setAttribute('dominant-baseline', 'central');
-            t.setAttribute('style',
-                'font-size:' + cs.fontSize + ';font-family:' + cs.fontFamily +
-                ';fill:' + (cs.color || '#333') + ';font-weight:' + cs.fontWeight);
-            t.textContent = (el.textContent || '').trim();
-            master.appendChild(t);
-        });
-
-        // Each mini-plot cell: canvas → <image>, SVG overlay → cloned <g>
-        var cells = gridEl.querySelectorAll('.mini-plot-cell');
-        cells.forEach(function (cell) {
-            var cr = cell.getBoundingClientRect();
-            var ox = cr.left - gridRect.left;
-            var oy = cr.top  - gridRect.top;
-
-            var g = document.createElementNS(ns, 'g');
-            g.setAttribute('transform', 'translate(' + ox + ',' + oy + ')');
-
-            // Rasterised data points
-            var canvas = cell.querySelector('canvas');
-            if (canvas) {
-                var img = document.createElementNS(ns, 'image');
-                img.setAttribute('x', '0'); img.setAttribute('y', '0');
-                img.setAttribute('width',  cr.width);
-                img.setAttribute('height', cr.height);
-                img.setAttribute('href', canvas.toDataURL('image/png'));
-                g.appendChild(img);
-            }
-
-            // Vector overlay (axes, gate outlines, labels)
-            var svgEl = cell.querySelector('svg');
-            if (svgEl) {
-                var clone = svgEl.cloneNode(true);
-                // Inline computed styles so they survive serialisation
-                clone.querySelectorAll('text, line, path, rect[stroke], circle').forEach(function (el) {
-                    var cs = window.getComputedStyle(el);
-                    var s = (el.getAttribute('style') || '');
-                    if (cs.fontSize)   s += ';font-size:'   + cs.fontSize;
-                    if (cs.fontFamily) s += ';font-family:' + cs.fontFamily;
-                    if (cs.fill && cs.fill !== 'rgba(0, 0, 0, 0)')   s += ';fill:'   + cs.fill;
-                    if (cs.stroke && cs.stroke !== 'rgba(0, 0, 0, 0)') s += ';stroke:' + cs.stroke;
-                    if (cs.strokeWidth) s += ';stroke-width:' + cs.strokeWidth;
-                    el.setAttribute('style', s);
-                });
-                // Move SVG children into the group (drop the <svg> wrapper)
-                while (clone.firstChild) g.appendChild(clone.firstChild);
-            }
-
-            master.appendChild(g);
-        });
-
-        return master;
-    }
-
     function exportGridPNG(gridId, filename) {
         var gridEl = document.getElementById(gridId);
         if (!gridEl) { alert('Grid not found: ' + gridId); return; }
@@ -1438,17 +1356,6 @@
                 if (blob) _downloadBlob(blob, (filename || 'export') + '.png');
             }, 'image/png');
         });
-    }
-
-    function exportGridSVG(gridId, filename) {
-        var gridEl = document.getElementById(gridId);
-        if (!gridEl) { alert('Grid not found: ' + gridId); return; }
-        var master = _buildCompositeSVG(gridEl);
-        var svgData = '<?xml version="1.0" encoding="UTF-8"?>' +
-            new XMLSerializer().serializeToString(master);
-        _downloadBlob(
-            new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' }),
-            (filename || 'export') + '.svg');
     }
 
     function _loadJsPdf() {
@@ -1917,7 +1824,6 @@
         renderMultiStrategyGrid: renderMultiStrategyGrid,
         renderIllustrationGrid: renderIllustrationGrid,
         exportGridPNG: exportGridPNG,
-        exportGridSVG: exportGridSVG,
         exportGridPDF: exportGridPDF
     };
 
@@ -1939,10 +1845,6 @@
 
         Shiny.addCustomMessageHandler('exportMiniPlotPNG', function (data) {
             CytofMiniPlot.exportGridPNG(data.gridId, data.filename);
-        });
-
-        Shiny.addCustomMessageHandler('exportMiniPlotSVG', function (data) {
-            CytofMiniPlot.exportGridSVG(data.gridId, data.filename);
         });
 
         Shiny.addCustomMessageHandler('exportMiniPlotPDF', function (data) {

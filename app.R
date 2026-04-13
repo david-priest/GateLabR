@@ -356,8 +356,6 @@ ui <- fluidPage(
               tags$div(class = "strategy-top-export-actions",
                 actionButton("strategy_export_png", "PNG",
                              class = "btn-sm btn-default", icon = icon("download")),
-                actionButton("strategy_export_svg", "SVG",
-                             class = "btn-sm btn-default", icon = icon("file-image-o")),
                 actionButton("strategy_export_pdf", "PDF",
                              class = "btn-sm btn-default", icon = icon("file-pdf-o"))
               )
@@ -477,8 +475,6 @@ ui <- fluidPage(
               tags$div(class = "illust-top-export-actions",
                 actionButton("illust_export_png", "PNG",
                              class = "btn-sm btn-default", icon = icon("download")),
-                actionButton("illust_export_svg", "SVG",
-                             class = "btn-sm btn-default", icon = icon("file-image-o")),
                 actionButton("illust_export_pdf", "PDF",
                              class = "btn-sm btn-default", icon = icon("file-pdf-o"))
               )
@@ -4511,13 +4507,6 @@ server <- function(input, output, session) {
     ))
   })
 
-  observeEvent(input$strategy_export_svg, {
-    session$sendCustomMessage("exportMiniPlotSVG", list(
-      gridId = "strategy-grid-container-grid",
-      filename = "gating_strategy"
-    ))
-  })
-
   observeEvent(input$strategy_export_pdf, {
     session$sendCustomMessage("exportMiniPlotPDF", list(
       gridId = "strategy-grid-container-grid",
@@ -4981,13 +4970,6 @@ server <- function(input, output, session) {
 
   observeEvent(input$illust_export_png, {
     session$sendCustomMessage("exportMiniPlotPNG", list(
-      gridId = "illustration-grid-container-grid",
-      filename = "illustration"
-    ))
-  })
-
-  observeEvent(input$illust_export_svg, {
-    session$sendCustomMessage("exportMiniPlotSVG", list(
       gridId = "illustration-grid-container-grid",
       filename = "illustration"
     ))
@@ -5655,12 +5637,10 @@ ui_with_runjs <- tagList(
         'illust_rescale_axes_btn': 'Fit Illustration panel axes to displayed data while honoring Axis span %',
         'illust_reset_axes_btn': 'Reset Illustration panel axes to channel-wide ranges using Axis span %',
         'strategy_export_png': 'Export the gating strategy grid as a PNG',
-        'strategy_export_svg': 'Export the gating strategy grid as an SVG file',
-        'strategy_export_pdf': 'Export the gating strategy grid as a PDF file',
+        'strategy_export_pdf': 'Export the gating strategy grid as a vector PDF',
         'illust_render_btn':   'Render the illustration mini-plot grid',
         'illust_export_png':   'Export the illustration grid as a PNG',
-        'illust_export_svg':   'Export the illustration grid as an SVG file',
-        'illust_export_pdf':   'Export the illustration grid as a PDF file'
+        'illust_export_pdf':   'Export the illustration grid as a vector PDF'
       };
       Object.entries(tips).forEach(function([id, tip]) {
         var el = $('#' + id);
