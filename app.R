@@ -113,7 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260403"),
     tags$script(src = "mini_plot.js?v=20260413k"),
-    tags$link(rel = "stylesheet", href = "custom.css?v=20260413a")
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260413b")
   ),
 
   titlePanel("GateLabR"),
@@ -5275,92 +5275,93 @@ server <- function(input, output, session) {
   # Helper: sanitise a channel name to a valid Shiny input ID suffix
   .scales_safe_id <- function(ch) gsub("[^A-Za-z0-9]", "_", ch)
 
-  # Render the per-channel table of scale controls
+  # Render the per-channel table of scale controls (2-column compact layout)
   output$scales_channels_ui <- renderUI({
     rv$.scales_ui_version   # forced-refresh trigger
     req(rv$sce, length(rv$channels) > 0)
     is_flow <- isolate(is_flow_session(rv$sce))
     channels <- isolate(rv$channels)
 
-    header <- tags$div(
-      style = paste0(
-        "display:grid; gap:4px; align-items:center;",
-        " font-size:10px; color:#666; font-weight:600;",
-        " padding:2px 0 4px 0; border-bottom:1px solid #ddd; margin-bottom:4px;",
-        if (is_flow)
-          " grid-template-columns:160px 80px 80px 80px 32px;"
-        else
-          " grid-template-columns:160px 80px 80px 32px;"
-      ),
-      tags$span("Channel"),
-      tags$span("Min"),
-      tags$span("Max"),
-      if (is_flow) tags$span("Log. W") else NULL,
-      tags$span("")
-    )
+    # Column template strings — kept narrow so two columns fit side by side
+    col_tpl <- if (is_flow) "110px 56px 56px 52px 24px" else "120px 60px 60px 24px"
 
-    rows <- lapply(channels, function(ch) {
-      safe_id  <- .scales_safe_id(ch)
-      stored   <- isolate(rv$global_scale_ranges[[ch]])
+    make_header <- function() {
+      tags$div(
+        class = "scales-col-header",
+        style = paste0("display:grid; grid-template-columns:", col_tpl,
+                       "; gap:3px; align-items:center;"),
+        tags$span("Channel"),
+        tags$span("Min"),
+        tags$span("Max"),
+        if (is_flow) tags$span("W") else NULL,
+        tags$span("")
+      )
+    }
+
+    make_row <- function(ch) {
+      safe_id    <- .scales_safe_id(ch)
+      stored     <- isolate(rv$global_scale_ranges[[ch]])
       is_scatter <- .is_scatter_channel(ch)
-      is_qc    <- .is_qc_channel(ch)
+      is_qc      <- .is_qc_channel(ch)
 
       if (is_flow) {
         if (is_scatter) {
-          lo_val <- stored$lo %||% -2
-          hi_val <- stored$hi %||% 10
+          lo_val <- stored$lo %||% -2;  hi_val <- stored$hi %||% 10
           w_cell <- tags$span("")
         } else if (is_qc) {
-          lo_val <- stored$lo %||% 0
-          hi_val <- stored$hi %||% 100
+          lo_val <- stored$lo %||% 0;   hi_val <- stored$hi %||% 100
           w_cell <- tags$span("")
         } else {
-          lo_val <- stored$lo %||% -0.5
-          hi_val <- stored$hi %||% 4.5
-          w_raw  <- isolate(
-            as.numeric(rv$flow_logicle_w[[ch]] %||%
-                       rv$flow_logicle_w_auto[[ch]] %||% 0.5)
-          )
-          w_cell <- numericInput(
-            paste0("scales_w_", safe_id), NULL,
-            value = round(w_raw, 3), min = 0.1, max = 2.0, step = 0.05, width = "78px"
-          )
+          lo_val <- stored$lo %||% -0.5; hi_val <- stored$hi %||% 4.5
+          w_raw  <- isolate(as.numeric(
+            rv$flow_logicle_w[[ch]] %||% rv$flow_logicle_w_auto[[ch]] %||% 0.5))
+          w_cell <- numericInput(paste0("scales_w_", safe_id), NULL,
+                                 value = round(w_raw, 3),
+                                 min = 0.1, max = 2.0, step = 0.05, width = "50px")
         }
       } else {
         rng    <- isolate(get_cytof_axis_range(ch))
-        lo_val <- stored$lo %||% rng[1]
-        hi_val <- stored$hi %||% rng[2]
+        lo_val <- stored$lo %||% rng[1]; hi_val <- stored$hi %||% rng[2]
         w_cell <- NULL
       }
 
       tags$div(
-        style = paste0(
-          "display:grid; gap:4px; align-items:center; margin-bottom:2px;",
-          if (is_flow)
-            " grid-template-columns:160px 80px 80px 80px 32px;"
-          else
-            " grid-template-columns:160px 80px 80px 32px;"
-        ),
-        tags$span(ch,
-                  style = "font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;",
-                  title = ch),
+        class = "scales-ch-row",
+        style = paste0("display:grid; grid-template-columns:", col_tpl,
+                       "; gap:3px; align-items:center;"),
+        tags$span(ch, class = "scales-ch-name", title = ch),
         numericInput(paste0("scales_lo_", safe_id), NULL,
-                     value = round(lo_val, 3), step = 0.1, width = "78px"),
+                     value = round(lo_val, 3), step = 0.1, width = "54px"),
         numericInput(paste0("scales_hi_", safe_id), NULL,
-                     value = round(hi_val, 3), step = 0.1, width = "78px"),
+                     value = round(hi_val, 3), step = 0.1, width = "54px"),
         if (is_flow) w_cell else NULL,
         actionButton(paste0("scales_reset_", safe_id), "\u21ba",
-                     class = "btn-xs btn-default",
-                     title  = paste("Reset", ch, "to auto"),
-                     style  = "padding:1px 4px; font-size:10px;")
+                     class = "btn-xs btn-default scales-reset-btn",
+                     title = paste("Reset", ch, "to auto"))
       )
-    })
+    }
+
+    # Split into two balanced columns
+    n      <- length(channels)
+    half   <- ceiling(n / 2)
+    col1   <- channels[seq_len(half)]
+    col2   <- if (n > half) channels[seq(half + 1L, n)] else character(0)
+
+    make_col <- function(chs) {
+      tags$div(
+        class = "scales-col",
+        make_header(),
+        lapply(chs, make_row)
+      )
+    }
 
     tags$div(
       class = "scales-channel-table",
-      style = "overflow-y:auto; max-height:calc(100vh - 300px);",
-      header,
-      do.call(tags$div, rows)
+      tags$div(
+        class = "scales-two-col",
+        make_col(col1),
+        if (length(col2) > 0) make_col(col2) else NULL
+      )
     )
   })
 
