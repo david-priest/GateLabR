@@ -708,11 +708,9 @@
             return p[0] + ',' + p[1];
         }).join('L') + 'Z';
 
-        // Fill
         g.append('path')
             .attr('d', pathStr)
-            .attr('fill', gate.color)
-            .attr('fill-opacity', 0.05)
+            .attr('fill', 'none')
             .attr('stroke', gate.color)
             .attr('stroke-width', 1.5);
 
