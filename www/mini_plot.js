@@ -716,7 +716,7 @@
             .attr('stroke', gate.color)
             .attr('stroke-width', 1.5);
 
-        // Label
+        // Label (name on line 1, percentage on line 2 — matching gating editor)
         if (gate.name) {
             var cx = d3.mean(points, function (p) { return p[0]; });
             var cy = d3.mean(points, function (p) { return p[1]; });
@@ -726,31 +726,45 @@
             var ox = lo[0] ? (xScale(lo[0]) - xScale(0)) : 0;
             var oy = lo[1] ? (yScale(lo[1]) - yScale(0)) : 0;
 
-            var lx = Math.max(0, Math.min(W, cx + ox));
-            var ly = Math.max(10, Math.min(H, cy + oy));
+            var pctLine = (gate.percent_of_parent != null)
+                ? Number(gate.percent_of_parent).toFixed(1) + '%'
+                : null;
+
+            // Estimate label width to clamp within plot area
+            var fsNum = parseFloat(gateFs);
+            if (!isFinite(fsNum) || fsNum <= 0) fsNum = 9;
+            var nameTxt = String(gate.name || '');
+            var pctTxt = pctLine || '';
+            var longerTxt = nameTxt.length > pctTxt.length ? nameTxt : pctTxt;
+            var estHalfW = longerTxt.length * fsNum * 0.32 + 4;
+
+            var lx = Math.max(estHalfW, Math.min(W - estHalfW, cx + ox));
+            var ly = Math.max(10, Math.min(H - 5, cy + oy));
 
             var label = g.append('g').attr('transform', 'translate(' + lx + ',' + ly + ')');
             var text = label.append('text')
                 .attr('text-anchor', 'middle')
-                .attr('dominant-baseline', 'central')
-                .style('font-size', gateFs)
-                .style('fill', '#fff')
+                .attr('fill', '#fff')
+                .style('font-size', gateFs);
+            text.append('tspan')
+                .attr('x', 0)
+                .attr('dy', pctLine ? '-0.55em' : '0.35em')
                 .text(gate.name);
+            if (pctLine) {
+                text.append('tspan')
+                    .attr('x', 0).attr('dy', '1.3em')
+                    .style('font-size', (fsNum - 1) + 'px')
+                    .text(pctLine);
+            }
 
             // Background (guard getBBox for offscreen/non-rendered SVG contexts).
             var bbox;
             try {
                 bbox = text.node().getBBox();
             } catch (_bboxErr) {
-                var fsNum = parseFloat(gateFs);
-                if (!isFinite(fsNum) || fsNum <= 0) fsNum = 9;
-                var txt = String(gate.name || '');
-                bbox = {
-                    x: -0.30 * fsNum * txt.length,
-                    y: -0.55 * fsNum,
-                    width: Math.max(6, txt.length * fsNum * 0.60),
-                    height: fsNum * 1.10
-                };
+                var estW = Math.max(6, longerTxt.length * fsNum * 0.60);
+                var estH = pctLine ? fsNum * 2.2 : fsNum * 1.1;
+                bbox = { x: -estW / 2, y: -estH / 2, width: estW, height: estH };
             }
 
             label.insert('rect', 'text')
@@ -909,7 +923,8 @@
                 back_color: '#d95f02',
                 gates: [{
                     gate_id: step.gate_id,
-                    name: step.gate_name + ' ' + step.pct_pass + '%',
+                    name: step.gate_name,
+                    percent_of_parent: step.pct_pass,
                     gate_type: step.gate_type,
                     vertices: step.vertices,
                     color: step.color,
@@ -1938,6 +1953,26 @@
         var pointSize   = isFinite(Number(data.point_size)) && Number(data.point_size) > 0 ? Number(data.point_size) : 1.2;
         var kdeBandwidth = isFinite(Number(data.kde_bandwidth)) ? Math.max(0, Number(data.kde_bandwidth)) : 0;
         var gapPx = 8;
+
+        // ── Safety net: resolve any (row,col) duplicates before layout ───────
+        // The R layout already resolves these, but guard here too so a stale
+        // payload or future code path never causes invisible stacked plots.
+        (function () {
+            // Sort by col asc, then node_id for a deterministic tie-break
+            nodes = nodes.slice().sort(function (a, b) {
+                var dc = (a.col || 0) - (b.col || 0);
+                if (dc !== 0) return dc;
+                return String(a.node_id || '').localeCompare(String(b.node_id || ''));
+            });
+            var used = {};
+            nodes.forEach(function (n) {
+                var row = n.row || 0;
+                var col = n.col || 0;
+                var key = row + '|' + col;
+                while (used[key]) { col++; n.col = col; key = row + '|' + col; }
+                used[key] = true;
+            });
+        })();
 
         var maxCol = 0, maxRow = 0;
         nodes.forEach(function (n) {

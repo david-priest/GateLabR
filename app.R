@@ -112,7 +112,7 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260403"),
-    tags$script(src = "mini_plot.js?v=20260413j"),
+    tags$script(src = "mini_plot.js?v=20260413k"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260413a")
   ),
 
@@ -2751,7 +2751,7 @@ server <- function(input, output, session) {
       if (is.null(pop_name) || nchar(trimws(pop_name)) == 0) {
         pop_name <- gate_name
       }
-      pop_name <- append_suffix(pop_name, "pop")
+      pop_name <- trimws(pop_name)
 
       new_pop <- new_population(
         pop_name,
@@ -4341,7 +4341,21 @@ server <- function(input, output, session) {
 
       x_range <- compute_range_from_values(x_vals, channel = x_ch, span_scale = span_scale)
       y_range <- compute_range_from_values(y_vals, channel = y_ch, span_scale = span_scale)
-      for (ge in nr$gate_entries) {
+      # Compute percent_of_parent for each gate entry and expand axis range for gate vertices
+      for (gi in seq_along(nr$gate_entries)) {
+        ge <- nr$gate_entries[[gi]]
+        # Compute gate percentage on parent events
+        gate_def <- gates[[ge$gate_id]]
+        if (!is.null(gate_def) && n_total > 0) {
+          gate_mask <- get_gate_mask(gate_def, assay_data)
+          if (isTRUE(ge$include)) {
+            child_mask <- parent_mask & gate_mask
+          } else {
+            child_mask <- parent_mask & !gate_mask
+          }
+          pct <- round(sum(child_mask, na.rm = TRUE) / n_total * 100, 1)
+          nr$gate_entries[[gi]]$percent_of_parent <- pct
+        }
         verts <- ge$vertices %||% list()
         if (length(verts) > 0) {
           gvx <- vapply(verts, .vertex_coord, numeric(1), idx = 1L)
@@ -4379,6 +4393,32 @@ server <- function(input, output, session) {
         n_events        = n_total
       )
     }
+
+    # ── Resolve (row, col) collisions ─────────────────────────────────────
+    # When a parent population has children gated on different channel pairs,
+    # all those nodes get identical (row, col) because both coordinates depend
+    # solely on parent_id.  Fix by walking each row in col order and bumping
+    # any duplicate col to the next free slot — preserving relative ordering
+    # (deterministic tie-break: sort by node_key so the result is stable).
+    if (length(result_nodes) > 1) {
+      row_vals <- vapply(result_nodes, function(n) n$row, integer(1))
+      for (row_val in unique(row_vals)) {
+        nks_in_row <- names(result_nodes)[row_vals == row_val]
+        if (length(nks_in_row) < 2) next
+        cols_in_row <- vapply(nks_in_row, function(k) result_nodes[[k]]$col, integer(1))
+        # Sort: primary = col, secondary = node_key (deterministic tie-break)
+        ord         <- order(cols_in_row, nks_in_row)
+        nks_in_row  <- nks_in_row[ord]
+        cols_in_row <- cols_in_row[ord]
+        prev_col    <- -1L
+        for (j in seq_along(nks_in_row)) {
+          new_col <- max(cols_in_row[j], prev_col + 1L)
+          result_nodes[[nks_in_row[j]]]$col <- new_col
+          prev_col <- new_col
+        }
+      }
+    }
+
     result_nodes
   }
 
