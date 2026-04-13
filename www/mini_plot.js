@@ -1470,211 +1470,353 @@
         });
     }
 
-    function _loadSvg2Pdf() {
-        return new Promise(function (resolve, reject) {
-            // svg2pdf is available as window.svg2pdf after the UMD bundle loads
-            if (typeof window.svg2pdf === 'function') { resolve(window.svg2pdf); return; }
-            var script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js';
-            script.onload = function () {
-                var fn = window.svg2pdf || (window.svg2pdf && window.svg2pdf.default);
-                if (typeof fn === 'function') resolve(fn);
-                else reject(new Error('svg2pdf loaded but function not found'));
+    // ── PDF Export: direct jsPDF rendering ─────────────────────────────────
+    // Each plot cell is drawn as:
+    //   • A high-resolution raster PNG of the canvas (data points / histograms)
+    //   • Vector lines, text, rectangles, polygons for axes, gates, labels, border
+    // No dependency on svg2pdf.js — only jsPDF is required (loaded from CDN).
+
+    function _parseRGB(css) {
+        if (!css) return null;
+        var m = css.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (m) return { r: +m[1], g: +m[2], b: +m[3] };
+        if (css.charAt(0) === '#') {
+            var hex = css.length === 4
+                ? css[1]+css[1]+css[2]+css[2]+css[3]+css[3]
+                : css.slice(1);
+            return {
+                r: parseInt(hex.substr(0,2), 16),
+                g: parseInt(hex.substr(2,2), 16),
+                b: parseInt(hex.substr(4,2), 16)
             };
-            script.onerror = function () { reject(new Error('Failed to load svg2pdf.js')); };
-            document.head.appendChild(script);
-        });
+        }
+        var named = { black:[0,0,0], white:[255,255,255], red:[255,0,0],
+                      green:[0,128,0], blue:[0,0,255], gray:[128,128,128],
+                      grey:[128,128,128], transparent:null, none:null };
+        var lc = (css || '').toLowerCase().trim();
+        if (lc in named) { var c = named[lc]; return c ? {r:c[0],g:c[1],b:c[2]} : null; }
+        return { r:0, g:0, b:0 };
     }
 
-    // Rasterise ONLY the canvas (data points) for each plot cell and return
-    // a map: cell element → data URL PNG at the requested scale.
-    function _rasterizeCanvasOnly(plotDiv, scale) {
-        var canvas = plotDiv.querySelector('canvas');
-        if (!canvas) return null;
-        var rect = plotDiv.getBoundingClientRect();
-        var w = Math.max(1, Math.ceil(rect.width  * scale));
-        var h = Math.max(1, Math.ceil(rect.height * scale));
+    function _pdfSetStroke(pdf, node, MM) {
+        var cs = window.getComputedStyle(node);
+        var stroke = node.getAttribute('stroke') || cs.stroke;
+        if (!stroke || stroke === 'none' || stroke === 'rgba(0, 0, 0, 0)') return false;
+        var c = _parseRGB(stroke);
+        if (!c) return false;
+        pdf.setDrawColor(c.r, c.g, c.b);
+        var sw = parseFloat(node.getAttribute('stroke-width') || cs.strokeWidth) || 1;
+        pdf.setLineWidth(Math.max(sw * MM, 0.05));
+        return true;
+    }
+
+    function _pdfSetFill(pdf, node) {
+        var cs = window.getComputedStyle(node);
+        var fill = node.getAttribute('fill') || cs.fill;
+        if (!fill || fill === 'none' || fill === 'rgba(0, 0, 0, 0)') return false;
+        var c = _parseRGB(fill);
+        if (!c) return false;
+        pdf.setFillColor(c.r, c.g, c.b);
+        return true;
+    }
+
+    function _pdfDrawLine(pdf, node, ox, oy, tx, ty, MM) {
+        if (!_pdfSetStroke(pdf, node, MM)) return;
+        var x1 = (parseFloat(node.getAttribute('x1')) || 0) + tx;
+        var y1 = (parseFloat(node.getAttribute('y1')) || 0) + ty;
+        var x2 = (parseFloat(node.getAttribute('x2')) || 0) + tx;
+        var y2 = (parseFloat(node.getAttribute('y2')) || 0) + ty;
+        pdf.line((ox+x1)*MM, (oy+y1)*MM, (ox+x2)*MM, (oy+y2)*MM);
+    }
+
+    function _pdfDrawRect(pdf, node, ox, oy, tx, ty, MM) {
+        var rx = (parseFloat(node.getAttribute('x')) || 0) + tx;
+        var ry = (parseFloat(node.getAttribute('y')) || 0) + ty;
+        var rw = parseFloat(node.getAttribute('width')) || 0;
+        var rh = parseFloat(node.getAttribute('height')) || 0;
+        if (rw <= 0 || rh <= 0) return;
+
+        // Skip very-low-opacity fills (gate overlays use fill-opacity 0.05 — barely
+        // visible and would obscure data in a non-transparent PDF fill).
+        var fo = parseFloat(node.getAttribute('fill-opacity'));
+        var skipFill = isFinite(fo) && fo < 0.15;
+
+        var hasFill   = !skipFill && _pdfSetFill(pdf, node);
+        var hasStroke = _pdfSetStroke(pdf, node, MM);
+        var style = hasFill && hasStroke ? 'FD' : hasFill ? 'F' : hasStroke ? 'S' : null;
+        if (style) pdf.rect((ox+rx)*MM, (oy+ry)*MM, rw*MM, rh*MM, style);
+    }
+
+    function _pdfDrawPath(pdf, node, ox, oy, tx, ty, MM) {
+        var d = node.getAttribute('d');
+        if (!d) return;
+        if (!_pdfSetStroke(pdf, node, MM)) return;
+        // Parse only M, L, H, V, Z (the subset D3 axes produce)
+        var parts = d.match(/[MLHVZmlhvz][^MLHVZmlhvz]*/g);
+        if (!parts) return;
+        var cx = 0, cy = 0, started = false;
+
+        // Check for fill (gate overlay paths have fill + fill-opacity)
+        var cs = window.getComputedStyle(node);
+        var fillAttr = node.getAttribute('fill') || cs.fill;
+        var hasFill = fillAttr && fillAttr !== 'none' && fillAttr !== 'rgba(0, 0, 0, 0)';
+        var fillOpacity = parseFloat(node.getAttribute('fill-opacity'));
+        if (!isFinite(fillOpacity)) fillOpacity = 1;
+
+        // Build list of line segments (for simple paths) or a polygon (for filled paths)
+        var polyPoints = [];
+        for (var pi = 0; pi < parts.length; pi++) {
+            var cmd = parts[pi].charAt(0);
+            var nums = parts[pi].slice(1).trim();
+            var args = nums.length > 0 ? nums.split(/[\s,]+/).map(Number) : [];
+            switch (cmd) {
+                case 'M': cx = args[0]; cy = args[1]; polyPoints.push([cx,cy]); started = true; break;
+                case 'L': cx = args[0]; cy = args[1]; polyPoints.push([cx,cy]); break;
+                case 'H': cx = args[0]; polyPoints.push([cx,cy]); break;
+                case 'V': cy = args[0]; polyPoints.push([cx,cy]); break;
+                case 'Z': case 'z': break;
+                // Relative commands
+                case 'm': cx += args[0]; cy += args[1]; polyPoints.push([cx,cy]); started = true; break;
+                case 'l': cx += args[0]; cy += args[1]; polyPoints.push([cx,cy]); break;
+                case 'h': cx += args[0]; polyPoints.push([cx,cy]); break;
+                case 'v': cy += args[0]; polyPoints.push([cx,cy]); break;
+            }
+        }
+
+        // Skip very-low-opacity fills (gate overlays use fill-opacity 0.05)
+        if (hasFill && fillOpacity >= 0.15 && polyPoints.length >= 3) {
+            var fc = _parseRGB(fillAttr);
+            if (fc) {
+                pdf.setFillColor(fc.r, fc.g, fc.b);
+                var startX = (ox + polyPoints[0][0] + tx) * MM;
+                var startY = (oy + polyPoints[0][1] + ty) * MM;
+                var deltas = [];
+                for (var fi = 1; fi < polyPoints.length; fi++) {
+                    deltas.push([
+                        (polyPoints[fi][0] - polyPoints[fi-1][0]) * MM,
+                        (polyPoints[fi][1] - polyPoints[fi-1][1]) * MM
+                    ]);
+                }
+                pdf.lines(deltas, startX, startY, [1,1], 'F', true);
+            }
+            // Re-set stroke for outline on top
+            _pdfSetStroke(pdf, node, MM);
+        }
+
+        // Draw stroke segments
+        if (started && polyPoints.length >= 2) {
+            for (var li = 0; li < polyPoints.length - 1; li++) {
+                var p0 = polyPoints[li], p1 = polyPoints[li+1];
+                pdf.line((ox+p0[0]+tx)*MM, (oy+p0[1]+ty)*MM,
+                         (ox+p1[0]+tx)*MM, (oy+p1[1]+ty)*MM);
+            }
+        }
+    }
+
+    function _pdfDrawText(pdf, node, ox, oy, tx, ty, rotation, MM) {
+        var txt = (node.textContent || '').trim();
+        if (!txt) return;
+
+        var cs = window.getComputedStyle(node);
+        var localX = (parseFloat(node.getAttribute('x')) || 0) +
+                     (parseFloat(node.getAttribute('dx')) || 0);
+        var localY = (parseFloat(node.getAttribute('y')) || 0) +
+                     (parseFloat(node.getAttribute('dy')) || 0);
+
+        var fontSize = parseFloat(cs.fontSize) || 10;
+        pdf.setFontSize(fontSize * 0.75);   // CSS px → PDF pt
+        var fc = _parseRGB(cs.fill || cs.color || '#000');
+        if (fc) pdf.setTextColor(fc.r, fc.g, fc.b);
+        var wt = (cs.fontWeight === 'bold' || parseInt(cs.fontWeight) >= 600) ? 'bold' : 'normal';
+        pdf.setFont('helvetica', wt);
+
+        var anchor = node.getAttribute('text-anchor') || cs.textAnchor || 'start';
+        var align = anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left';
+
+        if (rotation !== 0) {
+            // Transform local coords through rotation to get screen position.
+            // SVG: parent translate(tx,ty) then element rotate(θ), text at (localX,localY).
+            // Screen = (tx + localX·cos(θ) − localY·sin(θ),
+            //           ty + localX·sin(θ) + localY·cos(θ))
+            var rad = rotation * Math.PI / 180;
+            var cosR = Math.cos(rad), sinR = Math.sin(rad);
+            var screenX = tx + localX * cosR - localY * sinR;
+            var screenY = ty + localX * sinR + localY * cosR;
+            // jsPDF angle convention: degrees, positive = counterclockwise.
+            // SVG rotate(-90) → text reads bottom-to-top → jsPDF angle 90.
+            pdf.text(txt, (ox + screenX) * MM, (oy + screenY) * MM,
+                     { align: align, angle: -rotation });
+        } else {
+            pdf.text(txt, (ox + tx + localX) * MM, (oy + ty + localY) * MM,
+                     { align: align });
+        }
+    }
+
+    function _pdfDrawPolygon(pdf, node, tag, ox, oy, tx, ty, MM) {
+        var pts = node.getAttribute('points');
+        if (!pts) return;
+        var nums = pts.trim().split(/[\s,]+/).map(Number);
+        if (nums.length < 4) return;
+        var coords = [];
+        for (var i = 0; i < nums.length - 1; i += 2) {
+            coords.push([(ox+nums[i]+tx)*MM, (oy+nums[i+1]+ty)*MM]);
+        }
+        var hasFill   = (tag === 'polygon') && _pdfSetFill(pdf, node);
+        var hasStroke = _pdfSetStroke(pdf, node, MM);
+        if (!hasFill && !hasStroke) return;
+
+        // Build relative-delta array for pdf.lines()
+        var deltas = [];
+        for (var j = 1; j < coords.length; j++) {
+            deltas.push([coords[j][0]-coords[j-1][0], coords[j][1]-coords[j-1][1]]);
+        }
+        var closed = (tag === 'polygon');
+        var style = hasFill && hasStroke ? 'FD' : hasFill ? 'F' : 'S';
+        pdf.lines(deltas, coords[0][0], coords[0][1], [1,1], style, closed);
+    }
+
+    function _pdfDrawCircle(pdf, node, ox, oy, tx, ty, MM) {
+        var ccx = (parseFloat(node.getAttribute('cx')) || 0) + tx;
+        var ccy = (parseFloat(node.getAttribute('cy')) || 0) + ty;
+        var cr  = parseFloat(node.getAttribute('r')) || 0;
+        if (cr <= 0) return;
+        var hasFill   = _pdfSetFill(pdf, node);
+        var hasStroke = _pdfSetStroke(pdf, node, MM);
+        var style = hasFill && hasStroke ? 'FD' : hasFill ? 'F' : hasStroke ? 'S' : null;
+        if (style) pdf.circle((ox+ccx)*MM, (oy+ccy)*MM, cr*MM, style);
+    }
+
+    // Recursively walk an SVG sub-tree and draw every element with jsPDF.
+    // ox, oy = cell offset from grid origin (px).
+    // tx, ty = accumulated translation from parent <g> transforms (SVG user units).
+    function _walkSVGToPDF(pdf, node, ox, oy, MM, tx, ty) {
+        if (node.nodeType !== 1) return;
+        var cs = window.getComputedStyle(node);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return;
+        if (parseFloat(cs.opacity) === 0) return;
+
+        var tag = (node.tagName || '').toLowerCase();
+
+        // Accumulate translations from this element's transform attribute
+        var curTx = tx, curTy = ty, rotation = 0;
+        var tr = node.getAttribute('transform') || '';
+        var tm = tr.match(/translate\(\s*([^,)\s]+)[\s,]+([^)\s]+)\s*\)/);
+        if (tm) { curTx += parseFloat(tm[1]) || 0; curTy += parseFloat(tm[2]) || 0; }
+        // Rotation (only meaningful on <text> elements in our SVG structure)
+        var rm = tr.match(/rotate\(\s*([^)\s,]+)/);
+        if (rm) rotation = parseFloat(rm[1]) || 0;
+
+        switch (tag) {
+            case 'line':     _pdfDrawLine(pdf, node, ox, oy, curTx, curTy, MM); break;
+            case 'rect':     _pdfDrawRect(pdf, node, ox, oy, curTx, curTy, MM); break;
+            case 'path':     _pdfDrawPath(pdf, node, ox, oy, curTx, curTy, MM); break;
+            case 'text':     _pdfDrawText(pdf, node, ox, oy, curTx, curTy, rotation, MM); break;
+            case 'polygon':  _pdfDrawPolygon(pdf, node, 'polygon',  ox, oy, curTx, curTy, MM); break;
+            case 'polyline': _pdfDrawPolygon(pdf, node, 'polyline', ox, oy, curTx, curTy, MM); break;
+            case 'circle':   _pdfDrawCircle(pdf, node, ox, oy, curTx, curTy, MM); break;
+        }
+
+        // Recurse into children (skip <text> children — already handled above)
+        if (tag !== 'text') {
+            for (var ci = 0; ci < node.children.length; ci++) {
+                _walkSVGToPDF(pdf, node.children[ci], ox, oy, MM, curTx, curTy);
+            }
+        }
+    }
+
+    // High-resolution rasterisation of a single plot cell's canvas for PDF embed.
+    function _rasterizeCanvasForPDF(canvas, targetW, targetH) {
         var out = document.createElement('canvas');
-        out.width  = w;
-        out.height = h;
-        var octx = out.getContext('2d');
-        octx.fillStyle = '#ffffff';
-        octx.fillRect(0, 0, w, h);
-        octx.drawImage(canvas, 0, 0, w, h);
+        out.width  = targetW;
+        out.height = targetH;
+        var ctx = out.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, targetW, targetH);
+        ctx.drawImage(canvas, 0, 0, targetW, targetH);
         return out.toDataURL('image/png');
-    }
-
-    // Build a pure-vector SVG for PDF export where data-point canvases are
-    // embedded as high-resolution <image> elements and the rest (axes, ticks,
-    // gate outlines, labels, titles) stays as native SVG vector geometry.
-    function _buildCompositeSVGForPDF(gridEl, rasterScale) {
-        var ns = 'http://www.w3.org/2000/svg';
-        var gridRect = gridEl.getBoundingClientRect();
-        var W = gridRect.width, H = gridRect.height;
-
-        var master = document.createElementNS(ns, 'svg');
-        master.setAttribute('xmlns', ns);
-        master.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-        master.setAttribute('width', W);
-        master.setAttribute('height', H);
-        master.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-
-        var bg = document.createElementNS(ns, 'rect');
-        bg.setAttribute('width', String(W));
-        bg.setAttribute('height', String(H));
-        bg.setAttribute('fill', 'white');
-        master.appendChild(bg);
-
-        // Header labels (row headers, strategy arrows, multi-strategy col headers)
-        var textEls = gridEl.querySelectorAll(
-            '.illustration-row-header, .strategy-arrow, .multi-strategy-col-header');
-        textEls.forEach(function (el) {
-            var r = el.getBoundingClientRect();
-            var cs = window.getComputedStyle(el);
-            var t = document.createElementNS(ns, 'text');
-            t.setAttribute('x', String(r.left - gridRect.left + r.width / 2));
-            t.setAttribute('y', String(r.top  - gridRect.top  + r.height / 2));
-            t.setAttribute('text-anchor', 'middle');
-            t.setAttribute('dominant-baseline', 'central');
-            t.setAttribute('font-size', cs.fontSize || '12px');
-            t.setAttribute('font-family', cs.fontFamily || 'Arial, Helvetica, sans-serif');
-            t.setAttribute('font-weight', cs.fontWeight || 'normal');
-            t.setAttribute('fill', cs.color || '#333');
-            t.textContent = (el.textContent || '').trim();
-            master.appendChild(t);
-        });
-
-        var cells = gridEl.querySelectorAll('.mini-plot-cell');
-        cells.forEach(function (cell) {
-            var cr = cell.getBoundingClientRect();
-            var ox = cr.left - gridRect.left;
-            var oy = cr.top  - gridRect.top;
-
-            var g = document.createElementNS(ns, 'g');
-            g.setAttribute('transform', 'translate(' + ox + ',' + oy + ')');
-
-            // Rasterised data (canvas only) as a high-res embedded PNG
-            var dataUrl = _rasterizeCanvasOnly(cell, rasterScale || 3);
-            if (dataUrl) {
-                var img = document.createElementNS(ns, 'image');
-                img.setAttribute('x', '0');
-                img.setAttribute('y', '0');
-                img.setAttribute('width',  String(cr.width));
-                img.setAttribute('height', String(cr.height));
-                img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dataUrl);
-                img.setAttribute('href', dataUrl);
-                g.appendChild(img);
-            }
-
-            // Vector overlay: clone the cell's SVG overlay with inlined styles
-            var svgEl = cell.querySelector('svg');
-            if (svgEl) {
-                var clone = svgEl.cloneNode(true);
-                // Promote computed styles to explicit attributes svg2pdf understands
-                clone.querySelectorAll('text').forEach(function (el) {
-                    var cs = window.getComputedStyle(el);
-                    if (cs.fontSize)   el.setAttribute('font-size',   cs.fontSize);
-                    if (cs.fontFamily) el.setAttribute('font-family', cs.fontFamily);
-                    if (cs.fontWeight) el.setAttribute('font-weight', cs.fontWeight);
-                    if (cs.fill && cs.fill !== 'none' && cs.fill !== 'rgba(0, 0, 0, 0)')
-                        el.setAttribute('fill', cs.fill);
-                });
-                clone.querySelectorAll('line, path, rect, circle, polygon, polyline').forEach(function (el) {
-                    var cs = window.getComputedStyle(el);
-                    if (cs.fill && cs.fill !== 'rgba(0, 0, 0, 0)')
-                        el.setAttribute('fill', cs.fill);
-                    if (cs.stroke && cs.stroke !== 'none' && cs.stroke !== 'rgba(0, 0, 0, 0)')
-                        el.setAttribute('stroke', cs.stroke);
-                    if (cs.strokeWidth)
-                        el.setAttribute('stroke-width', parseFloat(cs.strokeWidth) || 1);
-                });
-                // Move children into g, dropping the wrapping <svg>
-                while (clone.firstChild) g.appendChild(clone.firstChild);
-            }
-
-            master.appendChild(g);
-        });
-
-        return master;
     }
 
     function exportGridPDF(gridId, filename) {
         var gridEl = document.getElementById(gridId);
         if (!gridEl) { alert('Grid not found: ' + gridId); return; }
 
-        var MM_PER_PX = 25.4 / 96;  // CSS px → mm at 96 DPI
-        var gridRect  = gridEl.getBoundingClientRect();
-        var wMm = gridRect.width  * MM_PER_PX;
-        var hMm = gridRect.height * MM_PER_PX;
+        var MM = 25.4 / 96;          // CSS px → mm at 96 DPI
+        var RASTER_DPI = 300;         // target DPI for rasterised data
+        var gridRect = gridEl.getBoundingClientRect();
+        var wMm = gridRect.width  * MM;
+        var hMm = gridRect.height * MM;
         var orientation = wMm >= hMm ? 'landscape' : 'portrait';
 
-        // Try the true-vector path first: jsPDF + svg2pdf.js
-        // Data points remain rasterised (inside the SVG as an <image>), while
-        // axes, ticks, gate outlines and all text stay as vector primitives.
-        Promise.all([_loadJsPdf(), _loadSvg2Pdf()]).then(function (libs) {
-            var jsPDF    = libs[0];
-            var svg2pdfFn = libs[1];
-            var svgEl = _buildCompositeSVGForPDF(gridEl, 3);
-            // svg2pdf.js v2 needs the SVG attached to the DOM to measure text
-            svgEl.style.position = 'fixed';
-            svgEl.style.left = '-10000px';
-            svgEl.style.top  = '0';
-            document.body.appendChild(svgEl);
-
+        _loadJsPdf().then(function (jsPDF) {
             var pdf = new jsPDF({
                 orientation: orientation,
                 unit: 'mm',
                 format: [wMm, hMm],
                 compress: true
             });
+            pdf.setFont('helvetica');
 
-            var done = function () {
-                document.body.removeChild(svgEl);
-                pdf.save((filename || 'export') + '.pdf');
-            };
+            // ── White background ────────────────────────────────────────────
+            pdf.setFillColor(255, 255, 255);
+            pdf.rect(0, 0, wMm, hMm, 'F');
 
-            var fail = function (err) {
-                document.body.removeChild(svgEl);
-                console.warn('svg2pdf failed, falling back to raster PDF', err);
-                _exportGridPDFRaster(gridEl, wMm, hMm, orientation, filename);
-            };
+            // ── Header text (row headers, strategy arrows, col headers) ────
+            var headerEls = gridEl.querySelectorAll(
+                '.illustration-row-header, .strategy-arrow, .multi-strategy-col-header');
+            headerEls.forEach(function (el) {
+                var r   = el.getBoundingClientRect();
+                var hcs = window.getComputedStyle(el);
+                var fontSize = parseFloat(hcs.fontSize) || 12;
+                pdf.setFontSize(fontSize * 0.75);
+                var fc = _parseRGB(hcs.color);
+                if (fc) pdf.setTextColor(fc.r, fc.g, fc.b);
+                var fw = (hcs.fontWeight === 'bold' || parseInt(hcs.fontWeight) >= 600)
+                         ? 'bold' : 'normal';
+                pdf.setFont('helvetica', fw);
 
-            try {
-                // svg2pdf v2 API: svg2pdf(svgNode, pdf, { x, y, width, height })
-                var result = svg2pdfFn(svgEl, pdf, {
-                    x: 0, y: 0, width: wMm, height: hMm
-                });
-                if (result && typeof result.then === 'function') {
-                    result.then(done).catch(fail);
-                } else {
-                    done();
-                }
-            } catch (e) {
-                fail(e);
-            }
-        }).catch(function (err) {
-            console.warn('PDF vector libraries unavailable, falling back to raster PDF', err);
-            _exportGridPDFRaster(gridEl, wMm, hMm, orientation, filename);
-        });
-    }
-
-    // Raster fallback for environments where svg2pdf.js cannot load.
-    function _exportGridPDFRaster(gridEl, wMm, hMm, orientation, filename) {
-        var PIXEL_RATIO = 3;
-        _rasterizeGridToCanvas(gridEl, PIXEL_RATIO).then(function (canvas) {
-            _loadJsPdf().then(function (jsPDF) {
-                var pdf = new jsPDF({
-                    orientation: orientation,
-                    unit: 'mm',
-                    format: [wMm, hMm],
-                    compress: true
-                });
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG',
-                             0, 0, wMm, hMm, undefined, 'FAST');
-                pdf.save((filename || 'export') + '.pdf');
-            }).catch(function (err) {
-                alert('PDF export failed: ' + err.message);
+                var cx = (r.left - gridRect.left + r.width  / 2) * MM;
+                var cy = (r.top  - gridRect.top  + r.height / 2) * MM;
+                pdf.text((el.textContent || '').trim(), cx, cy,
+                         { align: 'center', baseline: 'middle' });
             });
+
+            // ── Plot cells ──────────────────────────────────────────────────
+            var cells = gridEl.querySelectorAll('.mini-plot-cell');
+            cells.forEach(function (cell) {
+                var cr = cell.getBoundingClientRect();
+                var cellOx = cr.left - gridRect.left;   // px offset from grid
+                var cellOy = cr.top  - gridRect.top;
+                var cellWMm = cr.width  * MM;
+                var cellHMm = cr.height * MM;
+
+                // 1. Rasterise canvas (data points / histograms) at 300 DPI
+                var canvas = cell.querySelector('canvas');
+                if (canvas) {
+                    var pxW = Math.ceil(cellWMm / 25.4 * RASTER_DPI);
+                    var pxH = Math.ceil(cellHMm / 25.4 * RASTER_DPI);
+                    var dataUrl = _rasterizeCanvasForPDF(canvas, pxW, pxH);
+                    pdf.addImage(dataUrl, 'PNG',
+                                 cellOx * MM, cellOy * MM,
+                                 cellWMm, cellHMm, undefined, 'FAST');
+                }
+
+                // 2. Draw SVG overlay as vector graphics
+                var svgEl = cell.querySelector('svg');
+                if (svgEl) {
+                    _walkSVGToPDF(pdf, svgEl, cellOx, cellOy, MM, 0, 0);
+                }
+            });
+
+            // ── Title text appended directly to SVG root (outside <g>) ──────
+            // The title <text> is a child of the SVG, not the inner <g>, so we
+            // already handle it during the SVG walk since _walkSVGToPDF
+            // recurses into all children.
+
+            pdf.save((filename || 'export') + '.pdf');
+        }).catch(function (err) {
+            alert('PDF export failed: could not load jsPDF.\n' + (err.message || err));
         });
     }
 
