@@ -1135,3 +1135,22 @@ body { font-size: 13px; }
   margin-top: 0;
   margin-bottom: 6px;
 }
+
+/* ── Scales tab ─────────────────────────────────────────────────── */
+.scales-controls {
+  padding: 8px 10px;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
+.scales-channel-table {
+  font-size: 11px;
+}
+
+.scales-channel-table .form-group {
+  margin-bottom: 0;
+}
+
+.scales-channel-row > span:first-child {
+  line-height: 30px;
+}
