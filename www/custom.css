@@ -135,11 +135,77 @@ body { font-size: 13px; }
 }
 
 .flow-transform-controls {
-  margin-top: 12px;
+  margin-top: 8px;
   padding: 10px 10px 8px 10px;
   border: 1px solid #d9dfeb;
   border-radius: 4px;
   background: #f8fbff;
+}
+
+.gating-scale-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.gating-scale-axis-label {
+  min-width: 82px;
+  max-width: 130px;
+  color: #5d6877;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gating-scale-row .form-group {
+  margin-bottom: 0;
+}
+
+.gating-scale-row input.form-control {
+  height: 24px;
+  font-size: 11px;
+  padding: 2px 5px;
+}
+
+.flow-w-inline {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+  flex: 0 0 140px;
+  min-width: 100px;
+}
+
+.flow-w-inline .form-group {
+  margin-bottom: 0;
+  width: 108px;
+}
+
+.flow-w-inline .irs {
+  height: 40px;
+}
+
+.flow-w-inline .irs-line,
+.flow-w-inline .irs-bar {
+  top: 18px;
+}
+
+.flow-w-inline .irs-handle {
+  top: 13px;
+}
+
+.flow-w-inline .irs-single {
+  top: 0;
+  font-size: 9px;
+}
+
+.flow-w-inline .btn {
+  height: 22px;
+  padding: 1px 4px;
+  line-height: 1.1;
 }
 
 .flow-transform-label {
@@ -729,6 +795,19 @@ body { font-size: 13px; }
   margin-bottom: 8px;
 }
 
+/* Stale-scales indicator: Render buttons turn amber when scales changed since last render */
+#strategy_render_btn.btn-scales-stale,
+#illust_render_btn.btn-scales-stale {
+  background-color: #e6920a;
+  border-color: #c07a08;
+  color: #fff;
+}
+#strategy_render_btn.btn-scales-stale:hover,
+#illust_render_btn.btn-scales-stale:hover {
+  background-color: #c07a08;
+  border-color: #a36506;
+}
+
 .strategy-top-export-actions {
   display: inline-flex;
   gap: 6px;
@@ -1156,7 +1235,7 @@ body { font-size: 13px; }
 
 /* Sticky header row for each column */
 .scales-col-header {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   color: #888;
   text-transform: uppercase;
@@ -1173,8 +1252,8 @@ body { font-size: 13px; }
 
 /* Channel name label */
 .scales-ch-name {
-  font-size: 10px;
-  line-height: 22px;
+  font-size: 11px;
+  line-height: 24px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1187,16 +1266,9 @@ body { font-size: 13px; }
 }
 
 .scales-channel-table input[type="number"] {
-  height: 22px !important;
-  padding: 1px 4px !important;
-  font-size: 10px !important;
+  height: 24px !important;
+  padding: 2px 5px !important;
+  font-size: 11px !important;
   line-height: 1.2 !important;
 }
 
-/* Shrink reset buttons to match input height */
-.scales-reset-btn.btn {
-  height: 22px !important;
-  padding: 1px 4px !important;
-  font-size: 10px !important;
-  line-height: 1.2 !important;
-}

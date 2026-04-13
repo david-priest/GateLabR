@@ -254,13 +254,14 @@ ui <- fluidPage(
             tags$div(style = "display:flex; gap:4px; margin-left: auto;",
               actionButton("flip_axes", "", icon = icon("arrows-h"),
                            class = "btn-xs btn-default"),
-              actionButton("reset_view_btn", "Reset", class = "btn-xs btn-default"),
-              actionButton("rescale_view_btn", "Rescale", class = "btn-xs btn-default"),
               actionButton("refresh_plot_btn", "Refresh", class = "btn-xs btn-default")
             )
           ),
           tags$div(id = "cytof-plot-container",
                    style = "width: 100%;"),
+
+          # Current-channel scale controls (min/max + logicle)
+          uiOutput("flow_transform_controls_ui"),
 
           # Hidden X/Y selects: axis-label clicks update these; UI is on the plot
           tags$div(style = "display:none;",
@@ -309,39 +310,26 @@ ui <- fluidPage(
                               selected = "subset")
                 ),
 
-                # Card 2: Axis
+                # Card 2: Gate Counts
                 tags$div(class = "strategy-block",
-                  tags$div(class = "gating-control-box-title", "Axis"),
-                  uiOutput("axis_controls_ui"),
-                  actionButton("apply_global_scales_gating_btn",
-                               "Apply global scales",
-                               class = "btn-xs btn-default",
-                               style = "margin-top:5px; width:100%;",
-                               title = "Set axis ranges for current X/Y channels from the Scales tab")
-                )
-              ),
-
-              # Gate Counts — full-width card below the grid
-              tags$div(class = "strategy-block", style = "margin-top:8px;",
-                tags$div(class = "gating-control-box-title", "Gate Counts"),
-                tags$div(style = "display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px;",
-                  selectInput("count_compute_mode", "Mode:",
-                              choices = c("Fast (sampled)" = "subset", "Exact (full data)" = "full"),
-                              selected = "subset", width = "170px"),
-                  tags$div(style = "display:flex; align-items:center; gap:4px;",
-                    tags$span("Cap:", style = "font-size:11px; color:#555;"),
-                    numericInput("subset_count_events", NULL, value = 30000,
-                                 min = 1000, step = 5000, width = "90px")
-                  ),
-                  actionButton("recompute_full_counts_btn", "Run Full", class = "btn-xs btn-default"),
-                  tags$span("Fast mode uses approximate counts for smoother edits",
-                            style = "font-size:10px; color:#999;")
+                  tags$div(class = "gating-control-box-title", "Gate Counts"),
+                  tags$div(style = "display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;",
+                    selectInput("count_compute_mode", "Mode:",
+                                choices = c("Fast (sampled)" = "subset", "Exact (full data)" = "full"),
+                                selected = "subset", width = "150px"),
+                    tags$div(style = "display:flex; align-items:center; gap:3px;",
+                      tags$span("Cap:", style = "font-size:11px; color:#555;"),
+                      numericInput("subset_count_events", NULL, value = 30000,
+                                   min = 1000, step = 5000, width = "80px")
+                    ),
+                    actionButton("recompute_full_counts_btn", "Run Full", class = "btn-xs btn-default"),
+                    tags$span("Fast: approx counts", style = "font-size:10px; color:#999;")
+                  )
                 )
               )
             ),
 
-            # Flow transform controls + Color by (outside the card — only shown for flow)
-            uiOutput("flow_transform_controls_ui"),
+              # Color by marker / metadata
             tags$div(class = "section-header", style = "margin-top:6px;",
                      "Color by marker / metadata",
                      actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default")),
@@ -424,20 +412,6 @@ ui <- fluidPage(
                   checkboxInput("strategy_fit_to_columns", "Fit panels to columns", value = TRUE)
                 )
               ),
-              tags$div(class = "strategy-param-card",
-                numericInput("strategy_axis_span_percent", "Axis span %:",
-                             value = 120, min = 100, max = 300, step = 5, width = "130px"),
-                checkboxInput("strategy_use_global_scales",
-                              "Use global scales", value = FALSE),
-                conditionalPanel("input.strategy_mode === 'single' && !input.strategy_use_global_scales",
-                  tags$div(class = "strategy-axis-actions",
-                    actionButton("strategy_rescale_axes_btn", "Rescale Axes",
-                                 class = "btn-sm btn-default"),
-                    actionButton("strategy_reset_axes_btn", "Reset Axes",
-                                 class = "btn-sm btn-default")
-                  )
-                )
-              ),
               tags$div(class = "strategy-param-card strategy-font-card",
                 tags$div(class = "strategy-font-grid",
                   style = "display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 8px;",
@@ -518,17 +492,8 @@ ui <- fluidPage(
                               value = FALSE)
               ),
               tags$div(class = "illust-block",
-                numericInput("illust_axis_span_percent", "Axis span %:",
-                             value = 120, min = 100, max = 300, step = 5, width = "130px"),
-                checkboxInput("illust_use_global_scales",
-                              "Use global scales", value = FALSE),
-                conditionalPanel("!input.illust_use_global_scales",
-                  tags$div(class = "illust-axis-actions",
-                    actionButton("illust_rescale_axes_btn", "Rescale Axes",
-                                 class = "btn-sm btn-default"),
-                    actionButton("illust_reset_axes_btn", "Reset Axes",
-                                 class = "btn-sm btn-default")
-                  )
+                tags$div(style = "font-size:11px; color:#555; margin-top:2px;",
+                  "Global channel scales from the Scales tab are always used."
                 )
               )
             ),
@@ -664,23 +629,8 @@ ui <- fluidPage(
           tags$div(class = "scales-controls",
             tags$div(class = "section-header", "Global Channel Scales"),
             tags$div(style = "font-size:11px; color:#666; margin-bottom:8px;",
-              "Define per-channel axis ranges used when ",
-              tags$strong("\u2018Use global scales\u2019"),
-              " is checked in the Strategy or Illustration tab.",
-              " This ensures uniform axes across all panels for figure export."
-            ),
-            tags$div(style = "display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;",
-              tags$div(style = "display:flex; align-items:center; gap:4px;",
-                tags$span("Span %:", style = "font-size:11px; color:#555;"),
-                numericInput("global_scale_span_percent", NULL,
-                             value = 120, min = 100, max = 300, step = 5, width = "80px")
-              ),
-              actionButton("global_scale_capture_btn", "Capture from data",
-                           class = "btn-sm btn-primary",
-                           title = "Compute axis ranges from current filtered data using Span % above"),
-              actionButton("global_scale_reset_all_btn", "Reset all",
-                           class = "btn-sm btn-default",
-                           title = "Clear all global scale overrides and revert to auto ranges")
+              "Define per-channel axis ranges used across Gating, Strategy, and Illustration.",
+              " These global scales keep axes uniform across all panels for figure export."
             ),
             uiOutput("scales_channels_ui")
           )
@@ -802,8 +752,64 @@ server <- function(input, output, session) {
     flow_raw_data = NULL,
     cytof_axis_range = list(),
     global_scale_ranges = list(),
-    .scales_ui_version = 0L
+    .scales_ui_version = 0L,
+    .strategy_stale = FALSE,
+    .illust_stale = FALSE,
+    .flow_transform_version = 0L
   )
+    valid_global_scale_range <- function(channel) {
+      gs <- rv$global_scale_ranges[[channel]]
+      if (is.null(gs)) return(NULL)
+      lo <- suppressWarnings(as.numeric(gs$lo %||% NA))
+      hi <- suppressWarnings(as.numeric(gs$hi %||% NA))
+      if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+      c(lo, hi)
+    }
+
+    initialize_missing_global_scales <- function(channels = rv$channels) {
+      if (is.null(rv$sce) || is.null(rv$assay_data) || length(channels %||% character(0)) == 0) return(FALSE)
+      changed <- FALSE
+      for (ch in channels) {
+        if (!is.null(valid_global_scale_range(ch))) next
+        vals <- tryCatch(get_filtered_channel_values(ch, for_plot = FALSE), error = function(e) numeric(0))
+        rng <- if (sum(is.finite(vals)) >= 2) {
+          compute_range_from_values(vals, channel = ch, span_scale = 1.2)
+        } else if (!is_flow_session(rv$sce)) {
+          get_cytof_axis_range(ch)
+        } else {
+          NULL
+        }
+        if (!is.null(rng) && length(rng) == 2 && all(is.finite(rng)) && rng[2] > rng[1]) {
+          rv$global_scale_ranges[[ch]] <- list(lo = rng[1], hi = rng[2])
+          changed <- TRUE
+        }
+      }
+      if (changed) rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
+      changed
+    }
+
+  # Mark Strategy and Illustration Render buttons as needing a refresh.
+  # Called whenever the user explicitly changes any scale value.
+  mark_renders_stale <- function() {
+    rv$.strategy_stale <- TRUE
+    rv$.illust_stale   <- TRUE
+  }
+
+  # Reactively toggle a CSS class on each Render button to signal staleness.
+  observe({
+    stale <- isTRUE(rv$.strategy_stale)
+    runjs(if (stale)
+      "document.getElementById('strategy_render_btn').classList.add('btn-scales-stale');"
+    else
+      "document.getElementById('strategy_render_btn').classList.remove('btn-scales-stale');")
+  })
+  observe({
+    stale <- isTRUE(rv$.illust_stale)
+    runjs(if (stale)
+      "document.getElementById('illust_render_btn').classList.add('btn-scales-stale');"
+    else
+      "document.getElementById('illust_render_btn').classList.remove('btn-scales-stale');")
+  })
 
   runjs <- function(code) {
     session$sendCustomMessage(type = "runjs", message = code)
@@ -1191,104 +1197,195 @@ server <- function(input, output, session) {
     )
   })
 
-  # Axis box contents: CyTOF → per-channel min/max on one line; flow → span %
-  output$axis_controls_ui <- renderUI({
-    is_cytof <- !is.null(rv$sce) && !is_flow_session(rv$sce)
-    if (is_cytof) {
-      x_ch  <- input$x_channel %||% ""
-      y_ch  <- input$y_channel %||% ""
-      x_rng <- get_cytof_axis_range(x_ch)
-      y_rng <- get_cytof_axis_range(y_ch)
-      tags$div(
-        tags$div(class = "cytof-axis-row",
-          tags$span("X:", style = "font-size:11px;color:#555;font-weight:600;width:14px;"),
-          numericInput("cytof_x_lo", NULL, value = x_rng[1], step = 0.5, width = "68px"),
-          tags$span("–", style = "font-size:11px;color:#999;"),
-          numericInput("cytof_x_hi", NULL, value = x_rng[2], step = 0.5, width = "68px")
-        ),
-        tags$div(class = "cytof-axis-row",
-          tags$span("Y:", style = "font-size:11px;color:#555;font-weight:600;width:14px;"),
-          numericInput("cytof_y_lo", NULL, value = y_rng[1], step = 0.5, width = "68px"),
-          tags$span("–", style = "font-size:11px;color:#999;"),
-          numericInput("cytof_y_hi", NULL, value = y_rng[2], step = 0.5, width = "68px")
+  observeEvent(list(input$cytof_x_lo, input$cytof_x_hi,
+                    input$cytof_y_lo, input$cytof_y_hi), {
+    req(rv$sce, input$x_channel, input$y_channel)
+    x_ch <- input$x_channel %||% ""
+    y_ch <- input$y_channel %||% ""
+    if (!nzchar(x_ch) || !nzchar(y_ch)) return()
+
+    x_lo <- suppressWarnings(as.numeric(input$cytof_x_lo))
+    x_hi <- suppressWarnings(as.numeric(input$cytof_x_hi))
+    y_lo <- suppressWarnings(as.numeric(input$cytof_y_lo))
+    y_hi <- suppressWarnings(as.numeric(input$cytof_y_hi))
+    .same_num <- function(a, b) is.finite(a) && is.finite(b) && abs(a - b) < 1e-9
+    x_ok <- is.finite(x_lo) && is.finite(x_hi) && x_hi > x_lo
+    y_ok <- is.finite(y_lo) && is.finite(y_hi) && y_hi > y_lo
+    if (!x_ok && !y_ok) return()
+
+    changed_plot_range <- FALSE
+    changed_global <- FALSE
+
+    if (is_flow_session(rv$sce)) {
+      # Flow/QC gating axes are driven by temporary range overrides.
+      if (!(x_ok && y_ok)) return()
+      current_ov <- get_active_plot_range_override(x_ch, y_ch)
+      same_override <- !is.null(current_ov) &&
+        .same_num(current_ov$x_range[1], x_lo) && .same_num(current_ov$x_range[2], x_hi) &&
+        .same_num(current_ov$y_range[1], y_lo) && .same_num(current_ov$y_range[2], y_hi)
+      if (!same_override) {
+        rv$.plot_range_override <- list(
+          x_channel = x_ch, y_channel = y_ch,
+          x_range = c(x_lo, x_hi), y_range = c(y_lo, y_hi)
         )
-      )
+        changed_plot_range <- TRUE
+      }
     } else {
-      tags$div(style = "display:flex;align-items:center;gap:4px;",
-        tags$span("Span %:", style = "font-size:11px;color:#555;"),
-        numericInput("axis_span_percent", NULL, value = 120, min = 100, max = 200, step = 5, width = "80px")
-      )
+      if (x_ok) {
+        old_x <- rv$cytof_axis_range[[x_ch]]
+        old_x_lo <- suppressWarnings(as.numeric(old_x$lo %||% NA))
+        old_x_hi <- suppressWarnings(as.numeric(old_x$hi %||% NA))
+        if (!(.same_num(old_x_lo, x_lo) && .same_num(old_x_hi, x_hi))) {
+          rv$cytof_axis_range[[x_ch]] <- list(lo = x_lo, hi = x_hi)
+          changed_plot_range <- TRUE
+        }
+      }
+      if (y_ok) {
+        old_y <- rv$cytof_axis_range[[y_ch]]
+        old_y_lo <- suppressWarnings(as.numeric(old_y$lo %||% NA))
+        old_y_hi <- suppressWarnings(as.numeric(old_y$hi %||% NA))
+        if (!(.same_num(old_y_lo, y_lo) && .same_num(old_y_hi, y_hi))) {
+          rv$cytof_axis_range[[y_ch]] <- list(lo = y_lo, hi = y_hi)
+          changed_plot_range <- TRUE
+        }
+      }
+      rv$.plot_range_override <- NULL
     }
-  })
 
-  observeEvent(list(input$cytof_x_lo, input$cytof_x_hi), {
-    req(rv$sce); if (is_flow_session(rv$sce)) return()
-    ch <- input$x_channel %||% ""; if (!nzchar(ch)) return()
-    lo <- suppressWarnings(as.numeric(input$cytof_x_lo)); if (!is.finite(lo)) return()
-    hi <- suppressWarnings(as.numeric(input$cytof_x_hi)); if (!is.finite(hi) || hi <= lo) return()
-    rv$cytof_axis_range[[ch]] <- list(lo = lo, hi = hi)
-    rv$.plot_range_override <- NULL
-    update_rescale_btn(FALSE)
-    rv$.range_cache <- list()
-    send_full_plot(reset_view = TRUE)
-  }, ignoreInit = TRUE)
+    # Keep Scales tab in sync when min/max are edited from Gating tab.
+    if (x_ok) {
+      old_gx <- rv$global_scale_ranges[[x_ch]]
+      old_gx_lo <- suppressWarnings(as.numeric(old_gx$lo %||% NA))
+      old_gx_hi <- suppressWarnings(as.numeric(old_gx$hi %||% NA))
+      if (!(.same_num(old_gx_lo, x_lo) && .same_num(old_gx_hi, x_hi))) {
+        rv$global_scale_ranges[[x_ch]] <- list(lo = x_lo, hi = x_hi)
+        changed_global <- TRUE
+      }
+    }
+    if (y_ok) {
+      old_gy <- rv$global_scale_ranges[[y_ch]]
+      old_gy_lo <- suppressWarnings(as.numeric(old_gy$lo %||% NA))
+      old_gy_hi <- suppressWarnings(as.numeric(old_gy$hi %||% NA))
+      if (!(.same_num(old_gy_lo, y_lo) && .same_num(old_gy_hi, y_hi))) {
+        rv$global_scale_ranges[[y_ch]] <- list(lo = y_lo, hi = y_hi)
+        changed_global <- TRUE
+      }
+    }
+    if (changed_global) {
+      rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
+      # Keep Scales-tab inputs synchronized immediately with latest Gating edits.
+      x_safe <- gsub("[^A-Za-z0-9]", "_", x_ch)
+      y_safe <- gsub("[^A-Za-z0-9]", "_", y_ch)
+      if (x_ok) {
+        updateNumericInput(session, paste0("scales_lo_", x_safe), value = x_lo)
+        updateNumericInput(session, paste0("scales_hi_", x_safe), value = x_hi)
+      }
+      if (y_ok) {
+        updateNumericInput(session, paste0("scales_lo_", y_safe), value = y_lo)
+        updateNumericInput(session, paste0("scales_hi_", y_safe), value = y_hi)
+      }
+      mark_renders_stale()
+    }
 
-  observeEvent(list(input$cytof_y_lo, input$cytof_y_hi), {
-    req(rv$sce); if (is_flow_session(rv$sce)) return()
-    ch <- input$y_channel %||% ""; if (!nzchar(ch)) return()
-    lo <- suppressWarnings(as.numeric(input$cytof_y_lo)); if (!is.finite(lo)) return()
-    hi <- suppressWarnings(as.numeric(input$cytof_y_hi)); if (!is.finite(hi) || hi <= lo) return()
-    rv$cytof_axis_range[[ch]] <- list(lo = lo, hi = hi)
-    rv$.plot_range_override <- NULL
-    update_rescale_btn(FALSE)
+    if (!changed_plot_range && !changed_global) return()
+
     rv$.range_cache <- list()
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   output$flow_transform_controls_ui <- renderUI({
-    req(rv$sce, input$x_channel, input$y_channel)
-    if (!is_flow_session(rv$sce)) return(NULL)
-    if (rv$assay_name != "exprs") return(NULL)
-    if (!"counts" %in% SummarizedExperiment::assayNames(rv$sce)) return(NULL)
-
+    # rv$.flow_transform_version is the ONLY explicit refresh trigger for value changes.
+    # All rv$global_scale_ranges and rv$.plot_range_override reads are wrapped in
+    # isolate() below so that scale edits do NOT cause a UI rebuild (which would
+    # re-fire the cytof_x/y_lo/hi observer and create an infinite loop). The same
+    # pattern is already used for rv$flow_logicle_w on the W sliders.
+    rv$.flow_transform_version
+    req(rv$sce, input$x_channel, input$y_channel)  # channel/SCE changes still auto-refresh
     x_ch <- input$x_channel %||% ""
     y_ch <- input$y_channel %||% ""
+    if (!nzchar(x_ch) || !nzchar(y_ch)) return(NULL)
 
-    # isolate() prevents slider self-updates from re-triggering renderUI rebuild loops.
-    x_w <- isolate(as.numeric(rv$flow_logicle_w[[x_ch]] %||% rv$flow_logicle_w_auto[[x_ch]] %||% 0.5))
-    y_w <- isolate(as.numeric(rv$flow_logicle_w[[y_ch]] %||% rv$flow_logicle_w_auto[[y_ch]] %||% 0.5))
+    is_flow <- isolate(is_flow_session(rv$sce))
+    has_logicle <- is_flow && rv$assay_name == "exprs" &&
+      "counts" %in% SummarizedExperiment::assayNames(isolate(rv$sce))
+
+    if (is_flow) {
+      active_override <- isolate(get_active_plot_range_override(x_ch, y_ch))
+      if (!is.null(active_override)) {
+        x_rng <- active_override$x_range
+        y_rng <- active_override$y_range
+      } else {
+        x_gs <- isolate(rv$global_scale_ranges[[x_ch]])
+        y_gs <- isolate(rv$global_scale_ranges[[y_ch]])
+        x_lo <- suppressWarnings(as.numeric(x_gs$lo %||% NA))
+        x_hi <- suppressWarnings(as.numeric(x_gs$hi %||% NA))
+        y_lo <- suppressWarnings(as.numeric(y_gs$lo %||% NA))
+        y_hi <- suppressWarnings(as.numeric(y_gs$hi %||% NA))
+        if (is.finite(x_lo) && is.finite(x_hi) && x_hi > x_lo) {
+          x_rng <- c(x_lo, x_hi)
+        } else {
+          x_rng <- compute_stable_range(x_ch, for_plot = TRUE)
+        }
+        if (is.finite(y_lo) && is.finite(y_hi) && y_hi > y_lo) {
+          y_rng <- c(y_lo, y_hi)
+        } else {
+          y_rng <- compute_stable_range(y_ch, for_plot = TRUE)
+        }
+      }
+    } else {
+      x_gs <- isolate(rv$global_scale_ranges[[x_ch]])
+      y_gs <- isolate(rv$global_scale_ranges[[y_ch]])
+      x_lo <- suppressWarnings(as.numeric(x_gs$lo %||% NA))
+      x_hi <- suppressWarnings(as.numeric(x_gs$hi %||% NA))
+      y_lo <- suppressWarnings(as.numeric(y_gs$lo %||% NA))
+      y_hi <- suppressWarnings(as.numeric(y_gs$hi %||% NA))
+      x_rng <- if (is.finite(x_lo) && is.finite(x_hi) && x_hi > x_lo) c(x_lo, x_hi) else get_cytof_axis_range(x_ch)
+      y_rng <- if (is.finite(y_lo) && is.finite(y_hi) && y_hi > y_lo) c(y_lo, y_hi) else get_cytof_axis_range(y_ch)
+    }
+
+    if (has_logicle) {
+      # isolate() prevents slider self-updates from re-triggering renderUI rebuild loops.
+      x_w <- isolate(as.numeric(rv$flow_logicle_w[[x_ch]] %||% rv$flow_logicle_w_auto[[x_ch]] %||% 0.5))
+      y_w <- isolate(as.numeric(rv$flow_logicle_w[[y_ch]] %||% rv$flow_logicle_w_auto[[y_ch]] %||% 0.5))
+    }
 
     tags$div(
       class = "flow-transform-controls",
       tags$div(style = "font-weight:600; font-size:11px; color:#555; margin-bottom:2px;",
-               "Logicle W"),
-      # X and Y sliders side-by-side
-      tags$div(class = "flow-w-sidebyside",
-        # X slider
-        tags$div(class = "flow-w-col",
-          tags$div(style = "font-size:10px; color:#666; margin-bottom:1px;", "X axis"),
-          tags$div(style = "display:flex; align-items:center; gap:3px;",
-            sliderInput("x_logicle_w", NULL,
-                        min = 0.1, max = 2.0, step = 0.05,
-                        value = x_w, width = "100%"),
-            actionButton("auto_w_x_btn", "A", class = "btn-xs btn-default",
-                         title = "Reset to auto-estimated W")
-          )
-        ),
-        # Y slider
-        tags$div(class = "flow-w-col",
-          tags$div(style = "font-size:10px; color:#666; margin-bottom:1px;", "Y axis"),
-          tags$div(style = "display:flex; align-items:center; gap:3px;",
-            sliderInput("y_logicle_w", NULL,
-                        min = 0.1, max = 2.0, step = 0.05,
-                        value = y_w, width = "100%"),
-            actionButton("auto_w_y_btn", "A", class = "btn-xs btn-default",
-                         title = "Reset to auto-estimated W")
-          )
-        )
+               "Current Channel Scales"),
+      tags$div(class = "flow-transform-note", style = "margin:2px 0 4px 0;",
+               "Edit Min/Max for current X/Y channels directly from Gating."),
+
+      tags$div(class = "cytof-axis-row gating-scale-row",
+        tags$span(paste0("X (", x_ch, ")"), class = "gating-scale-axis-label"),
+        numericInput("cytof_x_lo", NULL, value = round(as.numeric(x_rng[1]), 3), step = 0.4, width = "78px"),
+        tags$span("to", style = "font-size:11px;color:#888;"),
+        numericInput("cytof_x_hi", NULL, value = round(as.numeric(x_rng[2]), 3), step = 0.4, width = "78px"),
+        if (has_logicle) tags$div(class = "flow-w-inline",
+          sliderInput("x_logicle_w", NULL,
+                      min = 0.1, max = 2.0, step = 0.05,
+                      value = x_w, width = "100%"),
+          actionButton("auto_w_x_btn", "A", class = "btn-xs btn-default",
+                       title = "Reset to auto-estimated W")
+        ) else NULL
       ),
-      tags$div(class = "flow-transform-note",
-               "W: linear half-width near zero (lower = more linear region)")
+
+      tags$div(class = "cytof-axis-row gating-scale-row",
+        tags$span(paste0("Y (", y_ch, ")"), class = "gating-scale-axis-label"),
+        numericInput("cytof_y_lo", NULL, value = round(as.numeric(y_rng[1]), 3), step = 0.4, width = "78px"),
+        tags$span("to", style = "font-size:11px;color:#888;"),
+        numericInput("cytof_y_hi", NULL, value = round(as.numeric(y_rng[2]), 3), step = 0.4, width = "78px"),
+        if (has_logicle) tags$div(class = "flow-w-inline",
+          sliderInput("y_logicle_w", NULL,
+                      min = 0.1, max = 2.0, step = 0.05,
+                      value = y_w, width = "100%"),
+          actionButton("auto_w_y_btn", "A", class = "btn-xs btn-default",
+                       title = "Reset to auto-estimated W")
+        ) else NULL
+      ),
+
+      if (has_logicle) tags$div(class = "flow-transform-note",
+               "W: linear half-width near zero (lower = more linear region)") else NULL
     )
   })
 
@@ -1302,6 +1399,9 @@ server <- function(input, output, session) {
     old_w <- rv$flow_logicle_w[[ch]]
     if (!is.null(old_w) && abs(new_w - as.numeric(old_w)) < 1e-6) return()
     rv$flow_logicle_w[[ch]] <- new_w
+    # Sync W to Scales tab numeric input
+    updateNumericInput(session, paste0("scales_w_", gsub("[^A-Za-z0-9]", "_", ch)), value = new_w)
+    mark_renders_stale()
     # Do NOT call persist_flow_transform_state() here — it mutates rv$sce, which
     # triggers the renderUI that recreates these sliders, which re-fires this
     # observer mid-drag, causing back-and-forth oscillation. Persistence happens
@@ -1321,6 +1421,9 @@ server <- function(input, output, session) {
     old_w <- rv$flow_logicle_w[[ch]]
     if (!is.null(old_w) && abs(new_w - as.numeric(old_w)) < 1e-6) return()
     rv$flow_logicle_w[[ch]] <- new_w
+    # Sync W to Scales tab numeric input
+    updateNumericInput(session, paste0("scales_w_", gsub("[^A-Za-z0-9]", "_", ch)), value = new_w)
+    mark_renders_stale()
     # Do NOT call persist_flow_transform_state() here — see comment in x_logicle_w observer.
     refresh_assay_data(reset_cache = FALSE,
                       channels_to_update = c(input$x_channel, input$y_channel))
@@ -1337,66 +1440,6 @@ server <- function(input, output, session) {
     req(input$y_channel)
     w_auto <- as.numeric(rv$flow_logicle_w_auto[[input$y_channel]] %||% 0.5)
     updateSliderInput(session, "y_logicle_w", value = w_auto)
-  }, ignoreInit = TRUE)
-
-  # Apply global scales to the current gating-tab axis pair
-  observeEvent(input$apply_global_scales_gating_btn, {
-    req(rv$sce, input$x_channel, input$y_channel)
-    x_ch <- input$x_channel
-    y_ch <- input$y_channel
-
-    if (length(rv$global_scale_ranges) == 0) {
-      showNotification(
-        "No global scales defined yet. Go to the Scales tab and click \u2018Capture from data\u2019 first.",
-        type = "warning", duration = 5)
-      return()
-    }
-
-    .valid_gs <- function(ch) {
-      gs <- rv$global_scale_ranges[[ch]]
-      if (is.null(gs)) return(NULL)
-      lo <- suppressWarnings(as.numeric(gs$lo %||% NA))
-      hi <- suppressWarnings(as.numeric(gs$hi %||% NA))
-      if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
-      c(lo, hi)
-    }
-    x_rng <- .valid_gs(x_ch)
-    y_rng <- .valid_gs(y_ch)
-
-    if (is.null(x_rng) && is.null(y_rng)) {
-      showNotification(
-        paste0("No global scales found for \u2018", x_ch, "\u2019 or \u2018", y_ch,
-               "\u2019. Capture scales first."),
-        type = "warning", duration = 5)
-      return()
-    }
-
-    if (!is_flow_session(rv$sce) && !is_gaussian_qc_channel(x_ch) && !is_gaussian_qc_channel(y_ch)) {
-      # CyTOF: update the persistent cytof_axis_range via the numeric inputs;
-      # the existing cytof_x_lo/hi observers will update rv$cytof_axis_range and re-plot.
-      if (!is.null(x_rng)) {
-        updateNumericInput(session, "cytof_x_lo", value = x_rng[1])
-        updateNumericInput(session, "cytof_x_hi", value = x_rng[2])
-      }
-      if (!is.null(y_rng)) {
-        updateNumericInput(session, "cytof_y_lo", value = y_rng[1])
-        updateNumericInput(session, "cytof_y_hi", value = y_rng[2])
-      }
-    } else {
-      # Flow / QC: use .plot_range_override (like the Rescale button does).
-      # Fall back to compute_stable_range for any channel without a global scale.
-      if (is.null(x_rng)) x_rng <- compute_stable_range(x_ch, for_plot = TRUE)
-      if (is.null(y_rng)) y_rng <- compute_stable_range(y_ch, for_plot = TRUE)
-      if (!is.null(x_rng) && !is.null(y_rng)) {
-        rv$.plot_range_override <- list(
-          x_channel = x_ch, y_channel = y_ch,
-          x_range   = x_rng, y_range = y_rng
-        )
-        update_rescale_btn(TRUE)
-        rv$.range_cache <- list()
-        send_full_plot(reset_view = TRUE)
-      }
-    }
   }, ignoreInit = TRUE)
 
   # ── SCE discovery ─────────────────────────────────────────────────────────
@@ -1609,6 +1652,10 @@ server <- function(input, output, session) {
     rv$overlay_factor <- NULL
     rv$overlay_selected <- NULL
 
+    # Reset scales observer tracking so the correct observers (incl. logicle W)
+    # are created for this SCE's instrument type (CyTOF vs flow).
+    session$userData$scales_obs_created <- character(0)
+
     ws <- load_workspace(sce)
     if (!is.null(ws)) {
       invalid <- validate_workspace_channels(ws, channels)
@@ -1626,8 +1673,10 @@ server <- function(input, output, session) {
       rv$gate_version <- rv$gate_version + 1L
       if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
       rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
+      initialize_missing_global_scales(channels)
       rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
       rv$.plot_range_override <- ws$plot_range_override %||% NULL
+      rv$.strategy_stale <- FALSE; rv$.illust_stale <- FALSE
       update_rescale_btn(!is.null(rv$.plot_range_override))
       output$status_text <- renderText(paste("Loaded workspace from", sce_name))
     } else {
@@ -1641,8 +1690,10 @@ server <- function(input, output, session) {
       rv$gate_version <- 0L
       rv$cytof_axis_range <- list()
       rv$global_scale_ranges <- list()
+      initialize_missing_global_scales(channels)
       rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
       rv$.plot_range_override <- NULL
+      rv$.strategy_stale <- FALSE; rv$.illust_stale <- FALSE
       update_rescale_btn(FALSE)
       output$status_text <- renderText(paste("Loaded", sce_name, "-",
                                              ncol(sce), "events,",
@@ -1719,6 +1770,7 @@ server <- function(input, output, session) {
 
       init_flow_transform_state(rv$sce)
       refresh_assay_data(reset_cache = TRUE)
+      initialize_missing_global_scales(channels)
       sort_population_tree_state()
 
       if (!is.null(rv$assay_data) && length(rv$channels) >= 2) {
@@ -1835,15 +1887,11 @@ server <- function(input, output, session) {
   }
 
   axis_span_scale <- function() {
-    val <- suppressWarnings(as.numeric(input$axis_span_percent %||% 120))
-    if (!is.finite(val) || val < 100) val <- 120
-    val / 100
+    1.2
   }
 
   axis_span_scale_from_input <- function(value, default_percent = 120) {
-    val <- suppressWarnings(as.numeric(value %||% default_percent))
-    if (!is.finite(val) || val < 100) val <- default_percent
-    val / 100
+    as.numeric(default_percent) / 100
   }
 
   is_gaussian_qc_channel <- function(channel) {
@@ -2292,7 +2340,7 @@ server <- function(input, output, session) {
     span <- high - low
     if (span < 1e-10) span <- 1
 
-    # Axis span is configurable, default 120% of data range.
+    # Keep a consistent default padding of 120% of data range.
     lower_pad <- span * 0.05
     upper_pad <- span * max(0, span_scale - 1)
     out <- c(low - lower_pad, high + upper_pad)
@@ -2489,15 +2537,21 @@ server <- function(input, output, session) {
     plot_gates <- get_plot_gates(x_ch, y_ch)
     alpha <- input$point_alpha %||% 0.35
     active_override <- get_active_plot_range_override(x_ch, y_ch)
+    .global_range <- function(ch) {
+      gs <- rv$global_scale_ranges[[ch]]
+      lo <- suppressWarnings(as.numeric(gs$lo %||% NA))
+      hi <- suppressWarnings(as.numeric(gs$hi %||% NA))
+      if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+      c(lo, hi)
+    }
     if (!is.null(active_override)) {
       x_range <- active_override$x_range
       y_range <- active_override$y_range
-    } else if (!is.null(rv$sce) && !is_flow_session(rv$sce) && !is_gaussian_qc_channel(x_ch) && !is_gaussian_qc_channel(y_ch)) {
-      x_range <- get_cytof_axis_range(x_ch)
-      y_range <- get_cytof_axis_range(y_ch)
     } else {
-      x_range <- compute_stable_range(x_ch, for_plot = TRUE)
-      y_range <- compute_stable_range(y_ch, for_plot = TRUE)
+      x_range <- .global_range(x_ch)
+      y_range <- .global_range(y_ch)
+      if (is.null(x_range)) x_range <- compute_stable_range(x_ch, for_plot = TRUE)
+      if (is.null(y_range)) y_range <- compute_stable_range(y_ch, for_plot = TRUE)
     }
 
     # When no user-locked override is active, expand axis ranges so that
@@ -2642,43 +2696,7 @@ server <- function(input, output, session) {
     rv$.range_cache <- list()
     send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
-  observeEvent(input$axis_span_percent, {
-    req(rv$assay_data)
-    rv$.range_cache <- list()
-    send_full_plot(reset_view = TRUE)
-  }, ignoreInit = TRUE)
   observeEvent(input$contour_threshold, { req(rv$assay_data); send_full_plot() }, ignoreInit = TRUE)
-  observeEvent(input$reset_view_btn, {
-    req(rv$assay_data)
-    rv$.plot_range_override <- NULL
-    update_rescale_btn(FALSE)
-    send_full_plot(reset_view = TRUE)
-  })
-
-  observeEvent(input$rescale_view_btn, {
-    req(rv$assay_data, input$x_channel, input$y_channel)
-    x_ch <- input$x_channel
-    y_ch <- input$y_channel
-    pop_mask <- get_pop_mask()
-    plot_sample_mask <- get_effective_sample_mask(for_plot = TRUE)
-    ranges <- compute_rescaled_plot_ranges(x_ch, y_ch, pop_mask = pop_mask, plot_sample_mask = plot_sample_mask)
-
-    if (is.null(ranges)) {
-      rv$.plot_range_override <- NULL
-      update_rescale_btn(FALSE)
-      send_full_plot(reset_view = TRUE)
-      return()
-    }
-
-    rv$.plot_range_override <- list(
-      x_channel = x_ch,
-      y_channel = y_ch,
-      x_range = ranges$x_range,
-      y_range = ranges$y_range
-    )
-    update_rescale_btn(TRUE)
-    send_full_plot(reset_view = TRUE)
-  }, ignoreInit = TRUE)
 
   # Axis-label clicks → update the hidden channel selects (which trigger send_full_plot)
   observeEvent(input$axis_label_click, {
@@ -2751,13 +2769,7 @@ server <- function(input, output, session) {
   }
 
   update_rescale_btn <- function(active) {
-    if (active) {
-      runjs("$('#rescale_view_btn').removeClass('btn-default').addClass('btn-warning')
-               .attr('title', 'Rescale locked \u2014 click Reset to release')")
-    } else {
-      runjs("$('#rescale_view_btn').removeClass('btn-warning').addClass('btn-default')
-               .attr('title', 'Rescale axes to fit plotted data')")
-    }
+    invisible(active)
   }
 
   observeEvent(input$toggle_gate_list_btn, {
@@ -3948,8 +3960,8 @@ server <- function(input, output, session) {
     if (is.na(strategy_n_columns)) strategy_n_columns <- 4L
     strategy_n_columns <- max(1L, min(12L, strategy_n_columns))
     strategy_fit_to_columns <- isTRUE(input$strategy_fit_to_columns)
-    strategy_span_scale <- axis_span_scale_from_input(input$strategy_axis_span_percent, default_percent = 120)
-    strategy_axis_mode <- if (identical(rv$strategy_axis_mode, "rescaled")) "rescaled" else "default"
+    strategy_span_scale <- 1.2
+    strategy_axis_mode <- "default"
 
     strategy_tick_font <- suppressWarnings(as.integer(input$strategy_tick_font_size %||% 8L))
     if (is.na(strategy_tick_font)) strategy_tick_font <- 8L
@@ -4063,16 +4075,17 @@ server <- function(input, output, session) {
       vapply(steps, function(s) as.character(s$y_channel %||% ""), character(1))
     ))
     strategy_channels <- strategy_channels[nzchar(strategy_channels)]
-    use_global_scales_strategy <- isTRUE(input$strategy_use_global_scales)
+    .strategy_global_range <- function(ch) {
+      gs <- rv$global_scale_ranges[[ch]]
+      if (is.null(gs)) return(NULL)
+      lo <- suppressWarnings(as.numeric(gs$lo %||% NA))
+      hi <- suppressWarnings(as.numeric(gs$hi %||% NA))
+      if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+      c(lo, hi)
+    }
     stable_range_by_channel <- setNames(lapply(strategy_channels, function(ch) {
-      if (use_global_scales_strategy) {
-        gs <- rv$global_scale_ranges[[ch]]
-        if (!is.null(gs) && is.finite(as.numeric(gs$lo %||% NA)) &&
-            is.finite(as.numeric(gs$hi %||% NA)) &&
-            as.numeric(gs$hi) > as.numeric(gs$lo)) {
-          return(c(as.numeric(gs$lo), as.numeric(gs$hi)))
-        }
-      }
+      gs_rng <- .strategy_global_range(ch)
+      if (!is.null(gs_rng)) return(gs_rng)
       compute_range_from_values(
         get_filtered_channel_values(ch, for_plot = TRUE),
         channel = ch,
@@ -4147,8 +4160,7 @@ server <- function(input, output, session) {
       )
     })
 
-    if (identical(strategy_axis_mode, "rescaled") && length(steps_json) > 0 &&
-        !use_global_scales_strategy) {
+    if (identical(strategy_axis_mode, "rescaled") && length(steps_json) > 0) {
       existing_override <- rv$strategy_axis_override
       override_ranges <- if (is.list(existing_override$ranges)) existing_override$ranges else (existing_override %||% list())
       updated_ranges <- list()
@@ -4581,7 +4593,8 @@ server <- function(input, output, session) {
     if (is.na(strategy_plot_size)) strategy_plot_size <- 200L
     strategy_plot_size <- max(120L, min(800L, strategy_plot_size))
 
-    strategy_span_scale <- axis_span_scale_from_input(input$strategy_axis_span_percent, default_percent = 120)
+    strategy_span_scale <- 1.2
+    use_global_scales_strategy <- TRUE
 
     strategy_mode_raw <- tolower(as.character(input$strategy_display %||% "pseudocolor"))
     strategy_mode <- switch(strategy_mode_raw,
@@ -4626,6 +4639,26 @@ server <- function(input, output, session) {
       ))
       return()
     }
+
+    if (use_global_scales_strategy) {
+      .valid_gs <- function(ch) {
+        gs <- rv$global_scale_ranges[[ch]]
+        if (is.null(gs)) return(NULL)
+        lo <- suppressWarnings(as.numeric(gs$lo %||% NA))
+        hi <- suppressWarnings(as.numeric(gs$hi %||% NA))
+        if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+        c(lo, hi)
+      }
+
+      nodes_list <- lapply(nodes_list, function(nd) {
+        xr <- .valid_gs(as.character(nd$x_channel %||% ""))
+        yr <- .valid_gs(as.character(nd$y_channel %||% ""))
+        if (!is.null(xr)) nd$x_range <- xr
+        if (!is.null(yr)) nd$y_range <- yr
+        nd
+      })
+    }
+
     message("[strategy multi] rendering ", length(nodes_list), " nodes")
 
     nodes_json <- lapply(nodes_list, function(nd) {
@@ -4700,6 +4733,7 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$strategy_render_btn, {
+    rv$.strategy_stale <- FALSE
     mode <- as.character(input$strategy_mode %||% "single")
     message("[strategy] Render clicked — mode='", mode, "' sel_size=",
             length(input$strategy_multi_pop_select %||% character(0)),
@@ -4717,18 +4751,6 @@ server <- function(input, output, session) {
       showNotification(paste0("Strategy render failed: ", conditionMessage(e)),
                        duration = 10, type = "error")
     })
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$strategy_rescale_axes_btn, {
-    rv$strategy_axis_mode <- "rescaled"
-    rv$strategy_axis_override <- NULL
-    render_strategy_tab()
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$strategy_reset_axes_btn, {
-    rv$strategy_axis_mode <- "default"
-    rv$strategy_axis_override <- NULL
-    render_strategy_tab()
   }, ignoreInit = TRUE)
 
   observeEvent(input$strategy_export_png, {
@@ -4934,9 +4956,9 @@ server <- function(input, output, session) {
     if (is.na(illust_n_columns)) illust_n_columns <- 4L
     illust_n_columns <- max(1L, min(12L, illust_n_columns))
     illust_fit_to_columns <- isTRUE(input$illust_fit_to_columns)
-    illust_span_scale <- axis_span_scale_from_input(input$illust_axis_span_percent, default_percent = 120)
-    illust_axis_mode <- if (identical(rv$illustration_axis_mode, "rescaled")) "rescaled" else "default"
-    use_global_scales_illust <- isTRUE(input$illust_use_global_scales)
+    illust_span_scale <- 1.2
+    illust_axis_mode <- "default"
+    use_global_scales_illust <- TRUE
 
     illust_max_events <- suppressWarnings(as.integer(input$illust_max_events %||% 10000L))
     if (is.na(illust_max_events)) illust_max_events <- 10000L
@@ -4958,17 +4980,14 @@ server <- function(input, output, session) {
     } else {
       paste0(length(rv$sample_mask), ":", sum(rv$sample_mask, na.rm = TRUE))
     }
-    # Include global-scales fingerprint so toggling "Use global scales" or
-    # changing scale values invalidates the cache.
-    illust_global_scales_sig <- if (use_global_scales_illust && length(rv$global_scale_ranges) > 0) {
+    # Include global-scales fingerprint so changed scale values invalidate cache.
+    illust_global_scales_sig <- {
       chs_for_sig <- sort(intersect(c(x_channels, y_channel %||% character(0)),
                                     names(rv$global_scale_ranges)))
       paste(vapply(chs_for_sig, function(ch) {
         gs <- rv$global_scale_ranges[[ch]]
         paste0(ch, ":", gs$lo %||% "NA", "-", gs$hi %||% "NA")
       }, character(1)), collapse = "|")
-    } else {
-      if (use_global_scales_illust) "global_on_empty" else "global_off"
     }
     illustration_cache_key <- jsonlite::toJSON(list(
       assay_version = rv$assay_version %||% 0L,
@@ -5019,13 +5038,11 @@ server <- function(input, output, session) {
         )
 
         .gs_range <- function(ch, span_scale) {
-          if (use_global_scales_illust) {
-            gs <- rv$global_scale_ranges[[ch]]
-            if (!is.null(gs) && is.finite(as.numeric(gs$lo %||% NA)) &&
-                is.finite(as.numeric(gs$hi %||% NA)) &&
-                as.numeric(gs$hi) > as.numeric(gs$lo)) {
-              return(c(as.numeric(gs$lo), as.numeric(gs$hi)))
-            }
+          gs <- rv$global_scale_ranges[[ch]]
+          if (!is.null(gs) && is.finite(as.numeric(gs$lo %||% NA)) &&
+              is.finite(as.numeric(gs$hi %||% NA)) &&
+              as.numeric(gs$hi) > as.numeric(gs$lo)) {
+            return(c(as.numeric(gs$lo), as.numeric(gs$hi)))
           }
           compute_range_from_values(
             get_filtered_channel_values(ch, for_plot = TRUE),
@@ -5121,8 +5138,7 @@ server <- function(input, output, session) {
       rv$.illustration_cache_payload <- base_payload
     }
 
-    if (identical(illust_axis_mode, "rescaled") && length(base_payload$plots %||% list()) > 0 &&
-        !use_global_scales_illust) {
+    if (identical(illust_axis_mode, "rescaled") && length(base_payload$plots %||% list()) > 0) {
       existing_override <- rv$illustration_axis_override
       override_ranges <- if (is.list(existing_override$ranges)) existing_override$ranges else (existing_override %||% list())
       updated_ranges <- list()
@@ -5238,20 +5254,9 @@ server <- function(input, output, session) {
 
   # Render illustration on button click
   observeEvent(input$illust_render_btn, {
+    rv$.illust_stale <- FALSE
     render_illustration_tab()
   })
-
-  observeEvent(input$illust_rescale_axes_btn, {
-    rv$illustration_axis_mode <- "rescaled"
-    rv$illustration_axis_override <- NULL
-    render_illustration_tab()
-  }, ignoreInit = TRUE)
-
-  observeEvent(input$illust_reset_axes_btn, {
-    rv$illustration_axis_mode <- "default"
-    rv$illustration_axis_override <- NULL
-    render_illustration_tab()
-  }, ignoreInit = TRUE)
 
   observeEvent(input$illust_export_png, {
     session$sendCustomMessage("exportMiniPlotPNG", list(
@@ -5290,7 +5295,7 @@ server <- function(input, output, session) {
     channels <- isolate(rv$channels)
 
     # Column template strings — kept narrow so two columns fit side by side
-    col_tpl <- if (is_flow) "110px 56px 56px 52px 24px" else "120px 60px 60px 24px"
+    col_tpl <- if (is_flow) "124px 66px 66px 56px" else "138px 72px 72px"
 
     make_header <- function() {
       tags$div(
@@ -5300,8 +5305,7 @@ server <- function(input, output, session) {
         tags$span("Channel"),
         tags$span("Min"),
         tags$span("Max"),
-        if (is_flow) tags$span("W") else NULL,
-        tags$span("")
+        if (is_flow) tags$span("W") else NULL
       )
     }
 
@@ -5338,13 +5342,10 @@ server <- function(input, output, session) {
                        "; gap:3px; align-items:center;"),
         tags$span(ch, class = "scales-ch-name", title = ch),
         numericInput(paste0("scales_lo_", safe_id), NULL,
-                     value = round(lo_val, 3), step = 0.1, width = "54px"),
+                     value = round(lo_val, 3), step = 0.4, width = "64px"),
         numericInput(paste0("scales_hi_", safe_id), NULL,
-                     value = round(hi_val, 3), step = 0.1, width = "54px"),
-        if (is_flow) w_cell else NULL,
-        actionButton(paste0("scales_reset_", safe_id), "\u21ba",
-                     class = "btn-xs btn-default scales-reset-btn",
-                     title = paste("Reset", ch, "to auto"))
+                     value = round(hi_val, 3), step = 0.4, width = "64px"),
+        if (is_flow) w_cell else NULL
       )
     }
 
@@ -5389,13 +5390,23 @@ server <- function(input, output, session) {
         .lo_id   <- paste0("scales_lo_", .safe)
         .hi_id   <- paste0("scales_hi_", .safe)
         .w_id    <- paste0("scales_w_",  .safe)
-        .rst_id  <- paste0("scales_reset_", .safe)
 
         observeEvent(input[[.lo_id]], {
           val <- suppressWarnings(as.numeric(input[[.lo_id]]))
           if (is.finite(val)) {
             if (is.null(rv$global_scale_ranges[[.ch]])) rv$global_scale_ranges[[.ch]] <- list()
-            rv$global_scale_ranges[[.ch]]$lo <- val
+            old_val <- suppressWarnings(as.numeric(rv$global_scale_ranges[[.ch]]$lo %||% NA))
+            if (!is.finite(old_val) || abs(old_val - val) >= 1e-9) {
+              rv$global_scale_ranges[[.ch]]$lo <- val
+              mark_renders_stale()
+              # Push the new value directly into the gating inputs for the current channel.
+              # This fires the cytof_x/y_lo/hi observer → updates axis range → send_full_plot().
+              # Do NOT clear rv$.plot_range_override here: flow_transform_controls_ui now
+              # isolates that read, so clearing it no longer triggers a UI rebuild.
+              x_ch <- isolate(input$x_channel %||% ""); y_ch <- isolate(input$y_channel %||% "")
+              if (.ch == x_ch) updateNumericInput(session, "cytof_x_lo", value = val)
+              if (.ch == y_ch) updateNumericInput(session, "cytof_y_lo", value = val)
+            }
           }
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
@@ -5403,7 +5414,15 @@ server <- function(input, output, session) {
           val <- suppressWarnings(as.numeric(input[[.hi_id]]))
           if (is.finite(val)) {
             if (is.null(rv$global_scale_ranges[[.ch]])) rv$global_scale_ranges[[.ch]] <- list()
-            rv$global_scale_ranges[[.ch]]$hi <- val
+            old_val <- suppressWarnings(as.numeric(rv$global_scale_ranges[[.ch]]$hi %||% NA))
+            if (!is.finite(old_val) || abs(old_val - val) >= 1e-9) {
+              rv$global_scale_ranges[[.ch]]$hi <- val
+              mark_renders_stale()
+              # Push the new value directly into the gating inputs for the current channel.
+              x_ch <- isolate(input$x_channel %||% ""); y_ch <- isolate(input$y_channel %||% "")
+              if (.ch == x_ch) updateNumericInput(session, "cytof_x_hi", value = val)
+              if (.ch == y_ch) updateNumericInput(session, "cytof_y_hi", value = val)
+            }
           }
         }, ignoreInit = TRUE, ignoreNULL = TRUE)
 
@@ -5415,62 +5434,19 @@ server <- function(input, output, session) {
               if (!identical(rv$flow_logicle_w[[.ch]], new_w)) {
                 rv$flow_logicle_w[[.ch]] <- new_w
                 refresh_assay_data(reset_cache = FALSE, channels_to_update = .ch)
+                # Sync gating tab logicle sliders and mark render buttons stale
+                x_ch <- isolate(input$x_channel %||% ""); y_ch <- isolate(input$y_channel %||% "")
+                if (.ch == x_ch) updateSliderInput(session, "x_logicle_w", value = new_w)
+                if (.ch == y_ch) updateSliderInput(session, "y_logicle_w", value = new_w)
+                if (.ch %in% c(x_ch, y_ch)) send_full_plot(reset_view = TRUE)
+                mark_renders_stale()
               }
             }
           }, ignoreInit = TRUE, ignoreNULL = TRUE)
         }
-
-        observeEvent(input[[.rst_id]], {
-          rv$global_scale_ranges[[.ch]] <- NULL
-          if (is_flow && !.is_scatter_channel(.ch) && !.is_qc_channel(.ch)) {
-            auto_w <- rv$flow_logicle_w_auto[[.ch]]
-            if (!is.null(auto_w)) {
-              rv$flow_logicle_w[[.ch]] <- as.numeric(auto_w)
-              refresh_assay_data(reset_cache = FALSE, channels_to_update = .ch)
-            }
-          }
-          rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
-        }, ignoreInit = TRUE)
       })
     }
   })
-
-  # "Capture from data" — bulk-populate global_scale_ranges from current filtered data
-  observeEvent(input$global_scale_capture_btn, {
-    req(rv$sce, length(rv$channels) > 0)
-    span_scale <- axis_span_scale_from_input(input$global_scale_span_percent, default_percent = 120)
-    for (ch in rv$channels) {
-      vals <- tryCatch(
-        get_filtered_channel_values(ch, for_plot = TRUE),
-        error = function(e) NULL
-      )
-      rng <- if (!is.null(vals) && sum(is.finite(vals)) >= 2) {
-        compute_range_from_values(vals, channel = ch, span_scale = span_scale)
-      } else if (!is_flow_session(rv$sce)) {
-        get_cytof_axis_range(ch)
-      } else {
-        NULL
-      }
-      if (!is.null(rng) && length(rng) == 2 && all(is.finite(rng))) {
-        rv$global_scale_ranges[[ch]] <- list(lo = rng[1], hi = rng[2])
-      }
-    }
-    rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
-    showNotification("Global scales captured from current data.", type = "message", duration = 3)
-  }, ignoreInit = TRUE)
-
-  # "Reset all" — clear all global scale overrides
-  observeEvent(input$global_scale_reset_all_btn, {
-    rv$global_scale_ranges <- list()
-    if (!is.null(rv$sce) && is_flow_session(rv$sce)) {
-      rv$flow_logicle_w <- rv$flow_logicle_w_auto
-      if (length(rv$channels) > 0) {
-        refresh_assay_data(reset_cache = FALSE, channels_to_update = rv$channels)
-      }
-    }
-    rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
-    showNotification("Global scales reset to auto.", type = "message", duration = 3)
-  }, ignoreInit = TRUE)
 
   # ══════════════════════════════════════════════════════════════════════════════
   # STATISTICS TAB
@@ -5670,8 +5646,12 @@ server <- function(input, output, session) {
     rv$gate_version <- rv$gate_version + 1L
     if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
     rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
+    initialize_missing_global_scales(rv$channels)
     rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
     rv$.plot_range_override <- ws$plot_range_override %||% NULL
+    # Channels don't change on workspace load, so force the scale controls to
+    # re-render with the just-loaded override / global scale values.
+    rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
     update_rescale_btn(!is.null(rv$.plot_range_override))
     autosave(); send_full_plot()
     showNotification(paste("Loaded workspace from", source_name), type = "message", duration = 3)
@@ -6086,8 +6066,6 @@ ui_with_runjs <- tagList(
         'mode_poly':     'Draw a freehand polygon gate',
         'mode_cancel':   'Cancel the current drawing and return to navigate mode',
         'flip_axes':     'Swap the X and Y channels',
-        'reset_view_btn':   'Reset axis ranges to the default range for the current plot scope',
-        'rescale_view_btn': 'Rescale axes to the current plotted data span (honors Axis span %)',
         'refresh_plot_btn': 'Force a full re-render of the plot',
         'gating_max_events': 'Cap events rendered in the gating plot (0 = no downsampling)',
         // Right panel
@@ -6112,9 +6090,6 @@ ui_with_runjs <- tagList(
         'strategy_kde_bandwidth': 'Contour smoothing bandwidth for Strategy contour mode (0 = auto)',
         'strategy_n_columns': 'Number of plot columns in the Strategy grid',
         'strategy_fit_to_columns': 'Scale strategy panels to fit the chosen number of columns',
-        'strategy_axis_span_percent': 'Axis span percentage padding applied to Strategy axes',
-        'strategy_rescale_axes_btn': 'Fit Strategy panel axes to the currently displayed data while honoring Axis span %',
-        'strategy_reset_axes_btn': 'Reset Strategy panel axes to channel-wide ranges using Axis span %',
         'strategy_render_btn':   'Render the strategy mini-plot grid',
         'illust_max_events':   'Maximum events per panel (0 = all events)',
         'illust_all_events':   'When checked, render all events in each panel',
@@ -6125,14 +6100,6 @@ ui_with_runjs <- tagList(
         'illust_kde_bandwidth': 'Contour smoothing bandwidth for Illustration contour mode (0 = auto)',
         'illust_n_columns': 'Number of plot columns per population row in Illustration grid',
         'illust_fit_to_columns': 'Scale panel size to fit the chosen number of columns',
-        'illust_axis_span_percent': 'Axis span percentage padding applied to Illustration axes',
-        'illust_rescale_axes_btn': 'Fit Illustration panel axes to displayed data while honoring Axis span %',
-        'illust_reset_axes_btn': 'Reset Illustration panel axes to channel-wide ranges using Axis span %',
-        'strategy_use_global_scales': 'Use per-channel axis ranges defined in the Scales tab for all Strategy panels',
-        'illust_use_global_scales': 'Use per-channel axis ranges defined in the Scales tab for all Illustration panels',
-        'apply_global_scales_gating_btn': 'Set the current X/Y axis ranges from the values defined in the Scales tab',
-        'global_scale_capture_btn': 'Compute per-channel axis ranges from current filtered data and store them as global scales',
-        'global_scale_reset_all_btn': 'Clear all global scale overrides and revert logicle W to auto-estimated values',
         'strategy_export_png': 'Export the gating strategy grid as a PNG',
         'strategy_export_pdf_dl': 'Export the gating strategy grid as a vector SVG with grouped elements for Illustrator',
         'illust_render_btn':   'Render the illustration mini-plot grid',
