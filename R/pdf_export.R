@@ -85,7 +85,44 @@ POP_COLORS <- c('#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
   draw_fn()  # caller draws all grid content
 
   gridSVG::grid.export(file_path, strict = FALSE)
+
+  # Post-process: replace Linux system font aliases that R/gridSVG resolves
+  # "Helvetica" to on Linux (FreeSans, Liberation Sans, Nimbus Sans L, DejaVu Sans).
+  # These cause "unknown problem" errors when opening in Adobe Illustrator.
+  # Replace them with cross-platform safe names Illustrator already knows.
+  .fix_svg_fonts(file_path)
+
   invisible(file_path)
+}
+
+#' Replace Linux-only font names embedded by gridSVG with Illustrator-safe equivalents.
+.fix_svg_fonts <- function(svg_path) {
+  if (!file.exists(svg_path)) return(invisible(svg_path))
+  lines <- readLines(svg_path, warn = FALSE, encoding = "UTF-8")
+
+  # Ordered: most-specific multi-word names first to avoid partial replacements.
+  linux_fonts <- c(
+    "Nimbus Sans L",
+    "Liberation Sans",
+    "FreeSans",
+    "DejaVu Sans",
+    "DejaVu Serif",
+    "Nimbus Mono L",
+    "Liberation Mono",
+    "FreeMono",
+    "DejaVu Sans Mono",
+    "Nimbus Roman No9 L",
+    "Liberation Serif",
+    "FreeSerif"
+  )
+  safe_font <- "Helvetica, Arial, sans-serif"
+
+  for (lf in linux_fonts) {
+    lines <- gsub(lf, safe_font, lines, fixed = TRUE)
+  }
+
+  writeLines(lines, svg_path, useBytes = FALSE)
+  invisible(svg_path)
 }
 
 
@@ -132,7 +169,8 @@ export_strategy_pdf <- function(file_path, steps, opts) {
 
       gate_overlay <- list(list(
         gate_id = step$gate_id,
-        name = paste0(step$gate_name, " ", step$pct_pass, "%"),
+        name = step$gate_name,
+        percent_of_parent = step$pct_pass,
         gate_type = step$gate_type,
         vertices = step$vertices,
         color = step$color,
@@ -860,7 +898,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
               col = gate_color, lwd = 1.2),
     name = "polygon")
 
-  # Label sub-group (background rect + text as one group)
+  # Label sub-group: name on line 1, percentage on line 2 (matching gating editor)
   gate_name <- gate$name %||% ""
   if (nzchar(gate_name)) {
     cx <- mean(screen_x); cy <- mean(screen_y)
@@ -868,23 +906,48 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     if (is.list(lo)) lo <- c(lo[[1]] %||% 0, lo[[2]] %||% 0)
     ox <- if (lo[1] != 0) (x_to_pt(lo[1]) - x_to_pt(0)) else 0
     oy <- if (lo[2] != 0) (y_to_pt(lo[2]) - y_to_pt(0)) else 0
-    lx <- max(M$left, min(M$left + W, cx + ox))
-    ly <- max(M$bottom + 5, min(M$bottom + H, cy + oy))
-    est_w <- nchar(gate_name) * gate_fs * 0.6 + 4
-    est_h <- gate_fs * 1.1 + 2
+
+    pct_val <- gate$percent_of_parent
+    has_pct <- !is.null(pct_val) && is.finite(as.numeric(pct_val))
+    pct_line <- if (has_pct) paste0(round(as.numeric(pct_val), 1), "%") else NULL
+
+    # Estimate width from the longer of name vs percentage
+    longer_text <- if (!is.null(pct_line) && nchar(pct_line) > nchar(gate_name)) pct_line else gate_name
+    est_half_w <- nchar(longer_text) * gate_fs * 0.32 + 4
+    est_h <- if (has_pct) gate_fs * 2.2 + 2 else gate_fs * 1.1 + 2
+
+    # Clamp so label doesn't exceed plot area
+    lx <- max(M$left + est_half_w, min(M$left + W - est_half_w, cx + ox))
+    ly <- max(M$bottom + 5, min(M$bottom + H - 5, cy + oy))
 
     label_children <- gList(
       rectGrob(
         x = unit(lx, "points"), y = unit(ly, "points"),
-        width = unit(est_w, "points"), height = unit(est_h, "points"),
+        width = unit(est_half_w * 2, "points"), height = unit(est_h, "points"),
         gp = gpar(fill = adjustcolor(gate_color, alpha.f = 0.85), col = NA),
-        name = "label_bg"),
-      textGrob(gate_name,
-        x = unit(lx, "points"), y = unit(ly, "points"),
-        just = c("centre", "centre"),
-        gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = "#ffffff"),
-        name = "label_text")
-    )
+        name = "label_bg"))
+
+    if (has_pct) {
+      # Two lines: name above, percentage below
+      label_children <- gList(label_children,
+        textGrob(gate_name,
+          x = unit(lx, "points"), y = unit(ly + gate_fs * 0.45, "points"),
+          just = c("centre", "centre"),
+          gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = "#ffffff"),
+          name = "label_name"),
+        textGrob(pct_line,
+          x = unit(lx, "points"), y = unit(ly - gate_fs * 0.55, "points"),
+          just = c("centre", "centre"),
+          gp = gpar(fontsize = gate_fs - 1, fontfamily = "Helvetica", col = "#ffffff"),
+          name = "label_pct"))
+    } else {
+      label_children <- gList(label_children,
+        textGrob(gate_name,
+          x = unit(lx, "points"), y = unit(ly, "points"),
+          just = c("centre", "centre"),
+          gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = "#ffffff"),
+          name = "label_text"))
+    }
     gate_children[[length(gate_children) + 1L]] <- gTree(
       children = label_children, name = "label")
   }

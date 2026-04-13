@@ -247,13 +247,12 @@ build_gates_for_channels <- function(gates, gate_order, gate_counts,
     }
 
     counts <- gate_counts[[gid]]
-    pct_text <- if (!is.null(counts)) {
-      paste0(" ", counts$percent_of_parent, "%")
-    } else ""
+    pct_parent <- if (!is.null(counts)) counts$percent_of_parent else NULL
 
     overlays[[length(overlays) + 1L]] <- list(
       gate_id = gid,
-      name = paste0(gate$name, pct_text),
+      name = gate$name,
+      percent_of_parent = pct_parent,
       gate_type = gate$gate_type,
       vertices = verts,
       color = gate$color,
