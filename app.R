@@ -557,8 +557,25 @@ ui <- fluidPage(
                      "Max events applies to each population x channel panel."),
             tags$div(class = "section-header", "X Channels"),
             uiOutput("illust_x_channels_ui"),
-            tags$div(class = "section-header", "Populations"),
-            uiOutput("illust_populations_ui")
+            tags$div(class = "illust-channel-group",
+              tags$div(class = "illust-channel-group-header",
+                tags$span("Populations"),
+                tags$span(class = "illust-channel-group-actions",
+                  actionButton("illust_pops_select_all_btn", "All",
+                               class = "btn-xs btn-default", style = "padding:1px 6px;"),
+                  actionButton("illust_pops_clear_btn", "Clear",
+                               class = "btn-xs btn-default", style = "padding:1px 6px;"),
+                  actionButton(
+                    "illust_toggle_pops_btn", "", icon = icon("chevron-down"),
+                    class = "btn-xs btn-default", style = "padding:1px 6px;",
+                    onclick = "(function(btn){var body=$('#illust_pops_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
+                  )
+                )
+              ),
+              tags$div(id = "illust_pops_body", class = "illust-channel-group-body",
+                uiOutput("illust_populations_ui")
+              )
+            )
           ),
           tags$div(id = "illustration-grid-container", class = "mini-plot-grid-container")
         ),
@@ -4613,6 +4630,16 @@ server <- function(input, output, session) {
 
   observeEvent(input$illust_marker_clear_btn, {
     updateCheckboxGroupInput(session, "illust_x_channels_marker", selected = character(0))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$illust_pops_select_all_btn, {
+    req(rv$populations)
+    all_pops <- names(rv$populations)
+    updateCheckboxGroupInput(session, "illust_populations", selected = all_pops)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$illust_pops_clear_btn, {
+    updateCheckboxGroupInput(session, "illust_populations", selected = character(0))
   }, ignoreInit = TRUE)
 
   # Dynamic checkboxes for populations

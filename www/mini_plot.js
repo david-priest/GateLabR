@@ -94,24 +94,31 @@
         container.style.display = 'inline-block';
         container.style.verticalAlign = 'top';
 
-        // Canvas
+        // Canvas — rendered at 2× internal resolution for crisp PDF export.
+        // Drawing code uses logical coordinates (0..size); ctx.scale() maps
+        // them to the 2× physical pixel buffer.
+        var CANVAS_SCALE = 2;
         var canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width  = size * CANVAS_SCALE;
+        canvas.height = size * CANVAS_SCALE;
         canvas.style.position = 'absolute';
-        canvas.style.top = '0';
+        canvas.style.top  = '0';
         canvas.style.left = '0';
+        canvas.style.width  = size + 'px';
+        canvas.style.height = size + 'px';
         container.appendChild(canvas);
 
         var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
+        ctx.fillRect(0, 0, size * CANVAS_SCALE, size * CANVAS_SCALE);
+        ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
 
-        // SVG
+        // SVG — force Arial/Helvetica so exported PDF text is not Times Roman
         var svg = d3.select(container).append('svg')
             .attr('width', size).attr('height', size)
             .style('position', 'absolute')
-            .style('top', '0').style('left', '0');
+            .style('top', '0').style('left', '0')
+            .style('font-family', 'Arial, Helvetica, sans-serif');
 
         var g = svg.append('g')
             .attr('transform', 'translate(' + M.left + ',' + M.top + ')');
@@ -1530,7 +1537,7 @@
             t.setAttribute('text-anchor', 'middle');
             t.setAttribute('dominant-baseline', 'central');
             t.setAttribute('font-size', cs.fontSize || '12px');
-            t.setAttribute('font-family', cs.fontFamily || 'sans-serif');
+            t.setAttribute('font-family', cs.fontFamily || 'Arial, Helvetica, sans-serif');
             t.setAttribute('font-weight', cs.fontWeight || 'normal');
             t.setAttribute('fill', cs.color || '#333');
             t.textContent = (el.textContent || '').trim();
