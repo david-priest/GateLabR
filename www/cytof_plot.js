@@ -1042,7 +1042,18 @@
         var yCh   = _plotData.y_label;
         var selId = _plotData.selected_gate_id;
 
-        _plotData.gates.forEach(function (gate) {
+        // Render the selected gate last so it sits on top of all others in
+        // SVG z-order — its vertex handles and hit areas are then never
+        // obscured by an overlapping gate's fill, making dragging reliable.
+        var orderedGates = selId
+            ? _plotData.gates.slice().sort(function (a, b) {
+                if (a.gate_id === selId) return  1;
+                if (b.gate_id === selId) return -1;
+                return 0;
+              })
+            : _plotData.gates;
+
+        orderedGates.forEach(function (gate) {
             var isNormal  = gate.x_channel === xCh && gate.y_channel === yCh;
             var isFlipped = gate.x_channel === yCh && gate.y_channel === xCh;
             if (!isNormal && !isFlipped) return;
