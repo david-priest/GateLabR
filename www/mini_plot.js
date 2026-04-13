@@ -94,10 +94,17 @@
         container.style.display = 'inline-block';
         container.style.verticalAlign = 'top';
 
-        // Canvas — rendered at 2× internal resolution for crisp PDF export.
+        // Keep a normalized render config on the plot cell for high-DPI export rerenders.
+        container.__miniPlotCfg = Object.assign({}, cfg, {
+            plot_size: size,
+            display_mode: displayMode
+        });
+
+        // Canvas — rendered at 2× internal resolution for crisp on-screen display.
         // Drawing code uses logical coordinates (0..size); ctx.scale() maps
-        // them to the 2× physical pixel buffer.
-        var CANVAS_SCALE = 2;
+        // them to the physical pixel buffer.
+        var CANVAS_SCALE = Number(cfg.canvas_scale);
+        if (!isFinite(CANVAS_SCALE) || CANVAS_SCALE <= 0) CANVAS_SCALE = 2;
         var canvas = document.createElement('canvas');
         canvas.width  = size * CANVAS_SCALE;
         canvas.height = size * CANVAS_SCALE;
@@ -153,15 +160,22 @@
             ctx.rect(M.left, M.top, W, H);
             ctx.clip();
 
+            // Configurable point radius and alpha
+            var dotR = Number(cfg.point_size);
+            if (!isFinite(dotR) || dotR <= 0) dotR = 1.2;
+            var cfgAlpha = Number(cfg.point_alpha);
+            var hasAlpha = isFinite(cfgAlpha) && cfgAlpha > 0;
+
             if (!hasOverlay && displayMode === 'pseudocolor') {
-                _drawPseudocolor(ctx, x, y, xScale, yScale, M, W, H);
+                _drawPseudocolor(ctx, x, y, xScale, yScale, M, W, H, dotR, cfgAlpha);
             } else if (!hasOverlay && displayMode === 'contour') {
                 _drawContour(ctx, x, y, xScale, yScale, M, W, H, {
                     contour_threshold: cfg.contour_threshold,
                     point_alpha: cfg.point_alpha,
                     kde_bandwidth: cfg.kde_bandwidth,
                     line_color: cfg.pop_color || '#111111',
-                    outlier_color: cfg.pop_color || '#111111'
+                    outlier_color: cfg.pop_color || '#111111',
+                    dot_radius: dotR
                 });
                 if (hasDual) {
                     _drawContour(ctx, xBack, yBack, xScale, yScale, M, W, H, {
@@ -169,12 +183,13 @@
                         point_alpha: cfg.point_alpha,
                         kde_bandwidth: cfg.kde_bandwidth,
                         line_color: cfg.back_color || '#d95f02',
-                        outlier_color: cfg.back_color || '#d95f02'
+                        outlier_color: cfg.back_color || '#d95f02',
+                        dot_radius: dotR
                     });
                 }
             } else {
                 // Scatter (including overlay biplot)
-                var alpha = hasOverlay ? 0.28 : (hasDual ? 0.42 : 0.35);
+                var alpha = hasAlpha ? cfgAlpha : (hasOverlay ? 0.28 : (hasDual ? 0.42 : 0.35));
 
                 // Draw additional overlay traces first (underneath the main pop)
                 if (hasOverlay) {
@@ -189,7 +204,7 @@
                             if (tpx < M.left - 2 || tpx > M.left + W + 2 ||
                                 tpy < M.top  - 2 || tpy > M.top  + H + 2) continue;
                             ctx.beginPath();
-                            ctx.arc(tpx, tpy, 1.2, 0, 6.2832);
+                            ctx.arc(tpx, tpy, dotR, 0, 6.2832);
                             ctx.fill();
                         }
                     }
@@ -203,20 +218,20 @@
                     if (px < M.left - 2 || px > M.left + W + 2 ||
                         py < M.top - 2 || py > M.top + H + 2) continue;
                     ctx.beginPath();
-                    ctx.arc(px, py, 1.2, 0, 6.2832);
+                    ctx.arc(px, py, dotR, 0, 6.2832);
                     ctx.fill();
                 }
 
                 if (hasDual && !hasOverlay) {
                     ctx.fillStyle = cfg.back_color || '#d95f02';
-                    ctx.globalAlpha = 0.42;
+                    ctx.globalAlpha = hasAlpha ? cfgAlpha : 0.42;
                     for (var j = 0; j < xBack.length; j++) {
                         var bpx = xScale(xBack[j]) + M.left;
                         var bpy = yScale(yBack[j]) + M.top;
                         if (bpx < M.left - 2 || bpx > M.left + W + 2 ||
                             bpy < M.top - 2 || bpy > M.top + H + 2) continue;
                         ctx.beginPath();
-                        ctx.arc(bpx, bpy, 1.2, 0, 6.2832);
+                        ctx.arc(bpx, bpy, dotR, 0, 6.2832);
                         ctx.fill();
                     }
                 }
@@ -348,7 +363,9 @@
     }
 
     // ── Pseudocolor rendering ───────────────────────────────────────────────
-    function _drawPseudocolor(ctx, x, y, xScale, yScale, M, W, H) {
+    function _drawPseudocolor(ctx, x, y, xScale, yScale, M, W, H, dotR, pointAlpha) {
+        if (!isFinite(dotR) || dotR <= 0) dotR = 1.2;
+        if (!isFinite(pointAlpha) || pointAlpha <= 0) pointAlpha = 0.85;
         var n = x.length;
         var gridN = 128, pad = 2, extSize = gridN + 2 * pad;
         var xStep = W / gridN, yStep = H / gridN;
@@ -398,7 +415,7 @@
         for (var i = 0; i < n; i++) indices[i] = i;
         indices.sort(function (a, b) { return densities[a] - densities[b]; });
 
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = pointAlpha;
         for (var j = 0; j < n; j++) {
             var idx = indices[j];
             var px = xScale(x[idx]) + M.left;
@@ -407,7 +424,7 @@
             var lutIdx = Math.max(0, Math.min(255, Math.floor(t * 255)));
             ctx.fillStyle = _jetLUT[lutIdx];
             ctx.beginPath();
-            ctx.arc(px, py, 1.2, 0, 6.2832);
+            ctx.arc(px, py, dotR, 0, 6.2832);
             ctx.fill();
         }
     }
@@ -508,7 +525,8 @@
         var outlierColor = ((cfg || {}).outlier_color) || '#111111';
         ctx.fillStyle = outlierColor;
         ctx.globalAlpha = alpha;
-        var dotR = 0.9;
+        var dotR = Number((cfg || {}).dot_radius);
+        if (!isFinite(dotR) || dotR <= 0) dotR = 0.9;
         outlierPts.forEach(function (pt) {
             ctx.beginPath();
             ctx.arc(pt[0], pt[1], dotR, 0, 6.2832);
@@ -719,8 +737,22 @@
                 .style('fill', '#fff')
                 .text(gate.name);
 
-            // Background
-            var bbox = text.node().getBBox();
+            // Background (guard getBBox for offscreen/non-rendered SVG contexts).
+            var bbox;
+            try {
+                bbox = text.node().getBBox();
+            } catch (_bboxErr) {
+                var fsNum = parseFloat(gateFs);
+                if (!isFinite(fsNum) || fsNum <= 0) fsNum = 9;
+                var txt = String(gate.name || '');
+                bbox = {
+                    x: -0.30 * fsNum * txt.length,
+                    y: -0.55 * fsNum,
+                    width: Math.max(6, txt.length * fsNum * 0.60),
+                    height: fsNum * 1.10
+                };
+            }
+
             label.insert('rect', 'text')
                 .attr('x', bbox.x - 2).attr('y', bbox.y - 1)
                 .attr('width', bbox.width + 4).attr('height', bbox.height + 2)
@@ -762,6 +794,8 @@
         if (!isFinite(contourThreshold)) contourThreshold = 5;
         var pointAlpha = Number(data.point_alpha);
         if (!isFinite(pointAlpha)) pointAlpha = 0.6;
+        var pointSize = Number(data.point_size);
+        if (!isFinite(pointSize) || pointSize <= 0) pointSize = 1.2;
         var kdeBandwidth = Number(data.kde_bandwidth);
         if (!isFinite(kdeBandwidth) || kdeBandwidth < 0) kdeBandwidth = 0;
         var nColumns = parseInt(data.n_columns, 10);
@@ -847,7 +881,8 @@
 
             var sign = step.include ? '' : 'NOT ';
             var modeTag = (showForward && showBack) ? ' (F+B)' : (showBack ? ' (Back)' : '');
-            var title = sign + step.gate_name + ': ' + step.pct_pass + '%' + modeTag;
+            var pctTotalStr = (step.pct_total != null) ? ' [' + step.pct_total + '% total]' : '';
+            var title = sign + step.gate_name + ': ' + step.pct_pass + '%' + pctTotalStr + modeTag;
 
             renderMiniPlot(plotDiv, {
                 x: step.x,
@@ -866,6 +901,7 @@
                 plot_size: effectivePlotSize,
                 contour_threshold: contourThreshold,
                 point_alpha: pointAlpha,
+                point_size: pointSize,
                 kde_bandwidth: kdeBandwidth,
                 title: title,
                 font_sizes: fontSizes,
@@ -913,6 +949,8 @@
         if (!isFinite(contourThreshold)) contourThreshold = 5;
         var pointAlpha = Number(data.point_alpha);
         if (!isFinite(pointAlpha)) pointAlpha = 0.6;
+        var pointSize = Number(data.point_size);
+        if (!isFinite(pointSize) || pointSize <= 0) pointSize = 1.2;
         var kdeBandwidth = Number(data.kde_bandwidth);
         if (!isFinite(kdeBandwidth) || kdeBandwidth < 0) kdeBandwidth = 0;
         var nColumns = parseInt(data.n_columns, 10);
@@ -1029,6 +1067,7 @@
                     plot_size:       effectivePlotSize,
                     contour_threshold: contourThreshold,
                     point_alpha:     pointAlpha,
+                    point_size:      pointSize,
                     kde_bandwidth:   kdeBandwidth,
                     title:           xCh,
                     font_sizes:      fontSizes,
@@ -1104,6 +1143,7 @@
                         plot_size:       effectivePlotSize,
                         contour_threshold: contourThreshold,
                         point_alpha:     pointAlpha,
+                        point_size:      pointSize,
                         kde_bandwidth:   kdeBandwidth,
                         title:           null,
                         font_sizes:      fontSizes,
@@ -1377,11 +1417,103 @@
         });
     }
 
-    // ── PDF Export: direct jsPDF rendering ─────────────────────────────────
+    function _buildPdfDataLayer(cell, dpi, fallbackPxW, fallbackPxH) {
+        var targetDpi = Number(dpi);
+        if (!isFinite(targetDpi) || targetDpi <= 0) targetDpi = 300;
+        var pxScale = targetDpi / 96;
+
+        var plotCfg = cell && cell.__miniPlotCfg ? cell.__miniPlotCfg : null;
+        if (plotCfg) {
+            var cellRect = cell.getBoundingClientRect();
+            var exportSize = Math.max(1, Math.round(cellRect.width || plotCfg.plot_size || 200));
+            var exportCfg = Object.assign({}, plotCfg, {
+                plot_size: exportSize,
+                canvas_scale: pxScale,
+                // Data layer only: overlays are exported separately as vectors.
+                gates: [],
+                title: null,
+                legend_entries: []
+            });
+
+            var offscreen = document.createElement('div');
+            renderMiniPlot(offscreen, exportCfg);
+            var exportCanvas = offscreen.querySelector('canvas');
+            if (exportCanvas) {
+                return exportCanvas.toDataURL('image/png');
+            }
+        }
+
+        // Fallback: scale the currently displayed canvas when no config is available.
+        var liveCanvas = cell ? cell.querySelector('canvas') : null;
+        if (!liveCanvas) return null;
+        return _rasterizeCanvasForPDF(liveCanvas, fallbackPxW, fallbackPxH);
+    }
+
+    function _renderSvgOverlayToPdf(pdf, svgEl, cellOxPx, cellOyPx, MM) {
+        if (!svgEl) return Promise.resolve();
+
+        // Stable vector overlay export: map SVG primitives directly into PDF commands
+        // using per-cell pixel offsets so layout matches on-screen grid placement.
+        _walkSVGToPDF(pdf, svgEl, cellOxPx, cellOyPx, MM, 0, 0);
+        return Promise.resolve();
+    }
+
+    function _buildPdfTranslationMatrix(pdf, tx, ty) {
+        if (pdf && typeof pdf.Matrix === 'function') {
+            try {
+                return new pdf.Matrix(1, 0, 0, 1, tx, ty);
+            } catch (_e) {
+                return null;
+            }
+        }
+        if (window.jspdf && typeof window.jspdf.Matrix === 'function') {
+            try {
+                return new window.jspdf.Matrix(1, 0, 0, 1, tx, ty);
+            } catch (_e2) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    function _placeFormObjectIdentity(pdf, formKey) {
+        if (!pdf || typeof pdf.doFormObject !== 'function') return false;
+
+        // Preferred for builds that expect a matrix-like object.
+        if (pdf.identityMatrix) {
+            try {
+                pdf.doFormObject(formKey, pdf.identityMatrix);
+                return true;
+            } catch (_e1) {
+                // continue to fallbacks
+            }
+        }
+
+        // Some builds expose a Matrix constructor on the instance or namespace.
+        var ident = _buildPdfTranslationMatrix(pdf, 0, 0);
+        if (ident) {
+            try {
+                pdf.doFormObject(formKey, ident);
+                return true;
+            } catch (_e2) {
+                // continue to fallbacks
+            }
+        }
+
+        // Other builds accept omitted matrix and default to identity.
+        try {
+            pdf.doFormObject(formKey);
+            return true;
+        } catch (_e3) {
+            return false;
+        }
+    }
+
+    // ── PDF Export: hybrid raster+vector rendering ─────────────────────────
     // Each plot cell is drawn as:
-    //   • A high-resolution raster PNG of the canvas (data points / histograms)
-    //   • Vector lines, text, rectangles, polygons for axes, gates, labels, border
-    // No dependency on svg2pdf.js — only jsPDF is required (loaded from CDN).
+    //   • A true-300-DPI raster PNG of the data layer (points/histograms/contours)
+    //   • Vector overlays (axes, gates, labels, borders) from the SVG layer
+    // Vector overlays are emitted via explicit jsPDF primitives for layout stability.
 
     function _parseRGB(css) {
         if (!css) return null;
@@ -1472,6 +1604,7 @@
 
         // Build list of line segments (for simple paths) or a polygon (for filled paths)
         var polyPoints = [];
+        var isClosedPath = false;
         for (var pi = 0; pi < parts.length; pi++) {
             var cmd = parts[pi].charAt(0);
             var nums = parts[pi].slice(1).trim();
@@ -1481,7 +1614,7 @@
                 case 'L': cx = args[0]; cy = args[1]; polyPoints.push([cx,cy]); break;
                 case 'H': cx = args[0]; polyPoints.push([cx,cy]); break;
                 case 'V': cy = args[0]; polyPoints.push([cx,cy]); break;
-                case 'Z': case 'z': break;
+            case 'Z': case 'z': isClosedPath = true; break;
                 // Relative commands
                 case 'm': cx += args[0]; cy += args[1]; polyPoints.push([cx,cy]); started = true; break;
                 case 'l': cx += args[0]; cy += args[1]; polyPoints.push([cx,cy]); break;
@@ -1517,6 +1650,12 @@
                 pdf.line((ox+p0[0]+tx)*MM, (oy+p0[1]+ty)*MM,
                          (ox+p1[0]+tx)*MM, (oy+p1[1]+ty)*MM);
             }
+            if (isClosedPath) {
+                var pf = polyPoints[0];
+                var pl = polyPoints[polyPoints.length - 1];
+                pdf.line((ox+pl[0]+tx)*MM, (oy+pl[1]+ty)*MM,
+                         (ox+pf[0]+tx)*MM, (oy+pf[1]+ty)*MM);
+            }
         }
     }
 
@@ -1540,23 +1679,19 @@
         var anchor = node.getAttribute('text-anchor') || cs.textAnchor || 'start';
         var align = anchor === 'middle' ? 'center' : anchor === 'end' ? 'right' : 'left';
 
-        if (rotation !== 0) {
-            // Transform local coords through rotation to get screen position.
-            // SVG: parent translate(tx,ty) then element rotate(θ), text at (localX,localY).
-            // Screen = (tx + localX·cos(θ) − localY·sin(θ),
-            //           ty + localX·sin(θ) + localY·cos(θ))
-            var rad = rotation * Math.PI / 180;
-            var cosR = Math.cos(rad), sinR = Math.sin(rad);
-            var screenX = tx + localX * cosR - localY * sinR;
-            var screenY = ty + localX * sinR + localY * cosR;
-            // jsPDF angle convention: degrees, positive = counterclockwise.
-            // SVG rotate(-90) → text reads bottom-to-top → jsPDF angle 90.
-            pdf.text(txt, (ox + screenX) * MM, (oy + screenY) * MM,
-                     { align: align, angle: -rotation });
-        } else {
-            pdf.text(txt, (ox + tx + localX) * MM, (oy + ty + localY) * MM,
-                     { align: align });
+        // Base anchor position in local SVG units, transformed into PDF mm.
+        var xPx = ox + tx + localX;
+        var yPx = oy + ty + localY;
+        var xMm = xPx * MM;
+        var yMm = yPx * MM;
+
+        if (rotation === 0) {
+            pdf.text(txt, xMm, yMm, { align: align });
+            return;
         }
+
+        // Let jsPDF apply anchor alignment under rotation (closest to SVG text-anchor).
+        pdf.text(txt, xMm, yMm, { align: align, angle: -rotation });
     }
 
     function _pdfDrawPolygon(pdf, node, tag, ox, oy, tx, ty, MM) {
@@ -1661,7 +1796,9 @@
                 orientation: orientation,
                 unit: 'mm',
                 format: [wMm, hMm],
-                compress: true
+                // Better compatibility with downstream vector tools (e.g., Illustrator)
+                // that can be picky about compressed object streams.
+                compress: false
             });
             pdf.setFont('helvetica');
 
@@ -1691,29 +1828,78 @@
 
             // ── Plot cells ──────────────────────────────────────────────────
             var cells = gridEl.querySelectorAll('.mini-plot-cell');
-            cells.forEach(function (cell) {
-                var cr = cell.getBoundingClientRect();
-                var cellOx = cr.left - gridRect.left;   // px offset from grid
-                var cellOy = cr.top  - gridRect.top;
-                var cellWMm = cr.width  * MM;
-                var cellHMm = cr.height * MM;
+            // Form-object grouping is intentionally disabled for runtime stability
+            // across jsPDF builds. Some builds still throw internal matrix/toString
+            // errors during form placement or serialization.
+            var canUseFormObjects = false;
 
-                // 1. Rasterise canvas (data points / histograms) at 300 DPI
-                var canvas = cell.querySelector('canvas');
-                if (canvas) {
-                    var pxW = Math.ceil(cellWMm / 25.4 * RASTER_DPI);
-                    var pxH = Math.ceil(cellHMm / 25.4 * RASTER_DPI);
-                    var dataUrl = _rasterizeCanvasForPDF(canvas, pxW, pxH);
-                    pdf.addImage(dataUrl, 'PNG',
-                                 cellOx * MM, cellOy * MM,
-                                 cellWMm, cellHMm, undefined, 'FAST');
-                }
+            var chain = Promise.resolve();
+            cells.forEach(function (cell, cellIdx) {
+                chain = chain.then(function () {
+                    var cr = cell.getBoundingClientRect();
+                    var cellOx = cr.left - gridRect.left;   // px offset from grid
+                    var cellOy = cr.top  - gridRect.top;
+                    var cellWMm = cr.width  * MM;
+                    var cellHMm = cr.height * MM;
+                    var cellOxMm = cellOx * MM;
+                    var cellOyMm = cellOy * MM;
 
-                // 2. Draw SVG overlay as vector graphics
-                var svgEl = cell.querySelector('svg');
-                if (svgEl) {
-                    _walkSVGToPDF(pdf, svgEl, cellOx, cellOy, MM, 0, 0);
-                }
+                    // 1) Rasterize only the plotted data layer at true 300 DPI.
+                    var pxW = Math.max(1, Math.ceil(cellWMm / 25.4 * RASTER_DPI));
+                    var pxH = Math.max(1, Math.ceil(cellHMm / 25.4 * RASTER_DPI));
+                    var dataUrl = null;
+                    try {
+                        dataUrl = _buildPdfDataLayer(cell, RASTER_DPI, pxW, pxH);
+                    } catch (_dataErr) {
+                        // Never fail the whole export due to an offscreen rerender issue.
+                        var liveCanvas = cell.querySelector('canvas');
+                        if (liveCanvas) dataUrl = _rasterizeCanvasForPDF(liveCanvas, pxW, pxH);
+                    }
+                    var svgEl = cell.querySelector('svg');
+
+                    if (canUseFormObjects) {
+                        try {
+                            var formKey = 'plot_cell_' + String(cellIdx);
+                            // Build one form object per plot cell so downstream editors
+                            // treat each panel as a grouped object.
+                            pdf.beginFormObject(0, 0, wMm, hMm);
+
+                            if (dataUrl) {
+                                pdf.addImage(dataUrl, 'PNG',
+                                             cellOxMm, cellOyMm,
+                                             cellWMm, cellHMm, undefined, 'FAST');
+                            }
+
+                            return _renderSvgOverlayToPdf(pdf, svgEl, cellOx, cellOy, MM)
+                                .then(function () {
+                                    pdf.endFormObject(formKey);
+                                    if (!_placeFormObjectIdentity(pdf, formKey)) {
+                                        throw new Error('Form object placement unsupported');
+                                    }
+                                })
+                                .catch(function () {
+                                    // Fall back to direct page drawing if form objects fail.
+                                    if (dataUrl) {
+                                        pdf.addImage(dataUrl, 'PNG',
+                                                     cellOxMm, cellOyMm,
+                                                     cellWMm, cellHMm, undefined, 'FAST');
+                                    }
+                                    return _renderSvgOverlayToPdf(pdf, svgEl, cellOx, cellOy, MM);
+                                });
+                        } catch (_formErr) {
+                            // Form-object API may vary by jsPDF build; use direct draw fallback.
+                        }
+                    }
+
+                    if (dataUrl) {
+                        pdf.addImage(dataUrl, 'PNG',
+                                     cellOxMm, cellOyMm,
+                                     cellWMm, cellHMm, undefined, 'FAST');
+                    }
+
+                    // 2) Draw overlays (axes, gates, labels, borders) as vector.
+                    return _renderSvgOverlayToPdf(pdf, svgEl, cellOx, cellOy, MM);
+                });
             });
 
             // ── Title text appended directly to SVG root (outside <g>) ──────
@@ -1721,9 +1907,11 @@
             // already handle it during the SVG walk since _walkSVGToPDF
             // recurses into all children.
 
-            pdf.save((filename || 'export') + '.pdf');
+            return chain.then(function () {
+                pdf.save((filename || 'export') + '.pdf');
+            });
         }).catch(function (err) {
-            alert('PDF export failed: could not load jsPDF.\n' + (err.message || err));
+            alert('PDF export failed.\n' + (err && err.message ? err.message : err));
         });
     }
 
@@ -1747,6 +1935,7 @@
         var fontSizes   = data.font_sizes || {};
         var contourThreshold = isFinite(Number(data.contour_threshold)) ? Number(data.contour_threshold) : 5;
         var pointAlpha  = isFinite(Number(data.point_alpha)) ? Math.max(0.05, Math.min(1, Number(data.point_alpha))) : 0.6;
+        var pointSize   = isFinite(Number(data.point_size)) && Number(data.point_size) > 0 ? Number(data.point_size) : 1.2;
         var kdeBandwidth = isFinite(Number(data.kde_bandwidth)) ? Math.max(0, Number(data.kde_bandwidth)) : 0;
         var gapPx = 8;
 
@@ -1801,6 +1990,7 @@
                 plot_size:       plotSize,
                 contour_threshold: contourThreshold,
                 point_alpha:     pointAlpha,
+                point_size:      pointSize,
                 kde_bandwidth:   kdeBandwidth,
                 title:           title,
                 font_sizes:      fontSizes,

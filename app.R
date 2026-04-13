@@ -14,6 +14,8 @@ library(uuid)
 library(jsonlite)
 library(S4Vectors)
 library(DT)
+library(png)
+library(gridSVG)
 
 if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
@@ -27,6 +29,7 @@ source("R/gatingml_export.R")
 source("R/fcs_export.R")
 source("R/strategy_utils.R")
 source("R/stats_utils.R")
+source("R/pdf_export.R")
 
 # ── Discover SCE objects in global environment ──────────────────────────────
 find_sce_objects <- function() {
@@ -109,8 +112,8 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260403"),
-    tags$script(src = "mini_plot.js?v=20260408e"),
-    tags$link(rel = "stylesheet", href = "custom.css?v=20260408a")
+    tags$script(src = "mini_plot.js?v=20260413j"),
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260413a")
   ),
 
   titlePanel("GateLabR"),
@@ -356,8 +359,8 @@ ui <- fluidPage(
               tags$div(class = "strategy-top-export-actions",
                 actionButton("strategy_export_png", "PNG",
                              class = "btn-sm btn-default", icon = icon("download")),
-                actionButton("strategy_export_pdf", "PDF",
-                             class = "btn-sm btn-default", icon = icon("file-pdf-o"))
+                downloadButton("strategy_export_pdf_dl", "SVG",
+                               class = "btn-sm btn-default")
               )
             ),
 
@@ -440,6 +443,14 @@ ui <- fluidPage(
                   numericInput("strategy_gate_label_font_size", "Gate labels (px):",
                                value = 8, min = 6, max = 24, step = 1)
                 )
+              ),
+              tags$div(class = "strategy-param-card",
+                numericInput("strategy_pdf_dpi", "SVG raster DPI:",
+                             value = 300, min = 72, max = 1200, step = 50),
+                numericInput("strategy_point_size", "Point size (px):",
+                             value = 1.2, min = 0.1, max = 5, step = 0.1),
+                sliderInput("strategy_point_alpha", "Point opacity:",
+                            min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
               )
             ),
 
@@ -475,8 +486,8 @@ ui <- fluidPage(
               tags$div(class = "illust-top-export-actions",
                 actionButton("illust_export_png", "PNG",
                              class = "btn-sm btn-default", icon = icon("download")),
-                actionButton("illust_export_pdf", "PDF",
-                             class = "btn-sm btn-default", icon = icon("file-pdf-o"))
+                downloadButton("illust_export_pdf_dl", "SVG",
+                               class = "btn-sm btn-default")
               )
             ),
 
@@ -535,6 +546,14 @@ ui <- fluidPage(
                   numericInput("illust_gate_label_font_size", "Gate labels (px):",
                                value = 8, min = 6, max = 24, step = 1)
                 )
+              ),
+              tags$div(class = "illust-param-card",
+                numericInput("illust_pdf_dpi", "SVG raster DPI:",
+                             value = 300, min = 72, max = 1200, step = 50),
+                numericInput("illust_point_size", "Point size (px):",
+                             value = 1.2, min = 0.1, max = 5, step = 0.1),
+                sliderInput("illust_point_alpha", "Point opacity:",
+                            min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
               )
             ),
 
@@ -3848,9 +3867,13 @@ server <- function(input, output, session) {
     if (!is.finite(strategy_contour_threshold)) strategy_contour_threshold <- 5
     strategy_contour_threshold <- max(0, min(100, strategy_contour_threshold))
 
-    strategy_point_alpha <- suppressWarnings(as.numeric(input$point_alpha %||% 0.6))
-    if (!is.finite(strategy_point_alpha)) strategy_point_alpha <- 0.6
+    strategy_point_alpha <- suppressWarnings(as.numeric(input$strategy_point_alpha %||% 0.35))
+    if (!is.finite(strategy_point_alpha)) strategy_point_alpha <- 0.35
     strategy_point_alpha <- max(0.05, min(1, strategy_point_alpha))
+
+    strategy_point_size <- suppressWarnings(as.numeric(input$strategy_point_size %||% 1.2))
+    if (!is.finite(strategy_point_size)) strategy_point_size <- 1.2
+    strategy_point_size <- max(0.1, min(5, strategy_point_size))
 
     strategy_kde_bandwidth <- suppressWarnings(as.numeric(input$strategy_kde_bandwidth %||% 0))
     if (!is.finite(strategy_kde_bandwidth) || strategy_kde_bandwidth < 0) strategy_kde_bandwidth <- 0
@@ -3967,13 +3990,22 @@ server <- function(input, output, session) {
       x_range_step <- stable_range_by_channel[[as.character(s$x_channel)]] %||% s$x_range
       y_range_step <- stable_range_by_channel[[as.character(s$y_channel)]] %||% s$y_range
 
-      # Expand to include gate vertices so boundaries stay in view on any sample
+      # Expand to include gate vertices + label position so everything stays in view
       step_verts <- s$vertices %||% list()
       if (length(step_verts) > 0) {
         vx_s <- vapply(step_verts, .vertex_coord, numeric(1), idx = 1L)
         vy_s <- vapply(step_verts, .vertex_coord, numeric(1), idx = 2L)
         x_range_step <- expand_range_for_vertices(x_range_step, vx_s)
         y_range_step <- expand_range_for_vertices(y_range_step, vy_s)
+        # Include label position (centroid + offset) with padding
+        lo <- s$label_offset
+        if (!is.null(lo)) {
+          cx <- mean(vx_s, na.rm = TRUE); cy <- mean(vy_s, na.rm = TRUE)
+          ox <- if (is.list(lo)) as.numeric(lo[[1]] %||% 0) else as.numeric(lo[1])
+          oy <- if (is.list(lo)) as.numeric(lo[[2]] %||% 0) else as.numeric(lo[2])
+          if (is.finite(ox) && is.finite(cx)) x_range_step <- expand_range_for_vertices(x_range_step, cx + ox)
+          if (is.finite(oy) && is.finite(cy)) y_range_step <- expand_range_for_vertices(y_range_step, cy + oy)
+        }
       }
 
       list(
@@ -3994,7 +4026,8 @@ server <- function(input, output, session) {
         y_range = y_range_step,
         n_before = s$n_before,
         n_after = s$n_after,
-        pct_pass = s$pct_pass
+        pct_pass = s$pct_pass,
+        pct_total = s$pct_total
       )
     })
 
@@ -4081,6 +4114,22 @@ server <- function(input, output, session) {
       })
     }
 
+    # Cache payload for server-side PDF export
+    rv$.strategy_pdf_payload <- list(
+      mode = "single",
+      steps = steps_json,
+      plot_size = strategy_plot_size,
+      n_columns = strategy_n_columns,
+      fit_to_columns = strategy_fit_to_columns,
+      gate_view = strategy_gate_view,
+      display_mode = strategy_mode,
+      contour_threshold = strategy_contour_threshold,
+      point_alpha = strategy_point_alpha,
+      point_size = strategy_point_size,
+      kde_bandwidth = strategy_kde_bandwidth,
+      font_sizes = strategy_font_sizes
+    )
+
     session$sendCustomMessage("renderStrategyGrid", list(
       containerId = "strategy-grid-container",
       steps = steps_json,
@@ -4091,6 +4140,7 @@ server <- function(input, output, session) {
       display_mode = strategy_mode,
       contour_threshold = strategy_contour_threshold,
       point_alpha = strategy_point_alpha,
+      point_size = strategy_point_size,
       kde_bandwidth = strategy_kde_bandwidth,
       font_sizes = strategy_font_sizes
     ))
@@ -4298,6 +4348,15 @@ server <- function(input, output, session) {
           gvy <- vapply(verts, .vertex_coord, numeric(1), idx = 2L)
           x_range <- expand_range_for_vertices(x_range, gvx)
           y_range <- expand_range_for_vertices(y_range, gvy)
+          # Include label position (centroid + offset)
+          lo <- ge$label_offset
+          if (!is.null(lo)) {
+            cx <- mean(gvx, na.rm = TRUE); cy <- mean(gvy, na.rm = TRUE)
+            ox <- if (is.list(lo)) as.numeric(lo[[1]] %||% 0) else as.numeric(lo[1])
+            oy <- if (is.list(lo)) as.numeric(lo[[2]] %||% 0) else as.numeric(lo[2])
+            if (is.finite(ox) && is.finite(cx)) x_range <- expand_range_for_vertices(x_range, cx + ox)
+            if (is.finite(oy) && is.finite(cy)) y_range <- expand_range_for_vertices(y_range, cy + oy)
+          }
         }
       }
 
@@ -4381,7 +4440,8 @@ server <- function(input, output, session) {
       gate_label = strategy_gate_label_font, title = strategy_title_font
     )
     strategy_contour_threshold <- max(0, min(100, suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5)) %||% 5))
-    strategy_point_alpha <- max(0.05, min(1, suppressWarnings(as.numeric(input$point_alpha %||% 0.6)) %||% 0.6))
+    strategy_point_alpha <- max(0.05, min(1, suppressWarnings(as.numeric(input$strategy_point_alpha %||% 0.35)) %||% 0.35))
+    strategy_point_size <- max(0.1, min(5, suppressWarnings(as.numeric(input$strategy_point_size %||% 1.2)) %||% 1.2))
     strategy_kde_bandwidth <- max(0, min(20, suppressWarnings(as.numeric(input$strategy_kde_bandwidth %||% 0)) %||% 0))
 
     display_gates <- get_plot_gates()
@@ -4450,6 +4510,19 @@ server <- function(input, output, session) {
     # "nothing happens" failure in the browser.
     nodes_json <- unname(nodes_json)
 
+    # Cache payload for server-side PDF export
+    rv$.strategy_pdf_payload <- list(
+      mode = "multi",
+      nodes = nodes_json,
+      plot_size = strategy_plot_size,
+      display_mode = strategy_mode,
+      contour_threshold = strategy_contour_threshold,
+      point_alpha = strategy_point_alpha,
+      point_size = strategy_point_size,
+      kde_bandwidth = strategy_kde_bandwidth,
+      font_sizes = strategy_font_sizes
+    )
+
     session$sendCustomMessage("renderMultiStrategyGrid", list(
       containerId     = "strategy-grid-container",
       nodes           = nodes_json,
@@ -4457,6 +4530,7 @@ server <- function(input, output, session) {
       display_mode    = strategy_mode,
       contour_threshold = strategy_contour_threshold,
       point_alpha     = strategy_point_alpha,
+      point_size      = strategy_point_size,
       kde_bandwidth   = strategy_kde_bandwidth,
       font_sizes      = strategy_font_sizes
     ))
@@ -4507,12 +4581,24 @@ server <- function(input, output, session) {
     ))
   })
 
-  observeEvent(input$strategy_export_pdf, {
-    session$sendCustomMessage("exportMiniPlotPDF", list(
-      gridId = "strategy-grid-container-grid",
-      filename = "gating_strategy"
-    ))
-  })
+  output$strategy_export_pdf_dl <- downloadHandler(
+    filename = function() {
+      paste0("gating_strategy_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".svg")
+    },
+    content = function(file) {
+      data <- rv$.strategy_pdf_payload
+      req(data)
+      data$pdf_dpi <- max(72L, min(1200L, as.integer(input$strategy_pdf_dpi %||% 300)))
+      data$pdf_point_size <- max(0.1, min(5, as.numeric(input$strategy_point_size %||% 1.2) / 2))
+      data$pdf_point_alpha <- max(0.05, min(1, as.numeric(input$strategy_point_alpha %||% 0.35)))
+      showNotification("Generating SVG\u2026", duration = 2, type = "message")
+      if (identical(data$mode, "multi")) {
+        export_multi_strategy_pdf(file, data$nodes, data)
+      } else {
+        export_strategy_pdf(file, data$steps, data)
+      }
+    }
+  )
 
   # ══════════════════════════════════════════════════════════════════════════════
   # ILLUSTRATION TAB
@@ -4678,9 +4764,12 @@ server <- function(input, output, session) {
     illust_contour_threshold <- suppressWarnings(as.numeric(input$contour_threshold %||% 5))
     if (!is.finite(illust_contour_threshold)) illust_contour_threshold <- 5
     illust_contour_threshold <- max(0, min(100, illust_contour_threshold))
-    illust_point_alpha <- suppressWarnings(as.numeric(input$point_alpha %||% 0.6))
-    if (!is.finite(illust_point_alpha)) illust_point_alpha <- 0.6
+    illust_point_alpha <- suppressWarnings(as.numeric(input$illust_point_alpha %||% 0.35))
+    if (!is.finite(illust_point_alpha)) illust_point_alpha <- 0.35
     illust_point_alpha <- max(0.05, min(1, illust_point_alpha))
+    illust_point_size <- suppressWarnings(as.numeric(input$illust_point_size %||% 1.2))
+    if (!is.finite(illust_point_size)) illust_point_size <- 1.2
+    illust_point_size <- max(0.1, min(5, illust_point_size))
     illust_kde_bandwidth <- suppressWarnings(as.numeric(input$illust_kde_bandwidth %||% 0))
     if (!is.finite(illust_kde_bandwidth) || illust_kde_bandwidth < 0) illust_kde_bandwidth <- 0
     illust_kde_bandwidth <- min(20, illust_kde_bandwidth)
@@ -4927,6 +5016,22 @@ server <- function(input, output, session) {
       })
     }
 
+    # Cache payload for server-side PDF export
+    rv$.illustration_pdf_payload <- list(
+      payload = base_payload,
+      plot_size = illust_plot_size,
+      n_columns = illust_n_columns,
+      fit_to_columns = illust_fit_to_columns,
+      display_mode = illust_mode,
+      contour_threshold = illust_contour_threshold,
+      point_alpha = illust_point_alpha,
+      point_size = illust_point_size,
+      kde_bandwidth = illust_kde_bandwidth,
+      font_sizes = illust_font_sizes,
+      overlay_populations = isTRUE(input$illust_overlay_pops),
+      color_by_population = isTRUE(input$illust_color_by_pop)
+    )
+
     session$sendCustomMessage("renderIllustrationGrid", c(
       list(
         containerId          = "illustration-grid-container",
@@ -4936,6 +5041,7 @@ server <- function(input, output, session) {
         display_mode         = illust_mode,
         contour_threshold    = illust_contour_threshold,
         point_alpha          = illust_point_alpha,
+        point_size           = illust_point_size,
         kde_bandwidth        = illust_kde_bandwidth,
         font_sizes           = illust_font_sizes,
         color_by_population  = isTRUE(input$illust_color_by_pop),
@@ -4975,12 +5081,20 @@ server <- function(input, output, session) {
     ))
   })
 
-  observeEvent(input$illust_export_pdf, {
-    session$sendCustomMessage("exportMiniPlotPDF", list(
-      gridId = "illustration-grid-container-grid",
-      filename = "illustration"
-    ))
-  })
+  output$illust_export_pdf_dl <- downloadHandler(
+    filename = function() {
+      paste0("illustration_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".svg")
+    },
+    content = function(file) {
+      data <- rv$.illustration_pdf_payload
+      req(data)
+      data$pdf_dpi <- max(72L, min(1200L, as.integer(input$illust_pdf_dpi %||% 300)))
+      data$pdf_point_size <- max(0.1, min(5, as.numeric(input$illust_point_size %||% 1.2) / 2))
+      data$pdf_point_alpha <- max(0.05, min(1, as.numeric(input$illust_point_alpha %||% 0.35)))
+      showNotification("Generating SVG\u2026", duration = 2, type = "message")
+      export_illustration_pdf(file, data$payload, data)
+    }
+  )
 
   # ══════════════════════════════════════════════════════════════════════════════
   # STATISTICS TAB
@@ -5637,10 +5751,10 @@ ui_with_runjs <- tagList(
         'illust_rescale_axes_btn': 'Fit Illustration panel axes to displayed data while honoring Axis span %',
         'illust_reset_axes_btn': 'Reset Illustration panel axes to channel-wide ranges using Axis span %',
         'strategy_export_png': 'Export the gating strategy grid as a PNG',
-        'strategy_export_pdf': 'Export the gating strategy grid as a vector PDF',
+        'strategy_export_pdf_dl': 'Export the gating strategy grid as a vector SVG with grouped elements for Illustrator',
         'illust_render_btn':   'Render the illustration mini-plot grid',
         'illust_export_png':   'Export the illustration grid as a PNG',
-        'illust_export_pdf':   'Export the illustration grid as a vector PDF'
+        'illust_export_pdf_dl':   'Export the illustration grid as a vector SVG with grouped elements for Illustrator'
       };
       Object.entries(tips).forEach(function([id, tip]) {
         var el = $('#' + id);

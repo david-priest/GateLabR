@@ -5,7 +5,8 @@
 save_workspace <- function(sce, gates, gate_order, populations,
                            root_population_id,
                            gate_value_space = "display",
-                           cytof_axis_range = list()) {
+                           cytof_axis_range = list(),
+                           plot_range_override = NULL) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
@@ -13,6 +14,7 @@ save_workspace <- function(sce, gates, gate_order, populations,
     root_population_id = root_population_id,
     gate_value_space = gate_value_space,
     cytof_axis_range = cytof_axis_range,
+    plot_range_override = plot_range_override,
     version = 1L,
     saved_at = as.character(Sys.time())
   )

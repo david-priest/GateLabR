@@ -420,6 +420,14 @@ body { font-size: 13px; }
   min-width: 140px;
 }
 
+/* Tree-line SVG — same width as the old indent spacer, sits flush before the name */
+.pop-row-name-col > svg {
+  display: block;
+  flex-shrink: 0;
+  align-self: stretch;   /* stretch to full row height so │ lines span correctly */
+  overflow: visible;
+}
+
 .pop-row-name {
   flex: 1;
   font-weight: 500;
@@ -453,10 +461,10 @@ body { font-size: 13px; }
 
 .pop-row-pct {
   color: #888;
-  font-size: 11px;
+  font-size: 10px;
   margin-left: 2px;
   white-space: nowrap;
-  padding-top: 1px;
+  padding-top: 2px;
 }
 
 .pop-row-delete {
@@ -558,6 +566,22 @@ body { font-size: 13px; }
 }
 
 /* ── Population editor (right panel) ──────────────────────────── */
+.pop-editor-selector-row {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e4e9f2;
+}
+
+.pop-editor-selector-row .form-group {
+  margin-bottom: 0;
+}
+
+.pop-editor-selector-row label.control-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: #333;
+}
+
 .pop-editor-panel {
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -598,6 +622,22 @@ body { font-size: 13px; }
   overflow-x: auto;
   white-space: nowrap;
   padding-bottom: 2px;
+}
+
+/* Gate ref editor rows: fixed 2-column grid so radio buttons always align */
+.gate-ref-edit-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 200px) 1fr;
+  align-items: center;
+  column-gap: 8px;
+  margin: 3px 0;
+}
+
+.gate-ref-edit-row .gate-ref-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Compact radio buttons in gate ref editor */
