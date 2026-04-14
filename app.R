@@ -112,7 +112,7 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260403"),
-    tags$script(src = "mini_plot.js?v=20260413k"),
+    tags$script(src = "mini_plot.js?v=20260414"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260413b")
   ),
 
