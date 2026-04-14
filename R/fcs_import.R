@@ -510,6 +510,144 @@ generate_asinh_ticks <- function(axis_range, cofactor = 5) {
   }, error = function(e) NULL)
 }
 
+#' Generate regular log-interval ticks for FSC/SSC scatter axes.
+#'
+#' Scatter channels are displayed in arcsinh(raw/cofactor) space, but users
+#' expect canonical log-style ticks in raw units.
+#' Uses major ticks at 1/2/5 x 10^n and minor ticks at 3/4/6/7/8/9 x 10^n.
+#' Returned positions are in display space; labels are raw-space values.
+#'
+#' @param axis_range length-2 numeric visible [lo, hi] in display space
+#' @param cofactor arcsinh cofactor for scatter channel (typically 150)
+#' @return named list(major_pos, major_labels, minor_pos) or NULL on error
+generate_scatter_ticks <- function(axis_range, cofactor = 150) {
+  tryCatch({
+    cf <- suppressWarnings(as.numeric(cofactor))
+    if (!is.finite(cf) || cf <= 0) cf <- 150
+    if (is.null(axis_range) || length(axis_range) != 2) return(NULL)
+    lo <- as.numeric(axis_range[1]); hi <- as.numeric(axis_range[2])
+    if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+
+    fwd <- function(raw) asinh(raw / cf)
+    inv <- function(disp) cf * sinh(disp)
+
+    raw_lo <- inv(lo)
+    raw_hi <- inv(hi)
+    raw_min <- min(raw_lo, raw_hi)
+    raw_max <- max(raw_lo, raw_hi)
+
+    .decades_in_range <- function(vmin, vmax) {
+      if (!is.finite(vmin) || !is.finite(vmax) || vmax <= 0) return(integer(0))
+      e_lo <- floor(log10(max(vmin, 1e-9)))
+      e_hi <- ceiling(log10(vmax))
+      seq.int(as.integer(e_lo), as.integer(e_hi))
+    }
+
+    pos_maj <- numeric(0); pos_min <- numeric(0)
+    neg_maj <- numeric(0); neg_min <- numeric(0)
+
+    if (raw_max > 0) {
+      # If range includes zero, start around the linear-to-log transition scale.
+      pos_floor <- if (raw_min > 0) raw_min else (cf / 10)
+      pos_floor <- max(pos_floor, 1e-9)
+      exps_pos <- .decades_in_range(pos_floor, raw_max)
+      if (length(exps_pos) > 0) {
+        pow_pos <- 10^exps_pos
+        pos_maj <- pow_pos
+        pos_min <- as.vector(outer(2:9, pow_pos, `*`))
+      }
+    }
+
+    if (raw_min < 0) {
+      neg_abs_max <- abs(raw_min)
+      neg_abs_floor <- if (raw_max < 0) abs(raw_max) else (cf / 10)
+      neg_abs_floor <- max(neg_abs_floor, 1e-9)
+      exps_neg <- .decades_in_range(neg_abs_floor, neg_abs_max)
+      if (length(exps_neg) > 0) {
+        pow_neg <- 10^exps_neg
+        neg_maj <- -pow_neg
+        neg_min <- -as.vector(outer(2:9, pow_neg, `*`))
+      }
+    }
+
+    major_raw <- sort(unique(c(neg_maj, if (raw_min <= 0 && raw_max >= 0) 0 else numeric(0), pos_maj)))
+    major_raw <- major_raw[major_raw >= raw_min & major_raw <= raw_max & is.finite(major_raw)]
+
+    minor_raw <- sort(unique(c(neg_min, pos_min)))
+    minor_raw <- minor_raw[minor_raw >= raw_min & minor_raw <= raw_max & is.finite(minor_raw)]
+    minor_raw <- minor_raw[!minor_raw %in% major_raw]
+
+    if (length(major_raw) == 0 && raw_min <= 0 && raw_max >= 0) {
+      major_raw <- 0
+    }
+
+    major_disp <- fwd(major_raw)
+    minor_disp <- fwd(minor_raw)
+
+    fmt_label <- function(v) {
+      a <- abs(v)
+      s <- if (v < 0) "-" else ""
+      if (a < 1e-9) return("0")
+      if (a >= 1e6) return(paste0(s, format(signif(a / 1e6, 3), trim = TRUE, scientific = FALSE), "M"))
+      if (a >= 1e3) return(paste0(s, format(signif(a / 1e3, 3), trim = TRUE, scientific = FALSE), "K"))
+      if (a >= 1) return(paste0(s, format(round(a), trim = TRUE, scientific = FALSE)))
+      paste0(s, format(signif(a, 2), trim = TRUE, scientific = FALSE))
+    }
+
+    list(
+      major_pos = as.numeric(major_disp),
+      major_labels = vapply(major_raw, fmt_label, character(1)),
+      minor_pos = as.numeric(minor_disp),
+      tick_mode = "scatter_log10"
+    )
+  }, error = function(e) NULL)
+}
+
+#' Generate nicely-rounded linear tick positions for scatter / linear-scale axes.
+#'
+#' Returns the same list structure as \code{generate_logicle_ticks} and
+#' \code{generate_asinh_ticks} so it can be used identically downstream.
+#' Tick positions are computed with \code{pretty()} and labelled with K / M
+#' abbreviations (e.g. 100000 → "100K").
+#'
+#' @param axis_range  length-2 numeric [lo, hi] in display / data units
+#' @param label_transform optional function applied to tick positions before
+#'        formatting labels (e.g. inverse display transform)
+#' @return named list(major_pos, major_labels, minor_pos) or NULL on error
+generate_linear_ticks <- function(axis_range, label_transform = NULL) {
+  tryCatch({
+    lo <- as.numeric(axis_range[1])
+    hi <- as.numeric(axis_range[2])
+    if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return(NULL)
+
+    tks <- pretty(c(lo, hi), n = 5)
+    tks <- tks[tks >= lo & tks <= hi]
+    if (length(tks) == 0) return(NULL)
+
+    fmt_label <- function(v) {
+      a <- abs(v); s <- if (v < 0) "-" else ""
+      if (a < 1e-9)      "0"
+      else if (a >= 1e6) paste0(s, round(a / 1e6, 3), "M")
+      else if (a >= 1e3) paste0(s, round(a / 1e3, 3), "K")
+      else               paste0(s, format(a, scientific = FALSE, trim = TRUE))
+    }
+
+    label_vals <- tks
+    if (is.function(label_transform)) {
+      transformed <- suppressWarnings(as.numeric(label_transform(tks)))
+      if (length(transformed) == length(tks) && all(is.finite(transformed))) {
+        label_vals <- transformed
+      }
+    }
+
+    list(
+      major_pos    = as.numeric(tks),
+      major_labels = vapply(label_vals, fmt_label, character(1)),
+      minor_pos    = numeric(0)
+    )
+  }, error = function(e) NULL)
+}
+
 flow_forward_vertices <- function(vertices,
                                   x_channel,
                                   y_channel,

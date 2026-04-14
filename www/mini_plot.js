@@ -263,9 +263,12 @@
             var xLg = _buildLogicleAxis(xScale, xTicks, d3.axisBottom);
             xAxisSel.call(xLg.axis);
             _styleLogicleAxis(xAxisSel, xLg.majorSet, true);
-            _hideCompressedLabels(xAxisSel, xScale, 28);
+            if (!(xTicks && xTicks.tick_mode === 'scatter_log10')) {
+                _hideCompressedLabels(xAxisSel, xScale, 28);
+            }
         } else {
-            xAxisSel.call(d3.axisBottom(xScale).ticks(4));
+            xAxisSel.call(d3.axisBottom(xScale).ticks(4).tickFormat(_formatLinearVal));
+            _hideCompressedLabels(xAxisSel, xScale, 28);
         }
         xAxisSel.selectAll('text').style('font-size', tickFs);
 
@@ -276,9 +279,12 @@
                 var yLg = _buildLogicleAxis(yScale, yTicks, d3.axisLeft);
                 yAxisSel.call(yLg.axis);
                 _styleLogicleAxis(yAxisSel, yLg.majorSet, false);
-                _hideCompressedLabels(yAxisSel, yScale, 18);
+                if (!(yTicks && yTicks.tick_mode === 'scatter_log10')) {
+                    _hideCompressedLabels(yAxisSel, yScale, 18);
+                }
             } else {
-                yAxisSel.call(d3.axisLeft(yScale).ticks(4));
+                yAxisSel.call(d3.axisLeft(yScale).ticks(4).tickFormat(_formatLinearVal));
+                _hideCompressedLabels(yAxisSel, yScale, 18);
             }
             yAxisSel.selectAll('text').style('font-size', tickFs);
         }
@@ -658,6 +664,25 @@
         return { axis: axis, majorSet: majorSet };
     }
 
+    // Format a raw linear value with K / M abbreviations (catch-all for axes
+    // where no custom tick list was supplied from R).
+    function _formatLinearVal(v) {
+        if (!isFinite(v) || Math.abs(v) < 1e-9) return '0';
+        var abs = Math.abs(v);
+        var sign = v < 0 ? '\u2212' : '';
+        if (abs >= 1e6) {
+            var m = abs / 1e6;
+            return sign + (+m.toPrecision(3)) + 'M';
+        }
+        if (abs >= 1e3) {
+            var k = abs / 1e3;
+            return sign + (+k.toPrecision(3)) + 'K';
+        }
+        if (abs >= 100) return sign + Math.round(abs).toLocaleString();
+        if (abs >= 1) return sign + (+abs.toFixed(1));
+        return sign + (+abs.toPrecision(2));
+    }
+
     function _styleLogicleAxis(sel, majorSet, isBottom) {
         sel.selectAll('.tick').each(function (d) {
             var tick = d3.select(this);
@@ -672,17 +697,52 @@
         var labeled = [];
         sel.selectAll('.tick text').each(function (d) {
             var el = d3.select(this);
-            if (el.style('display') !== 'none' && el.text() !== '') {
-                labeled.push({ el: el, px: scale(d) });
+            var txt = (el.text() || '').trim();
+            if (el.style('display') !== 'none' && txt !== '') {
+                labeled.push({ el: el, px: scale(d), val: d, txt: txt, hidden: false });
             }
         });
         labeled.sort(function (a, b) { return a.px - b.px; });
+
+        // Identify zero label — it always takes priority over neighbours
+        var zeroIdx = -1, zeroPx = null;
+        for (var j = 0; j < labeled.length; j++) {
+            var vj = Number(labeled[j].val);
+            if (labeled[j].txt === '0' || (isFinite(vj) && Math.abs(vj) < 1e-9)) {
+                zeroIdx = j;
+                zeroPx = labeled[j].px;
+                break;
+            }
+        }
+
+        // Keep labels adjacent to zero with a softer spacing rule so nearby
+        // decade labels (e.g. 10K/100K) can still appear when useful.
+        var zeroAdjSpacing = Math.max(8, minSpacingPx * 0.55);
+        var zeroProtectSpacing = Math.max(5, minSpacingPx * 0.38);
+
+        // Pass 1 — standard left-to-right suppression, but never suppress zero
         var lastPx = -Infinity;
+        var lastWasZero = false;
         for (var i = 0; i < labeled.length; i++) {
-            if (Math.abs(labeled[i].px - lastPx) < minSpacingPx) {
+            var isZero = i === zeroIdx;
+            var requiredSpacing = (isZero || lastWasZero) ? zeroAdjSpacing : minSpacingPx;
+            if (Math.abs(labeled[i].px - lastPx) < requiredSpacing && !isZero) {
                 labeled[i].el.style('display', 'none');
+                labeled[i].hidden = true;
             } else {
                 lastPx = labeled[i].px;
+                lastWasZero = isZero;
+            }
+        }
+
+        // Pass 2 — hide any surviving label that is still too close to zero
+        if (zeroPx !== null) {
+            for (var k = 0; k < labeled.length; k++) {
+                if (!labeled[k].hidden && k !== zeroIdx &&
+                        Math.abs(labeled[k].px - zeroPx) < zeroProtectSpacing) {
+                    labeled[k].el.style('display', 'none');
+                    labeled[k].hidden = true;
+                }
             }
         }
     }
@@ -825,6 +885,25 @@
         var fontSizes = data.font_sizes || {};
         var gateStyle = data.gate_style || {};
         var gapPx = 8;
+
+        if (data.strategy_context_title) {
+            var contextDiv = document.createElement('div');
+            var contextFs = Number(data.strategy_context_title_font);
+            if (!isFinite(contextFs) || contextFs <= 0) {
+                contextFs = Math.max(9, Math.min(14, Number(fontSizes.title || 10) + 1));
+            }
+            contextDiv.className = 'strategy-context-title';
+            contextDiv.textContent = String(data.strategy_context_title);
+            contextDiv.style.fontSize = contextFs + 'px';
+            contextDiv.style.fontWeight = '500';
+            contextDiv.style.color = '#334155';
+            contextDiv.style.lineHeight = '1.2';
+            contextDiv.style.margin = '0 0 6px 0';
+            contextDiv.style.whiteSpace = 'nowrap';
+            contextDiv.style.overflow = 'hidden';
+            contextDiv.style.textOverflow = 'ellipsis';
+            container.appendChild(contextDiv);
+        }
 
         if (showBack) {
             var legendDiv = document.createElement('div');
@@ -1965,6 +2044,25 @@
         var pointSize   = isFinite(Number(data.point_size)) && Number(data.point_size) > 0 ? Number(data.point_size) : 1.2;
         var kdeBandwidth = isFinite(Number(data.kde_bandwidth)) ? Math.max(0, Number(data.kde_bandwidth)) : 0;
         var gapPx = 8;
+
+        if (data.strategy_context_title) {
+            var contextDiv = document.createElement('div');
+            var contextFs = Number(data.strategy_context_title_font);
+            if (!isFinite(contextFs) || contextFs <= 0) {
+                contextFs = Math.max(9, Math.min(14, Number(fontSizes.title || 10) + 1));
+            }
+            contextDiv.className = 'strategy-context-title';
+            contextDiv.textContent = String(data.strategy_context_title);
+            contextDiv.style.fontSize = contextFs + 'px';
+            contextDiv.style.fontWeight = '500';
+            contextDiv.style.color = '#334155';
+            contextDiv.style.lineHeight = '1.2';
+            contextDiv.style.margin = '0 0 6px 0';
+            contextDiv.style.whiteSpace = 'nowrap';
+            contextDiv.style.overflow = 'hidden';
+            contextDiv.style.textOverflow = 'ellipsis';
+            container.appendChild(contextDiv);
+        }
 
         // ── Safety net: resolve any (row,col) duplicates before layout ───────
         // The R layout already resolves these, but guard here too so a stale

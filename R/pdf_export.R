@@ -718,23 +718,50 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   minor_y0 <- numeric(0); minor_y1 <- numeric(0)
   label_grobs <- list(); li <- 0L
 
+  .fmt_linear_lbl <- function(v) {
+    a <- abs(v); s <- if (v < 0) "-" else ""
+    if (a == 0)        "0"
+    else if (a >= 1e6) paste0(s, round(a / 1e6, 3), "M")
+    else if (a >= 1e3) paste0(s, round(a / 1e3, 3), "K")
+    else               format(v, scientific = FALSE, trim = TRUE)
+  }
+
   if (x_is_logicle && !is.null(x_logicle_ticks)) {
     major_pos    <- as.numeric(x_logicle_ticks$major_pos %||% numeric(0))
     major_labels <- as.character(x_logicle_ticks$major_labels %||% character(0))
     minor_pos    <- as.numeric(x_logicle_ticks$minor_pos %||% numeric(0))
+    x_tick_mode  <- as.character(x_logicle_ticks$tick_mode %||% "")
+    x_is_scatter_log10 <- identical(x_tick_mode, "scatter_log10")
+
+    # Pre-compute which labels to show (zero takes priority over neighbours)
+    zero_xp_x <- if (!x_is_scatter_log10 && 0 %in% major_pos) x_to_pt(0) else NA_real_
+    x_show_lbl <- logical(length(major_pos))
     last_lx <- -Inf
+    for (i in seq_along(major_pos)) {
+      lbl <- if (i <= length(major_labels)) major_labels[i] else ""
+      if (!nzchar(lbl)) next
+      xp  <- x_to_pt(major_pos[i])
+      is_zero <- !x_is_scatter_log10 && major_pos[i] == 0
+      if ((xp - last_lx) >= 28 || is_zero) { x_show_lbl[i] <- TRUE; last_lx <- xp }
+    }
+    if (!is.na(zero_xp_x)) {
+      for (i in seq_along(major_pos)) {
+        if (x_show_lbl[i] && major_pos[i] != 0 && abs(x_to_pt(major_pos[i]) - zero_xp_x) < 28)
+          x_show_lbl[i] <- FALSE
+      }
+    }
+
     for (i in seq_along(major_pos)) {
       xp <- x_to_pt(major_pos[i])
       major_x0 <- c(major_x0, xp); major_x1 <- c(major_x1, xp)
       major_y0 <- c(major_y0, M$bottom); major_y1 <- c(major_y1, M$bottom - tick_len_major)
+      if (!x_show_lbl[i]) next
       lbl <- if (i <= length(major_labels)) major_labels[i] else ""
-      if (nzchar(lbl) && (xp - last_lx) >= 28) {
-        li <- li + 1L
-        label_grobs[[li]] <- textGrob(lbl, x = unit(xp, "points"),
-                       y = unit(M$bottom - tick_len_major - 2, "points"),
-                       just = c("centre", "top"), gp = gp_label)
-        last_lx <- xp
-      }
+      if (!nzchar(lbl)) next
+      li <- li + 1L
+      label_grobs[[li]] <- textGrob(lbl, x = unit(xp, "points"),
+                     y = unit(M$bottom - tick_len_major - 2, "points"),
+                     just = c("centre", "top"), gp = gp_label)
     }
     for (mp in minor_pos) {
       xp <- x_to_pt(mp)
@@ -744,15 +771,20 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   } else {
     tks <- pretty(xr, n = 4)
     tks <- tks[tks >= xr[1] & tks <= xr[2]]
+    zero_xp_x_lin <- if (0 %in% tks) x_to_pt(0) else NA_real_
     for (tv in tks) {
       xp <- x_to_pt(tv)
       major_x0 <- c(major_x0, xp); major_x1 <- c(major_x1, xp)
       major_y0 <- c(major_y0, M$bottom); major_y1 <- c(major_y1, M$bottom - tick_len_major)
-      li <- li + 1L
-      label_grobs[[li]] <- textGrob(format(tv, scientific = FALSE, trim = TRUE),
-                     x = unit(xp, "points"),
-                     y = unit(M$bottom - tick_len_major - 2, "points"),
-                     just = c("centre", "top"), gp = gp_label)
+      is_zero <- tv == 0
+      too_close_to_zero <- !is.na(zero_xp_x_lin) && !is_zero && abs(xp - zero_xp_x_lin) < 28
+      if (!too_close_to_zero) {
+        li <- li + 1L
+        label_grobs[[li]] <- textGrob(.fmt_linear_lbl(tv),
+                       x = unit(xp, "points"),
+                       y = unit(M$bottom - tick_len_major - 2, "points"),
+                       just = c("centre", "top"), gp = gp_label)
+      }
     }
   }
 
@@ -795,19 +827,37 @@ export_illustration_pdf <- function(file_path, payload, opts) {
       major_pos    <- as.numeric(y_logicle_ticks$major_pos %||% numeric(0))
       major_labels <- as.character(y_logicle_ticks$major_labels %||% character(0))
       minor_pos    <- as.numeric(y_logicle_ticks$minor_pos %||% numeric(0))
+      y_tick_mode  <- as.character(y_logicle_ticks$tick_mode %||% "")
+      y_is_scatter_log10 <- identical(y_tick_mode, "scatter_log10")
+
+      zero_xp_y <- if (!y_is_scatter_log10 && 0 %in% major_pos) y_to_pt(0) else NA_real_
+      y_show_lbl <- logical(length(major_pos))
       last_ly <- -Inf
+      for (i in seq_along(major_pos)) {
+        lbl <- if (i <= length(major_labels)) major_labels[i] else ""
+        if (!nzchar(lbl)) next
+        yp <- y_to_pt(major_pos[i])
+        is_zero <- !y_is_scatter_log10 && major_pos[i] == 0
+        if ((yp - last_ly) >= 18 || is_zero) { y_show_lbl[i] <- TRUE; last_ly <- yp }
+      }
+      if (!is.na(zero_xp_y)) {
+        for (i in seq_along(major_pos)) {
+          if (y_show_lbl[i] && major_pos[i] != 0 && abs(y_to_pt(major_pos[i]) - zero_xp_y) < 18)
+            y_show_lbl[i] <- FALSE
+        }
+      }
+
       for (i in seq_along(major_pos)) {
         yp <- y_to_pt(major_pos[i])
         major_x0 <- c(major_x0, M$left); major_x1 <- c(major_x1, M$left - tick_len_major)
         major_y0 <- c(major_y0, yp); major_y1 <- c(major_y1, yp)
+        if (!y_show_lbl[i]) next
         lbl <- if (i <= length(major_labels)) major_labels[i] else ""
-        if (nzchar(lbl) && (yp - last_ly) >= 18) {
-          li <- li + 1L
-          label_grobs[[li]] <- textGrob(lbl, x = unit(M$left - tick_len_major - 2, "points"),
-                          y = unit(yp, "points"),
-                          just = c("right", "centre"), gp = gp_label)
-          last_ly <- yp
-        }
+        if (!nzchar(lbl)) next
+        li <- li + 1L
+        label_grobs[[li]] <- textGrob(lbl, x = unit(M$left - tick_len_major - 2, "points"),
+                        y = unit(yp, "points"),
+                        just = c("right", "centre"), gp = gp_label)
       }
       for (mp in minor_pos) {
         yp <- y_to_pt(mp)
@@ -817,15 +867,20 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     } else {
       tks <- pretty(yr, n = 4)
       tks <- tks[tks >= yr[1] & tks <= yr[2]]
+      zero_xp_y_lin <- if (0 %in% tks) y_to_pt(0) else NA_real_
       for (tv in tks) {
         yp <- y_to_pt(tv)
         major_x0 <- c(major_x0, M$left); major_x1 <- c(major_x1, M$left - tick_len_major)
         major_y0 <- c(major_y0, yp); major_y1 <- c(major_y1, yp)
-        li <- li + 1L
-        label_grobs[[li]] <- textGrob(format(tv, scientific = FALSE, trim = TRUE),
-                        x = unit(M$left - tick_len_major - 2, "points"),
-                        y = unit(yp, "points"),
-                        just = c("right", "centre"), gp = gp_label)
+        is_zero <- tv == 0
+        too_close_to_zero <- !is.na(zero_xp_y_lin) && !is_zero && abs(yp - zero_xp_y_lin) < 18
+        if (!too_close_to_zero) {
+          li <- li + 1L
+          label_grobs[[li]] <- textGrob(.fmt_linear_lbl(tv),
+                          x = unit(M$left - tick_len_major - 2, "points"),
+                          y = unit(yp, "points"),
+                          just = c("right", "centre"), gp = gp_label)
+        }
       }
     }
 

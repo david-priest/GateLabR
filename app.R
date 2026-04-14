@@ -111,8 +111,8 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260403"),
-    tags$script(src = "mini_plot.js?v=20260414"),
+    tags$script(src = "cytof_plot.js?v=20260414e"),
+    tags$script(src = "mini_plot.js?v=20260414f"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260413b")
   ),
 
@@ -1042,8 +1042,12 @@ server <- function(input, output, session) {
     if (!nzchar(channel %||% "")) return(NULL)
     if (is.null(axis_range) || length(axis_range) != 2) return(NULL)
     if (.is_qc_channel(channel)) return(NULL)
-    # Scatter channels stay on their existing arcsinh-scatter tick path
-    if (.is_scatter_channel(channel)) return(NULL)
+    # Scatter channels (FSC/SSC) use regular log-style intervals in raw space.
+    if (.is_scatter_channel(channel)) {
+      cf <- suppressWarnings(as.numeric(rv$flow_scatter_cofactor[[channel]] %||% 150))
+      if (!is.finite(cf) || cf <= 0) cf <- 150
+      return(generate_scatter_ticks(axis_range, cofactor = cf))
+    }
 
     if (is_flow_session(rv$sce)) {
       raw_mat <- rv$flow_raw_data
@@ -3931,6 +3935,69 @@ server <- function(input, output, session) {
     paste0("Contributing samples (", length(selected_keys), "/", length(all_keys), "): ", preview, suffix)
   })
 
+  # Build a compact one-line context title for strategy renders.
+  build_strategy_sample_scope <- function(max_names = 4L) {
+    info <- rv$sample_info
+    if (is.null(info) || is.null(info$table)) return("Samples: all loaded")
+
+    selected_keys <- as.character(resolve_filtered_sample_keys(info) %||% character(0))
+    all_keys <- as.character(info$keys %||% character(0))
+    if (length(all_keys) == 0) return("Samples: all loaded")
+    if (length(selected_keys) == 0) return("Samples: none")
+
+    tbl <- info$table
+    pick_col <- function(df, choices) {
+      cn <- tolower(colnames(df))
+      for (nm in choices) {
+        idx <- match(tolower(nm), cn)
+        if (!is.na(idx)) return(colnames(df)[idx])
+      }
+      NULL
+    }
+
+    label_col <- pick_col(tbl, c("file_name", "filename", "sample_name", "sample_id"))
+    key_col <- pick_col(tbl, c("sample_id"))
+
+    labels <- selected_keys
+    if (!is.null(label_col) && !is.null(key_col) && key_col %in% colnames(tbl)) {
+      key_vals <- as.character(tbl[[key_col]])
+      label_vals <- as.character(tbl[[label_col]])
+      lut <- setNames(label_vals, key_vals)
+      mapped <- unname(lut[selected_keys])
+      keep_mapped <- !is.na(mapped) & nzchar(mapped)
+      labels <- ifelse(keep_mapped, mapped, selected_keys)
+    }
+
+    labels <- unique(as.character(labels))
+    if (length(selected_keys) == length(all_keys)) {
+      return(paste0("Samples: all (", length(all_keys), ")"))
+    }
+
+    show_n <- min(max_names, length(labels))
+    preview <- paste(utils::head(labels, show_n), collapse = ", ")
+    suffix <- if (length(labels) > show_n) paste0(" +", length(labels) - show_n) else ""
+    paste0("Samples: ", preview, suffix)
+  }
+
+  build_strategy_population_scope <- function(pop_names, max_names = 4L) {
+    pop_names <- unique(as.character(pop_names %||% character(0)))
+    pop_names <- pop_names[nzchar(pop_names)]
+    if (length(pop_names) == 0) return("Populations: none")
+    label <- if (length(pop_names) == 1L) "Population" else "Populations"
+    show_n <- min(max_names, length(pop_names))
+    preview <- paste(utils::head(pop_names, show_n), collapse = ", ")
+    suffix <- if (length(pop_names) > show_n) paste0(" +", length(pop_names) - show_n) else ""
+    paste0(label, ": ", preview, suffix)
+  }
+
+  build_strategy_context_title <- function(pop_names) {
+    paste0(
+      build_strategy_sample_scope(max_names = 4L),
+      " | ",
+      build_strategy_population_scope(pop_names, max_names = 4L)
+    )
+  }
+
   observeEvent(input$strategy_gate_view, {
     vals <- as.character(input$strategy_gate_view %||% character(0))
     show_forward <- "forward" %in% vals
@@ -3995,6 +4062,9 @@ server <- function(input, output, session) {
       gate_label = strategy_gate_label_font,
       title = strategy_title_font
     )
+    selected_pop_name <- as.character(rv$populations[[pop_id]]$name %||% pop_id)
+    strategy_context_title <- build_strategy_context_title(selected_pop_name)
+    strategy_context_title_font <- max(8L, min(24L, strategy_title_font + 1L))
 
     strategy_pub_style <- isTRUE(input$strategy_pub_style)
     strategy_gate_line_width <- suppressWarnings(as.numeric(input$strategy_gate_line_width %||% 1.5))
@@ -4044,6 +4114,8 @@ server <- function(input, output, session) {
       session$sendCustomMessage("renderStrategyGrid", list(
         containerId = "strategy-grid-container",
         steps = list(),
+        strategy_context_title = strategy_context_title,
+        strategy_context_title_font = strategy_context_title_font,
         plot_size = strategy_plot_size,
         n_columns = strategy_n_columns,
         fit_to_columns = strategy_fit_to_columns,
@@ -4079,6 +4151,8 @@ server <- function(input, output, session) {
       session$sendCustomMessage("renderStrategyGrid", list(
         containerId = "strategy-grid-container",
         steps = list(),
+        strategy_context_title = strategy_context_title,
+        strategy_context_title_font = strategy_context_title_font,
         plot_size = strategy_plot_size,
         n_columns = strategy_n_columns,
         fit_to_columns = strategy_fit_to_columns,
@@ -4267,6 +4341,7 @@ server <- function(input, output, session) {
     # Cache payload for server-side PDF export
     rv$.strategy_pdf_payload <- list(
       mode = "single",
+      strategy_context_title = strategy_context_title,
       steps = steps_json,
       plot_size = strategy_plot_size,
       n_columns = strategy_n_columns,
@@ -4284,6 +4359,8 @@ server <- function(input, output, session) {
     session$sendCustomMessage("renderStrategyGrid", list(
       containerId = "strategy-grid-container",
       steps = steps_json,
+      strategy_context_title = strategy_context_title,
+      strategy_context_title_font = strategy_context_title_font,
       plot_size = strategy_plot_size,
       n_columns = strategy_n_columns,
       fit_to_columns = strategy_fit_to_columns,
@@ -4581,6 +4658,15 @@ server <- function(input, output, session) {
     selected_pop_ids <- unique(c(selectize_sel, checkbox_sel))
     selected_pop_ids <- intersect(selected_pop_ids, names(rv$populations %||% list()))
     selected_pop_ids <- setdiff(selected_pop_ids, rv$root_population_id %||% character(0))
+    selected_pop_names <- if (length(selected_pop_ids) > 0) {
+      vapply(selected_pop_ids, function(pid) as.character(rv$populations[[pid]]$name %||% pid), character(1))
+    } else {
+      character(0)
+    }
+    strategy_title_font_base <- suppressWarnings(as.integer(input$strategy_title_font_size %||% 10L))
+    if (is.na(strategy_title_font_base)) strategy_title_font_base <- 10L
+    strategy_context_title <- build_strategy_context_title(selected_pop_names)
+    strategy_context_title_font <- max(8L, min(24L, strategy_title_font_base + 1L))
 
     message("[strategy multi] selectize=", length(selectize_sel),
             " checkbox=", length(checkbox_sel),
@@ -4592,6 +4678,8 @@ server <- function(input, output, session) {
       message("[strategy multi] no assay data available")
       session$sendCustomMessage("renderMultiStrategyGrid", list(
         containerId = "strategy-grid-container",
+        strategy_context_title = strategy_context_title,
+        strategy_context_title_font = strategy_context_title_font,
         nodes = list(), plot_size = 200L, display_mode = "pseudocolor",
         error_msg = "No data available. Load a dataset first."
       ))
@@ -4602,6 +4690,8 @@ server <- function(input, output, session) {
       message("[strategy multi] no populations selected")
       session$sendCustomMessage("renderMultiStrategyGrid", list(
         containerId = "strategy-grid-container",
+        strategy_context_title = strategy_context_title,
+        strategy_context_title_font = strategy_context_title_font,
         nodes = list(), plot_size = 200L, display_mode = "pseudocolor",
         error_msg = "No populations selected. Choose one or more populations from the dropdown above, or tick checkboxes in the Populations panel on the Gating tab, then click Render."
       ))
@@ -4655,6 +4745,8 @@ server <- function(input, output, session) {
       message("[strategy multi] compute_multi_pop_strategy returned 0 nodes")
       session$sendCustomMessage("renderMultiStrategyGrid", list(
         containerId = "strategy-grid-container",
+        strategy_context_title = strategy_context_title,
+        strategy_context_title_font = strategy_context_title_font,
         nodes = list(),
         plot_size = strategy_plot_size,
         display_mode = strategy_mode,
@@ -4731,6 +4823,7 @@ server <- function(input, output, session) {
     # Cache payload for server-side PDF export
     rv$.strategy_pdf_payload <- list(
       mode = "multi",
+      strategy_context_title = strategy_context_title,
       nodes = nodes_json,
       plot_size = strategy_plot_size,
       display_mode = strategy_mode,
@@ -4744,6 +4837,8 @@ server <- function(input, output, session) {
 
     session$sendCustomMessage("renderMultiStrategyGrid", list(
       containerId     = "strategy-grid-container",
+      strategy_context_title = strategy_context_title,
+      strategy_context_title_font = strategy_context_title_font,
       nodes           = nodes_json,
       plot_size       = strategy_plot_size,
       display_mode    = strategy_mode,

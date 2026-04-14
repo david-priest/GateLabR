@@ -475,18 +475,52 @@
         var labeled = [];
         sel.selectAll('.tick text').each(function(d) {
             var el = d3.select(this);
-            if (el.style('display') !== 'none' && el.text() !== '') {
-                labeled.push({ el: el, px: scale(d) });
+            var txt = (el.text() || '').trim();
+            if (el.style('display') !== 'none' && txt !== '') {
+                labeled.push({ el: el, px: scale(d), val: d, txt: txt, hidden: false });
             }
         });
-        // Sort by pixel coordinate so we scan in screen order
         labeled.sort(function(a, b) { return a.px - b.px; });
+
+        // Identify zero label — it always takes priority over neighbours
+        var zeroIdx = -1, zeroPx = null;
+        for (var j = 0; j < labeled.length; j++) {
+            var vj = Number(labeled[j].val);
+            if (labeled[j].txt === '0' || (isFinite(vj) && Math.abs(vj) < 1e-9)) {
+                zeroIdx = j;
+                zeroPx = labeled[j].px;
+                break;
+            }
+        }
+
+        // Keep labels adjacent to zero with a softer spacing rule so nearby
+        // informative labels are not hidden too aggressively.
+        var zeroAdjSpacing = Math.max(8, minSpacingPx * 0.55);
+        var zeroProtectSpacing = Math.max(5, minSpacingPx * 0.38);
+
+        // Pass 1 — standard left-to-right suppression, but never suppress zero
         var lastPx = -Infinity;
+        var lastWasZero = false;
         for (var i = 0; i < labeled.length; i++) {
-            if (Math.abs(labeled[i].px - lastPx) < minSpacingPx) {
+            var isZero = i === zeroIdx;
+            var requiredSpacing = (isZero || lastWasZero) ? zeroAdjSpacing : minSpacingPx;
+            if (Math.abs(labeled[i].px - lastPx) < requiredSpacing && !isZero) {
                 labeled[i].el.style('display', 'none');
+                labeled[i].hidden = true;
             } else {
                 lastPx = labeled[i].px;
+                lastWasZero = isZero;
+            }
+        }
+
+        // Pass 2 — hide any surviving label that is still too close to zero
+        if (zeroPx !== null) {
+            for (var k = 0; k < labeled.length; k++) {
+                if (!labeled[k].hidden && k !== zeroIdx &&
+                        Math.abs(labeled[k].px - zeroPx) < zeroProtectSpacing) {
+                    labeled[k].el.style('display', 'none');
+                    labeled[k].hidden = true;
+                }
             }
         }
     }
@@ -511,13 +545,17 @@
             var xLg = _buildLogicleAxis(zx, xTicks, d3.axisBottom);
             _g.select('.x-axis').call(xLg.axis);
             _styleLogicleAxis(_g.select('.x-axis'), xLg.majorSet, true);
-            _hideCompressedLabels(_g.select('.x-axis'), zx, 28);
+            if (!(xTicks && xTicks.tick_mode === 'scatter_log10')) {
+                _hideCompressedLabels(_g.select('.x-axis'), zx, 28);
+            }
         } else if (xIsLog) {
             _g.select('.x-axis').call(
                 d3.axisBottom(zx).ticks(5).tickFormat(_scatterTickFormat(xScCf))
             );
+            _hideCompressedLabels(_g.select('.x-axis'), zx, 28);
         } else {
             _g.select('.x-axis').call(d3.axisBottom(zx).ticks(6));
+            _hideCompressedLabels(_g.select('.x-axis'), zx, 28);
         }
         _g.select('.x-axis').selectAll('.tick text').style('font-size', '12px');
 
@@ -526,13 +564,17 @@
             var yLg = _buildLogicleAxis(zy, yTicks, d3.axisLeft);
             _g.select('.y-axis').call(yLg.axis);
             _styleLogicleAxis(_g.select('.y-axis'), yLg.majorSet, false);
-            _hideCompressedLabels(_g.select('.y-axis'), zy, 18);
+            if (!(yTicks && yTicks.tick_mode === 'scatter_log10')) {
+                _hideCompressedLabels(_g.select('.y-axis'), zy, 18);
+            }
         } else if (yIsLog) {
             _g.select('.y-axis').call(
                 d3.axisLeft(zy).ticks(5).tickFormat(_scatterTickFormat(yScCf))
             );
+            _hideCompressedLabels(_g.select('.y-axis'), zy, 18);
         } else {
             _g.select('.y-axis').call(d3.axisLeft(zy).ticks(6));
+            _hideCompressedLabels(_g.select('.y-axis'), zy, 18);
         }
         _g.select('.y-axis').selectAll('.tick text').style('font-size', '12px');
 
