@@ -112,8 +112,8 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260414e"),
-    tags$script(src = "mini_plot.js?v=20260414f"),
-    tags$link(rel = "stylesheet", href = "custom.css?v=20260413b")
+    tags$script(src = "mini_plot.js?v=20260414i"),
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
 
   titlePanel("GateLabR"),
@@ -484,14 +484,20 @@ ui <- fluidPage(
                 radioButtons("illust_plot_type", "Plot type:",
                              choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
                              selected = "biplot", inline = TRUE),
-                selectInput("illust_y_channel", "Y channel:", choices = NULL)
+                conditionalPanel(
+                  "input.illust_plot_type == 'biplot'",
+                  selectInput("illust_y_channel", "Y channel:", choices = NULL)
+                )
               ),
               tags$div(class = "illust-block",
-                radioButtons("illust_display", "Display mode:",
-                             choices = c("Scatter" = "scatter",
-                                         "Pseudo" = "pseudocolor",
-                                         "Contour" = "contour"),
-                             selected = "pseudocolor", inline = TRUE),
+                conditionalPanel(
+                  "input.illust_plot_type == 'biplot'",
+                  radioButtons("illust_display", "Display mode:",
+                               choices = c("Scatter" = "scatter",
+                                           "Pseudo" = "pseudocolor",
+                                           "Contour" = "contour"),
+                               selected = "pseudocolor", inline = TRUE)
+                ),
                 checkboxInput("illust_color_by_pop", "Color each population differently",
                               value = FALSE),
                 checkboxInput("illust_overlay_pops",
@@ -533,22 +539,40 @@ ui <- fluidPage(
               tags$div(class = "illust-param-card",
                 numericInput("illust_pdf_dpi", "SVG raster DPI:",
                              value = 300, min = 72, max = 1200, step = 50),
-                numericInput("illust_point_size", "Point size (px):",
-                             value = 1.2, min = 0.1, max = 5, step = 0.1),
-                sliderInput("illust_point_alpha", "Point opacity:",
-                            min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
+                conditionalPanel(
+                  "input.illust_plot_type == 'biplot'",
+                  numericInput("illust_point_size", "Point size (px):",
+                               value = 1.2, min = 0.1, max = 5, step = 0.1),
+                  sliderInput("illust_point_alpha", "Point opacity:",
+                              min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
+                ),
+                conditionalPanel(
+                  "input.illust_plot_type == 'histogram'",
+                  numericInput("illust_hist_line_width", "Histogram line width:",
+                               value = 1.8, min = 0.5, max = 6, step = 0.1),
+                  checkboxInput("illust_hist_fill", "Fill histogram area", value = FALSE),
+                  sliderInput("illust_hist_fill_alpha", "Histogram fill opacity:",
+                              min = 0, max = 1.0, value = 0.22, step = 0.05, width = "100%"),
+                  selectInput("illust_hist_overlay_mode", "Overlay fill behavior:",
+                              choices = c("Blend fills" = "blend",
+                                          "Front histogram opaque" = "front_opaque"),
+                              selected = "front_opaque")
+                )
               ),
-              tags$div(class = "illust-param-card",
-                checkboxInput("illust_pub_style",
-                              "Publication style (black gates, no label background)",
-                              value = FALSE),
-                numericInput("illust_gate_line_width", "Gate line width:",
-                             value = 1.5, min = 0.5, max = 5, step = 0.25)
+              conditionalPanel(
+                "input.illust_plot_type == 'biplot'",
+                tags$div(class = "illust-param-card",
+                  checkboxInput("illust_pub_style",
+                                "Publication style (black gates, no label background)",
+                                value = FALSE),
+                  numericInput("illust_gate_line_width", "Gate line width:",
+                               value = 1.5, min = 0.5, max = 5, step = 0.25)
+                )
               )
             ),
 
             conditionalPanel(
-              "input.illust_display == 'contour'",
+              "input.illust_plot_type == 'biplot' && input.illust_display == 'contour'",
               tags$div(class = "illust-contour-controls",
                 tags$span("Contour smoothing:", style = "font-size:11px; color:#555; white-space:nowrap;"),
                 tags$div(style = "width:220px;",
@@ -769,7 +793,10 @@ server <- function(input, output, session) {
     .scales_ui_version = 0L,
     .strategy_stale = FALSE,
     .illust_stale = FALSE,
-    .flow_transform_version = 0L
+    .flow_transform_version = 0L,
+    illust_pop_palette = list(),
+    illust_pop_selected = NULL,
+    .illust_palette_ui_version = 0L
   )
     valid_global_scale_range <- function(channel) {
       gs <- rv$global_scale_ranges[[channel]]
@@ -959,7 +986,9 @@ server <- function(input, output, session) {
       gate_value_space = gate_value_space,
       cytof_axis_range = rv$cytof_axis_range %||% list(),
       global_scale_ranges = rv$global_scale_ranges %||% list(),
-      plot_range_override = rv$.plot_range_override
+      plot_range_override = rv$.plot_range_override,
+      illust_pop_palette = rv$illust_pop_palette %||% list(),
+      illust_pop_selected = rv$illust_pop_selected
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1694,6 +1723,11 @@ server <- function(input, output, session) {
       initialize_missing_global_scales(channels)
       rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
       rv$.plot_range_override <- ws$plot_range_override %||% NULL
+      rv$illust_pop_palette <- ws$illust_pop_palette %||% list()
+      rv$illust_pop_selected <- if (!is.null(ws$illust_pop_selected)) as.character(ws$illust_pop_selected) else NULL
+      if (isTRUE(sync_illust_palette_state())) {
+        rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+      }
       rv$.strategy_stale <- FALSE; rv$.illust_stale <- FALSE
       update_rescale_btn(!is.null(rv$.plot_range_override))
       output$status_text <- renderText(paste("Loaded workspace from", sce_name))
@@ -1711,6 +1745,11 @@ server <- function(input, output, session) {
       initialize_missing_global_scales(channels)
       rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
       rv$.plot_range_override <- NULL
+      rv$illust_pop_palette <- list()
+      rv$illust_pop_selected <- NULL
+      if (isTRUE(sync_illust_palette_state())) {
+        rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+      }
       rv$.strategy_stale <- FALSE; rv$.illust_stale <- FALSE
       update_rescale_btn(FALSE)
       output$status_text <- renderText(paste("Loaded", sce_name, "-",
@@ -3998,6 +4037,170 @@ server <- function(input, output, session) {
     )
   }
 
+  .clamp_int <- function(value, default, lo, hi) {
+    out <- suppressWarnings(as.integer(value))
+    if (is.na(out)) out <- as.integer(default)
+    max(as.integer(lo), min(as.integer(hi), out))
+  }
+
+  .clamp_num <- function(value, default, lo, hi) {
+    out <- suppressWarnings(as.numeric(value))
+    if (!is.finite(out)) out <- as.numeric(default)
+    max(as.numeric(lo), min(as.numeric(hi), out))
+  }
+
+  .normalize_display_mode <- function(mode_raw) {
+    mode_chr <- tolower(as.character(mode_raw %||% "pseudocolor"))
+    switch(
+      mode_chr,
+      pseudo = "pseudocolor",
+      pseudocolour = "pseudocolor",
+      pseudocolor = "pseudocolor",
+      contour = "contour",
+      scatter = "scatter",
+      "scatter"
+    )
+  }
+
+  collect_plot_style_params <- function(scope = c("strategy", "illustration"),
+                                        plot_type = "biplot",
+                                        gate_view = NULL) {
+    scope <- match.arg(scope)
+    is_strategy <- identical(scope, "strategy")
+
+    if (!is_strategy && !plot_type %in% c("biplot", "histogram")) {
+      plot_type <- "biplot"
+    }
+
+    mode <- .normalize_display_mode(if (is_strategy) input$strategy_display else input$illust_display)
+    if (!is_strategy && identical(plot_type, "histogram")) {
+      mode <- "scatter"
+    }
+    if (is_strategy) {
+      gv <- as.character(gate_view %||% input$strategy_gate_view %||% "forward")
+      show_forward <- "forward" %in% gv
+      show_back <- "back" %in% gv
+      if (!show_forward && !show_back) show_forward <- TRUE
+      if (show_forward && show_back && identical(mode, "pseudocolor")) mode <- "scatter"
+    }
+
+    tick_font <- .clamp_int(
+      if (is_strategy) input$strategy_tick_font_size else input$illust_tick_font_size,
+      default = 8L, lo = 6L, hi = 24L
+    )
+    axis_font <- .clamp_int(
+      if (is_strategy) input$strategy_axis_label_font_size else input$illust_axis_label_font_size,
+      default = 10L, lo = 6L, hi = 28L
+    )
+    title_font <- .clamp_int(
+      if (is_strategy) input$strategy_title_font_size else input$illust_title_font_size,
+      default = 10L, lo = 6L, hi = 28L
+    )
+    gate_label_font <- .clamp_int(
+      if (is_strategy) input$strategy_gate_label_font_size else input$illust_gate_label_font_size,
+      default = 8L, lo = 6L, hi = 24L
+    )
+
+    contour_threshold <- .clamp_num(
+      if (is_strategy) input$strategy_contour_threshold else input$contour_threshold,
+      default = 5, lo = 0, hi = 100
+    )
+    point_alpha <- .clamp_num(
+      if (is_strategy) input$strategy_point_alpha else input$illust_point_alpha,
+      default = 0.35, lo = 0.05, hi = 1
+    )
+    point_size <- .clamp_num(
+      if (is_strategy) input$strategy_point_size else input$illust_point_size,
+      default = 1.2, lo = 0.1, hi = 5
+    )
+    kde_bandwidth <- .clamp_num(
+      if (is_strategy) input$strategy_kde_bandwidth else input$illust_kde_bandwidth,
+      default = 0, lo = 0, hi = 20
+    )
+
+    gate_line_width <- .clamp_num(
+      if (is_strategy) input$strategy_gate_line_width else input$illust_gate_line_width,
+      default = 1.5, lo = 0.5, hi = 5
+    )
+
+    hist_line_width <- if (is_strategy) {
+      1.8
+    } else {
+      .clamp_num(input$illust_hist_line_width, default = 1.8, lo = 0.5, hi = 6)
+    }
+    hist_fill <- if (is_strategy) FALSE else isTRUE(input$illust_hist_fill)
+    hist_fill_alpha <- if (is_strategy) {
+      0.22
+    } else {
+      .clamp_num(input$illust_hist_fill_alpha, default = 0.22, lo = 0, hi = 1)
+    }
+    hist_overlay_mode <- if (is_strategy) {
+      "front_opaque"
+    } else {
+      hm <- as.character(input$illust_hist_overlay_mode %||% "front_opaque")
+      if (hm %in% c("blend", "front_opaque")) hm else "front_opaque"
+    }
+
+    list(
+      display_mode = mode,
+      contour_threshold = contour_threshold,
+      point_alpha = point_alpha,
+      point_size = point_size,
+      kde_bandwidth = kde_bandwidth,
+      font_sizes = list(
+        axis_label = axis_font,
+        tick = tick_font,
+        gate_label = gate_label_font,
+        title = title_font
+      ),
+      gate_style = list(
+        pub_style = if (is_strategy) isTRUE(input$strategy_pub_style) else isTRUE(input$illust_pub_style),
+        line_width = gate_line_width
+      ),
+      hist_line_width = hist_line_width,
+      hist_fill = hist_fill,
+      hist_fill_alpha = hist_fill_alpha,
+      hist_overlay_mode = hist_overlay_mode
+    )
+  }
+
+  collect_layout_params <- function(scope = c("strategy", "illustration")) {
+    scope <- match.arg(scope)
+    is_strategy <- identical(scope, "strategy")
+
+    fit_to_columns <- if (is_strategy) isTRUE(input$strategy_fit_to_columns) else isTRUE(input$illust_fit_to_columns)
+    effective_plot_size <- suppressWarnings(as.integer(
+      if (is_strategy) input$strategy_effective_plot_size else input$illustration_effective_plot_size
+    ))
+    if (is.na(effective_plot_size) || effective_plot_size < 60L || effective_plot_size > 4000L) {
+      effective_plot_size <- NA_integer_
+    }
+    control_plot_size <- .clamp_int(
+      if (is_strategy) input$strategy_plot_size else input$illust_plot_size,
+      default = 200L, lo = 120L, hi = 800L
+    )
+    export_plot_size <- if (fit_to_columns && !is.na(effective_plot_size)) {
+      max(120L, min(800L, effective_plot_size))
+    } else {
+      control_plot_size
+    }
+
+    list(
+      plot_size = control_plot_size,
+      n_columns = .clamp_int(
+        if (is_strategy) input$strategy_n_columns else input$illust_n_columns,
+        default = 4L, lo = 1L, hi = 12L
+      ),
+      fit_to_columns = fit_to_columns,
+      effective_plot_size = effective_plot_size,
+      export_plot_size = export_plot_size,
+      pdf_dpi = .clamp_int(
+        if (is_strategy) input$strategy_pdf_dpi else input$illust_pdf_dpi,
+        default = 300L, lo = 72L, hi = 1200L
+      )
+    )
+  }
+
   observeEvent(input$strategy_gate_view, {
     vals <- as.character(input$strategy_gate_view %||% character(0))
     show_forward <- "forward" %in% vals
@@ -4033,71 +4236,12 @@ server <- function(input, output, session) {
       strategy_max_events <- Inf
     }
 
-    strategy_plot_size <- suppressWarnings(as.integer(input$strategy_plot_size %||% 200L))
-    if (is.na(strategy_plot_size)) strategy_plot_size <- 200L
-    strategy_plot_size <- max(120L, min(800L, strategy_plot_size))
-
-    strategy_n_columns <- suppressWarnings(as.integer(input$strategy_n_columns %||% 4L))
-    if (is.na(strategy_n_columns)) strategy_n_columns <- 4L
-    strategy_n_columns <- max(1L, min(12L, strategy_n_columns))
-    strategy_fit_to_columns <- isTRUE(input$strategy_fit_to_columns)
+    layout <- collect_layout_params("strategy")
+    strategy_plot_size <- layout$plot_size
+    strategy_n_columns <- layout$n_columns
+    strategy_fit_to_columns <- layout$fit_to_columns
     strategy_span_scale <- 1.2
     strategy_axis_mode <- "default"
-
-    strategy_tick_font <- suppressWarnings(as.integer(input$strategy_tick_font_size %||% 8L))
-    if (is.na(strategy_tick_font)) strategy_tick_font <- 8L
-    strategy_tick_font <- max(6L, min(24L, strategy_tick_font))
-    strategy_axis_font <- suppressWarnings(as.integer(input$strategy_axis_label_font_size %||% 10L))
-    if (is.na(strategy_axis_font)) strategy_axis_font <- 10L
-    strategy_axis_font <- max(6L, min(28L, strategy_axis_font))
-    strategy_title_font <- suppressWarnings(as.integer(input$strategy_title_font_size %||% 10L))
-    if (is.na(strategy_title_font)) strategy_title_font <- 10L
-    strategy_title_font <- max(6L, min(28L, strategy_title_font))
-    strategy_gate_label_font <- suppressWarnings(as.integer(input$strategy_gate_label_font_size %||% 8L))
-    if (is.na(strategy_gate_label_font)) strategy_gate_label_font <- 8L
-    strategy_gate_label_font <- max(6L, min(24L, strategy_gate_label_font))
-    strategy_font_sizes <- list(
-      axis_label = strategy_axis_font,
-      tick = strategy_tick_font,
-      gate_label = strategy_gate_label_font,
-      title = strategy_title_font
-    )
-    selected_pop_name <- as.character(rv$populations[[pop_id]]$name %||% pop_id)
-    strategy_context_title <- build_strategy_context_title(selected_pop_name)
-    strategy_context_title_font <- max(8L, min(24L, strategy_title_font + 1L))
-
-    strategy_pub_style <- isTRUE(input$strategy_pub_style)
-    strategy_gate_line_width <- suppressWarnings(as.numeric(input$strategy_gate_line_width %||% 1.5))
-    if (!is.finite(strategy_gate_line_width)) strategy_gate_line_width <- 1.5
-    strategy_gate_line_width <- max(0.5, min(5, strategy_gate_line_width))
-    strategy_gate_style <- list(pub_style = strategy_pub_style, line_width = strategy_gate_line_width)
-
-    strategy_contour_threshold <- suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5))
-    if (!is.finite(strategy_contour_threshold)) strategy_contour_threshold <- 5
-    strategy_contour_threshold <- max(0, min(100, strategy_contour_threshold))
-
-    strategy_point_alpha <- suppressWarnings(as.numeric(input$strategy_point_alpha %||% 0.35))
-    if (!is.finite(strategy_point_alpha)) strategy_point_alpha <- 0.35
-    strategy_point_alpha <- max(0.05, min(1, strategy_point_alpha))
-
-    strategy_point_size <- suppressWarnings(as.numeric(input$strategy_point_size %||% 1.2))
-    if (!is.finite(strategy_point_size)) strategy_point_size <- 1.2
-    strategy_point_size <- max(0.1, min(5, strategy_point_size))
-
-    strategy_kde_bandwidth <- suppressWarnings(as.numeric(input$strategy_kde_bandwidth %||% 0))
-    if (!is.finite(strategy_kde_bandwidth) || strategy_kde_bandwidth < 0) strategy_kde_bandwidth <- 0
-    strategy_kde_bandwidth <- min(20, strategy_kde_bandwidth)
-
-    strategy_mode_raw <- tolower(as.character(input$strategy_display %||% "pseudocolor"))
-    strategy_mode <- switch(
-      strategy_mode_raw,
-      pseudo = "pseudocolor",
-      pseudocolour = "pseudocolor",
-      pseudocolor = "pseudocolor",
-      contour = "contour",
-      scatter = "scatter",
-      "scatter"
-    )
 
     strategy_gate_view <- as.character(input$strategy_gate_view %||% "forward")
     show_forward <- "forward" %in% strategy_gate_view
@@ -4106,9 +4250,12 @@ server <- function(input, output, session) {
       show_forward <- TRUE
       strategy_gate_view <- "forward"
     }
-    if (show_forward && show_back && identical(strategy_mode, "pseudocolor")) {
-      strategy_mode <- "scatter"
-    }
+
+    style <- collect_plot_style_params("strategy", gate_view = strategy_gate_view)
+    strategy_mode <- style$display_mode
+    strategy_font_sizes <- style$font_sizes
+    strategy_context_title <- build_strategy_context_title(as.character(rv$populations[[pop_id]]$name %||% pop_id))
+    strategy_context_title_font <- max(8L, min(24L, as.integer(strategy_font_sizes$title %||% 10L) + 1L))
 
     if (nrow(assay_for_strategy) == 0) {
       session$sendCustomMessage("renderStrategyGrid", list(
@@ -4120,11 +4267,16 @@ server <- function(input, output, session) {
         n_columns = strategy_n_columns,
         fit_to_columns = strategy_fit_to_columns,
         display_mode = strategy_mode,
-        contour_threshold = strategy_contour_threshold,
-        point_alpha = strategy_point_alpha,
-        kde_bandwidth = strategy_kde_bandwidth,
+        contour_threshold = style$contour_threshold,
+        point_alpha = style$point_alpha,
+        point_size = style$point_size,
+        kde_bandwidth = style$kde_bandwidth,
+        hist_line_width = style$hist_line_width,
+        hist_fill = style$hist_fill,
+        hist_fill_alpha = style$hist_fill_alpha,
+        hist_overlay_mode = style$hist_overlay_mode,
         font_sizes = strategy_font_sizes,
-        gate_style = strategy_gate_style
+        gate_style = style$gate_style
       ))
       return()
     }
@@ -4157,10 +4309,16 @@ server <- function(input, output, session) {
         n_columns = strategy_n_columns,
         fit_to_columns = strategy_fit_to_columns,
         display_mode = strategy_mode,
-        contour_threshold = strategy_contour_threshold,
-        point_alpha = strategy_point_alpha,
-        kde_bandwidth = strategy_kde_bandwidth,
-        font_sizes = strategy_font_sizes
+        contour_threshold = style$contour_threshold,
+        point_alpha = style$point_alpha,
+        point_size = style$point_size,
+        kde_bandwidth = style$kde_bandwidth,
+        hist_line_width = style$hist_line_width,
+        hist_fill = style$hist_fill,
+        hist_fill_alpha = style$hist_fill_alpha,
+        hist_overlay_mode = style$hist_overlay_mode,
+        font_sizes = strategy_font_sizes,
+        gate_style = style$gate_style
       ))
       return()
     }
@@ -4342,18 +4500,23 @@ server <- function(input, output, session) {
     rv$.strategy_pdf_payload <- list(
       mode = "single",
       strategy_context_title = strategy_context_title,
+      strategy_context_title_font = strategy_context_title_font,
       steps = steps_json,
       plot_size = strategy_plot_size,
       n_columns = strategy_n_columns,
       fit_to_columns = strategy_fit_to_columns,
       gate_view = strategy_gate_view,
       display_mode = strategy_mode,
-      contour_threshold = strategy_contour_threshold,
-      point_alpha = strategy_point_alpha,
-      point_size = strategy_point_size,
-      kde_bandwidth = strategy_kde_bandwidth,
+      contour_threshold = style$contour_threshold,
+      point_alpha = style$point_alpha,
+      point_size = style$point_size,
+      kde_bandwidth = style$kde_bandwidth,
+      hist_line_width = style$hist_line_width,
+      hist_fill = style$hist_fill,
+      hist_fill_alpha = style$hist_fill_alpha,
+      hist_overlay_mode = style$hist_overlay_mode,
       font_sizes = strategy_font_sizes,
-      gate_style = strategy_gate_style
+      gate_style = style$gate_style
     )
 
     session$sendCustomMessage("renderStrategyGrid", list(
@@ -4366,12 +4529,16 @@ server <- function(input, output, session) {
       fit_to_columns = strategy_fit_to_columns,
       gate_view = strategy_gate_view,
       display_mode = strategy_mode,
-      contour_threshold = strategy_contour_threshold,
-      point_alpha = strategy_point_alpha,
-      point_size = strategy_point_size,
-      kde_bandwidth = strategy_kde_bandwidth,
+      contour_threshold = style$contour_threshold,
+      point_alpha = style$point_alpha,
+      point_size = style$point_size,
+      kde_bandwidth = style$kde_bandwidth,
+      hist_line_width = style$hist_line_width,
+      hist_fill = style$hist_fill,
+      hist_fill_alpha = style$hist_fill_alpha,
+      hist_overlay_mode = style$hist_overlay_mode,
       font_sizes = strategy_font_sizes,
-      gate_style = strategy_gate_style
+      gate_style = style$gate_style
     ))
   }
 
@@ -4663,10 +4830,10 @@ server <- function(input, output, session) {
     } else {
       character(0)
     }
-    strategy_title_font_base <- suppressWarnings(as.integer(input$strategy_title_font_size %||% 10L))
-    if (is.na(strategy_title_font_base)) strategy_title_font_base <- 10L
+    style <- collect_plot_style_params("strategy")
+    layout <- collect_layout_params("strategy")
     strategy_context_title <- build_strategy_context_title(selected_pop_names)
-    strategy_context_title_font <- max(8L, min(24L, strategy_title_font_base + 1L))
+    strategy_context_title_font <- max(8L, min(24L, as.integer(style$font_sizes$title %||% 10L) + 1L))
 
     message("[strategy multi] selectize=", length(selectize_sel),
             " checkbox=", length(checkbox_sel),
@@ -4680,7 +4847,17 @@ server <- function(input, output, session) {
         containerId = "strategy-grid-container",
         strategy_context_title = strategy_context_title,
         strategy_context_title_font = strategy_context_title_font,
-        nodes = list(), plot_size = 200L, display_mode = "pseudocolor",
+        nodes = list(), plot_size = layout$plot_size, display_mode = style$display_mode,
+        contour_threshold = style$contour_threshold,
+        point_alpha = style$point_alpha,
+        point_size = style$point_size,
+        kde_bandwidth = style$kde_bandwidth,
+        hist_line_width = style$hist_line_width,
+        hist_fill = style$hist_fill,
+        hist_fill_alpha = style$hist_fill_alpha,
+        hist_overlay_mode = style$hist_overlay_mode,
+        font_sizes = style$font_sizes,
+        gate_style = style$gate_style,
         error_msg = "No data available. Load a dataset first."
       ))
       return()
@@ -4692,7 +4869,17 @@ server <- function(input, output, session) {
         containerId = "strategy-grid-container",
         strategy_context_title = strategy_context_title,
         strategy_context_title_font = strategy_context_title_font,
-        nodes = list(), plot_size = 200L, display_mode = "pseudocolor",
+        nodes = list(), plot_size = layout$plot_size, display_mode = style$display_mode,
+        contour_threshold = style$contour_threshold,
+        point_alpha = style$point_alpha,
+        point_size = style$point_size,
+        kde_bandwidth = style$kde_bandwidth,
+        hist_line_width = style$hist_line_width,
+        hist_fill = style$hist_fill,
+        hist_fill_alpha = style$hist_fill_alpha,
+        hist_overlay_mode = style$hist_overlay_mode,
+        font_sizes = style$font_sizes,
+        gate_style = style$gate_style,
         error_msg = "No populations selected. Choose one or more populations from the dropdown above, or tick checkboxes in the Populations panel on the Gating tab, then click Render."
       ))
       return()
@@ -4702,35 +4889,12 @@ server <- function(input, output, session) {
     if (is.na(strategy_max_events)) strategy_max_events <- 10000L
     if (isTRUE(input$strategy_all_events) || strategy_max_events <= 0L) strategy_max_events <- Inf
 
-    strategy_plot_size <- suppressWarnings(as.integer(input$strategy_plot_size %||% 200L))
-    if (is.na(strategy_plot_size)) strategy_plot_size <- 200L
-    strategy_plot_size <- max(120L, min(800L, strategy_plot_size))
+    strategy_plot_size <- layout$plot_size
 
     strategy_span_scale <- 1.2
     use_global_scales_strategy <- TRUE
-
-    strategy_mode_raw <- tolower(as.character(input$strategy_display %||% "pseudocolor"))
-    strategy_mode <- switch(strategy_mode_raw,
-      pseudo = "pseudocolor", pseudocolour = "pseudocolor", pseudocolor = "pseudocolor",
-      contour = "contour", scatter = "scatter", "scatter")
-
-    strategy_tick_font <- max(6L, min(24L, suppressWarnings(as.integer(input$strategy_tick_font_size %||% 8L)) %||% 8L))
-    strategy_axis_font <- max(6L, min(28L, suppressWarnings(as.integer(input$strategy_axis_label_font_size %||% 10L)) %||% 10L))
-    strategy_title_font <- max(6L, min(28L, suppressWarnings(as.integer(input$strategy_title_font_size %||% 10L)) %||% 10L))
-    strategy_gate_label_font <- max(6L, min(24L, suppressWarnings(as.integer(input$strategy_gate_label_font_size %||% 8L)) %||% 8L))
-    strategy_font_sizes <- list(
-      axis_label = strategy_axis_font, tick = strategy_tick_font,
-      gate_label = strategy_gate_label_font, title = strategy_title_font
-    )
-    strategy_pub_style_m <- isTRUE(input$strategy_pub_style)
-    strategy_gate_line_width_m <- suppressWarnings(as.numeric(input$strategy_gate_line_width %||% 1.5))
-    if (!is.finite(strategy_gate_line_width_m)) strategy_gate_line_width_m <- 1.5
-    strategy_gate_line_width_m <- max(0.5, min(5, strategy_gate_line_width_m))
-    strategy_gate_style_m <- list(pub_style = strategy_pub_style_m, line_width = strategy_gate_line_width_m)
-    strategy_contour_threshold <- max(0, min(100, suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5)) %||% 5))
-    strategy_point_alpha <- max(0.05, min(1, suppressWarnings(as.numeric(input$strategy_point_alpha %||% 0.35)) %||% 0.35))
-    strategy_point_size <- max(0.1, min(5, suppressWarnings(as.numeric(input$strategy_point_size %||% 1.2)) %||% 1.2))
-    strategy_kde_bandwidth <- max(0, min(20, suppressWarnings(as.numeric(input$strategy_kde_bandwidth %||% 0)) %||% 0))
+    strategy_mode <- style$display_mode
+    strategy_font_sizes <- style$font_sizes
 
     display_gates <- get_plot_gates()
 
@@ -4751,6 +4915,15 @@ server <- function(input, output, session) {
         plot_size = strategy_plot_size,
         display_mode = strategy_mode,
         font_sizes = strategy_font_sizes,
+        contour_threshold = style$contour_threshold,
+        point_alpha = style$point_alpha,
+        point_size = style$point_size,
+        kde_bandwidth = style$kde_bandwidth,
+        hist_line_width = style$hist_line_width,
+        hist_fill = style$hist_fill,
+        hist_fill_alpha = style$hist_fill_alpha,
+        hist_overlay_mode = style$hist_overlay_mode,
+        gate_style = style$gate_style,
         error_msg = paste0(
           "Could not build a strategy tree for the selected populations (",
           paste(selected_pop_ids, collapse = ", "),
@@ -4824,15 +4997,20 @@ server <- function(input, output, session) {
     rv$.strategy_pdf_payload <- list(
       mode = "multi",
       strategy_context_title = strategy_context_title,
+      strategy_context_title_font = strategy_context_title_font,
       nodes = nodes_json,
       plot_size = strategy_plot_size,
       display_mode = strategy_mode,
-      contour_threshold = strategy_contour_threshold,
-      point_alpha = strategy_point_alpha,
-      point_size = strategy_point_size,
-      kde_bandwidth = strategy_kde_bandwidth,
+      contour_threshold = style$contour_threshold,
+      point_alpha = style$point_alpha,
+      point_size = style$point_size,
+      kde_bandwidth = style$kde_bandwidth,
+      hist_line_width = style$hist_line_width,
+      hist_fill = style$hist_fill,
+      hist_fill_alpha = style$hist_fill_alpha,
+      hist_overlay_mode = style$hist_overlay_mode,
       font_sizes = strategy_font_sizes,
-      gate_style = strategy_gate_style_m
+      gate_style = style$gate_style
     )
 
     session$sendCustomMessage("renderMultiStrategyGrid", list(
@@ -4842,12 +5020,16 @@ server <- function(input, output, session) {
       nodes           = nodes_json,
       plot_size       = strategy_plot_size,
       display_mode    = strategy_mode,
-      contour_threshold = strategy_contour_threshold,
-      point_alpha     = strategy_point_alpha,
-      point_size      = strategy_point_size,
-      kde_bandwidth   = strategy_kde_bandwidth,
+      contour_threshold = style$contour_threshold,
+      point_alpha     = style$point_alpha,
+      point_size      = style$point_size,
+      kde_bandwidth   = style$kde_bandwidth,
+      hist_line_width = style$hist_line_width,
+      hist_fill       = style$hist_fill,
+      hist_fill_alpha = style$hist_fill_alpha,
+      hist_overlay_mode = style$hist_overlay_mode,
       font_sizes      = strategy_font_sizes,
-      gate_style      = strategy_gate_style_m
+      gate_style      = style$gate_style
     ))
   }
 
@@ -4879,9 +5061,47 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(input$strategy_export_png, {
+    data <- rv$.strategy_pdf_payload
+    req(data)
+
+    latest_style <- collect_plot_style_params("strategy", gate_view = data$gate_view %||% input$strategy_gate_view)
+    latest_layout <- collect_layout_params("strategy")
+
+    render_base <- list(
+      containerId = "strategy-grid-container",
+      render_family = "strategy",
+      mode = data$mode %||% "single",
+      strategy_context_title = data$strategy_context_title,
+      strategy_context_title_font = max(8L, min(24L, as.integer(latest_style$font_sizes$title %||% 10L) + 1L)),
+      plot_size = latest_layout$export_plot_size,
+      display_mode = latest_style$display_mode,
+      contour_threshold = latest_style$contour_threshold,
+      point_alpha = latest_style$point_alpha,
+      point_size = latest_style$point_size,
+      kde_bandwidth = latest_style$kde_bandwidth,
+      hist_line_width = latest_style$hist_line_width,
+      hist_fill = latest_style$hist_fill,
+      hist_fill_alpha = latest_style$hist_fill_alpha,
+      hist_overlay_mode = latest_style$hist_overlay_mode,
+      font_sizes = latest_style$font_sizes,
+      gate_style = latest_style$gate_style
+    )
+
+    render_data <- if (identical(data$mode, "multi")) {
+      c(render_base, list(nodes = data$nodes %||% list()))
+    } else {
+      c(render_base, list(
+        steps = data$steps %||% list(),
+        n_columns = latest_layout$n_columns,
+        fit_to_columns = latest_layout$fit_to_columns,
+        gate_view = data$gate_view %||% input$strategy_gate_view
+      ))
+    }
+
     session$sendCustomMessage("exportMiniPlotPNG", list(
       gridId = "strategy-grid-container-grid",
-      filename = "gating_strategy"
+      filename = "gating_strategy",
+      render_data = render_data
     ))
   })
 
@@ -4892,9 +5112,16 @@ server <- function(input, output, session) {
     content = function(file) {
       data <- rv$.strategy_pdf_payload
       req(data)
-      data$pdf_dpi <- max(72L, min(1200L, as.integer(input$strategy_pdf_dpi %||% 300)))
-      data$pdf_point_size <- max(0.1, min(5, as.numeric(input$strategy_point_size %||% 1.2) / 2))
-      data$pdf_point_alpha <- max(0.05, min(1, as.numeric(input$strategy_point_alpha %||% 0.35)))
+      latest_style <- collect_plot_style_params("strategy", gate_view = data$gate_view %||% input$strategy_gate_view)
+      latest_layout <- collect_layout_params("strategy")
+      for (nm in names(latest_style)) data[[nm]] <- latest_style[[nm]]
+      data$strategy_context_title_font <- max(8L, min(24L, as.integer(latest_style$font_sizes$title %||% 10L) + 1L))
+      data$plot_size <- latest_layout$export_plot_size
+      data$n_columns <- latest_layout$n_columns
+      data$fit_to_columns <- latest_layout$fit_to_columns
+      data$pdf_dpi <- latest_layout$pdf_dpi
+      data$pdf_point_size <- max(0.1, min(5, as.numeric(data$point_size %||% 1.2) / 2))
+      data$pdf_point_alpha <- max(0.05, min(1, as.numeric(data$point_alpha %||% 0.35)))
       showNotification("Generating SVG\u2026", duration = 2, type = "message")
       if (identical(data$mode, "multi")) {
         export_multi_strategy_pdf(file, data$nodes, data)
@@ -5011,83 +5238,222 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session, "illust_x_channels_marker", selected = character(0))
   }, ignoreInit = TRUE)
 
+  .illust_safe_id <- function(id) gsub("[^A-Za-z0-9]", "_", id)
+
+  .normalize_hex_color <- function(x, fallback = "#444444") {
+    raw <- toupper(trimws(as.character(x %||% "")))
+    if (!nzchar(raw)) return(fallback)
+    if (grepl("^#[0-9A-F]{3}$", raw)) {
+      raw <- paste0("#", paste(rep(substr(raw, 2, 4), each = 2), collapse = ""))
+    }
+    if (grepl("^#[0-9A-F]{6}$", raw)) return(raw)
+    if (grepl("^[0-9A-F]{6}$", raw)) return(paste0("#", raw))
+    fallback
+  }
+
+  .illust_default_palette <- c(
+    "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD",
+    "#8C564B", "#E377C2", "#7F7F7F", "#BCBD22", "#17BECF"
+  )
+
+  .default_pop_color <- function(pop_id, pop_ids) {
+    idx <- match(pop_id, pop_ids)
+    if (is.na(idx) || idx <= 0) idx <- 1L
+    .illust_default_palette[((idx - 1L) %% length(.illust_default_palette)) + 1L]
+  }
+
+  update_illust_pop_color_ui <- function(pop_id, color_hex) {
+    safe <- .illust_safe_id(pop_id)
+    hex_id <- paste0("illust_pop_hex_", safe)
+    pick_id <- paste0("illust_pop_picker_", safe)
+    sw_id <- paste0("illust_pop_swatch_", safe)
+    col <- .normalize_hex_color(color_hex, "#444444")
+    js <- sprintf(
+      "(function(){var h=document.getElementById('%s');if(h&&h.value!=='%s')h.value='%s';var p=document.getElementById('%s');if(p&&String(p.value||'').toUpperCase()!=='%s')p.value='%s';var s=document.getElementById('%s');if(s)s.style.background='%s';})();",
+      hex_id, col, col, pick_id, col, col, sw_id, col
+    )
+    runjs(js)
+  }
+
+  sync_illust_palette_state <- function() {
+    pop_ids <- names(rv$populations %||% list())
+    if (length(pop_ids) == 0) {
+      rv$illust_pop_palette <- list()
+      if (is.null(rv$illust_pop_selected)) rv$illust_pop_selected <- character(0)
+      return(FALSE)
+    }
+
+    old_palette <- rv$illust_pop_palette %||% list()
+    new_palette <- setNames(lapply(pop_ids, function(pid) {
+      .normalize_hex_color(old_palette[[pid]], .default_pop_color(pid, pop_ids))
+    }), pop_ids)
+
+    old_sel <- as.character(rv$illust_pop_selected %||% character(0))
+    if (is.null(rv$illust_pop_selected)) {
+      init_sel <- as.character(rv$active_population_id %||% rv$root_population_id %||% character(0))
+      old_sel <- intersect(init_sel, pop_ids)
+    }
+    new_sel <- intersect(old_sel, pop_ids)
+
+    palette_changed <- !identical(old_palette, new_palette)
+    sel_changed <- !identical(as.character(rv$illust_pop_selected %||% character(0)), new_sel)
+
+    rv$illust_pop_palette <- new_palette
+    rv$illust_pop_selected <- new_sel
+
+    palette_changed || sel_changed
+  }
+
+  get_selected_illust_pop_ids <- function(pop_ids = names(rv$populations %||% list())) {
+    pop_ids <- as.character(pop_ids %||% character(0))
+    if (length(pop_ids) == 0) return(character(0))
+    picked <- character(0)
+    for (pid in pop_ids) {
+      sid <- paste0("illust_pop_sel_", .illust_safe_id(pid))
+      val <- input[[sid]]
+      if (isTRUE(val)) picked <- c(picked, pid)
+    }
+    unique(picked)
+  }
+
+  observe({
+    rv$populations
+    rv$root_population_id
+    rv$active_population_id
+    if (isTRUE(sync_illust_palette_state())) {
+      rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+    }
+  })
+
+  observe({
+    pop_ids <- names(rv$populations %||% list())
+    if (length(pop_ids) == 0) return()
+    vals <- lapply(pop_ids, function(pid) input[[paste0("illust_pop_sel_", .illust_safe_id(pid))]])
+    if (!any(vapply(vals, function(v) !is.null(v), logical(1)))) return()
+    selected <- get_selected_illust_pop_ids(pop_ids)
+    if (!identical(selected, as.character(rv$illust_pop_selected %||% character(0)))) {
+      rv$illust_pop_selected <- selected
+    }
+  })
+
+  observe({
+    pop_ids <- names(rv$populations %||% list())
+    created <- session$userData$illust_palette_obs_created %||% character(0)
+    new_ids <- setdiff(pop_ids, created)
+    if (length(new_ids) == 0) return()
+    session$userData$illust_palette_obs_created <- c(created, new_ids)
+
+    for (pid in new_ids) {
+      local({
+        .pid <- pid
+        .safe <- .illust_safe_id(.pid)
+        .hex_id <- paste0("illust_pop_hex_", .safe)
+        .pick_id <- paste0("illust_pop_picker_", .safe)
+
+        observeEvent(input[[.hex_id]], {
+          fallback <- rv$illust_pop_palette[[.pid]] %||% .default_pop_color(.pid, names(rv$populations %||% list()))
+          new_col <- .normalize_hex_color(input[[.hex_id]], fallback)
+          old_col <- rv$illust_pop_palette[[.pid]] %||% fallback
+          if (!identical(new_col, old_col)) {
+            rv$illust_pop_palette[[.pid]] <- new_col
+            update_illust_pop_color_ui(.pid, new_col)
+            mark_renders_stale()
+            autosave()
+          }
+        }, ignoreInit = TRUE, ignoreNULL = TRUE)
+
+        observeEvent(input[[.pick_id]], {
+          fallback <- rv$illust_pop_palette[[.pid]] %||% .default_pop_color(.pid, names(rv$populations %||% list()))
+          new_col <- .normalize_hex_color(input[[.pick_id]], fallback)
+          old_col <- rv$illust_pop_palette[[.pid]] %||% fallback
+          if (!identical(new_col, old_col)) {
+            rv$illust_pop_palette[[.pid]] <- new_col
+            update_illust_pop_color_ui(.pid, new_col)
+            mark_renders_stale()
+            autosave()
+          }
+        }, ignoreInit = TRUE, ignoreNULL = TRUE)
+      })
+    }
+  })
+
   observeEvent(input$illust_pops_select_all_btn, {
     req(rv$populations)
-    all_pops <- names(rv$populations)
-    updateCheckboxGroupInput(session, "illust_populations", selected = all_pops)
+    all_pops <- names(rv$populations %||% list())
+    rv$illust_pop_selected <- all_pops
+    for (pid in all_pops) {
+      updateCheckboxInput(session, paste0("illust_pop_sel_", .illust_safe_id(pid)), value = TRUE)
+    }
   }, ignoreInit = TRUE)
 
   observeEvent(input$illust_pops_clear_btn, {
-    updateCheckboxGroupInput(session, "illust_populations", selected = character(0))
+    pop_ids <- names(rv$populations %||% list())
+    rv$illust_pop_selected <- character(0)
+    for (pid in pop_ids) {
+      updateCheckboxInput(session, paste0("illust_pop_sel_", .illust_safe_id(pid)), value = FALSE)
+    }
   }, ignoreInit = TRUE)
 
-  # Dynamic checkboxes for populations
+  # Dynamic population selector + editable color palette
   output$illust_populations_ui <- renderUI({
-    rv$populations; rv$root_population_id; rv$gate_version
+    rv$populations; rv$root_population_id; rv$gate_version; rv$.illust_palette_ui_version
     if (is.null(rv$root_population_id) || length(rv$populations) == 0) return(NULL)
-    pop_choices <- setNames(names(rv$populations),
-                            vapply(rv$populations, function(p) p$name, character(1)))
-    checkboxGroupInput("illust_populations", NULL,
-                       choices = pop_choices,
-                       selected = rv$active_population_id %||% rv$root_population_id,
-                       inline = FALSE)
+    pop_ids <- names(rv$populations)
+    pop_names <- vapply(rv$populations, function(p) as.character(p$name %||% ""), character(1))
+    selected <- as.character(rv$illust_pop_selected %||% character(0))
+
+    tagList(
+      tags$div(class = "illust-pop-palette-header",
+        tags$span("Use", class = "illust-pop-head-use"),
+        tags$span("Population", class = "illust-pop-head-name"),
+        tags$span("Color", class = "illust-pop-head-color")
+      ),
+      lapply(pop_ids, function(pid) {
+        safe <- .illust_safe_id(pid)
+        col <- rv$illust_pop_palette[[pid]] %||% .default_pop_color(pid, pop_ids)
+        nm <- pop_names[[pid]]
+        if (!nzchar(nm)) nm <- pid
+
+        tags$div(class = "illust-pop-palette-row",
+          tags$div(class = "illust-pop-select-cell",
+            checkboxInput(paste0("illust_pop_sel_", safe), NULL, value = pid %in% selected)
+          ),
+          tags$div(class = "illust-pop-name-cell", title = nm, nm),
+          tags$div(class = "illust-pop-color-cell",
+            tags$span(id = paste0("illust_pop_swatch_", safe), class = "illust-pop-color-swatch", style = paste0("background:", col, ";")),
+            tags$input(
+              id = paste0("illust_pop_hex_", safe),
+              type = "text",
+              value = col,
+              class = "form-control input-sm illust-pop-hex",
+              spellcheck = "false",
+              autocomplete = "off"
+            ),
+            tags$input(
+              id = paste0("illust_pop_picker_", safe),
+              type = "color",
+              value = col,
+              class = "illust-pop-picker",
+              onchange = sprintf("Shiny.setInputValue('%s', this.value, {priority:'event'});", paste0("illust_pop_picker_", safe))
+            )
+          )
+        )
+      })
+    )
   })
 
   render_illustration_tab <- function() {
-    illust_mode_raw <- tolower(as.character(input$illust_display %||% "pseudocolor"))
-    illust_mode <- switch(
-      illust_mode_raw,
-      pseudo = "pseudocolor",
-      pseudocolour = "pseudocolor",
-      pseudocolor = "pseudocolor",
-      contour = "contour",
-      scatter = "scatter",
-      "scatter"
-    )
-    illust_plot_size <- suppressWarnings(as.integer(input$illust_plot_size %||% 200L))
-    if (is.na(illust_plot_size)) illust_plot_size <- 200L
-    illust_plot_size <- max(120L, min(800L, illust_plot_size))
-    illust_tick_font <- suppressWarnings(as.integer(input$illust_tick_font_size %||% 8L))
-    if (is.na(illust_tick_font)) illust_tick_font <- 8L
-    illust_tick_font <- max(6L, min(24L, illust_tick_font))
-    illust_axis_font <- suppressWarnings(as.integer(input$illust_axis_label_font_size %||% 10L))
-    if (is.na(illust_axis_font)) illust_axis_font <- 10L
-    illust_axis_font <- max(6L, min(28L, illust_axis_font))
-    illust_title_font <- suppressWarnings(as.integer(input$illust_title_font_size %||% 10L))
-    if (is.na(illust_title_font)) illust_title_font <- 10L
-    illust_title_font <- max(6L, min(28L, illust_title_font))
-    illust_gate_label_font <- suppressWarnings(as.integer(input$illust_gate_label_font_size %||% 8L))
-    if (is.na(illust_gate_label_font)) illust_gate_label_font <- 8L
-    illust_gate_label_font <- max(6L, min(24L, illust_gate_label_font))
-    illust_font_sizes <- list(
-      axis_label = illust_axis_font,
-      tick = illust_tick_font,
-      gate_label = illust_gate_label_font,
-      title = illust_title_font
-    )
+    illust_plot_type <- as.character(input$illust_plot_type %||% "biplot")
+    if (!illust_plot_type %in% c("biplot", "histogram")) illust_plot_type <- "biplot"
 
-    illust_pub_style <- isTRUE(input$illust_pub_style)
-    illust_gate_line_width <- suppressWarnings(as.numeric(input$illust_gate_line_width %||% 1.5))
-    if (!is.finite(illust_gate_line_width)) illust_gate_line_width <- 1.5
-    illust_gate_line_width <- max(0.5, min(5, illust_gate_line_width))
-    illust_gate_style <- list(pub_style = illust_pub_style, line_width = illust_gate_line_width)
-
-    illust_contour_threshold <- suppressWarnings(as.numeric(input$contour_threshold %||% 5))
-    if (!is.finite(illust_contour_threshold)) illust_contour_threshold <- 5
-    illust_contour_threshold <- max(0, min(100, illust_contour_threshold))
-    illust_point_alpha <- suppressWarnings(as.numeric(input$illust_point_alpha %||% 0.35))
-    if (!is.finite(illust_point_alpha)) illust_point_alpha <- 0.35
-    illust_point_alpha <- max(0.05, min(1, illust_point_alpha))
-    illust_point_size <- suppressWarnings(as.numeric(input$illust_point_size %||% 1.2))
-    if (!is.finite(illust_point_size)) illust_point_size <- 1.2
-    illust_point_size <- max(0.1, min(5, illust_point_size))
-    illust_kde_bandwidth <- suppressWarnings(as.numeric(input$illust_kde_bandwidth %||% 0))
-    if (!is.finite(illust_kde_bandwidth) || illust_kde_bandwidth < 0) illust_kde_bandwidth <- 0
-    illust_kde_bandwidth <- min(20, illust_kde_bandwidth)
-    illust_n_columns <- suppressWarnings(as.integer(input$illust_n_columns %||% 4L))
-    if (is.na(illust_n_columns)) illust_n_columns <- 4L
-    illust_n_columns <- max(1L, min(12L, illust_n_columns))
-    illust_fit_to_columns <- isTRUE(input$illust_fit_to_columns)
+    style <- collect_plot_style_params("illustration", plot_type = illust_plot_type)
+    layout <- collect_layout_params("illustration")
+    illust_mode <- style$display_mode
+    illust_plot_size <- layout$plot_size
+    illust_font_sizes <- style$font_sizes
+    illust_gate_style <- style$gate_style
+    illust_n_columns <- layout$n_columns
+    illust_fit_to_columns <- layout$fit_to_columns
     illust_span_scale <- 1.2
     illust_axis_mode <- "default"
     use_global_scales_illust <- TRUE
@@ -5098,13 +5464,20 @@ server <- function(input, output, session) {
       illust_max_events <- Inf
     }
 
-    pop_ids <- input$illust_populations
+    pop_ids <- as.character(rv$illust_pop_selected %||% character(0))
+    pop_ids <- intersect(pop_ids, names(rv$populations %||% list()))
+    illust_population_colors <- setNames(lapply(pop_ids, function(pid) {
+      .normalize_hex_color(
+        rv$illust_pop_palette[[pid]],
+        .default_pop_color(pid, names(rv$populations %||% list()))
+      )
+    }), pop_ids)
     x_channels <- unique(c(
       as.character(input$illust_x_channels_simple %||% character(0)),
       as.character(input$illust_x_channels_marker %||% character(0))
     ))
     x_channels <- x_channels[x_channels %in% rv$channels]
-    y_channel <- if (input$illust_plot_type == "biplot") input$illust_y_channel else NULL
+    y_channel <- if (illust_plot_type == "biplot") input$illust_y_channel else NULL
 
     max_events_key <- if (is.finite(illust_max_events)) as.integer(illust_max_events) else "all"
     mask_sig <- if (is.null(rv$sample_mask)) {
@@ -5165,7 +5538,7 @@ server <- function(input, output, session) {
           assay_for_illustration, display_gates, rv$gate_order,
           rv$populations, rv$root_population_id,
           pop_ids, x_channels, y_channel,
-          plot_type = input$illust_plot_type,
+          plot_type = illust_plot_type,
           max_events = illust_max_events
         )
 
@@ -5240,7 +5613,7 @@ server <- function(input, output, session) {
           # Build gate overlays for this channel pair
           parts <- strsplit(key, "\\|")[[1]]
           pop_id <- parts[1]; x_ch <- parts[2]
-          if (!is.null(y_channel) && input$illust_plot_type == "biplot") {
+          if (!is.null(y_channel) && illust_plot_type == "biplot") {
             pop_gc <- batch$gate_counts[[pop_id]] %||% list()
             gate_ovl <- build_gates_for_channels(display_gates, rv$gate_order, pop_gc, x_ch, y_channel)
             gate_overlays_json[[key]] <- gate_ovl
@@ -5346,14 +5719,19 @@ server <- function(input, output, session) {
     # Cache payload for server-side PDF export
     rv$.illustration_pdf_payload <- list(
       payload = base_payload,
+      population_colors = illust_population_colors,
       plot_size = illust_plot_size,
       n_columns = illust_n_columns,
       fit_to_columns = illust_fit_to_columns,
       display_mode = illust_mode,
-      contour_threshold = illust_contour_threshold,
-      point_alpha = illust_point_alpha,
-      point_size = illust_point_size,
-      kde_bandwidth = illust_kde_bandwidth,
+      contour_threshold = style$contour_threshold,
+      point_alpha = style$point_alpha,
+      point_size = style$point_size,
+      hist_line_width = style$hist_line_width,
+      hist_fill = style$hist_fill,
+      hist_fill_alpha = style$hist_fill_alpha,
+      hist_overlay_mode = style$hist_overlay_mode,
+      kde_bandwidth = style$kde_bandwidth,
       font_sizes = illust_font_sizes,
       gate_style = illust_gate_style,
       overlay_populations = isTRUE(input$illust_overlay_pops),
@@ -5367,14 +5745,19 @@ server <- function(input, output, session) {
         n_columns            = illust_n_columns,
         fit_to_columns       = illust_fit_to_columns,
         display_mode         = illust_mode,
-        contour_threshold    = illust_contour_threshold,
-        point_alpha          = illust_point_alpha,
-        point_size           = illust_point_size,
-        kde_bandwidth        = illust_kde_bandwidth,
+        contour_threshold    = style$contour_threshold,
+        point_alpha          = style$point_alpha,
+        point_size           = style$point_size,
+        hist_line_width      = style$hist_line_width,
+        hist_fill            = style$hist_fill,
+        hist_fill_alpha      = style$hist_fill_alpha,
+        hist_overlay_mode    = style$hist_overlay_mode,
+        kde_bandwidth        = style$kde_bandwidth,
         font_sizes           = illust_font_sizes,
         gate_style           = illust_gate_style,
         color_by_population  = isTRUE(input$illust_color_by_pop),
-        overlay_populations  = isTRUE(input$illust_overlay_pops)
+        overlay_populations  = isTRUE(input$illust_overlay_pops),
+        population_colors    = illust_population_colors
       ),
       base_payload
     ))
@@ -5393,9 +5776,51 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$illust_export_png, {
+    data <- rv$.illustration_pdf_payload
+    req(data, data$payload)
+    illust_plot_type <- as.character(input$illust_plot_type %||% "biplot")
+    latest_style <- collect_plot_style_params("illustration", plot_type = illust_plot_type)
+    latest_layout <- collect_layout_params("illustration")
+    latest_overlay <- isTRUE(input$illust_overlay_pops)
+    latest_color_by <- isTRUE(input$illust_color_by_pop)
+
+    pop_ids <- as.character(data$payload$pop_ids %||% character(0))
+    current_pop_colors <- setNames(lapply(pop_ids, function(pid) {
+      .normalize_hex_color(
+        rv$illust_pop_palette[[pid]],
+        .default_pop_color(pid, names(rv$populations %||% list()))
+      )
+    }), pop_ids)
+
+    render_data <- c(
+      list(
+        containerId         = "illustration-grid-container",
+        render_family       = "illustration",
+        plot_size           = latest_layout$export_plot_size,
+        n_columns           = latest_layout$n_columns,
+        fit_to_columns      = latest_layout$fit_to_columns,
+        display_mode        = latest_style$display_mode,
+        contour_threshold   = latest_style$contour_threshold,
+        point_alpha         = latest_style$point_alpha,
+        point_size          = latest_style$point_size,
+        hist_line_width     = latest_style$hist_line_width,
+        hist_fill           = latest_style$hist_fill,
+        hist_fill_alpha     = latest_style$hist_fill_alpha,
+        hist_overlay_mode   = latest_style$hist_overlay_mode,
+        kde_bandwidth       = latest_style$kde_bandwidth,
+        font_sizes          = latest_style$font_sizes,
+        gate_style          = latest_style$gate_style,
+        color_by_population = latest_color_by,
+        overlay_populations = latest_overlay,
+        population_colors   = current_pop_colors
+      ),
+      data$payload
+    )
+
     session$sendCustomMessage("exportMiniPlotPNG", list(
       gridId = "illustration-grid-container-grid",
-      filename = "illustration"
+      filename = "illustration",
+      render_data = render_data
     ))
   })
 
@@ -5406,9 +5831,25 @@ server <- function(input, output, session) {
     content = function(file) {
       data <- rv$.illustration_pdf_payload
       req(data)
-      data$pdf_dpi <- max(72L, min(1200L, as.integer(input$illust_pdf_dpi %||% 300)))
-      data$pdf_point_size <- max(0.1, min(5, as.numeric(input$illust_point_size %||% 1.2) / 2))
-      data$pdf_point_alpha <- max(0.05, min(1, as.numeric(input$illust_point_alpha %||% 0.35)))
+      illust_plot_type <- as.character(input$illust_plot_type %||% "biplot")
+      latest_style <- collect_plot_style_params("illustration", plot_type = illust_plot_type)
+      latest_layout <- collect_layout_params("illustration")
+      for (nm in names(latest_style)) data[[nm]] <- latest_style[[nm]]
+      data$plot_size <- latest_layout$export_plot_size
+      data$n_columns <- latest_layout$n_columns
+      data$fit_to_columns <- latest_layout$fit_to_columns
+      data$overlay_populations <- isTRUE(input$illust_overlay_pops)
+      data$color_by_population <- isTRUE(input$illust_color_by_pop)
+      pop_ids <- as.character(data$payload$pop_ids %||% character(0))
+      data$population_colors <- setNames(lapply(pop_ids, function(pid) {
+        .normalize_hex_color(
+          rv$illust_pop_palette[[pid]],
+          .default_pop_color(pid, names(rv$populations %||% list()))
+        )
+      }), pop_ids)
+      data$pdf_dpi <- latest_layout$pdf_dpi
+      data$pdf_point_size <- max(0.1, min(5, as.numeric(data$point_size %||% 1.2) / 2))
+      data$pdf_point_alpha <- max(0.05, min(1, as.numeric(data$point_alpha %||% 0.35)))
       showNotification("Generating SVG\u2026", duration = 2, type = "message")
       export_illustration_pdf(file, data$payload, data)
     }
@@ -5783,6 +6224,11 @@ server <- function(input, output, session) {
     initialize_missing_global_scales(rv$channels)
     rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
     rv$.plot_range_override <- ws$plot_range_override %||% NULL
+    rv$illust_pop_palette <- ws$illust_pop_palette %||% list()
+    rv$illust_pop_selected <- if (!is.null(ws$illust_pop_selected)) as.character(ws$illust_pop_selected) else NULL
+    if (isTRUE(sync_illust_palette_state())) {
+      rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+    }
     # Channels don't change on workspace load, so force the scale controls to
     # re-render with the just-loaded override / global scale values.
     rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L

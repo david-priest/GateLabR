@@ -240,18 +240,41 @@
         } else if (x && x.length > 0 && (!y || y.length === 0)) {
             // Histogram mode — smooth KDE curves
             var overlayTraces = cfg.overlay_traces;
+            var histLineWidth = Number(cfg.hist_line_width);
+            if (!isFinite(histLineWidth) || histLineWidth <= 0) histLineWidth = 1.8;
+            histLineWidth = Math.max(0.5, Math.min(6, histLineWidth));
+            var histFillEnabled = !!cfg.hist_fill;
+            var histFillAlpha = Number(cfg.hist_fill_alpha);
+            if (!isFinite(histFillAlpha)) histFillAlpha = 0.22;
+            histFillAlpha = Math.max(0, Math.min(1, histFillAlpha));
+            var histOverlayMode = String(cfg.hist_overlay_mode || 'front_opaque');
+            if (histOverlayMode !== 'blend' && histOverlayMode !== 'front_opaque') {
+                histOverlayMode = 'front_opaque';
+            }
             if (overlayTraces && overlayTraces.length > 0) {
                 // Overlay: draw each population's KDE, main trace last for prominence
                 for (var oi = 0; oi < overlayTraces.length; oi++) {
                     var tr = overlayTraces[oi];
                     if (tr.x && tr.x.length > 0) {
-                        _drawKDEHistogram(ctx, tr.x, xScale, M, W, H, tr.color, 0.22);
+                        _drawKDEHistogram(ctx, tr.x, xScale, M, W, H, tr.color, {
+                            fill_enabled: histFillEnabled,
+                            fill_alpha: histFillAlpha,
+                            line_width: histLineWidth
+                        });
                     }
                 }
                 // Main trace on top
-                _drawKDEHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#444444', 0.22);
+                _drawKDEHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#444444', {
+                    fill_enabled: histFillEnabled,
+                    fill_alpha: (histFillEnabled && histOverlayMode === 'front_opaque') ? 1 : histFillAlpha,
+                    line_width: histLineWidth
+                });
             } else {
-                _drawKDEHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#444444', 0.35);
+                _drawKDEHistogram(ctx, x, xScale, M, W, H, cfg.pop_color || '#444444', {
+                    fill_enabled: histFillEnabled,
+                    fill_alpha: histFillEnabled ? histFillAlpha : 0,
+                    line_width: histLineWidth
+                });
             }
         }
 
@@ -564,10 +587,25 @@
     // ── KDE histogram rendering ─────────────────────────────────────────────
     // Draws a smooth Gaussian KDE curve (filled + stroked) instead of bins.
     // alpha: fill opacity (stroke is always more opaque).
-    function _drawKDEHistogram(ctx, x, xScale, M, W, H, color, alpha) {
+    function _drawKDEHistogram(ctx, x, xScale, M, W, H, color, opts) {
         var n = x.length;
         if (n === 0) return;
-        if (alpha === undefined || !isFinite(alpha)) alpha = 0.35;
+        var fillEnabled = true;
+        var fillAlpha = 0.35;
+        var lineWidth = 1.8;
+
+        if (typeof opts === 'number') {
+            fillAlpha = opts;
+        } else if (opts && typeof opts === 'object') {
+            fillEnabled = !!opts.fill_enabled;
+            fillAlpha = Number(opts.fill_alpha);
+            lineWidth = Number(opts.line_width);
+        }
+
+        if (!isFinite(fillAlpha)) fillAlpha = 0.35;
+        fillAlpha = Math.max(0, Math.min(1, fillAlpha));
+        if (!isFinite(lineWidth) || lineWidth <= 0) lineWidth = 1.8;
+        lineWidth = Math.max(0.5, Math.min(6, lineWidth));
 
         // Scott's bandwidth: 1.06 * σ * n^(-1/5)
         var mean = 0;
@@ -618,16 +656,18 @@
         var scaleY = function (d) { return H - (d / maxD) * H * 0.92; };
 
         // Filled area under the curve
-        ctx.beginPath();
-        ctx.moveTo(xScale(pts[0].xi), H);
-        for (var i = 0; i < nPts; i++) {
-            ctx.lineTo(xScale(pts[i].xi), scaleY(pts[i].d));
+        if (fillEnabled && fillAlpha > 0) {
+            ctx.beginPath();
+            ctx.moveTo(xScale(pts[0].xi), H);
+            for (var i = 0; i < nPts; i++) {
+                ctx.lineTo(xScale(pts[i].xi), scaleY(pts[i].d));
+            }
+            ctx.lineTo(xScale(pts[nPts - 1].xi), H);
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.globalAlpha = fillAlpha;
+            ctx.fill();
         }
-        ctx.lineTo(xScale(pts[nPts - 1].xi), H);
-        ctx.closePath();
-        ctx.fillStyle = color;
-        ctx.globalAlpha = alpha;
-        ctx.fill();
 
         // Outline
         ctx.beginPath();
@@ -636,8 +676,8 @@
             ctx.lineTo(xScale(pts[i].xi), scaleY(pts[i].d));
         }
         ctx.strokeStyle = color;
-        ctx.globalAlpha = Math.min(1, alpha + 0.45);
-        ctx.lineWidth = 1.8;
+        ctx.globalAlpha = fillEnabled ? Math.min(1, fillAlpha + 0.45) : 1;
+        ctx.lineWidth = lineWidth;
         ctx.lineJoin = 'round';
         ctx.stroke();
 
@@ -878,6 +918,17 @@
         if (!isFinite(pointSize) || pointSize <= 0) pointSize = 1.2;
         var kdeBandwidth = Number(data.kde_bandwidth);
         if (!isFinite(kdeBandwidth) || kdeBandwidth < 0) kdeBandwidth = 0;
+        var histLineWidth = Number(data.hist_line_width);
+        if (!isFinite(histLineWidth) || histLineWidth <= 0) histLineWidth = 1.8;
+        histLineWidth = Math.max(0.5, Math.min(6, histLineWidth));
+        var histFill = !!data.hist_fill;
+        var histFillAlpha = Number(data.hist_fill_alpha);
+        if (!isFinite(histFillAlpha)) histFillAlpha = 0.22;
+        histFillAlpha = Math.max(0, Math.min(1, histFillAlpha));
+        var histOverlayMode = String(data.hist_overlay_mode || 'front_opaque');
+        if (histOverlayMode !== 'blend' && histOverlayMode !== 'front_opaque') {
+            histOverlayMode = 'front_opaque';
+        }
         var nColumns = parseInt(data.n_columns, 10);
         if (!isFinite(nColumns) || nColumns < 1) nColumns = steps.length;
         nColumns = Math.max(1, Math.min(24, nColumns));
@@ -956,6 +1007,9 @@
                 effectivePlotSize = Math.max(plotSize, fitSize);
             }
         }
+        if (typeof Shiny !== 'undefined' && Shiny && typeof Shiny.setInputValue === 'function') {
+            Shiny.setInputValue('strategy_effective_plot_size', effectivePlotSize, { priority: 'event' });
+        }
         var rowTargetWidth = nColumns * effectivePlotSize + gapPx * (nColumns - 1);
 
         var gridDiv = document.createElement('div');
@@ -1003,6 +1057,10 @@
                 point_alpha: pointAlpha,
                 point_size: pointSize,
                 kde_bandwidth: kdeBandwidth,
+                hist_line_width: histLineWidth,
+                hist_fill: histFill,
+                hist_fill_alpha: histFillAlpha,
+                hist_overlay_mode: histOverlayMode,
                 title: title,
                 font_sizes: fontSizes,
                 gate_style: gateStyle,
@@ -1073,6 +1131,9 @@
                 effectivePlotSize = Math.max(plotSize, fitSize);
             }
         }
+        if (typeof Shiny !== 'undefined' && Shiny && typeof Shiny.setInputValue === 'function') {
+            Shiny.setInputValue('illustration_effective_plot_size', effectivePlotSize, { priority: 'event' });
+        }
         var rowTargetWidth = nColumns * effectivePlotSize + gapPx * (nColumns - 1);
 
         // Colorblind-friendly palette used when color_by_population is true
@@ -1080,16 +1141,27 @@
             '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
             '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
         ];
+        var providedPopColors = data.population_colors || {};
         var colorByPop   = !!data.color_by_population;
         var overlayPops  = !!data.overlay_populations;
         // Overlay always forces per-pop colour so populations are distinguishable
         if (overlayPops) colorByPop = true;
 
+        function _normalizeHexColor(x) {
+            if (typeof x !== 'string') return null;
+            var s = x.trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+            if (/^[0-9a-fA-F]{6}$/.test(s)) return '#' + s;
+            return null;
+        }
+
         // Build per-population colour map
         var popColorMap = {};
         for (var pi2 = 0; pi2 < popIds.length; pi2++) {
-            popColorMap[popIds[pi2]] = colorByPop
-                ? POP_COLORS[pi2 % POP_COLORS.length]
+            var pid2 = popIds[pi2];
+            var customColor = _normalizeHexColor(providedPopColors[pid2]);
+            popColorMap[pid2] = colorByPop
+                ? (customColor || POP_COLORS[pi2 % POP_COLORS.length])
                 : '#444444';
         }
 
@@ -1171,6 +1243,10 @@
                     contour_threshold: contourThreshold,
                     point_alpha:     pointAlpha,
                     point_size:      pointSize,
+                    hist_line_width: Number(data.hist_line_width),
+                    hist_fill:       !!data.hist_fill,
+                    hist_fill_alpha: Number(data.hist_fill_alpha),
+                    hist_overlay_mode: String(data.hist_overlay_mode || 'front_opaque'),
                     kde_bandwidth:   kdeBandwidth,
                     title:           xCh,
                     font_sizes:      fontSizes,
@@ -1248,6 +1324,10 @@
                         contour_threshold: contourThreshold,
                         point_alpha:     pointAlpha,
                         point_size:      pointSize,
+                        hist_line_width: Number(data.hist_line_width),
+                        hist_fill:       !!data.hist_fill,
+                        hist_fill_alpha: Number(data.hist_fill_alpha),
+                        hist_overlay_mode: String(data.hist_overlay_mode || 'front_opaque'),
                         kde_bandwidth:   kdeBandwidth,
                         title:           null,
                         font_sizes:      fontSizes,
@@ -2043,6 +2123,11 @@
         var pointAlpha  = isFinite(Number(data.point_alpha)) ? Math.max(0.05, Math.min(1, Number(data.point_alpha))) : 0.6;
         var pointSize   = isFinite(Number(data.point_size)) && Number(data.point_size) > 0 ? Number(data.point_size) : 1.2;
         var kdeBandwidth = isFinite(Number(data.kde_bandwidth)) ? Math.max(0, Number(data.kde_bandwidth)) : 0;
+        var histLineWidth = isFinite(Number(data.hist_line_width)) ? Math.max(0.5, Math.min(6, Number(data.hist_line_width))) : 1.8;
+        var histFill = !!data.hist_fill;
+        var histFillAlpha = isFinite(Number(data.hist_fill_alpha)) ? Math.max(0, Math.min(1, Number(data.hist_fill_alpha))) : 0.22;
+        var histOverlayMode = String(data.hist_overlay_mode || 'front_opaque');
+        if (histOverlayMode !== 'blend' && histOverlayMode !== 'front_opaque') histOverlayMode = 'front_opaque';
         var gapPx = 8;
 
         if (data.strategy_context_title) {
@@ -2092,6 +2177,10 @@
         var nCols = maxCol + 1;
         var nRows = maxRow + 1;
 
+        if (typeof Shiny !== 'undefined' && Shiny && typeof Shiny.setInputValue === 'function') {
+            Shiny.setInputValue('strategy_effective_plot_size', plotSize, { priority: 'event' });
+        }
+
         container.style.overflowX = 'auto';
         container.style.overflowY = 'visible';
 
@@ -2137,6 +2226,10 @@
                 point_alpha:     pointAlpha,
                 point_size:      pointSize,
                 kde_bandwidth:   kdeBandwidth,
+                hist_line_width: histLineWidth,
+                hist_fill:       histFill,
+                hist_fill_alpha: histFillAlpha,
+                hist_overlay_mode: histOverlayMode,
                 title:           title,
                 font_sizes:      fontSizes,
                 gate_style:      gateStyle,
@@ -2180,6 +2273,24 @@
         });
 
         Shiny.addCustomMessageHandler('exportMiniPlotPNG', function (data) {
+            if (data && data.render_data && data.render_data.containerId) {
+                var rd = data.render_data;
+                if (rd.render_family === 'strategy') {
+                    if (rd.mode === 'multi') {
+                        CytofMiniPlot.renderMultiStrategyGrid(rd.containerId, rd);
+                    } else {
+                        CytofMiniPlot.renderStrategyGrid(rd.containerId, rd);
+                    }
+                } else {
+                    CytofMiniPlot.renderIllustrationGrid(rd.containerId, rd);
+                }
+                window.requestAnimationFrame(function () {
+                    window.requestAnimationFrame(function () {
+                        CytofMiniPlot.exportGridPNG(data.gridId, data.filename);
+                    });
+                });
+                return;
+            }
             CytofMiniPlot.exportGridPNG(data.gridId, data.filename);
         });
 

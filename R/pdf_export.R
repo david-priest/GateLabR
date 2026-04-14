@@ -142,6 +142,15 @@ export_strategy_pdf <- function(file_path, steps, opts) {
   pdf_dpi <- as.integer(opts$pdf_dpi %||% 300)
   pdf_point_size <- as.numeric(opts$pdf_point_size %||% 0.6)
   pdf_point_alpha <- as.numeric(opts$pdf_point_alpha %||% 0.35)
+  hist_line_width <- as.numeric(opts$hist_line_width %||% 1.8)
+  if (!is.finite(hist_line_width)) hist_line_width <- 1.8
+  hist_line_width <- max(0.5, min(6, hist_line_width))
+  hist_fill <- isTRUE(opts$hist_fill)
+  hist_fill_alpha <- as.numeric(opts$hist_fill_alpha %||% 0.22)
+  if (!is.finite(hist_fill_alpha)) hist_fill_alpha <- 0.22
+  hist_fill_alpha <- max(0, min(1, hist_fill_alpha))
+  hist_overlay_mode <- as.character(opts$hist_overlay_mode %||% "front_opaque")
+  if (!hist_overlay_mode %in% c("blend", "front_opaque")) hist_overlay_mode <- "front_opaque"
 
   gate_view <- opts$gate_view %||% "forward"
   if (!is.character(gate_view)) gate_view <- as.character(gate_view)
@@ -150,17 +159,58 @@ export_strategy_pdf <- function(file_path, steps, opts) {
   if (!show_forward && !show_back) show_forward <- TRUE
   if (show_forward && show_back && display_mode == "pseudocolor") display_mode <- "scatter"
 
+  strategy_context_title <- trimws(as.character(opts$strategy_context_title %||% ""))
+  strategy_context_title_fs <- suppressWarnings(as.numeric(
+    opts$strategy_context_title_font %||% ((font_sizes$title %||% 10) + 1)
+  ))
+  if (!is.finite(strategy_context_title_fs)) strategy_context_title_fs <- 11
+  strategy_context_title_fs <- max(8, min(24, strategy_context_title_fs))
+
+  context_h <- if (nzchar(strategy_context_title)) strategy_context_title_fs + 8 else 0
+  legend_h <- if (show_back) 18 else 0
+  top_h <- context_h + legend_h
+
   page_w <- n_cols * plot_size + (n_cols - 1) * GAP_PT + 20
-  page_h <- n_rows * plot_size + (n_rows - 1) * GAP_PT + 20
+  page_h <- top_h + n_rows * plot_size + (n_rows - 1) * GAP_PT + 20
 
   .export_svg(file_path, page_w, page_h, function() {
+    top_cursor <- page_h - 8
+
+    if (nzchar(strategy_context_title)) {
+      grid.text(strategy_context_title,
+        x = unit(10, "points"), y = unit(top_cursor, "points"),
+        just = c("left", "top"),
+        gp = gpar(fontsize = strategy_context_title_fs, fontfamily = "Helvetica", col = "#334155"))
+      top_cursor <- top_cursor - context_h
+    }
+
+    if (show_back) {
+      ly <- top_cursor - (legend_h / 2)
+      lx <- 10
+      draw_leg <- function(col, label) {
+        grid.rect(
+          x = unit(lx + 4, "points"), y = unit(ly, "points"),
+          width = unit(8, "points"), height = unit(8, "points"),
+          just = c("centre", "centre"),
+          gp = gpar(fill = col, col = "#00000033", lwd = 0.5)
+        )
+        grid.text(label,
+          x = unit(lx + 11, "points"), y = unit(ly, "points"),
+          just = c("left", "centre"),
+          gp = gpar(fontsize = 9, fontfamily = "Helvetica", col = "#334155"))
+        lx <<- lx + 11 + nchar(label) * 5.6 + 10
+      }
+      if (show_forward) draw_leg("#3182ce", "Forward-gated")
+      if (show_back) draw_leg("#d95f02", "Back-gated")
+    }
+
     for (i in seq_along(steps)) {
       step <- steps[[i]]
       col_idx <- (i - 1L) %% n_cols
       row_idx <- (i - 1L) %/% n_cols
 
       x_origin <- 10 + col_idx * (plot_size + GAP_PT)
-      y_origin <- page_h - 10 - (row_idx + 1) * plot_size - row_idx * GAP_PT
+      y_origin <- page_h - top_h - 10 - (row_idx + 1) * plot_size - row_idx * GAP_PT
 
       sign <- if (isTRUE(step$include)) "" else "NOT "
       mode_tag <- if (show_forward && show_back) " (F+B)" else if (show_back) " (Back)" else ""
@@ -194,6 +244,10 @@ export_strategy_pdf <- function(file_path, steps, opts) {
         point_alpha = pdf_point_alpha,
         kde_bandwidth = opts$kde_bandwidth,
         pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size,
+        hist_line_width = hist_line_width,
+        hist_fill = hist_fill,
+        hist_fill_alpha = hist_fill_alpha,
+        hist_overlay_mode = hist_overlay_mode,
         gate_style = opts$gate_style
       )
     }
@@ -211,6 +265,23 @@ export_multi_strategy_pdf <- function(file_path, nodes, opts) {
   pdf_dpi <- as.integer(opts$pdf_dpi %||% 300)
   pdf_point_size <- as.numeric(opts$pdf_point_size %||% 0.6)
   pdf_point_alpha <- as.numeric(opts$pdf_point_alpha %||% 0.35)
+  hist_line_width <- as.numeric(opts$hist_line_width %||% 1.8)
+  if (!is.finite(hist_line_width)) hist_line_width <- 1.8
+  hist_line_width <- max(0.5, min(6, hist_line_width))
+  hist_fill <- isTRUE(opts$hist_fill)
+  hist_fill_alpha <- as.numeric(opts$hist_fill_alpha %||% 0.22)
+  if (!is.finite(hist_fill_alpha)) hist_fill_alpha <- 0.22
+  hist_fill_alpha <- max(0, min(1, hist_fill_alpha))
+  hist_overlay_mode <- as.character(opts$hist_overlay_mode %||% "front_opaque")
+  if (!hist_overlay_mode %in% c("blend", "front_opaque")) hist_overlay_mode <- "front_opaque"
+
+  strategy_context_title <- trimws(as.character(opts$strategy_context_title %||% ""))
+  strategy_context_title_fs <- suppressWarnings(as.numeric(
+    opts$strategy_context_title_font %||% ((font_sizes$title %||% 10) + 1)
+  ))
+  if (!is.finite(strategy_context_title_fs)) strategy_context_title_fs <- 11
+  strategy_context_title_fs <- max(8, min(24, strategy_context_title_fs))
+  context_h <- if (nzchar(strategy_context_title)) strategy_context_title_fs + 8 else 0
 
   max_col <- max(vapply(nodes, function(n) as.integer(n$col %||% 0), integer(1)))
   max_row <- max(vapply(nodes, function(n) as.integer(n$row %||% 0), integer(1)))
@@ -218,14 +289,21 @@ export_multi_strategy_pdf <- function(file_path, nodes, opts) {
   n_rows <- max_row + 1L
 
   page_w <- n_cols * plot_size + (n_cols - 1) * GAP_PT + 20
-  page_h <- n_rows * plot_size + (n_rows - 1) * GAP_PT + 20
+  page_h <- context_h + n_rows * plot_size + (n_rows - 1) * GAP_PT + 20
 
   .export_svg(file_path, page_w, page_h, function() {
+    if (nzchar(strategy_context_title)) {
+      grid.text(strategy_context_title,
+        x = unit(10, "points"), y = unit(page_h - 8, "points"),
+        just = c("left", "top"),
+        gp = gpar(fontsize = strategy_context_title_fs, fontfamily = "Helvetica", col = "#334155"))
+    }
+
     for (nd in nodes) {
       col_idx <- as.integer(nd$col %||% 0)
       row_idx <- as.integer(nd$row %||% 0)
       x_origin <- 10 + col_idx * (plot_size + GAP_PT)
-      y_origin <- page_h - 10 - (row_idx + 1) * plot_size - row_idx * GAP_PT
+      y_origin <- page_h - context_h - 10 - (row_idx + 1) * plot_size - row_idx * GAP_PT
       title <- paste0(nd$parent_pop_name %||% "", " (", nd$n_events %||% 0, ")")
 
       .render_panel(
@@ -242,6 +320,10 @@ export_multi_strategy_pdf <- function(file_path, nodes, opts) {
         point_alpha = pdf_point_alpha,
         kde_bandwidth = opts$kde_bandwidth,
         pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size,
+        hist_line_width = hist_line_width,
+        hist_fill = hist_fill,
+        hist_fill_alpha = hist_fill_alpha,
+        hist_overlay_mode = hist_overlay_mode,
         gate_style = opts$gate_style
       )
     }
@@ -275,12 +357,33 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   pdf_dpi <- as.integer(opts$pdf_dpi %||% 300)
   pdf_point_size <- as.numeric(opts$pdf_point_size %||% 0.6)
   pdf_point_alpha <- as.numeric(opts$pdf_point_alpha %||% 0.35)
+  hist_line_width <- as.numeric(opts$hist_line_width %||% 1.8)
+  if (!is.finite(hist_line_width)) hist_line_width <- 1.8
+  hist_line_width <- max(0.5, min(6, hist_line_width))
+  hist_fill <- isTRUE(opts$hist_fill)
+  hist_fill_alpha <- as.numeric(opts$hist_fill_alpha %||% 0.22)
+  if (!is.finite(hist_fill_alpha)) hist_fill_alpha <- 0.22
+  hist_fill_alpha <- max(0, min(1, hist_fill_alpha))
+  hist_overlay_mode <- as.character(opts$hist_overlay_mode %||% "front_opaque")
+  if (!hist_overlay_mode %in% c("blend", "front_opaque")) hist_overlay_mode <- "front_opaque"
+
+  normalize_hex_color <- function(x, fallback = NULL) {
+    raw <- toupper(trimws(as.character(x %||% "")))
+    if (!nzchar(raw)) return(fallback)
+    if (grepl("^#[0-9A-F]{6}$", raw)) return(raw)
+    if (grepl("^[0-9A-F]{6}$", raw)) return(paste0("#", raw))
+    fallback
+  }
+
+  provided_pop_colors <- opts$population_colors %||% payload$population_colors %||% list()
 
   pop_color_map <- list()
   for (i in seq_along(pop_ids)) {
     pid <- pop_ids[i]
+    fallback_col <- POP_COLORS[((i - 1L) %% length(POP_COLORS)) + 1L]
+    custom_col <- normalize_hex_color(provided_pop_colors[[pid]], fallback = fallback_col)
     pop_color_map[[pid]] <- if (color_by_pop) {
-      POP_COLORS[((i - 1L) %% length(POP_COLORS)) + 1L]
+      custom_col
     } else "#444444"
   }
 
@@ -292,6 +395,8 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     back_color = NULL, contour_threshold = opts$contour_threshold,
     point_alpha = pdf_point_alpha, kde_bandwidth = opts$kde_bandwidth,
     pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size,
+    hist_line_width = hist_line_width, hist_fill = hist_fill,
+    hist_fill_alpha = hist_fill_alpha, hist_overlay_mode = hist_overlay_mode,
     gate_style = opts$gate_style
   )
 
@@ -412,6 +517,10 @@ export_illustration_pdf <- function(file_path, payload, opts) {
                           kde_bandwidth = NULL,
                           pdf_dpi = 300L,
                           pdf_point_size = 0.6,
+                          hist_line_width = 1.8,
+                          hist_fill = FALSE,
+                          hist_fill_alpha = 0.22,
+                          hist_overlay_mode = "front_opaque",
                           gate_style = NULL) {
 
   M <- MARGIN
@@ -467,7 +576,9 @@ export_illustration_pdf <- function(file_path, payload, opts) {
                         pdf_dpi, pdf_point_size)
     } else {
       .draw_data_histogram(x, xr, W, H, pop_color, overlay_traces,
-                           point_alpha, pdf_dpi)
+                           point_alpha, pdf_dpi,
+                           hist_line_width, hist_fill,
+                           hist_fill_alpha, hist_overlay_mode)
     }
   }
   popViewport()  # data_clip
@@ -491,7 +602,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     x = unit(M$left, "points"), y = unit(M$bottom, "points"),
     width = unit(W, "points"), height = unit(H, "points"),
     just = c("left", "bottom"),
-    gp = gpar(fill = NA, col = "#333333", lwd = 0.75),
+    gp = gpar(fill = NA, col = "#333333", lwd = 1.0),
     name = "border")
 
   popViewport()  # panel
@@ -530,10 +641,12 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     .draw_pseudocolor_raster(x, y, xr, yr, W, H, dot_cex)
   } else if (display_mode == "contour" && !has_overlay) {
     .draw_contour_raster(x, y, xr, yr, pop_color, alpha_val, dot_cex,
-                         contour_threshold, kde_bandwidth)
+                         contour_threshold, kde_bandwidth,
+                         panel_w = W, panel_h = H)
     if (has_back) {
       .draw_contour_raster(x_back, y_back, xr, yr, back_color %||% "#d95f02",
-                           alpha_val, dot_cex, contour_threshold, kde_bandwidth)
+                           alpha_val, dot_cex, contour_threshold, kde_bandwidth,
+                           panel_w = W, panel_h = H)
     }
   } else {
     if (has_overlay) {
@@ -592,7 +705,8 @@ export_illustration_pdf <- function(file_path, payload, opts) {
 }
 
 .draw_contour_raster <- function(x, y, xr, yr, line_color, alpha_val, dot_cex,
-                                 contour_threshold, kde_bandwidth) {
+                                 contour_threshold, kde_bandwidth,
+                                 panel_w = 1, panel_h = 1) {
   n <- length(x)
   if (n < 10) {
     points(x, y, pch = 16, cex = dot_cex,
@@ -609,7 +723,27 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     max(0, min(100, contour_threshold))
   } else 5
 
-  kde <- tryCatch(MASS::kde2d(x, y, n = 128, lims = c(xr, yr)), error = function(e) NULL)
+  kde_h <- NULL
+  kb <- suppressWarnings(as.numeric(kde_bandwidth %||% NA_real_))
+  if (is.finite(kb) && kb > 0) {
+    # Match JS semantics: user bandwidth is in screen pixels.
+    xr_span <- abs(xr[2] - xr[1])
+    yr_span <- abs(yr[2] - yr[1])
+    sx <- xr_span / max(1, panel_w)
+    sy <- yr_span / max(1, panel_h)
+    hx <- max(.Machine$double.eps, kb * sx)
+    hy <- max(.Machine$double.eps, kb * sy)
+    kde_h <- c(hx, hy)
+  }
+
+  kde <- tryCatch(
+    if (is.null(kde_h)) {
+      MASS::kde2d(x, y, n = 128, lims = c(xr, yr))
+    } else {
+      MASS::kde2d(x, y, n = 128, lims = c(xr, yr), h = kde_h)
+    },
+    error = function(e) NULL
+  )
   if (is.null(kde)) {
     points(x, y, pch = 16, cex = dot_cex, col = adjustcolor(line_color, alpha.f = alpha_val))
     return()
@@ -640,7 +774,11 @@ export_illustration_pdf <- function(file_path, payload, opts) {
 
 # ── Data drawing: histogram ──────────────────────────────────────────────────
 .draw_data_histogram <- function(x, xr, W, H, pop_color, overlay_traces,
-                                 point_alpha, pdf_dpi) {
+                                 point_alpha, pdf_dpi,
+                                 hist_line_width = 1.8,
+                                 hist_fill = FALSE,
+                                 hist_fill_alpha = 0.22,
+                                 hist_overlay_mode = "front_opaque") {
   raster_w <- as.integer(ceiling(W * pdf_dpi / 72))
   raster_h <- as.integer(ceiling(H * pdf_dpi / 72))
 
@@ -653,30 +791,46 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   plot.new()
   plot.window(xlim = xr, ylim = c(0, 1))
 
-  alpha_val <- if (!is.null(point_alpha) && is.finite(point_alpha)) {
-    max(0.05, min(1, point_alpha))
-  } else 0.35
+  alpha_val <- if (!is.null(hist_fill_alpha) && is.finite(hist_fill_alpha)) {
+    max(0, min(1, hist_fill_alpha))
+  } else if (!is.null(point_alpha) && is.finite(point_alpha)) {
+    max(0, min(1, point_alpha))
+  } else 0.22
+  line_w <- if (!is.null(hist_line_width) && is.finite(hist_line_width)) {
+    max(0.5, min(6, hist_line_width))
+  } else 1.8
+  # UI line width is in CSS px (96 DPI). Convert to device-space width so
+  # exported rasterized histogram lines match on-screen thickness.
+  line_w_device <- line_w * (pdf_dpi / 96)
+  line_w_device <- max(0.5, line_w_device)
+  hm <- as.character(hist_overlay_mode %||% "front_opaque")
+  if (!hm %in% c("blend", "front_opaque")) hm <- "front_opaque"
   has_overlay <- !is.null(overlay_traces) && length(overlay_traces) > 0
-  if (has_overlay) alpha_val <- min(alpha_val, 0.22)
 
-  draw_kde <- function(vals, color, alpha) {
+  draw_kde <- function(vals, color, alpha, fill_enabled = FALSE) {
     if (length(vals) < 2) return()
     bw <- tryCatch(bw.SJ(vals), error = function(e) bw.nrd0(vals))
     bw <- max(bw, (xr[2] - xr[1]) / 200)
     d <- density(vals, bw = bw, from = xr[1], to = xr[2], n = 300)
     max_d <- max(d$y); if (max_d <= 0) return()
     y_scaled <- d$y / max_d * 0.92
-    polygon(c(d$x[1], d$x, d$x[length(d$x)]), c(0, y_scaled, 0),
-            col = adjustcolor(color, alpha.f = alpha), border = NA)
-    lines(d$x, y_scaled, col = adjustcolor(color, alpha.f = min(1, alpha + 0.45)), lwd = 1.5)
+    if (isTRUE(fill_enabled) && alpha > 0) {
+      polygon(c(d$x[1], d$x, d$x[length(d$x)]), c(0, y_scaled, 0),
+              col = adjustcolor(color, alpha.f = alpha), border = NA)
+    }
+    line_alpha <- if (isTRUE(fill_enabled)) min(1, alpha + 0.45) else 1
+    lines(d$x, y_scaled, col = adjustcolor(color, alpha.f = line_alpha), lwd = line_w_device)
   }
 
   if (has_overlay) {
     for (tr in overlay_traces) {
-      if (!is.null(tr$x) && length(tr$x) > 0) draw_kde(tr$x, tr$color %||% "#444444", alpha_val)
+      if (!is.null(tr$x) && length(tr$x) > 0) {
+        draw_kde(tr$x, tr$color %||% "#444444", alpha_val, fill_enabled = isTRUE(hist_fill))
+      }
     }
   }
-  draw_kde(x, pop_color %||% "#444444", alpha_val)
+  main_alpha <- if (has_overlay && isTRUE(hist_fill) && identical(hm, "front_opaque")) 1 else alpha_val
+  draw_kde(x, pop_color %||% "#444444", main_alpha, fill_enabled = isTRUE(hist_fill))
   dev.off()
 
   img <- png::readPNG(png_file, native = TRUE)
@@ -726,6 +880,15 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     else               format(v, scientific = FALSE, trim = TRUE)
   }
 
+  .is_zero_tick <- function(v, lbl = NULL) {
+    if (!is.null(lbl)) {
+      ls <- trimws(as.character(lbl))
+      if (identical(ls, "0") || identical(ls, "-0") || identical(ls, "+0")) return(TRUE)
+    }
+    vv <- suppressWarnings(as.numeric(v))
+    is.finite(vv) && abs(vv) < 1e-9
+  }
+
   if (x_is_logicle && !is.null(x_logicle_ticks)) {
     major_pos    <- as.numeric(x_logicle_ticks$major_pos %||% numeric(0))
     major_labels <- as.character(x_logicle_ticks$major_labels %||% character(0))
@@ -734,19 +897,35 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     x_is_scatter_log10 <- identical(x_tick_mode, "scatter_log10")
 
     # Pre-compute which labels to show (zero takes priority over neighbours)
-    zero_xp_x <- if (!x_is_scatter_log10 && 0 %in% major_pos) x_to_pt(0) else NA_real_
+    zero_idx_x <- if (!x_is_scatter_log10) {
+      zi <- which(vapply(seq_along(major_pos), function(i) {
+        lbl <- if (i <= length(major_labels)) major_labels[i] else NULL
+        .is_zero_tick(major_pos[i], lbl)
+      }, logical(1)))
+      if (length(zi) > 0) zi[[1]] else NA_integer_
+    } else NA_integer_
+    zero_xp_x <- if (is.finite(zero_idx_x)) x_to_pt(major_pos[zero_idx_x]) else NA_real_
     x_show_lbl <- logical(length(major_pos))
     last_lx <- -Inf
+    last_was_zero <- FALSE
+    x_adj_spacing <- max(8, 28 * 0.55)
+    x_zero_protect <- max(5, 28 * 0.38)
     for (i in seq_along(major_pos)) {
       lbl <- if (i <= length(major_labels)) major_labels[i] else ""
       if (!nzchar(lbl)) next
       xp  <- x_to_pt(major_pos[i])
-      is_zero <- !x_is_scatter_log10 && major_pos[i] == 0
-      if ((xp - last_lx) >= 28 || is_zero) { x_show_lbl[i] <- TRUE; last_lx <- xp }
+      is_zero <- !x_is_scatter_log10 && is.finite(zero_idx_x) && i == zero_idx_x
+      req_spacing <- if (is_zero || last_was_zero) x_adj_spacing else 28
+      if ((xp - last_lx) >= req_spacing || is_zero) {
+        x_show_lbl[i] <- TRUE
+        last_lx <- xp
+        last_was_zero <- is_zero
+      }
     }
     if (!is.na(zero_xp_x)) {
       for (i in seq_along(major_pos)) {
-        if (x_show_lbl[i] && major_pos[i] != 0 && abs(x_to_pt(major_pos[i]) - zero_xp_x) < 28)
+        is_zero <- is.finite(zero_idx_x) && i == zero_idx_x
+        if (x_show_lbl[i] && !is_zero && abs(x_to_pt(major_pos[i]) - zero_xp_x) < x_zero_protect)
           x_show_lbl[i] <- FALSE
       }
     }
@@ -771,12 +950,17 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   } else {
     tks <- pretty(xr, n = 4)
     tks <- tks[tks >= xr[1] & tks <= xr[2]]
-    zero_xp_x_lin <- if (0 %in% tks) x_to_pt(0) else NA_real_
-    for (tv in tks) {
+    zero_idx_x_lin <- {
+      zi <- which(vapply(tks, .is_zero_tick, logical(1)))
+      if (length(zi) > 0) zi[[1]] else NA_integer_
+    }
+    zero_xp_x_lin <- if (is.finite(zero_idx_x_lin)) x_to_pt(tks[zero_idx_x_lin]) else NA_real_
+    for (i in seq_along(tks)) {
+      tv <- tks[i]
       xp <- x_to_pt(tv)
       major_x0 <- c(major_x0, xp); major_x1 <- c(major_x1, xp)
       major_y0 <- c(major_y0, M$bottom); major_y1 <- c(major_y1, M$bottom - tick_len_major)
-      is_zero <- tv == 0
+      is_zero <- is.finite(zero_idx_x_lin) && i == zero_idx_x_lin
       too_close_to_zero <- !is.na(zero_xp_x_lin) && !is_zero && abs(xp - zero_xp_x_lin) < 28
       if (!too_close_to_zero) {
         li <- li + 1L
@@ -830,19 +1014,35 @@ export_illustration_pdf <- function(file_path, payload, opts) {
       y_tick_mode  <- as.character(y_logicle_ticks$tick_mode %||% "")
       y_is_scatter_log10 <- identical(y_tick_mode, "scatter_log10")
 
-      zero_xp_y <- if (!y_is_scatter_log10 && 0 %in% major_pos) y_to_pt(0) else NA_real_
+      zero_idx_y <- if (!y_is_scatter_log10) {
+        zi <- which(vapply(seq_along(major_pos), function(i) {
+          lbl <- if (i <= length(major_labels)) major_labels[i] else NULL
+          .is_zero_tick(major_pos[i], lbl)
+        }, logical(1)))
+        if (length(zi) > 0) zi[[1]] else NA_integer_
+      } else NA_integer_
+      zero_xp_y <- if (is.finite(zero_idx_y)) y_to_pt(major_pos[zero_idx_y]) else NA_real_
       y_show_lbl <- logical(length(major_pos))
       last_ly <- -Inf
+      last_was_zero <- FALSE
+      y_adj_spacing <- max(8, 18 * 0.55)
+      y_zero_protect <- max(5, 18 * 0.38)
       for (i in seq_along(major_pos)) {
         lbl <- if (i <= length(major_labels)) major_labels[i] else ""
         if (!nzchar(lbl)) next
         yp <- y_to_pt(major_pos[i])
-        is_zero <- !y_is_scatter_log10 && major_pos[i] == 0
-        if ((yp - last_ly) >= 18 || is_zero) { y_show_lbl[i] <- TRUE; last_ly <- yp }
+        is_zero <- !y_is_scatter_log10 && is.finite(zero_idx_y) && i == zero_idx_y
+        req_spacing <- if (is_zero || last_was_zero) y_adj_spacing else 18
+        if ((yp - last_ly) >= req_spacing || is_zero) {
+          y_show_lbl[i] <- TRUE
+          last_ly <- yp
+          last_was_zero <- is_zero
+        }
       }
       if (!is.na(zero_xp_y)) {
         for (i in seq_along(major_pos)) {
-          if (y_show_lbl[i] && major_pos[i] != 0 && abs(y_to_pt(major_pos[i]) - zero_xp_y) < 18)
+          is_zero <- is.finite(zero_idx_y) && i == zero_idx_y
+          if (y_show_lbl[i] && !is_zero && abs(y_to_pt(major_pos[i]) - zero_xp_y) < y_zero_protect)
             y_show_lbl[i] <- FALSE
         }
       }
@@ -867,12 +1067,17 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     } else {
       tks <- pretty(yr, n = 4)
       tks <- tks[tks >= yr[1] & tks <= yr[2]]
-      zero_xp_y_lin <- if (0 %in% tks) y_to_pt(0) else NA_real_
-      for (tv in tks) {
+      zero_idx_y_lin <- {
+        zi <- which(vapply(tks, .is_zero_tick, logical(1)))
+        if (length(zi) > 0) zi[[1]] else NA_integer_
+      }
+      zero_xp_y_lin <- if (is.finite(zero_idx_y_lin)) y_to_pt(tks[zero_idx_y_lin]) else NA_real_
+      for (i in seq_along(tks)) {
+        tv <- tks[i]
         yp <- y_to_pt(tv)
         major_x0 <- c(major_x0, M$left); major_x1 <- c(major_x1, M$left - tick_len_major)
         major_y0 <- c(major_y0, yp); major_y1 <- c(major_y1, yp)
-        is_zero <- tv == 0
+        is_zero <- is.finite(zero_idx_y_lin) && i == zero_idx_y_lin
         too_close_to_zero <- !is.na(zero_xp_y_lin) && !is_zero && abs(yp - zero_xp_y_lin) < 18
         if (!too_close_to_zero) {
           li <- li + 1L

@@ -1036,6 +1036,93 @@ body { font-size: 13px; }
   padding: 4px 6px 2px 6px;
 }
 
+.illust-pop-palette-header {
+  display: grid;
+  grid-template-columns: 34px minmax(120px, 240px) 138px;
+  gap: 6px;
+  align-items: center;
+  justify-content: start;
+  font-size: 10px;
+  font-weight: 600;
+  color: #677282;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0 0 4px 0;
+  padding: 0 2px;
+}
+
+.illust-pop-palette-row {
+  display: grid;
+  grid-template-columns: 34px minmax(120px, 240px) 138px;
+  gap: 6px;
+  align-items: center;
+  justify-content: start;
+  padding: 2px 2px;
+  border-top: 1px solid #eef2f7;
+}
+
+.illust-pop-select-cell .form-group,
+.illust-pop-select-cell .checkbox {
+  margin: 0;
+}
+
+.illust-pop-select-cell .checkbox,
+.illust-pop-select-cell .checkbox label {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.illust-pop-select-cell .checkbox label {
+  min-height: 0;
+  padding-left: 0;
+}
+
+.illust-pop-select-cell .checkbox input[type="checkbox"] {
+  margin: 0;
+  position: static;
+}
+
+.illust-pop-name-cell {
+  font-size: 11px;
+  color: #2f3a47;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.illust-pop-color-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.illust-pop-color-swatch {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #c8d0dc;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+.illust-pop-hex {
+  width: 88px;
+  height: 24px;
+  font-size: 11px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+}
+
+.illust-pop-picker {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #c8d0dc;
+  border-radius: 3px;
+  background: #fff;
+}
+
 #illust_simple_body .shiny-options-group,
 #illust_marker_body .shiny-options-group {
   column-count: 3;

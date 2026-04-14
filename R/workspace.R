@@ -7,7 +7,9 @@ save_workspace <- function(sce, gates, gate_order, populations,
                            gate_value_space = "display",
                            cytof_axis_range = list(),
                            global_scale_ranges = list(),
-                           plot_range_override = NULL) {
+                           plot_range_override = NULL,
+                           illust_pop_palette = list(),
+                           illust_pop_selected = NULL) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
@@ -17,7 +19,9 @@ save_workspace <- function(sce, gates, gate_order, populations,
     cytof_axis_range = cytof_axis_range,
     global_scale_ranges = global_scale_ranges,
     plot_range_override = plot_range_override,
-    version = 1L,
+    illust_pop_palette = illust_pop_palette,
+    illust_pop_selected = illust_pop_selected,
+    version = 2L,
     saved_at = as.character(Sys.time())
   )
   S4Vectors::metadata(sce)$gating_workspace <- workspace
