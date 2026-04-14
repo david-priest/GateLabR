@@ -432,6 +432,13 @@ ui <- fluidPage(
                              value = 1.2, min = 0.1, max = 5, step = 0.1),
                 sliderInput("strategy_point_alpha", "Point opacity:",
                             min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
+              ),
+              tags$div(class = "strategy-param-card",
+                checkboxInput("strategy_pub_style",
+                              "Publication style (black gates, no label background)",
+                              value = FALSE),
+                numericInput("strategy_gate_line_width", "Gate line width:",
+                             value = 1.5, min = 0.5, max = 5, step = 0.25)
               )
             ),
 
@@ -530,6 +537,13 @@ ui <- fluidPage(
                              value = 1.2, min = 0.1, max = 5, step = 0.1),
                 sliderInput("illust_point_alpha", "Point opacity:",
                             min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
+              ),
+              tags$div(class = "illust-param-card",
+                checkboxInput("illust_pub_style",
+                              "Publication style (black gates, no label background)",
+                              value = FALSE),
+                numericInput("illust_gate_line_width", "Gate line width:",
+                             value = 1.5, min = 0.5, max = 5, step = 0.25)
               )
             ),
 
@@ -3982,6 +3996,12 @@ server <- function(input, output, session) {
       title = strategy_title_font
     )
 
+    strategy_pub_style <- isTRUE(input$strategy_pub_style)
+    strategy_gate_line_width <- suppressWarnings(as.numeric(input$strategy_gate_line_width %||% 1.5))
+    if (!is.finite(strategy_gate_line_width)) strategy_gate_line_width <- 1.5
+    strategy_gate_line_width <- max(0.5, min(5, strategy_gate_line_width))
+    strategy_gate_style <- list(pub_style = strategy_pub_style, line_width = strategy_gate_line_width)
+
     strategy_contour_threshold <- suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5))
     if (!is.finite(strategy_contour_threshold)) strategy_contour_threshold <- 5
     strategy_contour_threshold <- max(0, min(100, strategy_contour_threshold))
@@ -4031,7 +4051,8 @@ server <- function(input, output, session) {
         contour_threshold = strategy_contour_threshold,
         point_alpha = strategy_point_alpha,
         kde_bandwidth = strategy_kde_bandwidth,
-        font_sizes = strategy_font_sizes
+        font_sizes = strategy_font_sizes,
+        gate_style = strategy_gate_style
       ))
       return()
     }
@@ -4256,7 +4277,8 @@ server <- function(input, output, session) {
       point_alpha = strategy_point_alpha,
       point_size = strategy_point_size,
       kde_bandwidth = strategy_kde_bandwidth,
-      font_sizes = strategy_font_sizes
+      font_sizes = strategy_font_sizes,
+      gate_style = strategy_gate_style
     )
 
     session$sendCustomMessage("renderStrategyGrid", list(
@@ -4271,7 +4293,8 @@ server <- function(input, output, session) {
       point_alpha = strategy_point_alpha,
       point_size = strategy_point_size,
       kde_bandwidth = strategy_kde_bandwidth,
-      font_sizes = strategy_font_sizes
+      font_sizes = strategy_font_sizes,
+      gate_style = strategy_gate_style
     ))
   }
 
@@ -4609,6 +4632,11 @@ server <- function(input, output, session) {
       axis_label = strategy_axis_font, tick = strategy_tick_font,
       gate_label = strategy_gate_label_font, title = strategy_title_font
     )
+    strategy_pub_style_m <- isTRUE(input$strategy_pub_style)
+    strategy_gate_line_width_m <- suppressWarnings(as.numeric(input$strategy_gate_line_width %||% 1.5))
+    if (!is.finite(strategy_gate_line_width_m)) strategy_gate_line_width_m <- 1.5
+    strategy_gate_line_width_m <- max(0.5, min(5, strategy_gate_line_width_m))
+    strategy_gate_style_m <- list(pub_style = strategy_pub_style_m, line_width = strategy_gate_line_width_m)
     strategy_contour_threshold <- max(0, min(100, suppressWarnings(as.numeric(input$strategy_contour_threshold %||% 5)) %||% 5))
     strategy_point_alpha <- max(0.05, min(1, suppressWarnings(as.numeric(input$strategy_point_alpha %||% 0.35)) %||% 0.35))
     strategy_point_size <- max(0.1, min(5, suppressWarnings(as.numeric(input$strategy_point_size %||% 1.2)) %||% 1.2))
@@ -4710,7 +4738,8 @@ server <- function(input, output, session) {
       point_alpha = strategy_point_alpha,
       point_size = strategy_point_size,
       kde_bandwidth = strategy_kde_bandwidth,
-      font_sizes = strategy_font_sizes
+      font_sizes = strategy_font_sizes,
+      gate_style = strategy_gate_style_m
     )
 
     session$sendCustomMessage("renderMultiStrategyGrid", list(
@@ -4722,7 +4751,8 @@ server <- function(input, output, session) {
       point_alpha     = strategy_point_alpha,
       point_size      = strategy_point_size,
       kde_bandwidth   = strategy_kde_bandwidth,
-      font_sizes      = strategy_font_sizes
+      font_sizes      = strategy_font_sizes,
+      gate_style      = strategy_gate_style_m
     ))
   }
 
@@ -4940,6 +4970,13 @@ server <- function(input, output, session) {
       gate_label = illust_gate_label_font,
       title = illust_title_font
     )
+
+    illust_pub_style <- isTRUE(input$illust_pub_style)
+    illust_gate_line_width <- suppressWarnings(as.numeric(input$illust_gate_line_width %||% 1.5))
+    if (!is.finite(illust_gate_line_width)) illust_gate_line_width <- 1.5
+    illust_gate_line_width <- max(0.5, min(5, illust_gate_line_width))
+    illust_gate_style <- list(pub_style = illust_pub_style, line_width = illust_gate_line_width)
+
     illust_contour_threshold <- suppressWarnings(as.numeric(input$contour_threshold %||% 5))
     if (!is.finite(illust_contour_threshold)) illust_contour_threshold <- 5
     illust_contour_threshold <- max(0, min(100, illust_contour_threshold))
@@ -5223,6 +5260,7 @@ server <- function(input, output, session) {
       point_size = illust_point_size,
       kde_bandwidth = illust_kde_bandwidth,
       font_sizes = illust_font_sizes,
+      gate_style = illust_gate_style,
       overlay_populations = isTRUE(input$illust_overlay_pops),
       color_by_population = isTRUE(input$illust_color_by_pop)
     )
@@ -5239,6 +5277,7 @@ server <- function(input, output, session) {
         point_size           = illust_point_size,
         kde_bandwidth        = illust_kde_bandwidth,
         font_sizes           = illust_font_sizes,
+        gate_style           = illust_gate_style,
         color_by_population  = isTRUE(input$illust_color_by_pop),
         overlay_populations  = isTRUE(input$illust_overlay_pops)
       ),

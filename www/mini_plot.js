@@ -311,8 +311,9 @@
 
         // ── Gate overlays ───────────────────────────────────────────────────
         if (cfg.gates && cfg.gates.length > 0) {
+            var gateStyle = cfg.gate_style || {};
             cfg.gates.forEach(function (gate) {
-                _drawGateOverlay(g, gate, xScale, yScale, W, H, gateFs);
+                _drawGateOverlay(g, gate, xScale, yScale, W, H, gateFs, gateStyle);
             });
         }
 
@@ -687,7 +688,12 @@
     }
 
     // ── Gate overlay rendering ──────────────────────────────────────────────
-    function _drawGateOverlay(g, gate, xScale, yScale, W, H, gateFs) {
+    function _drawGateOverlay(g, gate, xScale, yScale, W, H, gateFs, gateStyle) {
+        gateStyle = gateStyle || {};
+        var pubStyle  = !!gateStyle.pub_style;
+        var lineWidth = (isFinite(Number(gateStyle.line_width)) && Number(gateStyle.line_width) > 0)
+            ? Number(gateStyle.line_width) : 1.5;
+
         var verts = gate.vertices;
         if (!verts || verts.length < 2) return;
 
@@ -711,8 +717,8 @@
         g.append('path')
             .attr('d', pathStr)
             .attr('fill', 'none')
-            .attr('stroke', gate.color)
-            .attr('stroke-width', 1.5);
+            .attr('stroke', pubStyle ? '#000000' : gate.color)
+            .attr('stroke-width', lineWidth);
 
         // Label (name on line 1, percentage on line 2 — matching gating editor)
         if (gate.name) {
@@ -742,7 +748,7 @@
             var label = g.append('g').attr('transform', 'translate(' + lx + ',' + ly + ')');
             var text = label.append('text')
                 .attr('text-anchor', 'middle')
-                .attr('fill', '#fff')
+                .attr('fill', pubStyle ? '#000000' : '#fff')
                 .style('font-size', gateFs);
             text.append('tspan')
                 .attr('x', 0)
@@ -755,21 +761,23 @@
                     .text(pctLine);
             }
 
-            // Background (guard getBBox for offscreen/non-rendered SVG contexts).
-            var bbox;
-            try {
-                bbox = text.node().getBBox();
-            } catch (_bboxErr) {
-                var estW = Math.max(6, longerTxt.length * fsNum * 0.60);
-                var estH = pctLine ? fsNum * 2.2 : fsNum * 1.1;
-                bbox = { x: -estW / 2, y: -estH / 2, width: estW, height: estH };
-            }
+            if (!pubStyle) {
+                // Background rect (guard getBBox for offscreen/non-rendered SVG contexts).
+                var bbox;
+                try {
+                    bbox = text.node().getBBox();
+                } catch (_bboxErr) {
+                    var estW = Math.max(6, longerTxt.length * fsNum * 0.60);
+                    var estH = pctLine ? fsNum * 2.2 : fsNum * 1.1;
+                    bbox = { x: -estW / 2, y: -estH / 2, width: estW, height: estH };
+                }
 
-            label.insert('rect', 'text')
-                .attr('x', bbox.x - 2).attr('y', bbox.y - 1)
-                .attr('width', bbox.width + 4).attr('height', bbox.height + 2)
-                .attr('rx', 2)
-                .attr('fill', gate.color).attr('fill-opacity', 0.85);
+                label.insert('rect', 'text')
+                    .attr('x', bbox.x - 2).attr('y', bbox.y - 1)
+                    .attr('width', bbox.width + 4).attr('height', bbox.height + 2)
+                    .attr('rx', 2)
+                    .attr('fill', gate.color).attr('fill-opacity', 0.85);
+            }
         }
     }
 
@@ -815,6 +823,7 @@
         nColumns = Math.max(1, Math.min(24, nColumns));
         var fitToColumns = !!data.fit_to_columns;
         var fontSizes = data.font_sizes || {};
+        var gateStyle = data.gate_style || {};
         var gapPx = 8;
 
         if (showBack) {
@@ -917,6 +926,7 @@
                 kde_bandwidth: kdeBandwidth,
                 title: title,
                 font_sizes: fontSizes,
+                gate_style: gateStyle,
                 pop_color: '#3182ce',
                 back_color: '#d95f02',
                 gates: [{
@@ -971,6 +981,7 @@
         nColumns = Math.max(1, Math.min(24, nColumns));
         var fitToColumns = !!data.fit_to_columns;
         var fontSizes = data.font_sizes || {};
+        var gateStyle = data.gate_style || {};
         var gateOverlays = data.gate_overlays || {}; // {pop_id|x_channel: [gate_overlay,...]}
         var gapPx = 8;
 
@@ -1084,6 +1095,7 @@
                     kde_bandwidth:   kdeBandwidth,
                     title:           xCh,
                     font_sizes:      fontSizes,
+                    gate_style:      gateStyle,
                     pop_color:       popColorMap[mainPid],
                     overlay_traces:  extraTraces,
                     legend_entries:  legendEntries,
@@ -1160,6 +1172,7 @@
                         kde_bandwidth:   kdeBandwidth,
                         title:           null,
                         font_sizes:      fontSizes,
+                        gate_style:      gateStyle,
                         pop_color:       popColor,
                         gates:           gateOvl
                     });
@@ -1946,6 +1959,7 @@
         var plotSize    = _normalizePlotSize(data.plot_size);
         var displayMode = _normalizeDisplayMode(data.display_mode);
         var fontSizes   = data.font_sizes || {};
+        var gateStyle   = data.gate_style || {};
         var contourThreshold = isFinite(Number(data.contour_threshold)) ? Number(data.contour_threshold) : 5;
         var pointAlpha  = isFinite(Number(data.point_alpha)) ? Math.max(0.05, Math.min(1, Number(data.point_alpha))) : 0.6;
         var pointSize   = isFinite(Number(data.point_size)) && Number(data.point_size) > 0 ? Number(data.point_size) : 1.2;
@@ -2027,6 +2041,7 @@
                 kde_bandwidth:   kdeBandwidth,
                 title:           title,
                 font_sizes:      fontSizes,
+                gate_style:      gateStyle,
                 pop_color:       '#3182ce',
                 gates:           node.gates || []
             });

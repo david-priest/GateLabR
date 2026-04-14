@@ -193,7 +193,8 @@ export_strategy_pdf <- function(file_path, steps, opts) {
         contour_threshold = opts$contour_threshold,
         point_alpha = pdf_point_alpha,
         kde_bandwidth = opts$kde_bandwidth,
-        pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size
+        pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size,
+        gate_style = opts$gate_style
       )
     }
   })
@@ -240,7 +241,8 @@ export_multi_strategy_pdf <- function(file_path, nodes, opts) {
         contour_threshold = opts$contour_threshold,
         point_alpha = pdf_point_alpha,
         kde_bandwidth = opts$kde_bandwidth,
-        pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size
+        pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size,
+        gate_style = opts$gate_style
       )
     }
   })
@@ -289,7 +291,8 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     display_mode = display_mode, plot_size = plot_size, font_sizes = font_sizes,
     back_color = NULL, contour_threshold = opts$contour_threshold,
     point_alpha = pdf_point_alpha, kde_bandwidth = opts$kde_bandwidth,
-    pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size
+    pdf_dpi = pdf_dpi, pdf_point_size = pdf_point_size,
+    gate_style = opts$gate_style
   )
 
   if (overlay_pops) {
@@ -408,7 +411,8 @@ export_illustration_pdf <- function(file_path, payload, opts) {
                           point_alpha = NULL,
                           kde_bandwidth = NULL,
                           pdf_dpi = 300L,
-                          pdf_point_size = 0.6) {
+                          pdf_point_size = 0.6,
+                          gate_style = NULL) {
 
   M <- MARGIN
   W <- plot_size - M$left - M$right
@@ -478,7 +482,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   # ── Gate overlays (each gate is a group) ──
   if (length(gates) > 0) {
     for (gi in seq_along(gates)) {
-      .draw_gate_grouped(gates[[gi]], xr, yr, M, W, H, gate_fs, gi)
+      .draw_gate_grouped(gates[[gi]], xr, yr, M, W, H, gate_fs, gi, gate_style)
     }
   }
 
@@ -865,15 +869,22 @@ export_illustration_pdf <- function(file_path, payload, opts) {
 #         └─ label_text (text)
 # ══════════════════════════════════════════════════════════════════════════════
 
-.draw_gate_grouped <- function(gate, xr, yr, M, W, H, gate_fs, gate_idx) {
+.draw_gate_grouped <- function(gate, xr, yr, M, W, H, gate_fs, gate_idx, gate_style = NULL) {
   verts <- gate$vertices
   if (is.null(verts) || length(verts) < 2) return()
+
+  pub_style  <- isTRUE(gate_style$pub_style)
+  line_width <- {
+    lw <- suppressWarnings(as.numeric(gate_style$line_width %||% NA))
+    if (is.finite(lw) && lw > 0) lw else 1.2
+  }
 
   x_to_pt <- function(v) M$left + (v - xr[1]) / (xr[2] - xr[1]) * W
   y_to_pt <- function(v) M$bottom + (v - yr[1]) / (yr[2] - yr[1]) * H
 
   gate_type  <- gate$gate_type %||% "polygon"
   gate_color <- gate$color %||% "#377eb8"
+  stroke_col <- if (pub_style) "#000000" else gate_color
 
   if (gate_type == "rectangle" && length(verts) == 2) {
     v0 <- verts[[1]]; v1 <- verts[[2]]
@@ -895,7 +906,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
   gate_children[[1L]] <- polygonGrob(
     x = unit(screen_x, "points"), y = unit(screen_y, "points"),
     gp = gpar(fill = NA,
-              col = gate_color, lwd = 1.2),
+              col = stroke_col, lwd = line_width),
     name = "polygon")
 
   # Label sub-group: name on line 1, percentage on line 2 (matching gating editor)
@@ -920,12 +931,19 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     lx <- max(M$left + est_half_w, min(M$left + W - est_half_w, cx + ox))
     ly <- max(M$bottom + 5, min(M$bottom + H - 5, cy + oy))
 
-    label_children <- gList(
-      rectGrob(
-        x = unit(lx, "points"), y = unit(ly, "points"),
-        width = unit(est_half_w * 2, "points"), height = unit(est_h, "points"),
-        gp = gpar(fill = adjustcolor(gate_color, alpha.f = 0.85), col = NA),
-        name = "label_bg"))
+    label_col <- if (pub_style) "#000000" else "#ffffff"
+
+    if (pub_style) {
+      # Publication style: plain text, no background rectangle
+      label_children <- gList()
+    } else {
+      label_children <- gList(
+        rectGrob(
+          x = unit(lx, "points"), y = unit(ly, "points"),
+          width = unit(est_half_w * 2, "points"), height = unit(est_h, "points"),
+          gp = gpar(fill = adjustcolor(gate_color, alpha.f = 0.85), col = NA),
+          name = "label_bg"))
+    }
 
     if (has_pct) {
       # Two lines: name above, percentage below
@@ -933,19 +951,19 @@ export_illustration_pdf <- function(file_path, payload, opts) {
         textGrob(gate_name,
           x = unit(lx, "points"), y = unit(ly + gate_fs * 0.45, "points"),
           just = c("centre", "centre"),
-          gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = "#ffffff"),
+          gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = label_col),
           name = "label_name"),
         textGrob(pct_line,
           x = unit(lx, "points"), y = unit(ly - gate_fs * 0.55, "points"),
           just = c("centre", "centre"),
-          gp = gpar(fontsize = gate_fs - 1, fontfamily = "Helvetica", col = "#ffffff"),
+          gp = gpar(fontsize = gate_fs - 1, fontfamily = "Helvetica", col = label_col),
           name = "label_pct"))
     } else {
       label_children <- gList(label_children,
         textGrob(gate_name,
           x = unit(lx, "points"), y = unit(ly, "points"),
           just = c("centre", "centre"),
-          gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = "#ffffff"),
+          gp = gpar(fontsize = gate_fs, fontfamily = "Helvetica", col = label_col),
           name = "label_text"))
     }
     gate_children[[length(gate_children) + 1L]] <- gTree(
