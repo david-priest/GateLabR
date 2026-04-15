@@ -4169,10 +4169,14 @@ server <- function(input, output, session) {
     is_strategy <- identical(scope, "strategy")
 
     fit_to_columns <- if (is_strategy) isTRUE(input$strategy_fit_to_columns) else isTRUE(input$illust_fit_to_columns)
-    effective_plot_size <- suppressWarnings(as.integer(
-      if (is_strategy) input$strategy_effective_plot_size else input$illustration_effective_plot_size
-    ))
-    if (is.na(effective_plot_size) || effective_plot_size < 60L || effective_plot_size > 4000L) {
+    effective_plot_size_raw <- if (is_strategy) input$strategy_effective_plot_size else input$illustration_effective_plot_size
+    effective_plot_size <- suppressWarnings(as.integer(effective_plot_size_raw))
+    if (length(effective_plot_size) < 1L) {
+      effective_plot_size <- NA_integer_
+    } else {
+      effective_plot_size <- effective_plot_size[[1L]]
+    }
+    if (!is.finite(effective_plot_size) || effective_plot_size < 60L || effective_plot_size > 4000L) {
       effective_plot_size <- NA_integer_
     }
     control_plot_size <- .clamp_int(
