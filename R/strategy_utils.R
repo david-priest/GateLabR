@@ -232,9 +232,9 @@ build_gates_for_channels <- function(gates, gate_order, gate_counts,
     if (is.null(gate)) next
 
     flipped <- FALSE
-    if (gate$x_channel == x_channel && gate$y_channel == y_channel) {
+    if (identical(gate$x_channel, x_channel) && identical(gate$y_channel, y_channel)) {
       # Exact match
-    } else if (gate$x_channel == y_channel && gate$y_channel == x_channel) {
+    } else if (identical(gate$x_channel, y_channel) && identical(gate$y_channel, x_channel)) {
       flipped <- TRUE
     } else {
       next

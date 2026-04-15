@@ -5479,7 +5479,10 @@ server <- function(input, output, session) {
       as.character(input$illust_x_channels_marker %||% character(0))
     ))
     x_channels <- x_channels[x_channels %in% rv$channels]
-    y_channel <- if (illust_plot_type == "biplot") input$illust_y_channel else NULL
+    y_channel <- if (illust_plot_type == "biplot") {
+      ch <- input$illust_y_channel
+      if (!is.null(ch) && length(ch) == 1L && !is.na(ch) && nzchar(ch)) ch else NULL
+    } else NULL
 
     max_events_key <- if (is.finite(illust_max_events)) as.integer(illust_max_events) else "all"
     mask_sig <- if (is.null(rv$sample_mask)) {
