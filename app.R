@@ -112,7 +112,7 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260414e"),
-    tags$script(src = "mini_plot.js?v=20260414i"),
+    tags$script(src = "mini_plot.js?v=20260415"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
 
@@ -4830,7 +4830,8 @@ server <- function(input, output, session) {
     } else {
       character(0)
     }
-    style <- collect_plot_style_params("strategy")
+    strategy_gate_view_m <- as.character(input$strategy_gate_view %||% "forward")
+    style <- collect_plot_style_params("strategy", gate_view = strategy_gate_view_m)
     layout <- collect_layout_params("strategy")
     strategy_context_title <- build_strategy_context_title(selected_pop_names)
     strategy_context_title_font <- max(8L, min(24L, as.integer(style$font_sizes$title %||% 10L) + 1L))
@@ -5000,6 +5001,7 @@ server <- function(input, output, session) {
       strategy_context_title_font = strategy_context_title_font,
       nodes = nodes_json,
       plot_size = strategy_plot_size,
+      gate_view = strategy_gate_view_m,
       display_mode = strategy_mode,
       contour_threshold = style$contour_threshold,
       point_alpha = style$point_alpha,

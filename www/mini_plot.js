@@ -709,7 +709,7 @@
     function _formatLinearVal(v) {
         if (!isFinite(v) || Math.abs(v) < 1e-9) return '0';
         var abs = Math.abs(v);
-        var sign = v < 0 ? '\u2212' : '';
+        var sign = v < 0 ? '-' : '';
         if (abs >= 1e6) {
             var m = abs / 1e6;
             return sign + (+m.toPrecision(3)) + 'M';

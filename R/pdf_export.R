@@ -961,7 +961,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
       major_x0 <- c(major_x0, xp); major_x1 <- c(major_x1, xp)
       major_y0 <- c(major_y0, M$bottom); major_y1 <- c(major_y1, M$bottom - tick_len_major)
       is_zero <- is.finite(zero_idx_x_lin) && i == zero_idx_x_lin
-      too_close_to_zero <- !is.na(zero_xp_x_lin) && !is_zero && abs(xp - zero_xp_x_lin) < 28
+      too_close_to_zero <- !is.na(zero_xp_x_lin) && !is_zero && abs(xp - zero_xp_x_lin) < max(5, 28 * 0.38)
       if (!too_close_to_zero) {
         li <- li + 1L
         label_grobs[[li]] <- textGrob(.fmt_linear_lbl(tv),
@@ -1078,7 +1078,7 @@ export_illustration_pdf <- function(file_path, payload, opts) {
         major_x0 <- c(major_x0, M$left); major_x1 <- c(major_x1, M$left - tick_len_major)
         major_y0 <- c(major_y0, yp); major_y1 <- c(major_y1, yp)
         is_zero <- is.finite(zero_idx_y_lin) && i == zero_idx_y_lin
-        too_close_to_zero <- !is.na(zero_xp_y_lin) && !is_zero && abs(yp - zero_xp_y_lin) < 18
+        too_close_to_zero <- !is.na(zero_xp_y_lin) && !is_zero && abs(yp - zero_xp_y_lin) < max(5, 18 * 0.38)
         if (!too_close_to_zero) {
           li <- li + 1L
           label_grobs[[li]] <- textGrob(.fmt_linear_lbl(tv),
