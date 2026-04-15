@@ -1541,15 +1541,34 @@
         addItem('Copy image', function () {
             var liveCell = _resolveCurrentPlotCell(plotDiv);
             if (!liveCell) return;
-            _rasterizePlotCell(liveCell, 2)
-                .then(_copyCanvasToClipboard)
-                .catch(function () {
-                    _rasterizePlotCell(liveCell, 2).then(function (canvas) {
+            if (navigator.clipboard && window.ClipboardItem) {
+                // Pass a Promise as the ClipboardItem value so navigator.clipboard.write()
+                // is called synchronously (within the user-gesture window) while the blob
+                // resolves asynchronously — browser keeps the gesture context alive.
+                var blobPromise = _rasterizePlotCell(liveCell, 2).then(function (canvas) {
+                    return new Promise(function (resolve, reject) {
                         canvas.toBlob(function (blob) {
-                            if (blob) _downloadBlob(blob, 'plot.png');
+                            blob ? resolve(blob) : reject(new Error('toBlob failed'));
                         }, 'image/png');
                     });
                 });
+                navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
+                    .catch(function () {
+                        // clipboard write failed — fall back to download
+                        _rasterizePlotCell(liveCell, 2).then(function (canvas) {
+                            canvas.toBlob(function (blob) {
+                                if (blob) _downloadBlob(blob, 'plot.png');
+                            }, 'image/png');
+                        });
+                    });
+            } else {
+                // Clipboard image API unavailable — fall back to download
+                _rasterizePlotCell(liveCell, 2).then(function (canvas) {
+                    canvas.toBlob(function (blob) {
+                        if (blob) _downloadBlob(blob, 'plot.png');
+                    }, 'image/png');
+                });
+            }
         });
 
         addItem('Download PNG', function () {
