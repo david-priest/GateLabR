@@ -271,6 +271,49 @@ body { font-size: 13px; }
   margin-bottom: 0;
 }
 
+/* ── Bulk rename populations ─────────────────────────────────── */
+.bulk-rename-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.bulk-rename-file {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.bulk-rename-file .form-group {
+  margin-bottom: 0;
+}
+
+/* keep the native shiny file-input height consistent */
+.bulk-rename-file .input-group {
+  flex-wrap: nowrap;
+}
+
+.bulk-rename-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  /* nudge up 1px so buttons sit flush with the file input baseline */
+  padding-bottom: 1px;
+}
+
+.bulk-rename-actions .btn {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.bulk-rename-hint {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
 /* ── Sample filter table panel ───────────────────────────────── */
 .sample-filter-panel {
   min-height: 560px;
@@ -932,6 +975,54 @@ body { font-size: 13px; }
   margin-bottom: 8px;
 }
 
+/* ── Illustration Presets bar ───────────────────────────────────────────── */
+.illust-presets-bar {
+  margin-bottom: 10px;
+  border: 1px solid #d4dae8;
+  border-radius: 5px;
+  background: #f7f9fc;
+  /* overflow must remain visible so the selectize dropdown can escape the box */
+  overflow: visible;
+  position: relative;
+}
+.illust-presets-bar summary {
+  padding: 5px 10px;
+  background: #eef1f8;
+  border-bottom: 1px solid #d4dae8;
+  /* round the top two corners to match the parent border-radius */
+  border-radius: 4px 4px 0 0;
+  list-style: none;
+  outline: none;
+}
+.illust-presets-bar summary::-webkit-details-marker { display: none; }
+.illust-presets-body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.illust-preset-save-row,
+.illust-preset-load-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+.illust-preset-save-row .form-group,
+.illust-preset-load-row .form-group {
+  margin-bottom: 0 !important;
+}
+.illust-preset-save-row input[type="text"] {
+  height: 26px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+.illust-preset-load-row select {
+  height: 26px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
 .illust-top-export-actions {
   display: inline-flex;
   gap: 6px;
@@ -1355,6 +1446,20 @@ body { font-size: 13px; }
 .scales-channel-table input[type="number"] {
   height: 24px !important;
   padding: 2px 5px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+
+/* ── Panel tab (marker rename) ───────────────────────────────────────────── */
+/* Re-uses .scales-ch-row, .scales-ch-name, .scales-col-header from above.  */
+/* Compact text inputs for the editable display-name column.                 */
+#panel_rename_ui .form-group {
+  margin-bottom: 2px !important;
+}
+
+#panel_rename_ui input[type="text"] {
+  height: 24px !important;
+  padding: 2px 6px !important;
   font-size: 11px !important;
   line-height: 1.2 !important;
 }

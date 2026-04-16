@@ -286,7 +286,10 @@
             var xLg = _buildLogicleAxis(xScale, xTicks, d3.axisBottom);
             xAxisSel.call(xLg.axis);
             _styleLogicleAxis(xAxisSel, xLg.majorSet, true);
-            if (!(xTicks && xTicks.tick_mode === 'scatter_log10')) {
+            // scatter_log10 axes (FSC/SSC) produce decade-spaced labels that
+            // never overlap — no compression needed.  CyTOF (asinh) and flow
+            // signal (logicle) axes may have closely-spaced labels near zero.
+            if (xTicks.tick_mode === 'asinh' || xTicks.tick_mode === 'logicle') {
                 _hideCompressedLabels(xAxisSel, xScale, 28);
             }
         } else {
@@ -302,7 +305,7 @@
                 var yLg = _buildLogicleAxis(yScale, yTicks, d3.axisLeft);
                 yAxisSel.call(yLg.axis);
                 _styleLogicleAxis(yAxisSel, yLg.majorSet, false);
-                if (!(yTicks && yTicks.tick_mode === 'scatter_log10')) {
+                if (yTicks.tick_mode === 'asinh' || yTicks.tick_mode === 'logicle') {
                     _hideCompressedLabels(yAxisSel, yScale, 18);
                 }
             } else {
@@ -733,56 +736,27 @@
         });
     }
 
+    // ── Label-compression helpers ───────────────────────────────────────────
+    // Used for logicle (CyTOF asinh + flow logicle) axes.
+    // Simple left-to-right pass: hide any label that is too close to the
+    // previous visible label.  Do NOT apply zero-protection here — that
+    // logic is specifically for scatter-log10 axes (FSC/SSC) which already
+    // skip this function entirely (tick_mode === 'scatter_log10' branch).
     function _hideCompressedLabels(sel, scale, minSpacingPx) {
         var labeled = [];
         sel.selectAll('.tick text').each(function (d) {
             var el = d3.select(this);
-            var txt = (el.text() || '').trim();
-            if (el.style('display') !== 'none' && txt !== '') {
-                labeled.push({ el: el, px: scale(d), val: d, txt: txt, hidden: false });
+            if (el.style('display') !== 'none' && el.text() !== '') {
+                labeled.push({ el: el, px: scale(d) });
             }
         });
         labeled.sort(function (a, b) { return a.px - b.px; });
-
-        // Identify zero label — it always takes priority over neighbours
-        var zeroIdx = -1, zeroPx = null;
-        for (var j = 0; j < labeled.length; j++) {
-            var vj = Number(labeled[j].val);
-            if (labeled[j].txt === '0' || (isFinite(vj) && Math.abs(vj) < 1e-9)) {
-                zeroIdx = j;
-                zeroPx = labeled[j].px;
-                break;
-            }
-        }
-
-        // Keep labels adjacent to zero with a softer spacing rule so nearby
-        // decade labels (e.g. 10K/100K) can still appear when useful.
-        var zeroAdjSpacing = Math.max(8, minSpacingPx * 0.55);
-        var zeroProtectSpacing = Math.max(5, minSpacingPx * 0.38);
-
-        // Pass 1 — standard left-to-right suppression, but never suppress zero
         var lastPx = -Infinity;
-        var lastWasZero = false;
         for (var i = 0; i < labeled.length; i++) {
-            var isZero = i === zeroIdx;
-            var requiredSpacing = (isZero || lastWasZero) ? zeroAdjSpacing : minSpacingPx;
-            if (Math.abs(labeled[i].px - lastPx) < requiredSpacing && !isZero) {
+            if (Math.abs(labeled[i].px - lastPx) < minSpacingPx) {
                 labeled[i].el.style('display', 'none');
-                labeled[i].hidden = true;
             } else {
                 lastPx = labeled[i].px;
-                lastWasZero = isZero;
-            }
-        }
-
-        // Pass 2 — hide any surviving label that is still too close to zero
-        if (zeroPx !== null) {
-            for (var k = 0; k < labeled.length; k++) {
-                if (!labeled[k].hidden && k !== zeroIdx &&
-                        Math.abs(labeled[k].px - zeroPx) < zeroProtectSpacing) {
-                    labeled[k].el.style('display', 'none');
-                    labeled[k].hidden = true;
-                }
             }
         }
     }
@@ -1280,6 +1254,7 @@
                 headerDiv.className = 'illustration-row-header';
                 headerDiv.textContent = popName + ' \u2014 ' + n.toLocaleString() + ' events';
                 headerDiv.style.minWidth = rowTargetWidth + 'px';
+                headerDiv.style.fontSize = (fontSizes.title || 11) + 'px';
                 gridDiv.appendChild(headerDiv);
 
                 // Row of plots
@@ -1503,6 +1478,67 @@
         }
     }
 
+    // Show the rasterized plot in a modal so the user can native-right-click
+    // → "Copy Image" on a real <img> element (reliable in all browsers/origins).
+    function _showCopyImageModal(canvas) {
+        var url = canvas.toDataURL('image/png');
+        var overlay = document.createElement('div');
+        overlay.style.cssText = [
+            'position:fixed', 'top:0', 'left:0', 'right:0', 'bottom:0',
+            'background:rgba(0,0,0,0.62)', 'z-index:99999',
+            'display:flex', 'align-items:center', 'justify-content:center',
+            'flex-direction:column', 'cursor:default'
+        ].join(';');
+
+        var msg = document.createElement('p');
+        msg.textContent = 'Right-click the image → Copy Image';
+        msg.style.cssText = 'color:#fff;margin:0 0 10px;font-size:13px;font-family:sans-serif;';
+
+        var img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = [
+            'max-width:90vw', 'max-height:80vh',
+            'border:2px solid #fff', 'border-radius:3px',
+            'box-shadow:0 6px 32px rgba(0,0,0,0.5)'
+        ].join(';');
+
+        var closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕ Close';
+        closeBtn.style.cssText = [
+            'margin-top:12px', 'padding:6px 20px',
+            'background:#fff', 'border:none', 'border-radius:4px',
+            'cursor:pointer', 'font-size:13px', 'font-family:sans-serif'
+        ].join(';');
+        closeBtn.onclick = function () { overlay.remove(); };
+        overlay.onclick = function (e) { if (e.target === overlay) overlay.remove(); };
+
+        overlay.appendChild(msg);
+        overlay.appendChild(img);
+        overlay.appendChild(closeBtn);
+        document.body.appendChild(overlay);
+    }
+
+    // Brief "✓ Copied!" toast shown after a successful clipboard write.
+    function _showCopyToast() {
+        var toast = document.createElement('div');
+        toast.textContent = '✓ Copied!';
+        toast.style.cssText = [
+            'position:fixed', 'bottom:28px', 'left:50%',
+            'transform:translateX(-50%)',
+            'background:#2b6cb0', 'color:#fff',
+            'padding:7px 22px', 'border-radius:20px',
+            'font-size:13px', 'font-family:sans-serif',
+            'z-index:99999', 'pointer-events:none',
+            'box-shadow:0 4px 14px rgba(0,0,0,0.25)',
+            'opacity:1', 'transition:opacity 0.4s'
+        ].join(';');
+        document.body.appendChild(toast);
+        setTimeout(function () {
+            toast.style.opacity = '0';
+            setTimeout(function () { toast.remove(); }, 450);
+        }, 1500);
+    }
+
     function _showMiniContextMenu(event, plotDiv) {
         _hideMiniContextMenu();
         var menu = document.createElement('div');
@@ -1541,33 +1577,33 @@
         addItem('Copy image', function () {
             var liveCell = _resolveCurrentPlotCell(plotDiv);
             if (!liveCell) return;
-            if (navigator.clipboard && window.ClipboardItem) {
-                // Pass a Promise as the ClipboardItem value so navigator.clipboard.write()
-                // is called synchronously (within the user-gesture window) while the blob
-                // resolves asynchronously — browser keeps the gesture context alive.
-                var blobPromise = _rasterizePlotCell(liveCell, 2).then(function (canvas) {
-                    return new Promise(function (resolve, reject) {
-                        canvas.toBlob(function (blob) {
-                            blob ? resolve(blob) : reject(new Error('toBlob failed'));
-                        }, 'image/png');
-                    });
-                });
-                navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
-                    .catch(function () {
-                        // clipboard write failed — fall back to download
-                        _rasterizePlotCell(liveCell, 2).then(function (canvas) {
-                            canvas.toBlob(function (blob) {
-                                if (blob) _downloadBlob(blob, 'plot.png');
-                            }, 'image/png');
-                        });
-                    });
-            } else {
-                // Clipboard image API unavailable — fall back to download
-                _rasterizePlotCell(liveCell, 2).then(function (canvas) {
+
+            // Build the blob promise ONCE — reused for both clipboard and modal fallback.
+            var blobPromise = _rasterizePlotCell(liveCell, 2).then(function (canvas) {
+                return new Promise(function (resolve, reject) {
                     canvas.toBlob(function (blob) {
-                        if (blob) _downloadBlob(blob, 'plot.png');
+                        if (blob) resolve({ blob: blob, canvas: canvas });
+                        else reject(new Error('toBlob failed'));
                     }, 'image/png');
                 });
+            });
+
+            if (navigator.clipboard && window.ClipboardItem) {
+                // Call clipboard.write() SYNCHRONOUSLY here, inside the click-handler
+                // user-gesture window, passing a Promise as the ClipboardItem value.
+                // The browser keeps the gesture context alive until the promise resolves,
+                // which is the only reliable way to copy images on http:// origins.
+                var clipPromise = blobPromise.then(function (r) { return r.blob; });
+                navigator.clipboard
+                    .write([new ClipboardItem({ 'image/png': clipPromise })])
+                    .then(function () { _showCopyToast(); })
+                    .catch(function () {
+                        // Permission denied or API not supported — show modal fallback.
+                        blobPromise.then(function (r) { _showCopyImageModal(r.canvas); });
+                    });
+            } else {
+                // No Clipboard API at all — go straight to the modal.
+                blobPromise.then(function (r) { _showCopyImageModal(r.canvas); });
             }
         });
 

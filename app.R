@@ -111,8 +111,8 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260414e"),
-    tags$script(src = "mini_plot.js?v=20260415b"),
+    tags$script(src = "cytof_plot.js?v=20260416d"),
+    tags$script(src = "mini_plot.js?v=20260416d"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
 
@@ -218,7 +218,9 @@ ui <- fluidPage(
             fileInput("import_gatingml_upload",NULL,
                       accept=c(".xml",".gatingml",".Gating-ML"),
                       buttonLabel="Import GatingML...",placeholder="No file selected",multiple=FALSE),
-            downloadButton("export_gatingml_dl","Export GatingML...",
+            downloadButton("export_gatingml_dl","Export GatingML (Cytobank)...",
+                           class="btn-default btn-block",style="margin-bottom:2px;text-align:left;"),
+            downloadButton("export_gatingml_standard_dl","Export GatingML (Standard)...",
                            class="btn-default btn-block",style="margin-bottom:4px;text-align:left;")
           ),
 
@@ -479,6 +481,39 @@ ui <- fluidPage(
               )
             ),
 
+            # ── Illustration Presets ────────────────────────────────────────────
+            tags$div(class = "illust-presets-bar",
+              tags$details(
+                tags$summary(
+                  tags$span(icon("bookmark"), " Illustration Presets",
+                            style = "font-size:12px; font-weight:600; cursor:pointer; user-select:none;")
+                ),
+                tags$div(class = "illust-presets-body",
+                  tags$div(class = "illust-preset-save-row",
+                    tags$span("Name:", style = "font-size:11px; white-space:nowrap; margin-right:4px;"),
+                    textInput("illust_preset_name", NULL, value = "",
+                              placeholder = "Preset name…",
+                              width = "160px"),
+                    actionButton("illust_preset_save_btn", "Save",
+                                 class = "btn-xs btn-primary",
+                                 title = "Save current illustration settings as a named preset",
+                                 style = "margin-left:4px;")
+                  ),
+                  tags$div(class = "illust-preset-load-row",
+                    uiOutput("illust_preset_select_ui"),
+                    actionButton("illust_preset_load_btn", "Load",
+                                 class = "btn-xs btn-default",
+                                 title = "Restore this preset",
+                                 style = "margin-left:4px;"),
+                    actionButton("illust_preset_delete_btn", "Delete",
+                                 class = "btn-xs btn-danger",
+                                 title = "Delete this preset",
+                                 style = "margin-left:4px;")
+                  )
+                )
+              )
+            ),
+
             tags$div(class = "illust-control-grid",
               tags$div(class = "illust-block",
                 radioButtons("illust_plot_type", "Plot type:",
@@ -662,7 +697,28 @@ ui <- fluidPage(
           )
         ),
 
-        # ── Tab 5: Scales ─────────────────────────────────────────────────────
+        # ── Tab 5: Panel (marker rename) ─────────────────────────────────────
+        tabPanel("Panel",
+          tags$div(class = "scales-controls",   # reuse same wrapper style as Scales tab
+            tags$div(class = "section-header", "Channel / Marker Names"),
+            tags$div(style = "font-size:11px; color:#666; margin-bottom:8px;",
+              "Edit the display name (marker) for each channel.",
+              " The FCS channel ID (e.g. metal or detector name) is shown for reference and",
+              " cannot be changed. Scatter channels (FSC/SSC) are locked as their names",
+              " drive axis scaling."
+            ),
+            tags$div(style = "margin-bottom:8px; display:flex; gap:6px; align-items:center;",
+              actionButton("apply_panel_rename_btn", "Apply Renames",
+                           class = "btn-sm btn-primary"),
+              actionButton("reset_panel_rename_btn", "Reset",
+                           class = "btn-sm btn-default",
+                           title = "Revert all edits to current names")
+            ),
+            uiOutput("panel_rename_ui")
+          )
+        ),
+
+        # ── Tab 6: Scales ─────────────────────────────────────────────────────
         tabPanel("Scales",
           tags$div(class = "scales-controls",
             tags$div(class = "section-header", "Global Channel Scales"),
@@ -715,6 +771,12 @@ ui <- fluidPage(
             actionButton("duplicate_selected_pops_btn", "", icon = icon("clone"),
                          title = "Duplicate selected populations",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("move_selected_pops_btn", "", icon = icon("share"),
+                         title = "Move selected populations to a different parent",
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("clear_selected_pops_btn", "", icon = icon("times"),
+                         title = "Clear selection",
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("delete_selected_pops_btn", "", icon = icon("trash"),
                          title = "Delete selected populations",
                          class = "btn-xs btn-danger", style = "padding: 1px 5px;")
@@ -723,22 +785,22 @@ ui <- fluidPage(
         tags$div(id = "population_tree_container", uiOutput("population_tree_ui")),
 
         tags$div(class = "section-header", "Bulk Rename Populations"),
-        tags$div(class = "fcs-inline-controls",
-          tags$div(class = "fcs-inline-item",
+        tags$div(class = "bulk-rename-controls",
+          tags$div(class = "bulk-rename-file",
             fileInput("bulk_pop_rename_upload", NULL,
                       accept = c(".csv", ".xlsx", ".xls"),
-                      buttonLabel = "Choose .csv/.xlsx...",
+                      buttonLabel = "Choose .csv/.xlsx…",
                       placeholder = "No file selected",
                       multiple = FALSE)
           ),
-          tags$div(class = "fcs-inline-action",
-            actionButton("apply_bulk_pop_rename_btn", "Apply Bulk Rename",
+          tags$div(class = "bulk-rename-actions",
+            actionButton("apply_bulk_pop_rename_btn", "Apply Rename",
                          class = "btn-sm btn-default"),
             downloadButton("bulk_rename_template_dl", "Download Template",
                            class = "btn-sm btn-default")
           )
         ),
-        tags$div(style = "font-size:11px; color:#888; margin-top:4px;",
+        tags$div(class = "bulk-rename-hint",
                  "Required columns: old_population, new_population")
 
       )
@@ -791,12 +853,16 @@ server <- function(input, output, session) {
     cytof_axis_range = list(),
     global_scale_ranges = list(),
     .scales_ui_version = 0L,
+    .panel_ui_version  = 0L,
     .strategy_stale = FALSE,
     .illust_stale = FALSE,
     .flow_transform_version = 0L,
     illust_pop_palette = list(),
     illust_pop_selected = NULL,
-    .illust_palette_ui_version = 0L
+    .illust_palette_ui_version = 0L,
+    .illust_settings_pending = NULL,   # saved settings waiting for channel UI to render
+    .illust_ui_restore_version = 0L,   # bumped to trigger deferred restore observer
+    illust_presets = list()            # named illustration presets stored in workspace
   )
     valid_global_scale_range <- function(channel) {
       gs <- rv$global_scale_ranges[[channel]]
@@ -971,6 +1037,48 @@ server <- function(input, output, session) {
     rv$populations <- sort_population_tree(rv$populations, rv$root_population_id)
   }
 
+  # ── Capture / apply illustration settings ─────────────────────────────────
+  # capture_illust_settings() snapshots every illustration input + pop selection.
+  # apply_illust_settings() restores them via the deferred UI restore mechanism.
+
+  capture_illust_settings <- function(input, rv) {
+    list(
+      x_channels_simple    = as.character(isolate(input$illust_x_channels_simple)   %||% character(0)),
+      x_channels_marker    = as.character(isolate(input$illust_x_channels_marker)   %||% character(0)),
+      y_channel            = as.character(isolate(input$illust_y_channel)            %||% ""),
+      plot_type            = as.character(isolate(input$illust_plot_type)            %||% "biplot"),
+      display              = as.character(isolate(input$illust_display)              %||% "pseudocolor"),
+      color_by_pop         = isTRUE(isolate(input$illust_color_by_pop)),
+      overlay_pops         = isTRUE(isolate(input$illust_overlay_pops)),
+      max_events           = isolate(input$illust_max_events)                        %||% 10000L,
+      all_events           = isTRUE(isolate(input$illust_all_events)),
+      plot_size            = isolate(input$illust_plot_size)                         %||% 200L,
+      n_columns            = isolate(input$illust_n_columns)                         %||% 4L,
+      fit_to_columns       = isTRUE(isolate(input$illust_fit_to_columns)),
+      tick_font_size       = isolate(input$illust_tick_font_size)                    %||% 8L,
+      axis_label_font_size = isolate(input$illust_axis_label_font_size)              %||% 10L,
+      title_font_size      = isolate(input$illust_title_font_size)                   %||% 10L,
+      gate_label_font_size = isolate(input$illust_gate_label_font_size)              %||% 8L,
+      pdf_dpi              = isolate(input$illust_pdf_dpi)                           %||% 300L,
+      point_size           = isolate(input$illust_point_size)                        %||% 1.2,
+      point_alpha          = isolate(input$illust_point_alpha)                       %||% 0.35,
+      hist_line_width      = isolate(input$illust_hist_line_width)                   %||% 1.8,
+      hist_fill            = isTRUE(isolate(input$illust_hist_fill)),
+      hist_fill_alpha      = isolate(input$illust_hist_fill_alpha)                   %||% 0.22,
+      hist_overlay_mode    = as.character(isolate(input$illust_hist_overlay_mode)    %||% "front_opaque"),
+      pub_style            = isTRUE(isolate(input$illust_pub_style)),
+      gate_line_width      = isolate(input$illust_gate_line_width)                   %||% 1.5,
+      kde_bandwidth        = isolate(input$illust_kde_bandwidth)                     %||% 0,
+      pop_selected         = rv$illust_pop_selected
+    )
+  }
+
+  # Queue a settings snapshot for deferred UI restore (works across renderUI boundaries)
+  apply_illust_settings <- function(s) {
+    rv$.illust_settings_pending  <- s
+    rv$.illust_ui_restore_version <- isolate(rv$.illust_ui_restore_version) + 1L
+  }
+
   autosave <- function() {
     if (is.null(rv$sce) || is.null(rv$sce_name)) return()
     # Flush latest logicle W / scatter cofactor into SCE metadata before saving
@@ -981,6 +1089,7 @@ server <- function(input, output, session) {
     } else {
       "display"
     }
+    illust_settings <- capture_illust_settings(input, rv)
     rv$sce <- save_workspace(
       rv$sce, rv$gates, rv$gate_order, rv$populations, rv$root_population_id,
       gate_value_space = gate_value_space,
@@ -988,7 +1097,9 @@ server <- function(input, output, session) {
       global_scale_ranges = rv$global_scale_ranges %||% list(),
       plot_range_override = rv$.plot_range_override,
       illust_pop_palette = rv$illust_pop_palette %||% list(),
-      illust_pop_selected = rv$illust_pop_selected
+      illust_pop_selected = rv$illust_pop_selected,
+      illust_settings = illust_settings,
+      illust_presets = rv$illust_presets %||% list()
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1725,8 +1836,15 @@ server <- function(input, output, session) {
       rv$.plot_range_override <- ws$plot_range_override %||% NULL
       rv$illust_pop_palette <- ws$illust_pop_palette %||% list()
       rv$illust_pop_selected <- if (!is.null(ws$illust_pop_selected)) as.character(ws$illust_pop_selected) else NULL
+      rv$illust_presets <- ws$illust_presets %||% list()
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+      }
+      # Stash illustration settings; the channel renderUI must render first before
+      # we can call updateCheckboxGroupInput, so we defer via a version counter.
+      if (!is.null(ws$illust_settings)) {
+        rv$.illust_settings_pending <- ws$illust_settings
+        rv$.illust_ui_restore_version <- isolate(rv$.illust_ui_restore_version) + 1L
       }
       rv$.strategy_stale <- FALSE; rv$.illust_stale <- FALSE
       update_rescale_btn(!is.null(rv$.plot_range_override))
@@ -1747,6 +1865,8 @@ server <- function(input, output, session) {
       rv$.plot_range_override <- NULL
       rv$illust_pop_palette <- list()
       rv$illust_pop_selected <- NULL
+      rv$illust_presets <- list()
+      rv$.illust_settings_pending <- NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
       }
@@ -3290,6 +3410,10 @@ server <- function(input, output, session) {
     }
   })
 
+  observeEvent(input$clear_selected_pops_btn, {
+    rv$.selected_pop_ids <- character(0)
+  }, ignoreInit = TRUE)
+
   observeEvent(input$delete_selected_pops_btn, {
     selected <- setdiff(intersect(rv$.selected_pop_ids, names(rv$populations)), rv$root_population_id)
     if (length(selected) == 0) {
@@ -3369,6 +3493,83 @@ server <- function(input, output, session) {
     autosave()
     send_full_plot()
     showNotification(sprintf("Duplicated %d population(s).", length(created_ids)),
+                     type = "message", duration = 3)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$move_selected_pops_btn, {
+    selected <- setdiff(intersect(rv$.selected_pop_ids, names(rv$populations)), rv$root_population_id)
+    if (length(selected) == 0) {
+      showNotification("No populations selected.", type = "message", duration = 2)
+      return()
+    }
+    # Valid new parents: not one of the selected pops, not a descendant of any
+    # selected pop (would create a cycle), not root excluded — root IS valid.
+    all_ids <- names(rv$populations)
+    valid_parent_ids <- Filter(function(pid) {
+      if (pid %in% selected) return(FALSE)
+      # Would moving any selected pop under this candidate create a cycle?
+      any_cycle <- any(vapply(selected, function(sid) {
+        would_create_cycle(rv$populations, sid, pid)
+      }, logical(1)))
+      !any_cycle
+    }, all_ids)
+    parent_choices <- setNames(
+      valid_parent_ids,
+      vapply(valid_parent_ids, function(pid) rv$populations[[pid]]$name, character(1))
+    )
+    pop_names <- paste(vapply(selected, function(pid) {
+      as.character(rv$populations[[pid]]$name %||% pid)
+    }, character(1)), collapse = ", ")
+    showModal(modalDialog(
+      title = "Move Selected Populations",
+      tags$p(sprintf("Move %d population(s) to a new parent:", length(selected))),
+      tags$p(pop_names, style = "font-style:italic; color:#555; font-size:12px;"),
+      selectInput("bulk_move_parent_select", "New parent:",
+                  choices = parent_choices,
+                  selected = rv$root_population_id),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_move_selected_pops_btn", "Move", class = "btn-primary")
+      ),
+      easyClose = TRUE
+    ))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$confirm_move_selected_pops_btn, {
+    removeModal()
+    new_parent_id <- input$bulk_move_parent_select
+    req(!is.null(new_parent_id), !is.null(rv$populations[[new_parent_id]]))
+    selected <- setdiff(intersect(rv$.selected_pop_ids, names(rv$populations)), rv$root_population_id)
+    if (length(selected) == 0) return()
+
+    # Re-validate: drop any that would now cycle (defensive)
+    to_move <- Filter(function(sid) {
+      !would_create_cycle(rv$populations, sid, new_parent_id) && !identical(sid, new_parent_id)
+    }, selected)
+    if (length(to_move) == 0) {
+      showNotification("Move would create a cycle — no populations moved.", type = "warning", duration = 4)
+      return()
+    }
+
+    save_undo_snapshot()
+    for (sid in to_move) {
+      old_parent_id <- rv$populations[[sid]]$parent_id
+      if (identical(old_parent_id, new_parent_id)) next
+      # Detach from old parent's children list
+      if (!is.null(old_parent_id) && !is.null(rv$populations[[old_parent_id]])) {
+        rv$populations[[old_parent_id]]$children <-
+          setdiff(rv$populations[[old_parent_id]]$children, sid)
+      }
+      # Attach to new parent
+      rv$populations <- link_child_to_parent(rv$populations, sid, new_parent_id)
+    }
+    sort_population_tree_state()
+    rv$gate_version <- rv$gate_version + 1L
+    autosave()
+    send_full_plot()
+    showNotification(sprintf("Moved %d population(s) to \"%s\".",
+                             length(to_move),
+                             rv$populations[[new_parent_id]]$name),
                      type = "message", duration = 3)
   }, ignoreInit = TRUE)
 
@@ -3765,51 +3966,36 @@ server <- function(input, output, session) {
       )
     } else NULL
 
-    # ── Own gate refs (editable) — exclude gates already in the ancestor chain ─
-    inherited_gate_ids <- unique(vapply(ancestor_refs,
-                                        function(r) r$gate_id, character(1)))
+    # ── Own gate refs (editable) — all gates available in gate_order ─────────
     gate_refs_ui <- NULL
     if (!is_root && length(rv$gates) > 0) {
-      # Only gates NOT inherited from an ancestor are editable here
-      editable_gids <- setdiff(names(rv$gates), inherited_gate_ids)
+      # All gates are editable; applying a gate already filtered by a parent is
+      # a logical no-op (the parent mask already excludes those events).
+      all_gids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
       current_refs <- list()
       for (ref in pop$gate_refs) current_refs[[ref$gate_id]] <- if (ref$include) "include" else "exclude"
 
-      if (length(editable_gids) > 0) {
-        ref_rows <- lapply(editable_gids, function(gid) {
-          gate <- rv$gates[[gid]]; current_val <- current_refs[[gid]] %||% "off"
-          tags$div(class = "gate-ref-edit-row",
-            tags$span(class = "gate-color-swatch",
-                      style = paste0("background:", gate$color,
-                                     "; width:10px; height:10px; border-radius:2px;")),
-            tags$span(class = "gate-ref-name", gate$name),
-            radioButtons(paste0("edit_ref_", gid), NULL,
-                         choices = c("Off" = "off", "Include" = "include", "Exclude" = "exclude"),
-                         selected = current_val, inline = TRUE))
-        })
-        gate_refs_ui <- tagList(
-          tags$div(class = "pop-editor-row",
-            tags$div(style = paste0("font-size:10px; color:#555; font-weight:700;",
-                                    " text-transform:uppercase; letter-spacing:0.4px;",
-                                    " margin-bottom:3px;"),
-                     "\u270F\uFE0F Gates for this population"),
-            ref_rows,
-            actionButton("apply_gate_refs_btn", "Apply",
-                         class = "btn-xs btn-primary", style = "margin-top: 5px;"))
-        )
-      } else {
-        gate_refs_ui <- tagList(
-          tags$div(class = "pop-editor-row",
-            tags$div(style = paste0("font-size:10px; color:#555; font-weight:700;",
-                                    " text-transform:uppercase; letter-spacing:0.4px;",
-                                    " margin-bottom:3px;"),
-                     "\u270F\uFE0F Gates for this population"),
-            tags$em("All gates are inherited from parents.",
-                    style = "font-size:11px; color:#aaa;"),
-            actionButton("apply_gate_refs_btn", "Apply",
-                         class = "btn-xs btn-primary", style = "margin-top: 5px; display:none;"))
-        )
-      }
+      ref_rows <- lapply(all_gids, function(gid) {
+        gate <- rv$gates[[gid]]; current_val <- current_refs[[gid]] %||% "off"
+        tags$div(class = "gate-ref-edit-row",
+          tags$span(class = "gate-color-swatch",
+                    style = paste0("background:", gate$color,
+                                   "; width:10px; height:10px; border-radius:2px;")),
+          tags$span(class = "gate-ref-name", gate$name),
+          radioButtons(paste0("edit_ref_", gid), NULL,
+                       choices = c("Off" = "off", "Include" = "include", "Exclude" = "exclude"),
+                       selected = current_val, inline = TRUE))
+      })
+      gate_refs_ui <- tagList(
+        tags$div(class = "pop-editor-row",
+          tags$div(style = paste0("font-size:10px; color:#555; font-weight:700;",
+                                  " text-transform:uppercase; letter-spacing:0.4px;",
+                                  " margin-bottom:3px;"),
+                   "\u270F\uFE0F Gates for this population"),
+          ref_rows,
+          actionButton("apply_gate_refs_btn", "Apply",
+                       class = "btn-xs btn-primary", style = "margin-top: 5px;"))
+      )
     }
     tags$div(class = "pop-editor-panel", selector_ui, top_controls, count_ui,
              inherited_ui, gate_refs_ui)
@@ -3856,18 +4042,11 @@ server <- function(input, output, session) {
     save_undo_snapshot()
     pop_id_edit <- rv$active_population_id
 
-    # Compute which gate IDs are inherited so we don't overwrite them
-    inherited_ids_edit <- character(0)
-    walk_id_edit <- rv$populations[[pop_id_edit]]$parent_id
-    while (!is.null(walk_id_edit) && !is.null(rv$populations[[walk_id_edit]])) {
-      for (ref in rv$populations[[walk_id_edit]]$gate_refs)
-        inherited_ids_edit <- c(inherited_ids_edit, ref$gate_id)
-      walk_id_edit <- rv$populations[[walk_id_edit]]$parent_id
-    }
-    editable_gate_ids <- setdiff(names(rv$gates), unique(inherited_ids_edit))
+    # All gates are editable; use gate_order for consistent ordering
+    all_gate_ids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
 
     new_refs <- list()
-    for (gid in editable_gate_ids) {
+    for (gid in all_gate_ids) {
       val <- input[[paste0("edit_ref_", gid)]]
       if (!is.null(val) && val != "off")
         new_refs[[length(new_refs) + 1L]] <- new_gate_ref(gid, include = (val == "include"))
@@ -5222,6 +5401,131 @@ server <- function(input, output, session) {
     )
   })
 
+  # ── Deferred illustration settings restore ───────────────────────────────────
+  # Triggered after workspace load. The channel checkboxes live inside a
+  # renderUI, so updateCheckboxGroupInput must run *after* that UI has rendered.
+  # We invalidate .illust_ui_restore_version on load; this observer fires once
+  # the renderUI output exists (it depends on rv$channels which drives the UI).
+  observeEvent(rv$.illust_ui_restore_version, {
+    s <- rv$.illust_settings_pending
+    if (is.null(s)) return()
+    rv$.illust_settings_pending <- NULL   # consume
+
+    chs <- as.character(rv$channels %||% character(0))
+    simple_chs <- chs[!grepl("_", chs)]
+    marker_chs <- chs[grepl("_", chs)]
+
+    updateCheckboxGroupInput(session, "illust_x_channels_simple",
+      selected = intersect(as.character(s$x_channels_simple %||% character(0)), simple_chs))
+    updateCheckboxGroupInput(session, "illust_x_channels_marker",
+      selected = intersect(as.character(s$x_channels_marker %||% character(0)), marker_chs))
+
+    if (nzchar(s$y_channel %||% ""))
+      updateSelectInput(session, "illust_y_channel",   selected = s$y_channel)
+    if (nzchar(s$plot_type %||% ""))
+      updateRadioButtons(session, "illust_plot_type",   selected = s$plot_type)
+    if (nzchar(s$display %||% ""))
+      updateRadioButtons(session, "illust_display",     selected = s$display)
+    updateCheckboxInput(session, "illust_color_by_pop",  value = isTRUE(s$color_by_pop))
+    updateCheckboxInput(session, "illust_overlay_pops",  value = isTRUE(s$overlay_pops))
+    if (!is.null(s$all_events))          updateCheckboxInput(session,  "illust_all_events",          value = isTRUE(s$all_events))
+    if (!is.null(s$max_events))          updateNumericInput(session,   "illust_max_events",          value = s$max_events)
+    if (!is.null(s$plot_size))           updateNumericInput(session,   "illust_plot_size",           value = s$plot_size)
+    # n_columns — handle old key "n_cols" for backward compat
+    n_cols_val <- s$n_columns %||% s$n_cols
+    if (!is.null(n_cols_val))            updateNumericInput(session,   "illust_n_columns",           value = n_cols_val)
+    if (!is.null(s$fit_to_columns))      updateCheckboxInput(session,  "illust_fit_to_columns",      value = isTRUE(s$fit_to_columns))
+    if (!is.null(s$tick_font_size))      updateNumericInput(session,   "illust_tick_font_size",      value = s$tick_font_size)
+    # axis_label_font_size — handle old key "label_font_size" for backward compat
+    axis_lbl_val <- s$axis_label_font_size %||% s$label_font_size
+    if (!is.null(axis_lbl_val))          updateNumericInput(session,   "illust_axis_label_font_size", value = axis_lbl_val)
+    if (!is.null(s$title_font_size))     updateNumericInput(session,   "illust_title_font_size",     value = s$title_font_size)
+    if (!is.null(s$gate_label_font_size))updateNumericInput(session,   "illust_gate_label_font_size",value = s$gate_label_font_size)
+    if (!is.null(s$pdf_dpi))             updateNumericInput(session,   "illust_pdf_dpi",             value = s$pdf_dpi)
+    if (!is.null(s$point_size))          updateNumericInput(session,   "illust_point_size",          value = s$point_size)
+    if (!is.null(s$point_alpha))         updateSliderInput(session,    "illust_point_alpha",         value = s$point_alpha)
+    if (!is.null(s$hist_line_width))     updateNumericInput(session,   "illust_hist_line_width",     value = s$hist_line_width)
+    if (!is.null(s$hist_fill))           updateCheckboxInput(session,  "illust_hist_fill",           value = isTRUE(s$hist_fill))
+    if (!is.null(s$hist_fill_alpha))     updateSliderInput(session,    "illust_hist_fill_alpha",     value = s$hist_fill_alpha)
+    if (!is.null(s$hist_overlay_mode))   updateSelectInput(session,    "illust_hist_overlay_mode",   selected = s$hist_overlay_mode)
+    if (!is.null(s$pub_style))           updateCheckboxInput(session,  "illust_pub_style",           value = isTRUE(s$pub_style))
+    if (!is.null(s$gate_line_width))     updateNumericInput(session,   "illust_gate_line_width",     value = s$gate_line_width)
+    if (!is.null(s$kde_bandwidth))       updateSliderInput(session,    "illust_kde_bandwidth",       value = s$kde_bandwidth)
+    # Restore population selection
+    if (!is.null(s$pop_selected))        rv$illust_pop_selected <- as.character(s$pop_selected)
+  }, ignoreInit = TRUE)
+
+  # ── Illustration preset renderUI ────────────────────────────────────────────
+  output$illust_preset_select_ui <- renderUI({
+    presets <- rv$illust_presets
+    if (length(presets) == 0) {
+      tags$span("No presets saved yet.", style = "font-size:11px; color:#888;")
+    } else {
+      selectInput("illust_preset_select", NULL,
+                  choices  = names(presets),
+                  selected = names(presets)[[length(presets)]],
+                  width    = "180px")
+    }
+  })
+
+  # ── Sync name box → selected preset ─────────────────────────────────────────
+  # When the user picks a different preset from the dropdown, auto-fill the
+  # name box with that preset's name.  This makes overwriting intuitive:
+  # select a preset, tweak settings, click Save — done.
+  observeEvent(input$illust_preset_select, {
+    nm <- input$illust_preset_select
+    if (!is.null(nm) && nzchar(nm))
+      updateTextInput(session, "illust_preset_name", value = nm)
+  }, ignoreInit = TRUE, ignoreNULL = TRUE)
+
+  # ── Save preset ─────────────────────────────────────────────────────────────
+  observeEvent(input$illust_preset_save_btn, {
+    nm <- trimws(input$illust_preset_name %||% "")
+    if (!nzchar(nm)) {
+      showNotification("Please enter a name for the preset.", type = "warning", duration = 3)
+      return()
+    }
+    is_overwrite <- nm %in% names(rv$illust_presets %||% list())
+    s <- capture_illust_settings(input, rv)
+    presets <- rv$illust_presets %||% list()
+    presets[[nm]] <- s
+    rv$illust_presets <- presets
+    autosave()
+    msg <- if (is_overwrite)
+      paste0("Preset \u2018", nm, "\u2019 updated.")
+    else
+      paste0("Preset \u2018", nm, "\u2019 saved.")
+    showNotification(msg, type = "message", duration = 2)
+    # Keep the name in the box so it's clear which preset is active / ready to overwrite again.
+  }, ignoreInit = TRUE)
+
+  # ── Load preset ─────────────────────────────────────────────────────────────
+  observeEvent(input$illust_preset_load_btn, {
+    nm <- input$illust_preset_select
+    if (is.null(nm) || !nm %in% names(rv$illust_presets)) {
+      showNotification("No preset selected.", type = "warning", duration = 3)
+      return()
+    }
+    s <- rv$illust_presets[[nm]]
+    apply_illust_settings(s)
+    showNotification(paste0("Preset \u2018", nm, "\u2019 loaded."), type = "message", duration = 2)
+  }, ignoreInit = TRUE)
+
+  # ── Delete preset ───────────────────────────────────────────────────────────
+  observeEvent(input$illust_preset_delete_btn, {
+    nm <- input$illust_preset_select
+    if (is.null(nm) || !nm %in% names(rv$illust_presets)) {
+      showNotification("No preset selected.", type = "warning", duration = 3)
+      return()
+    }
+    presets <- rv$illust_presets
+    presets[[nm]] <- NULL
+    rv$illust_presets <- presets
+    autosave()
+    showNotification(paste0("Preset \u2018", nm, "\u2019 deleted."), type = "message", duration = 2)
+    updateTextInput(session, "illust_preset_name", value = "")
+  }, ignoreInit = TRUE)
+
   observeEvent(input$illust_simple_select_all_btn, {
     req(rv$channels)
     chs <- as.character(rv$channels)
@@ -5778,6 +6082,26 @@ server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
+  # Autosave when illustration inputs change (debounced — no need to save on
+  # every keystroke; the render button press is the natural checkpoint).
+  observeEvent(list(
+    input$illust_x_channels_simple, input$illust_x_channels_marker,
+    input$illust_y_channel, input$illust_plot_type, input$illust_display,
+    input$illust_color_by_pop, input$illust_overlay_pops,
+    input$illust_all_events, input$illust_max_events,
+    input$illust_plot_size, input$illust_n_columns, input$illust_fit_to_columns,
+    input$illust_tick_font_size, input$illust_axis_label_font_size,
+    input$illust_title_font_size, input$illust_gate_label_font_size,
+    input$illust_pdf_dpi,
+    input$illust_point_size, input$illust_point_alpha,
+    input$illust_hist_line_width, input$illust_hist_fill,
+    input$illust_hist_fill_alpha, input$illust_hist_overlay_mode,
+    input$illust_pub_style, input$illust_gate_line_width,
+    input$illust_kde_bandwidth
+  ), {
+    autosave()
+  }, ignoreInit = TRUE, ignoreNULL = FALSE)
+
   # Render illustration on button click
   observeEvent(input$illust_render_btn, {
     rv$.illust_stale <- FALSE
@@ -5863,6 +6187,210 @@ server <- function(input, output, session) {
       export_illustration_pdf(file, data$payload, data)
     }
   )
+
+  # ══════════════════════════════════════════════════════════════════════════════
+  # PANEL TAB  (marker / display-name rename)
+  # ══════════════════════════════════════════════════════════════════════════════
+
+  # Helper: sanitise channel name → valid Shiny input ID
+  .panel_safe_id <- function(ch) gsub("[^A-Za-z0-9]", "_", ch)
+
+  output$panel_rename_ui <- renderUI({
+    rv$.panel_ui_version   # refresh trigger
+    req(rv$sce, length(rv$channels) > 0)
+
+    channels   <- isolate(rv$channels)
+    is_flow    <- isolate(is_flow_session(rv$sce))
+    ch_to_pnn  <- S4Vectors::metadata(isolate(rv$sce))$channel_to_pnn  # may be NULL
+
+    # Column widths: [pnn ref] [current → new name]
+    col_tpl <- if (!is.null(ch_to_pnn)) "120px 1fr" else "1fr"
+
+    header <- tags$div(
+      class = "scales-col-header",
+      style = paste0("display:grid; grid-template-columns:", col_tpl,
+                     "; gap:6px; align-items:center; margin-bottom:2px;"),
+      if (!is.null(ch_to_pnn)) tags$span("FCS Channel") else NULL,
+      tags$span("Display Name (editable)")
+    )
+
+    rows <- lapply(channels, function(ch) {
+      safe_id   <- .panel_safe_id(ch)
+      pnn       <- if (!is.null(ch_to_pnn)) as.character(ch_to_pnn[[ch]] %||% "\u2014") else NULL
+      is_scatter <- isTRUE(.is_scatter_channel(ch))
+      is_qc      <- isTRUE(.is_qc_channel(ch))
+      locked     <- is_scatter   # QC channels are renameable; scatter are not
+
+      name_cell <- if (locked) {
+        tags$span(
+          ch,
+          style = "font-size:11px; color:#888; font-style:italic;",
+          title = "Scatter channels are locked — renaming would break axis scaling"
+        )
+      } else {
+        textInput(
+          paste0("panel_name_", safe_id), NULL,
+          value = ch, width = "100%"
+        )
+      }
+
+      tags$div(
+        class = "scales-ch-row",
+        style = paste0("display:grid; grid-template-columns:", col_tpl,
+                       "; gap:6px; align-items:center;"),
+        if (!is.null(ch_to_pnn)) tags$span(
+          pnn,
+          class = "scales-ch-name",
+          title = paste0("FCS $PnN: ", pnn),
+          style = if (locked) "color:#999;" else ""
+        ) else NULL,
+        name_cell
+      )
+    })
+
+    # Split into two side-by-side columns (same layout as Scales tab)
+    mid  <- ceiling(length(rows) / 2)
+    col1 <- rows[seq_len(mid)]
+    col2 <- if (mid < length(rows)) rows[(mid + 1):length(rows)] else list()
+
+    tags$div(
+      header,
+      tags$div(
+        style = "display:grid; grid-template-columns:1fr 1fr; gap:0 12px;",
+        tags$div(col1),
+        tags$div(col2)
+      )
+    )
+  })
+
+  # ── Apply renames ──────────────────────────────────────────────────────────
+  observeEvent(input$apply_panel_rename_btn, {
+    req(rv$sce, length(rv$channels) > 0)
+
+    old_channels <- rv$channels
+    rename_map   <- list()  # old_name → new_name
+
+    for (ch in old_channels) {
+      if (isTRUE(.is_scatter_channel(ch))) next  # locked
+      safe_id  <- .panel_safe_id(ch)
+      new_name <- trimws(input[[paste0("panel_name_", safe_id)]] %||% "")
+      if (!nzchar(new_name) || identical(new_name, ch)) next
+      rename_map[[ch]] <- new_name
+    }
+
+    if (length(rename_map) == 0) {
+      showNotification("No names changed.", type = "message", duration = 2)
+      return()
+    }
+
+    # Validate: no empty names, no duplicates among proposed new names
+    new_names_all <- vapply(old_channels, function(ch) {
+      rename_map[[ch]] %||% ch
+    }, character(1))
+
+    if (anyDuplicated(new_names_all)) {
+      dups <- new_names_all[duplicated(new_names_all)]
+      showNotification(
+        paste0("Duplicate name(s): ", paste(unique(dups), collapse = ", ")),
+        type = "error", duration = 5
+      )
+      return()
+    }
+
+    # ── Apply to SCE rownames ──────────────────────────────────────────────
+    new_rownames <- rownames(rv$sce)
+    for (old in names(rename_map)) {
+      idx <- match(old, new_rownames)
+      if (!is.na(idx)) new_rownames[idx] <- rename_map[[old]]
+    }
+    rownames(rv$sce) <- new_rownames
+
+    # ── Update pnn_to_channel / channel_to_pnn metadata ───────────────────
+    md <- S4Vectors::metadata(rv$sce)
+    if (!is.null(md$pnn_to_channel)) {
+      for (old in names(rename_map)) {
+        hits <- names(md$pnn_to_channel)[vapply(md$pnn_to_channel, identical, logical(1), old)]
+        for (pnn in hits) md$pnn_to_channel[[pnn]] <- rename_map[[old]]
+      }
+    }
+    if (!is.null(md$channel_to_pnn)) {
+      for (old in names(rename_map)) {
+        if (!is.null(md$channel_to_pnn[[old]])) {
+          md$channel_to_pnn[[rename_map[[old]]]] <- md$channel_to_pnn[[old]]
+          md$channel_to_pnn[[old]] <- NULL
+        }
+      }
+    }
+    S4Vectors::metadata(rv$sce) <- md
+
+    # ── Update rv$channels ────────────────────────────────────────────────
+    rv$channels <- get_channel_names(rv$sce)
+
+    # ── Rename keys in per-channel rv lists ───────────────────────────────
+    rename_list_keys <- function(lst, rmap) {
+      if (is.null(lst) || length(lst) == 0 || length(rmap) == 0) return(lst)
+      for (old in names(rmap)) {
+        if (!is.null(lst[[old]])) {
+          lst[[rmap[[old]]]] <- lst[[old]]
+          lst[[old]] <- NULL
+        }
+      }
+      lst
+    }
+
+    rv$cytof_axis_range      <- rename_list_keys(rv$cytof_axis_range,      rename_map)
+    rv$global_scale_ranges   <- rename_list_keys(rv$global_scale_ranges,   rename_map)
+    rv$flow_logicle_w        <- rename_list_keys(rv$flow_logicle_w,        rename_map)
+    rv$flow_logicle_w_auto   <- rename_list_keys(rv$flow_logicle_w_auto,   rename_map)
+    rv$flow_scatter_cofactor <- rename_list_keys(rv$flow_scatter_cofactor, rename_map)
+
+    # ── Update plot range override ────────────────────────────────────────
+    if (!is.null(rv$.plot_range_override)) {
+      ov <- rv$.plot_range_override
+      if (!is.null(rename_map[[ov$x_channel]])) ov$x_channel <- rename_map[[ov$x_channel]]
+      if (!is.null(rename_map[[ov$y_channel]])) ov$y_channel <- rename_map[[ov$y_channel]]
+      rv$.plot_range_override <- ov
+    }
+
+    # ── Update gate channel references ────────────────────────────────────
+    for (gid in names(rv$gates)) {
+      g <- rv$gates[[gid]]
+      changed <- FALSE
+      if (!is.null(rename_map[[g$x_channel]])) { g$x_channel <- rename_map[[g$x_channel]]; changed <- TRUE }
+      if (!is.null(rename_map[[g$y_channel]])) { g$y_channel <- rename_map[[g$y_channel]]; changed <- TRUE }
+      if (changed) rv$gates[[gid]] <- g
+    }
+
+    # ── Refresh UI channel dropdowns ──────────────────────────────────────
+    new_chs    <- rv$channels
+    cur_x      <- input$x_channel
+    cur_y      <- input$y_channel
+    cur_iy     <- input$illust_y_channel
+    new_x      <- rename_map[[cur_x]] %||% cur_x
+    new_y      <- rename_map[[cur_y]] %||% cur_y
+    new_iy     <- rename_map[[cur_iy]] %||% cur_iy
+    updateSelectInput(session, "x_channel",       choices = new_chs, selected = new_x)
+    updateSelectInput(session, "y_channel",       choices = new_chs, selected = new_y)
+    updateSelectInput(session, "illust_y_channel",choices = new_chs, selected = new_iy)
+
+    # Force Scales tab and panel tab to re-render with new names
+    rv$.scales_ui_version  <- isolate(rv$.scales_ui_version) + 1L
+    rv$.panel_ui_version   <- isolate(rv$.panel_ui_version)  + 1L
+
+    autosave()
+
+    n <- length(rename_map)
+    showNotification(
+      paste0(n, " channel", if (n != 1) "s" else "", " renamed."),
+      type = "message", duration = 3
+    )
+    send_full_plot()
+  }, ignoreInit = TRUE)
+
+  # ── Reset button: just re-render the UI from current names ────────────────
+  observeEvent(input$reset_panel_rename_btn, {
+    rv$.panel_ui_version <- isolate(rv$.panel_ui_version) + 1L
+  }, ignoreInit = TRUE)
 
   # ══════════════════════════════════════════════════════════════════════════════
   # SCALES TAB
@@ -6411,35 +6939,47 @@ server <- function(input, output, session) {
   })
 
   # ── Export GatingML ──────────────────────────────────────────────────────────
+  .gatingml_export_content <- function(file, fmt) {
+    req(rv$sce, rv$gates)
+    if (length(rv$gates) == 0) {
+      showNotification("No gates to export.", type = "warning", duration = 4)
+      return()
+    }
+    tryCatch({
+      export_gatingml_to_cytobank(
+        gates                   = isolate(rv$gates),
+        gate_order              = isolate(rv$gate_order),
+        populations             = isolate(rv$populations),
+        root_population_id      = isolate(rv$root_population_id),
+        sce                     = isolate(rv$sce),
+        file_path               = file,
+        format                  = fmt,
+        logicle_w_params        = isolate(rv$flow_logicle_w),
+        scatter_cofactor_params = isolate(rv$flow_scatter_cofactor),
+        counts_mat              = isolate(rv$flow_raw_data)
+      )
+    }, error = function(e) {
+      showNotification(paste("GatingML export error:", e$message),
+                       type = "error", duration = 8)
+    })
+  }
+
   output$export_gatingml_dl <- downloadHandler(
     filename = function() {
       sce_nm <- isolate(rv$sce_name) %||% "workspace"
-      paste0(gsub("[^A-Za-z0-9_.-]", "_", sce_nm), "_gates_",
+      paste0(gsub("[^A-Za-z0-9_.-]", "_", sce_nm), "_gates_cytobank_",
              format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
     },
-    content = function(file) {
-      req(rv$sce, rv$gates)
-      if (length(rv$gates) == 0) {
-        showNotification("No gates to export.", type = "warning", duration = 4)
-        return()
-      }
-      tryCatch({
-        export_gatingml_to_cytobank(
-          gates                   = isolate(rv$gates),
-          gate_order              = isolate(rv$gate_order),
-          populations             = isolate(rv$populations),
-          root_population_id      = isolate(rv$root_population_id),
-          sce                     = isolate(rv$sce),
-          file_path               = file,
-          logicle_w_params        = isolate(rv$flow_logicle_w),
-          scatter_cofactor_params = isolate(rv$flow_scatter_cofactor),
-          counts_mat              = isolate(rv$flow_raw_data)
-        )
-      }, error = function(e) {
-        showNotification(paste("GatingML export error:", e$message),
-                         type = "error", duration = 8)
-      })
-    }
+    content = function(file) .gatingml_export_content(file, "cytobank")
+  )
+
+  output$export_gatingml_standard_dl <- downloadHandler(
+    filename = function() {
+      sce_nm <- isolate(rv$sce_name) %||% "workspace"
+      paste0(gsub("[^A-Za-z0-9_.-]", "_", sce_nm), "_gates_standard_",
+             format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
+    },
+    content = function(file) .gatingml_export_content(file, "standard")
   )
 
   # ── Export FCS — modal then download ────────────────────────────────────────
@@ -6649,7 +7189,8 @@ ui_with_runjs <- tagList(
         'save_rds_dl':        'Download the SCE with embedded workspace as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
         'import_gatingml_upload': 'Import Cytobank Gating-ML XML and replace current gates/populations',
-        'export_gatingml_dl':     'Export current gates and populations as Cytobank Gating-ML 2.0 XML',
+        'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML (uses FCS $PnN channel names, BooleanGate definitions)',
+        'export_gatingml_standard_dl': 'Export gates as standard Gating-ML 2.0 XML with GatingHierarchy (re-importable into GateLabR)',
         // Mode toolbar
         'mode_rect':     'Draw a rectangle gate',
         'mode_poly':     'Draw a freehand polygon gate',
@@ -6665,7 +7206,8 @@ ui_with_runjs <- tagList(
         'sort_gates_alpha_btn': 'Sort the gate list alphabetically',
         'add_pop_btn':      'Define a new population using gate references',
         'edit_pop_btn':     'Open the population editor for the selected population',
-        'duplicate_selected_pops_btn': 'Duplicate checked populations',
+        'duplicate_selected_pops_btn': 'Duplicate checked populations under the same parent',
+        'move_selected_pops_btn':      'Move checked populations to a different parent',
         'delete_selected_pops_btn': 'Delete checked populations',
         // Strategy / Illustration
         'strategy_gate_view': 'Choose whether to display forward-gated events, back-gated events, or both overlays',

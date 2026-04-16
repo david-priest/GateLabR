@@ -9,7 +9,9 @@ save_workspace <- function(sce, gates, gate_order, populations,
                            global_scale_ranges = list(),
                            plot_range_override = NULL,
                            illust_pop_palette = list(),
-                           illust_pop_selected = NULL) {
+                           illust_pop_selected = NULL,
+                           illust_settings = NULL,
+                           illust_presets = list()) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
@@ -21,6 +23,8 @@ save_workspace <- function(sce, gates, gate_order, populations,
     plot_range_override = plot_range_override,
     illust_pop_palette = illust_pop_palette,
     illust_pop_selected = illust_pop_selected,
+    illust_settings = illust_settings,
+    illust_presets = illust_presets,
     version = 2L,
     saved_at = as.character(Sys.time())
   )

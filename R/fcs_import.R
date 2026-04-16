@@ -440,7 +440,8 @@ generate_logicle_ticks <- function(channel_name,
     list(
       major_pos    = as.numeric(major_disp[keep_m]),
       major_labels = as.character(fmt_label(major_raw[keep_m])),
-      minor_pos    = as.numeric(minor_disp[keep_n])
+      minor_pos    = as.numeric(minor_disp[keep_n]),
+      tick_mode    = "logicle"  # flow signal channels — JS uses this to select the correct axis path
     )
 
   }, error = function(e) NULL)
@@ -505,7 +506,8 @@ generate_asinh_ticks <- function(axis_range, cofactor = 5) {
     list(
       major_pos    = as.numeric(major_disp[keep_m]),
       major_labels = as.character(fmt_label(major_raw[keep_m])),
-      minor_pos    = as.numeric(minor_disp[keep_n])
+      minor_pos    = as.numeric(minor_disp[keep_n]),
+      tick_mode    = "asinh"   # CyTOF metal channels — JS uses this to select the correct axis path
     )
   }, error = function(e) NULL)
 }
