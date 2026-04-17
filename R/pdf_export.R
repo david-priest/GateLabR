@@ -92,6 +92,10 @@ POP_COLORS <- c('#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
   # Replace them with cross-platform safe names Illustrator already knows.
   .fix_svg_fonts(file_path)
 
+  # Post-process: remove duplicate white-halo text elements that gridSVG
+  # (older versions) inserts before every text grob for legibility.
+  .fix_svg_text_halo(file_path)
+
   invisible(file_path)
 }
 
@@ -120,6 +124,36 @@ POP_COLORS <- c('#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
   for (lf in linux_fonts) {
     lines <- gsub(lf, safe_font, lines, fixed = TRUE)
   }
+
+  writeLines(lines, svg_path, useBytes = FALSE)
+  invisible(svg_path)
+}
+
+#' Remove duplicate white-halo text elements inserted by older versions of gridSVG.
+#'
+#' gridSVG (pre-1.7) renders each text grob TWICE: first as a white-stroked
+#' background copy (the "halo", to ensure legibility on any background), then
+#' as the actual filled text element.  In vector editors such as Illustrator or
+#' Inkscape this appears as two overlapping text objects — one black, one white-
+#' outlined — for every label in the figure.
+#'
+#' The halo copy is identified by having stroke="white" (in any of its common
+#' representations).  We keep the filled element and delete the halo copy.
+#' This is safe for white gate labels too: their halo has stroke="white" and
+#' fill="white", while the keeper element has fill="white" and no stroke.
+.fix_svg_text_halo <- function(svg_path) {
+  if (!file.exists(svg_path)) return(invisible(svg_path))
+  lines <- readLines(svg_path, warn = FALSE, encoding = "UTF-8")
+
+  # Match any of: stroke="white", stroke="#fff", stroke="#FFF",
+  # stroke="#ffffff", stroke="#FFFFFF", or stroke="rgb(255, 255, 255)" etc.
+  white_col_re <- paste0(
+    'white',
+    '|#[Ff]{3,6}',
+    '|rgb\\(\\s*2(?:5[0-5]|[0-4][0-9])\\s*,\\s*2(?:5[0-5]|[0-4][0-9])\\s*,\\s*2(?:5[0-5]|[0-4][0-9])[^)]*\\)'
+  )
+  halo_pat <- paste0('<text\\b[^>]*\\bstroke\\s*=\\s*"(?:', white_col_re, ')"')
+  lines <- lines[!grepl(halo_pat, lines, perl = TRUE)]
 
   writeLines(lines, svg_path, useBytes = FALSE)
   invisible(svg_path)
