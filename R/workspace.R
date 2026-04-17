@@ -71,7 +71,10 @@ validate_workspace_channels <- function(workspace, channel_names) {
 export_population_to_coldata <- function(sce, population_id, pop_name,
                                          gates, populations,
                                          root_population_id,
-                                         assay_name = "exprs") {
+                                         assay_name = "exprs",
+                                         col_name   = NULL,
+                                         in_label   = "TRUE",
+                                         out_label  = "FALSE") {
   # Extract full assay data
   assay_data <- t(SummarizedExperiment::assay(sce, assay_name))
 
@@ -89,14 +92,22 @@ export_population_to_coldata <- function(sce, population_id, pop_name,
     stop("Population '", pop_name, "' not found in gating results.")
   }
 
+  # Derive column name if not supplied
+  if (is.null(col_name) || !nzchar(trimws(col_name))) {
+    col_name <- gsub("[^A-Za-z0-9_]", "_", trimws(pop_name))
+    col_name <- gsub("_+", "_", col_name)
+    col_name <- sub("^_|_$", "", col_name)
+    if (!nzchar(col_name)) col_name <- "population"
+  }
+
   # Add as factor column
-  col_name <- make.names(pop_name)
   SummarizedExperiment::colData(sce)[[col_name]] <- factor(
     pop_mask,
     levels = c(TRUE, FALSE),
-    labels = c("In", "Out")
+    labels = c(in_label, out_label)
   )
 
-  message("Exported population '", pop_name, "' as colData column '", col_name, "'")
+  message("Exported population '", pop_name, "' as colData column '", col_name,
+          "' (", in_label, " / ", out_label, ")")
   sce
 }

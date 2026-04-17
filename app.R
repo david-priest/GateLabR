@@ -6782,15 +6782,54 @@ server <- function(input, output, session) {
       showNotification("Cannot export root population (all events).", type = "warning", duration = 3)
       return()
     }
+    # Derive default column name (no spaces / special chars)
+    default_col <- gsub("[^A-Za-z0-9_]", "_", trimws(pop$name))
+    default_col <- gsub("_+", "_", default_col)
+    default_col <- sub("^_|_$", "", default_col)
+    if (!nzchar(default_col)) default_col <- "population"
+
+    showModal(modalDialog(
+      title = "Export population to colData",
+      tags$p(style = "color:#555; font-size:12px; margin-bottom:10px;",
+             paste0("Exporting: '", pop$name, "'  \u2014  ", rv$sce_name)),
+      textInput("export_col_name",  "Column name:",           value = default_col),
+      textInput("export_in_label",  "Label for gated cells:", value = "TRUE"),
+      textInput("export_out_label", "Label for other cells:", value = "FALSE"),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_export_pop_btn", "Export", class = "btn-success")
+      )
+    ))
+  })
+
+  observeEvent(input$confirm_export_pop_btn, {
+    removeModal()
+    req(rv$sce, rv$active_population_id)
+    pop_id <- rv$active_population_id
+    pop <- rv$populations[[pop_id]]; req(pop)
+
+    col_name  <- trimws(input$export_col_name  %||% "")
+    in_label  <- trimws(input$export_in_label  %||% "TRUE")
+    out_label <- trimws(input$export_out_label %||% "FALSE")
+    if (!nzchar(col_name)) col_name <- gsub("[^A-Za-z0-9_]", "_", pop$name)
+
     tryCatch({
-      rv$sce <- export_population_to_coldata(rv$sce, pop_id, pop$name,
-                                              rv$gates, rv$populations, rv$root_population_id,
-                                              rv$assay_name)
+      rv$sce <- export_population_to_coldata(
+        rv$sce, pop_id, pop$name,
+        rv$gates, rv$populations, rv$root_population_id,
+        rv$assay_name,
+        col_name  = col_name,
+        in_label  = in_label,
+        out_label = out_label
+      )
       assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
       cd_names <- get_coldata_names(rv$sce); rv$coldata_names <- cd_names
       updateSelectInput(session, "overlay_coldata", choices = c("(none)" = "", cd_names))
-      showNotification(paste("Exported '", pop$name, "' to colData of", rv$sce_name),
-                       type = "message", duration = 3)
+      showNotification(
+        paste0("Exported '", pop$name, "' \u2192 colData$", col_name,
+               "  (", in_label, " / ", out_label, ")"),
+        type = "message", duration = 4
+      )
     }, error = function(e) {
       showNotification(paste("Export error:", e$message), type = "error", duration = 5)
     })
