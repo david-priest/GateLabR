@@ -644,6 +644,209 @@ ui <- fluidPage(
           tags$div(id = "illustration-grid-container", class = "mini-plot-grid-container")
         ),
 
+        # ── Tab 4: UMAP ───────────────────────────────────────────────────────
+        tabPanel("UMAP",
+          tags$style(HTML("
+            .umap-controls { max-width: 100%; box-sizing: border-box; }
+            .umap-compact .form-group { margin-bottom: 4px; }
+            .umap-compact label { font-size: 11px; margin-bottom: 1px; font-weight: 500; display: block; }
+            .umap-compact .shiny-input-container:not(.shiny-input-container-inline) {
+              width: auto !important; min-width: 0; margin: 0;
+            }
+            .umap-compact input[type='number'],
+            .umap-compact input[type='text'] {
+              width: 70px; min-width: 55px; max-width: 100%;
+              padding: 2px 4px; font-size: 11px;
+            }
+            .umap-compact .selectize-control,
+            .umap-compact select { width: 150px; min-width: 120px; }
+            .umap-compact .selectize-input { font-size: 11px; min-height: 28px; padding: 3px 6px; }
+            .umap-compact .irs { margin-bottom: 2px; }
+            .umap-compact .irs-grid-text { font-size: 9px; }
+            .umap-flex-row {
+              display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end;
+              margin-bottom: 6px;
+            }
+            .umap-field { display: flex; flex-direction: column; }
+            .umap-field-wide { flex: 1 1 200px; min-width: 160px; max-width: 100%; }
+            .umap-field-color input[type='color'] {
+              width: 48px !important; height: 28px; padding: 1px; border: 1px solid #bbb;
+              border-radius: 3px; cursor: pointer;
+            }
+            .umap-run-toggle {
+              display: inline-block; background: #eaf1ff; border: 1px solid #7892c7;
+              border-radius: 4px; padding: 4px 12px; font-weight: 600;
+              color: #1e3a7a; cursor: pointer; user-select: none;
+              font-size: 12px; margin: 4px 0;
+            }
+            .umap-run-toggle:hover { background: #d7e3f9; }
+            details > summary { list-style: none; }
+            details > summary::-webkit-details-marker,
+            details > summary::marker { display: none; }
+            details[open] .umap-run-chev-closed { display: none; }
+            details:not([open]) .umap-run-chev-open { display: none; }
+            .umap-features-used {
+              font-size: 10px; color: #444; line-height: 1.3;
+              background: #f7f7fa; border: 1px solid #e0e0e8;
+              padding: 3px 6px; border-radius: 3px; margin-top: 2px;
+              max-height: 48px; overflow-y: auto;
+            }
+          ")),
+          tags$div(class = "umap-controls", style = "padding:6px 4px;",
+
+            tags$div(class = "umap-top-actions",
+                     style = "display:flex; gap:8px; align-items:center; margin-bottom:6px;",
+              actionButton("umap_render_btn", "Render UMAP",
+                           class = "btn-sm btn-primary"),
+              downloadButton("umap_export_svg_dl", "SVG",
+                             class = "btn-sm btn-default"),
+              downloadButton("umap_export_pdf_dl", "PDF",
+                             class = "btn-sm btn-default"),
+              tags$span(textOutput("umap_status", inline = TRUE),
+                        style = "font-size:11px; color:#666;")
+            ),
+
+            # ── Color / display controls ──────────────────────────────────────
+            tags$div(class = "umap-flex-row umap-compact",
+              tags$div(class = "umap-field",
+                selectInput("umap_color_mode", "Color by:",
+                            choices = c("Populations" = "populations",
+                                        "colData column" = "coldata",
+                                        "Marker expression" = "marker"),
+                            selected = "populations")
+              ),
+              tags$div(class = "umap-field umap-field-wide",
+                conditionalPanel(
+                  "input.umap_color_mode == 'coldata'",
+                  selectInput("umap_color_coldata", "colData column:",
+                              choices = NULL)
+                ),
+                conditionalPanel(
+                  "input.umap_color_mode == 'marker'",
+                  selectInput("umap_color_marker", "Marker:",
+                              choices = NULL)
+                ),
+                conditionalPanel(
+                  "input.umap_color_mode == 'populations'",
+                  tags$div(style = "font-size:11px; color:#666; margin-bottom:2px;",
+                    "Show populations (rest → Ungated):"),
+                  tags$div(style = "display:flex; gap:4px; margin-bottom:2px;",
+                    actionButton("umap_display_pops_all",   "All",
+                                 class = "btn-xs btn-default", style = "padding:1px 6px; font-size:10px;"),
+                    actionButton("umap_display_pops_clear", "None",
+                                 class = "btn-xs btn-default", style = "padding:1px 6px; font-size:10px;")
+                  ),
+                  tags$div(style = "max-height:130px; overflow-y:auto; border:1px solid #eee; padding:2px 4px; border-radius:3px; font-size:11px;",
+                    checkboxGroupInput("umap_display_pops", NULL, choices = NULL, selected = NULL)
+                  )
+                )
+              ),
+              tags$div(class = "umap-field umap-field-color",
+                tags$label("Ungated:", class = "control-label",
+                           style = "font-size:11px; margin-bottom:2px;"),
+                tags$input(id = "umap_ungated_color",
+                           type = "color", value = "#BBBBBB",
+                           onchange = "Shiny.setInputValue('umap_ungated_color', this.value, {priority:'event'});")
+              ),
+              tags$div(class = "umap-field umap-field-wide",
+                selectInput("umap_dr_name", "Reduction:",
+                            choices = NULL,
+                            selected = NULL),
+                tags$div(style = "font-size:11px; color:#666;",
+                         textOutput("umap_dr_info", inline = TRUE)),
+                tags$div(style = "display:flex; gap:4px; align-items:center; margin-top:3px;",
+                  tags$span("Markers used:", style = "font-size:10px; color:#444;"),
+                  actionButton("umap_reuse_features", "Reselect",
+                               class = "btn-xs btn-default",
+                               style = "padding:1px 6px; font-size:10px;",
+                               title = "Tick these markers as the Run-UMAP feature set")
+                ),
+                tags$div(class = "umap-features-used",
+                         textOutput("umap_features_used", inline = FALSE))
+              )
+            ),
+
+            tags$div(class = "umap-flex-row umap-compact",
+              tags$div(class = "umap-field",
+                numericInput("umap_point_size",  "Pt size:",  value = 0.6, min = 0.1, max = 5,   step = 0.1)),
+              tags$div(class = "umap-field", style = "min-width:140px;",
+                sliderInput("umap_point_alpha", "Opacity:", min = 0.05, max = 1, value = 0.8, step = 0.05)),
+              tags$div(class = "umap-field",
+                numericInput("umap_text_size",   "Font:",     value = 14,  min = 6,   max = 36,  step = 1)),
+              tags$div(class = "umap-field",
+                numericInput("umap_plot_width",  "W (in):",   value = 7,   min = 3,   max = 20,  step = 0.5)),
+              tags$div(class = "umap-field",
+                numericInput("umap_plot_height", "H (in):",   value = 7,   min = 3,   max = 20,  step = 0.5)),
+              tags$div(class = "umap-field", style = "font-size:11px;",
+                checkboxInput("umap_rasterize",  "Rasterize",   value = TRUE),
+                checkboxInput("umap_hide_axis",  "Hide axes",   value = TRUE),
+                checkboxInput("umap_show_legend","Legend",      value = TRUE),
+                checkboxInput("umap_label_pops", "Label pops",  value = FALSE)
+              )
+            ),
+
+            # ── Run-UMAP collapsible section ──────────────────────────────────
+            tags$details(id = "umap_run_section",
+              tags$summary(
+                tags$span(class = "umap-run-toggle",
+                  icon("cogs"),
+                  tags$span(class = "umap-run-chev-closed", HTML("&nbsp;▸&nbsp;Run / Re-run UMAP")),
+                  tags$span(class = "umap-run-chev-open",   HTML("&nbsp;▾&nbsp;Run / Re-run UMAP"))
+                )
+              ),
+              tags$div(class = "umap-run-body umap-compact",
+                       style = "padding:8px 8px; border:1px solid #7892c7; border-radius:4px; margin-top:2px; background:#fbfcff;",
+                tags$div(class = "umap-flex-row",
+                  tags$div(class = "umap-field",
+                    numericInput("umap_run_cells",       "Cells/samp:", value = 1000, min = 100, max = 50000, step = 100)),
+                  tags$div(class = "umap-field",
+                    numericInput("umap_run_n_neighbors", "n_neigh:",    value = 15,   min = 2,   max = 200,   step = 1)),
+                  tags$div(class = "umap-field",
+                    numericInput("umap_run_min_dist",    "min_dist:",   value = 0.01, min = 0,   max = 1,     step = 0.01)),
+                  tags$div(class = "umap-field",
+                    numericInput("umap_run_seed",        "Seed:",       value = 1234, min = 0,   max = 99999, step = 1)),
+                  tags$div(class = "umap-field",
+                    textInput(   "umap_run_name",        "Red. name:",  value = "UMAP"))
+                ),
+                tags$div(class = "umap-flex-row",
+                  tags$div(class = "umap-field umap-field-wide",
+                    selectInput("umap_run_on_population", "Run on population:",
+                                choices  = c("All cells" = "__all__"),
+                                selected = "__all__"),
+                    tags$div(style = "font-size:10px; color:#888;",
+                      "Restrict to events in a gated population (e.g. live cells).")
+                  ),
+                  tags$div(class = "umap-field umap-field-wide",
+                    tags$label("Samples to include:", style = "font-size:11px; margin-bottom:2px;"),
+                    tags$div(style = "display:flex; gap:4px; margin-bottom:2px; flex-wrap:wrap;",
+                      actionButton("umap_run_samples_all",   "All",
+                                   class = "btn-xs btn-default", style = "padding:1px 6px; font-size:10px;"),
+                      actionButton("umap_run_samples_clear", "None",
+                                   class = "btn-xs btn-default", style = "padding:1px 6px; font-size:10px;"),
+                      actionButton("umap_run_samples_sync",  "Use left filter",
+                                   class = "btn-xs btn-default", style = "padding:1px 6px; font-size:10px;",
+                                   title = "Copy the current left-panel sample filter selection")
+                    ),
+                    tags$div(style = "max-height:100px; overflow-y:auto; border:1px solid #e0e0e8; padding:2px 4px; border-radius:3px; font-size:11px; background:white;",
+                      checkboxGroupInput("umap_run_samples", NULL, choices = NULL, selected = NULL)
+                    )
+                  )
+                ),
+                tags$div(class = "section-header", "Type markers (features)"),
+                uiOutput("umap_feature_channels_ui"),
+                tags$div(style = "margin-top:8px;",
+                  actionButton("umap_run_btn", "Run UMAP",
+                               class = "btn-sm btn-primary", icon = icon("play"))
+                )
+              )
+            )
+          ),
+          tags$div(id = "umap-plot-container",
+                   style = "padding:8px 4px; overflow:auto; min-height:400px;",
+            plotOutput("umap_plot", width = "auto", height = "700px")
+          )
+        ),
+
         # ── Tab 4: Statistics ────────────────────────────────────────────────
         tabPanel("Statistics",
           tags$div(class = "stats-controls",
@@ -6201,22 +6404,52 @@ server <- function(input, output, session) {
 
     channels   <- isolate(rv$channels)
     is_flow    <- isolate(is_flow_session(rv$sce))
-    ch_to_pnn  <- S4Vectors::metadata(isolate(rv$sce))$channel_to_pnn  # may be NULL
+    sce_local  <- isolate(rv$sce)
+    ch_to_pnn  <- S4Vectors::metadata(sce_local)$channel_to_pnn  # may be NULL
 
-    # Column widths: [pnn ref] [current → new name]
-    col_tpl <- if (!is.null(ch_to_pnn)) "120px 1fr" else "1fr"
+    # Fallback: CATALYST-prepped SCEs store the channel (PnN / metal) name in
+    # rowData(sce)$channel_name. Use it when channel_to_pnn metadata is absent
+    # so the Panel tab always shows channel alongside marker.
+    rd_channel_map <- NULL
+    if (is.null(ch_to_pnn)) {
+      rd <- tryCatch(SummarizedExperiment::rowData(sce_local),
+                     error = function(e) NULL)
+      if (!is.null(rd) && "channel_name" %in% colnames(rd)) {
+        rn <- rownames(sce_local)
+        cn <- as.character(rd$channel_name)
+        if (length(cn) == length(rn)) {
+          rd_channel_map <- setNames(as.list(cn), rn)
+        }
+      }
+    }
+
+    lookup_channel <- function(ch) {
+      if (!is.null(ch_to_pnn)) {
+        return(as.character(ch_to_pnn[[ch]] %||% "\u2014"))
+      }
+      if (!is.null(rd_channel_map)) {
+        return(as.character(rd_channel_map[[ch]] %||% "\u2014"))
+      }
+      "\u2014"
+    }
+
+    # Always show [channel] [editable marker] — channel column populated from
+    # metadata$channel_to_pnn or rowData$channel_name (whichever is available),
+    # or a "—" placeholder so the layout stays consistent.
+    col_tpl <- "120px 1fr"
+    show_channel_col <- !is.null(ch_to_pnn) || !is.null(rd_channel_map)
 
     header <- tags$div(
       class = "scales-col-header",
       style = paste0("display:grid; grid-template-columns:", col_tpl,
                      "; gap:6px; align-items:center; margin-bottom:2px;"),
-      if (!is.null(ch_to_pnn)) tags$span("FCS Channel") else NULL,
-      tags$span("Display Name (editable)")
+      tags$span(if (show_channel_col) "FCS Channel" else "Channel"),
+      tags$span("Marker (editable)")
     )
 
     rows <- lapply(channels, function(ch) {
       safe_id   <- .panel_safe_id(ch)
-      pnn       <- if (!is.null(ch_to_pnn)) as.character(ch_to_pnn[[ch]] %||% "\u2014") else NULL
+      pnn       <- lookup_channel(ch)
       is_scatter <- isTRUE(.is_scatter_channel(ch))
       is_qc      <- isTRUE(.is_qc_channel(ch))
       locked     <- is_scatter   # QC channels are renameable; scatter are not
@@ -6238,12 +6471,12 @@ server <- function(input, output, session) {
         class = "scales-ch-row",
         style = paste0("display:grid; grid-template-columns:", col_tpl,
                        "; gap:6px; align-items:center;"),
-        if (!is.null(ch_to_pnn)) tags$span(
+        tags$span(
           pnn,
           class = "scales-ch-name",
           title = paste0("FCS $PnN: ", pnn),
           style = if (locked) "color:#999;" else ""
-        ) else NULL,
+        ),
         name_cell
       )
     })
@@ -7202,6 +7435,716 @@ server <- function(input, output, session) {
   )
 
   output$status_text <- renderText("Select an SCE object to begin")
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # UMAP tab
+  # ════════════════════════════════════════════════════════════════════════════
+
+  rv$umap_last_render_ver <- 0L
+  rv$umap_status_text     <- ""
+  # Type markers used for each computed reduction, keyed by reduction name.
+  # Also mirrored to metadata(sce)$umap_features for persistence.
+  rv$umap_run_features    <- list()
+
+  output$umap_status <- renderText({ rv$umap_status_text })
+
+  # Helper: combined population assignments → character vector (one entry per
+  # event). Events belonging to multiple populations pick the first-matching
+  # pop in the display order of rv$populations. Events in none become "Ungated".
+  # Only populations selected via `input$umap_display_pops` are considered —
+  # this lets the user untangle nested gates (e.g. show only terminal pops).
+  .umap_pop_assignment <- function() {
+    pops <- rv$populations %||% list()
+    root_id <- rv$root_population_id
+    if (length(pops) == 0 || is.null(root_id)) return(NULL)
+    pop_ids <- setdiff(names(pops), root_id)
+    selected <- input$umap_display_pops
+    if (!is.null(selected)) {
+      pop_ids <- pop_ids[pop_ids %in% selected]
+    }
+    n_cells <- ncol(rv$sce)
+    if (length(pop_ids) == 0) return(rep("Ungated", n_cells))
+    masks <- rv$pop_events_map %||% list()
+    assignment <- rep(NA_character_, n_cells)
+    for (pid in pop_ids) {
+      m <- masks[[pid]]
+      if (is.null(m) || length(m) != n_cells) next
+      nm <- pops[[pid]]$name %||% pid
+      assignment[is.na(assignment) & m] <- nm
+    }
+    assignment[is.na(assignment)] <- "Ungated"
+    assignment
+  }
+
+  # Keep the population dropdowns (display filter + run-on-population) in sync
+  # with the current set of user-defined populations.
+  observe({
+    pops <- rv$populations %||% list()
+    root_id <- rv$root_population_id
+    pop_ids <- setdiff(names(pops), root_id %||% "")
+    labels <- vapply(pop_ids, function(pid)
+      as.character(pops[[pid]]$name %||% pid), character(1))
+
+    # Display-filter checkboxes (value = pop_id, label = name)
+    display_choices <- if (length(pop_ids) == 0) character(0)
+                       else setNames(pop_ids, unname(labels))
+    prev_display <- isolate(input$umap_display_pops)
+    new_display <- if (is.null(prev_display) || length(prev_display) == 0)
+                     pop_ids
+                   else intersect(prev_display, pop_ids)
+    # If no prior selection existed, select all on first sync
+    if (length(new_display) == 0 && length(pop_ids) > 0 &&
+        (is.null(prev_display) || length(prev_display) == 0)) {
+      new_display <- pop_ids
+    }
+    updateCheckboxGroupInput(session, "umap_display_pops",
+                             choices = display_choices, selected = new_display)
+
+    # Run-on-population dropdown
+    run_choices <- c("All cells" = "__all__",
+                     if (length(pop_ids) > 0) setNames(pop_ids, unname(labels)))
+    prev_run <- isolate(input$umap_run_on_population)
+    new_run <- if (!is.null(prev_run) && prev_run %in% run_choices) prev_run else "__all__"
+    updateSelectInput(session, "umap_run_on_population",
+                      choices = run_choices, selected = new_run)
+  })
+
+  observeEvent(input$umap_display_pops_all, {
+    pops <- rv$populations %||% list()
+    pop_ids <- setdiff(names(pops), rv$root_population_id %||% "")
+    updateCheckboxGroupInput(session, "umap_display_pops", selected = pop_ids)
+  })
+  observeEvent(input$umap_display_pops_clear, {
+    updateCheckboxGroupInput(session, "umap_display_pops", selected = character(0))
+  })
+
+  # ── Sample selector (for Run-UMAP input) ─────────────────────────────────
+  .umap_sample_ids <- function() {
+    if (is.null(rv$sce)) return(character(0))
+    cd <- tryCatch(SummarizedExperiment::colData(rv$sce), error = function(e) NULL)
+    if (is.null(cd) || !("sample_id" %in% colnames(cd))) return(character(0))
+    lv <- cd[["sample_id"]]
+    if (is.factor(lv)) levels(lv) else sort(unique(as.character(lv)))
+  }
+
+  observe({
+    req(rv$sce)
+    ids <- .umap_sample_ids()
+    prev <- isolate(input$umap_run_samples)
+    sel <- if (is.null(prev) || length(prev) == 0) ids
+           else intersect(prev, ids)
+    if (length(sel) == 0 && length(ids) > 0 &&
+        (is.null(prev) || length(prev) == 0)) sel <- ids
+    updateCheckboxGroupInput(session, "umap_run_samples",
+                             choices = if (length(ids) == 0) character(0) else ids,
+                             selected = sel)
+  })
+
+  observeEvent(input$umap_run_samples_all, {
+    updateCheckboxGroupInput(session, "umap_run_samples",
+                             selected = .umap_sample_ids())
+  })
+  observeEvent(input$umap_run_samples_clear, {
+    updateCheckboxGroupInput(session, "umap_run_samples", selected = character(0))
+  })
+  observeEvent(input$umap_run_samples_sync, {
+    req(rv$sce)
+    cd <- tryCatch(SummarizedExperiment::colData(rv$sce), error = function(e) NULL)
+    if (is.null(cd) || !("sample_id" %in% colnames(cd))) return()
+    mask <- rv$sample_mask
+    sids <- as.character(cd[["sample_id"]])
+    if (is.null(mask) || length(mask) != length(sids)) {
+      # No active left filter → select all
+      updateCheckboxGroupInput(session, "umap_run_samples",
+                               selected = .umap_sample_ids())
+    } else {
+      chosen <- unique(sids[mask])
+      updateCheckboxGroupInput(session, "umap_run_samples", selected = chosen)
+    }
+  })
+
+  # ── "Markers used" display + reselect button ─────────────────────────────
+  .umap_current_features <- reactive({
+    rv$umap_last_render_ver
+    req(rv$sce)
+    nm <- input$umap_dr_name
+    if (is.null(nm) || !nzchar(nm)) return(character(0))
+    # Prefer in-session record; fall back to persisted metadata
+    f <- rv$umap_run_features[[nm]]
+    if (is.null(f)) {
+      md <- tryCatch(S4Vectors::metadata(rv$sce)$umap_features,
+                     error = function(e) NULL)
+      if (is.list(md)) f <- md[[nm]]
+    }
+    as.character(f %||% character(0))
+  })
+
+  output$umap_features_used <- renderText({
+    f <- .umap_current_features()
+    if (length(f) == 0) return("(Not recorded — run UMAP from this app to log its feature set.)")
+    paste(f, collapse = ", ")
+  })
+
+  observeEvent(input$umap_reuse_features, {
+    f <- .umap_current_features()
+    if (length(f) == 0) {
+      showNotification("No recorded markers for this reduction.",
+                       type = "warning", duration = 3)
+      return()
+    }
+    chs <- as.character(rv$channels %||% character(0))
+    simple <- intersect(f, chs[!grepl("_", chs)])
+    marker <- intersect(f, chs[ grepl("_", chs)])
+    # Anything not matching either bucket: just put in whichever group exists
+    leftover <- setdiff(f, c(simple, marker))
+    if (length(leftover) > 0) {
+      marker <- c(marker, intersect(leftover, chs))
+    }
+    updateCheckboxGroupInput(session, "umap_features_simple", selected = simple)
+    updateCheckboxGroupInput(session, "umap_features_marker", selected = marker)
+    showNotification(sprintf("Reselected %d markers from '%s'.",
+                             length(f), input$umap_dr_name),
+                     type = "message", duration = 3)
+  })
+
+  # Sync reduction dropdown to whatever is stored on the active SCE
+  observe({
+    req(rv$sce)
+    drs <- tryCatch(SingleCellExperiment::reducedDimNames(rv$sce),
+                    error = function(e) character(0))
+    cur <- isolate(input$umap_dr_name)
+    sel <- if (length(drs) == 0) character(0)
+           else if (!is.null(cur) && cur %in% drs) cur
+           else drs[1]
+    updateSelectInput(session, "umap_dr_name",
+                      choices = if (length(drs) == 0) character(0) else drs,
+                      selected = sel)
+  })
+
+  # Sync colData / marker dropdowns
+  observe({
+    req(rv$sce)
+    cd_names <- tryCatch(get_coldata_names(rv$sce),
+                         error = function(e) character(0))
+    updateSelectInput(session, "umap_color_coldata",
+                      choices  = if (length(cd_names) == 0) character(0) else cd_names,
+                      selected = isolate(input$umap_color_coldata))
+
+    mk <- tryCatch(get_channel_names(rv$sce),
+                   error = function(e) character(0))
+    updateSelectInput(session, "umap_color_marker",
+                      choices  = if (length(mk) == 0) character(0) else mk,
+                      selected = isolate(input$umap_color_marker))
+  })
+
+  output$umap_dr_info <- renderText({
+    req(rv$sce)
+    drs <- tryCatch(SingleCellExperiment::reducedDimNames(rv$sce),
+                    error = function(e) character(0))
+    nm <- input$umap_dr_name
+    if (length(drs) == 0 || is.null(nm) || !nzchar(nm) || !(nm %in% drs)) {
+      return("No reduction stored — use 'Run UMAP' below.")
+    }
+    dm <- tryCatch(SingleCellExperiment::reducedDim(rv$sce, nm),
+                   error = function(e) NULL)
+    if (is.null(dm)) return("")
+    sprintf("%s: %d cells x %d dims", nm, nrow(dm), ncol(dm))
+  })
+
+  # ── Feature (type-marker) checkbox UI ──────────────────────────────────────
+  output$umap_feature_channels_ui <- renderUI({
+    req(rv$channels)
+    chs <- as.character(rv$channels)
+    marker_assigned <- grepl("_", chs)
+    simple <- chs[!marker_assigned]
+    marker <- chs[marker_assigned]
+
+    current_simple <- isolate(as.character(input$umap_features_simple %||% character(0)))
+    current_marker <- isolate(as.character(input$umap_features_marker %||% character(0)))
+
+    tagList(
+      if (length(simple) > 0) {
+        tags$div(class = "illust-channel-group",
+          tags$div(class = "illust-channel-group-header",
+            tags$span("Simple / isotope channels"),
+            tags$span(class = "illust-channel-group-actions",
+              actionButton("umap_feat_simple_all",   "All",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;"),
+              actionButton("umap_feat_simple_clear", "Clear",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;")
+            )
+          ),
+          tags$div(class = "illust-channel-group-body",
+            checkboxGroupInput("umap_features_simple", NULL,
+              choices  = setNames(simple, simple),
+              selected = intersect(current_simple, simple),
+              inline   = FALSE)
+          )
+        )
+      },
+      if (length(marker) > 0) {
+        tags$div(class = "illust-channel-group",
+          tags$div(class = "illust-channel-group-header",
+            tags$span("Marker-assigned channels"),
+            tags$span(class = "illust-channel-group-actions",
+              actionButton("umap_feat_marker_all",   "All",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;"),
+              actionButton("umap_feat_marker_clear", "Clear",
+                           class = "btn-xs btn-default", style = "padding:1px 6px;")
+            )
+          ),
+          tags$div(class = "illust-channel-group-body",
+            checkboxGroupInput("umap_features_marker", NULL,
+              choices  = setNames(marker, marker),
+              selected = intersect(current_marker, marker),
+              inline   = FALSE)
+          )
+        )
+      }
+    )
+  })
+
+  observeEvent(input$umap_feat_simple_all, {
+    chs <- as.character(rv$channels)
+    simple <- chs[!grepl("_", chs)]
+    updateCheckboxGroupInput(session, "umap_features_simple", selected = simple)
+  })
+  observeEvent(input$umap_feat_simple_clear, {
+    updateCheckboxGroupInput(session, "umap_features_simple", selected = character(0))
+  })
+  observeEvent(input$umap_feat_marker_all, {
+    chs <- as.character(rv$channels)
+    marker <- chs[grepl("_", chs)]
+    updateCheckboxGroupInput(session, "umap_features_marker", selected = marker)
+  })
+  observeEvent(input$umap_feat_marker_clear, {
+    updateCheckboxGroupInput(session, "umap_features_marker", selected = character(0))
+  })
+
+  # ── Run UMAP ───────────────────────────────────────────────────────────────
+  observeEvent(input$umap_run_btn, {
+    req(rv$sce, rv$sce_name)
+    if (!requireNamespace("CATALYST", quietly = TRUE)) {
+      showNotification("Package 'CATALYST' is required to run UMAP.", type = "error", duration = 6)
+      return()
+    }
+    feats <- unique(c(as.character(input$umap_features_simple %||% character(0)),
+                      as.character(input$umap_features_marker %||% character(0))))
+    if (length(feats) < 2) {
+      showNotification("Select at least 2 type markers to run UMAP.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    run_name  <- trimws(input$umap_run_name %||% "UMAP")
+    if (!nzchar(run_name)) run_name <- "UMAP"
+    cells     <- as.integer(input$umap_run_cells %||% 1000)
+    n_neigh   <- as.integer(input$umap_run_n_neighbors %||% 15)
+    min_dist  <- as.numeric(input$umap_run_min_dist %||% 0.01)
+    seed_val  <- as.integer(input$umap_run_seed %||% 1234)
+    run_pop   <- input$umap_run_on_population %||% "__all__"
+    use_pop   <- nzchar(run_pop) && !identical(run_pop, "__all__")
+
+    # Build the combined input mask: population ∩ samples.
+    n_cells <- ncol(rv$sce)
+    combined_mask <- rep(TRUE, n_cells)
+    if (use_pop) {
+      pop_mask <- tryCatch(get_pop_mask(run_pop), error = function(e) NULL)
+      if (is.null(pop_mask) || length(pop_mask) != n_cells) {
+        showNotification("No event mask available for the selected population. ",
+                         "Visit the Populations tab first.",
+                         type = "error", duration = 6); return()
+      }
+      combined_mask <- combined_mask & pop_mask
+    }
+    selected_samples <- as.character(input$umap_run_samples %||% character(0))
+    cd <- tryCatch(SummarizedExperiment::colData(rv$sce), error = function(e) NULL)
+    has_sample_col <- !is.null(cd) && ("sample_id" %in% colnames(cd))
+    use_sample_subset <- has_sample_col &&
+      length(selected_samples) > 0 &&
+      length(selected_samples) < length(unique(as.character(cd[["sample_id"]])))
+    if (has_sample_col && length(selected_samples) == 0) {
+      showNotification("Select at least one sample for UMAP input.",
+                       type = "warning", duration = 4); return()
+    }
+    if (use_sample_subset) {
+      samp_mask <- as.character(cd[["sample_id"]]) %in% selected_samples
+      combined_mask <- combined_mask & samp_mask
+    }
+    use_subset <- use_pop || use_sample_subset
+    if (use_subset && !any(combined_mask)) {
+      showNotification("Population × sample selection has no cells.",
+                       type = "error", duration = 6); return()
+    }
+
+    withProgress(message = paste("Running", run_name, "..."), value = 0.1, {
+      rv$umap_status_text <- "Running UMAP..."
+      tryCatch({
+        if (use_subset) {
+          sub_sce <- rv$sce[, combined_mask]
+          set.seed(seed_val)
+          sub_sce <- CATALYST::runDR(
+            sub_sce, dr = "UMAP",
+            cells       = cells,
+            features    = feats,
+            n_neighbors = n_neigh,
+            min_dist    = min_dist
+          )
+          set.seed(seed_val)
+          sub_dr <- SingleCellExperiment::reducedDim(sub_sce, "UMAP")
+          full_dr <- matrix(NA_real_, nrow = n_cells, ncol = ncol(sub_dr))
+          colnames(full_dr) <- colnames(sub_dr)
+          full_dr[combined_mask, ] <- sub_dr
+          new_sce <- rv$sce
+          SingleCellExperiment::reducedDim(new_sce, run_name) <- full_dr
+        } else {
+          set.seed(seed_val)
+          new_sce <- CATALYST::runDR(
+            rv$sce, dr = "UMAP",
+            cells       = cells,
+            features    = feats,
+            n_neighbors = n_neigh,
+            min_dist    = min_dist
+          )
+          set.seed(seed_val)
+          if (!identical(run_name, "UMAP") &&
+              "UMAP" %in% SingleCellExperiment::reducedDimNames(new_sce)) {
+            rd_names <- SingleCellExperiment::reducedDimNames(new_sce)
+            rd_names[rd_names == "UMAP"] <- run_name
+            SingleCellExperiment::reducedDimNames(new_sce) <- rd_names
+          }
+        }
+
+        # Record the feature set for this reduction (session + SCE metadata)
+        rv$umap_run_features[[run_name]] <- feats
+        md_feat <- tryCatch(S4Vectors::metadata(new_sce)$umap_features,
+                            error = function(e) NULL)
+        if (!is.list(md_feat)) md_feat <- list()
+        md_feat[[run_name]] <- feats
+        S4Vectors::metadata(new_sce)$umap_features <- md_feat
+
+        rv$sce <- new_sce
+        assign(rv$sce_name, new_sce, envir = .GlobalEnv)
+
+        drs <- SingleCellExperiment::reducedDimNames(new_sce)
+        updateSelectInput(session, "umap_dr_name",
+                          choices  = drs,
+                          selected = run_name)
+
+        pop_desc <- if (use_pop) {
+          nm <- rv$populations[[run_pop]]$name %||% run_pop
+          sprintf(" on '%s'", nm)
+        } else ""
+        samp_desc <- if (use_sample_subset)
+          sprintf(" across %d samples", length(selected_samples)) else ""
+        rv$umap_status_text <- sprintf(
+          "Computed %s%s%s (%d input cells, cells/sample=%s, %d markers)",
+          run_name, pop_desc, samp_desc,
+          sum(combined_mask), cells, length(feats))
+        rv$umap_last_render_ver <- rv$umap_last_render_ver + 1L
+        showNotification(paste("UMAP complete:", run_name),
+                         type = "message", duration = 4)
+      }, error = function(e) {
+        rv$umap_status_text <- paste("UMAP error:", conditionMessage(e))
+        showNotification(paste("UMAP error:", conditionMessage(e)),
+                         type = "error", duration = 8)
+      })
+    })
+  })
+
+  observeEvent(input$umap_render_btn, {
+    rv$umap_last_render_ver <- rv$umap_last_render_ver + 1L
+  })
+
+  # ── Build the UMAP data frame for plotting ────────────────────────────────
+  umap_plot_df <- reactive({
+    rv$umap_last_render_ver
+    req(rv$sce)
+    drs <- tryCatch(SingleCellExperiment::reducedDimNames(rv$sce),
+                    error = function(e) character(0))
+    if (length(drs) == 0) return(NULL)
+
+    # Fall back to first available reduction if the dropdown hasn't been
+    # updated yet (e.g. immediately after runDR queues an updateSelectInput
+    # that hasn't round-tripped back to the client).
+    dr_name <- input$umap_dr_name
+    if (is.null(dr_name) || !nzchar(dr_name) || !(dr_name %in% drs)) {
+      dr_name <- drs[1]
+    }
+    xy <- SingleCellExperiment::reducedDim(rv$sce, dr_name)
+    if (is.null(xy) || ncol(xy) < 2) return(NULL)
+    df <- data.frame(x = xy[, 1], y = xy[, 2])
+
+    mode <- input$umap_color_mode %||% "populations"
+    if (mode == "populations") {
+      assignment <- .umap_pop_assignment()
+      if (is.null(assignment) || length(assignment) != nrow(df)) {
+        df$color_val <- "Ungated"
+      } else {
+        df$color_val <- assignment
+      }
+      # Ordered factor: populations first (in palette order), then Ungated last
+      pop_ids <- setdiff(names(rv$populations %||% list()), rv$root_population_id)
+      pop_names <- vapply(pop_ids, function(pid) as.character(rv$populations[[pid]]$name %||% pid),
+                          character(1))
+      levs <- c(pop_names, "Ungated")
+      levs <- intersect(levs, unique(df$color_val))
+      if (!"Ungated" %in% levs && any(df$color_val == "Ungated")) levs <- c(levs, "Ungated")
+      df$color_val <- factor(df$color_val, levels = levs)
+    } else if (mode == "coldata") {
+      cd_col <- input$umap_color_coldata
+      if (is.null(cd_col) || !nzchar(cd_col)) return(NULL)
+      cd <- SummarizedExperiment::colData(rv$sce)
+      if (!(cd_col %in% colnames(cd))) return(NULL)
+      vals <- cd[[cd_col]]
+      if (length(vals) != nrow(df)) return(NULL)
+      df$color_val <- vals
+    } else if (mode == "marker") {
+      mk <- input$umap_color_marker
+      if (is.null(mk) || !nzchar(mk)) return(NULL)
+      if (!(mk %in% rownames(rv$sce))) return(NULL)
+      assay_name <- rv$assay_name %||% "exprs"
+      vals <- as.numeric(SummarizedExperiment::assay(rv$sce, assay_name)[mk, ])
+      df$color_val <- vals
+    }
+
+    df <- df[!is.na(df$x) & !is.na(df$y), , drop = FALSE]
+    df
+  })
+
+  # ── Render UMAP plot (ggplot2, aspect.ratio = 1) ──────────────────────────
+  .umap_empty_plot <- function(msg) {
+    if (!requireNamespace("ggplot2", quietly = TRUE)) {
+      plot.new(); title(msg); return(invisible(NULL))
+    }
+    library(ggplot2)
+    ggplot() +
+      annotate("text", x = 0, y = 0, label = msg, size = 5, colour = "#666") +
+      theme_void()
+  }
+
+  output$umap_plot <- renderPlot({
+    df <- umap_plot_df()
+
+    if (is.null(rv$sce)) return(.umap_empty_plot("Load an SCE first."))
+    drs <- tryCatch(SingleCellExperiment::reducedDimNames(rv$sce),
+                    error = function(e) character(0))
+    if (length(drs) == 0) {
+      return(.umap_empty_plot("No reduction stored.\nOpen 'Run UMAP' and compute one."))
+    }
+    if (is.null(df) || nrow(df) == 0) {
+      return(.umap_empty_plot(
+        paste0("No cells to plot for '", input$umap_dr_name %||% drs[1],
+               "'.\nCheck that the reduction has non-NA coordinates.")))
+    }
+
+    if (!requireNamespace("ggplot2", quietly = TRUE)) {
+      stop("Package 'ggplot2' is required.")
+    }
+    library(ggplot2)
+
+    mode        <- input$umap_color_mode %||% "populations"
+    point_size  <- as.numeric(input$umap_point_size  %||% 0.6)
+    point_alpha <- as.numeric(input$umap_point_alpha %||% 0.8)
+    text_size   <- as.numeric(input$umap_text_size   %||% 14)
+    rast        <- isTRUE(input$umap_rasterize)
+    hide_axis   <- isTRUE(input$umap_hide_axis)
+    show_legend <- isTRUE(input$umap_show_legend)
+    label_pops  <- isTRUE(input$umap_label_pops)
+    ungated_col <- input$umap_ungated_color %||% "#BBBBBB"
+
+    p <- ggplot(df, aes(x = x, y = y, colour = color_val))
+
+    if (rast && requireNamespace("ggrastr", quietly = TRUE)) {
+      p <- p + ggrastr::geom_point_rast(size = point_size, alpha = point_alpha,
+                                        shape = 16, raster.dpi = 300)
+    } else {
+      p <- p + geom_point(size = point_size, alpha = point_alpha, shape = 16)
+    }
+
+    # Scale / palette
+    if (mode == "populations") {
+      pal <- rv$illust_pop_palette %||% list()
+      levs <- levels(df$color_val)
+      cols <- vapply(levs, function(lv) {
+        if (identical(lv, "Ungated")) return(ungated_col)
+        # Look up via pop_id whose name == lv
+        pop_ids <- names(rv$populations %||% list())
+        match_idx <- which(vapply(pop_ids, function(pid)
+          identical(as.character(rv$populations[[pid]]$name %||% pid), lv),
+          logical(1)))
+        if (length(match_idx) > 0) {
+          pid <- pop_ids[[match_idx[1]]]
+          return(as.character(pal[[pid]] %||% "#444444"))
+        }
+        "#444444"
+      }, character(1))
+      names(cols) <- levs
+      p <- p + scale_colour_manual(values = cols, drop = FALSE,
+                                   name = "Population")
+    } else if (mode == "marker" || (mode == "coldata" && is.numeric(df$color_val))) {
+      p <- p + scale_colour_gradientn(colours = hcl.colors(10, "Viridis"),
+                                      name = if (mode == "marker") input$umap_color_marker
+                                             else input$umap_color_coldata)
+    } else {
+      # Discrete colData: use CATALYST cluster palette if available, else hue
+      if (requireNamespace("CATALYST", quietly = TRUE) &&
+          exists(".cluster_cols", envir = asNamespace("CATALYST"))) {
+        k_pal <- CATALYST:::.cluster_cols
+        n <- length(unique(df$color_val))
+        if (length(k_pal) < n) k_pal <- colorRampPalette(k_pal)(n)
+        p <- p + scale_colour_manual(values = k_pal[seq_len(n)],
+                                     name = input$umap_color_coldata)
+      }
+    }
+
+    # Labels
+    if (label_pops && mode == "populations") {
+      lbl_df <- aggregate(cbind(x, y) ~ color_val, data = df, FUN = mean)
+      if (requireNamespace("ggrepel", quietly = TRUE)) {
+        p <- p + ggrepel::geom_label_repel(
+          data = lbl_df, aes(x = x, y = y, label = color_val),
+          inherit.aes = FALSE, size = text_size * 0.32,
+          alpha = 0.8, show.legend = FALSE)
+      } else {
+        p <- p + geom_label(
+          data = lbl_df, aes(x = x, y = y, label = color_val),
+          inherit.aes = FALSE, size = text_size * 0.32,
+          alpha = 0.8, show.legend = FALSE)
+      }
+    }
+
+    dr_label <- input$umap_dr_name %||% "UMAP"
+    p <- p +
+      labs(x = paste(dr_label, "dim. 1"), y = paste(dr_label, "dim. 2")) +
+      theme_minimal() +
+      theme(text           = element_text(size = text_size),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.text      = element_text(colour = "black"),
+            panel.border   = element_rect(colour = "black", fill = NA, linewidth = 1),
+            aspect.ratio   = 1,
+            legend.key.height = unit(0.9, "lines"))
+
+    if (hide_axis) {
+      p <- p + theme(axis.text.x = element_blank(),
+                     axis.text.y = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.ticks.y = element_blank())
+    }
+    if (!show_legend) p <- p + theme(legend.position = "none")
+    else {
+      n_lev <- if (is.factor(df$color_val)) nlevels(df$color_val)
+               else length(unique(df$color_val))
+      p <- p + guides(colour = guide_legend(
+        ncol = if (isTRUE(n_lev > 12)) 2 else 1,
+        override.aes = list(alpha = 1, size = 3)))
+    }
+    p
+  }, res = 96)
+
+  # ── Downloads ──────────────────────────────────────────────────────────────
+  .umap_save <- function(file, device = c("svg", "pdf")) {
+    device <- match.arg(device)
+    df <- umap_plot_df()
+    req(df)
+    isolate({
+      w <- as.numeric(input$umap_plot_width  %||% 7)
+      h <- as.numeric(input$umap_plot_height %||% 7)
+    })
+    ggplot2::ggsave(filename = file, plot = last_umap_plot(),
+                    device = device, width = w, height = h, units = "in")
+  }
+
+  # Capture the ggplot separately so downloads don't re-invoke renderPlot.
+  last_umap_plot <- reactive({
+    # Re-build the plot outside renderPlot (same code path).
+    df <- umap_plot_df()
+    req(df)
+    mode        <- input$umap_color_mode %||% "populations"
+    point_size  <- as.numeric(input$umap_point_size  %||% 0.6)
+    point_alpha <- as.numeric(input$umap_point_alpha %||% 0.8)
+    text_size   <- as.numeric(input$umap_text_size   %||% 14)
+    rast        <- isTRUE(input$umap_rasterize)
+    hide_axis   <- isTRUE(input$umap_hide_axis)
+    show_legend <- isTRUE(input$umap_show_legend)
+    label_pops  <- isTRUE(input$umap_label_pops)
+    ungated_col <- input$umap_ungated_color %||% "#BBBBBB"
+
+    library(ggplot2)
+    p <- ggplot(df, aes(x = x, y = y, colour = color_val))
+    if (rast && requireNamespace("ggrastr", quietly = TRUE)) {
+      p <- p + ggrastr::geom_point_rast(size = point_size, alpha = point_alpha,
+                                        shape = 16, raster.dpi = 600)
+    } else {
+      p <- p + geom_point(size = point_size, alpha = point_alpha, shape = 16)
+    }
+    if (mode == "populations") {
+      pal <- rv$illust_pop_palette %||% list()
+      levs <- levels(df$color_val)
+      cols <- vapply(levs, function(lv) {
+        if (identical(lv, "Ungated")) return(ungated_col)
+        pop_ids <- names(rv$populations %||% list())
+        m <- which(vapply(pop_ids, function(pid)
+          identical(as.character(rv$populations[[pid]]$name %||% pid), lv),
+          logical(1)))
+        if (length(m) > 0) {
+          pid <- pop_ids[[m[1]]]
+          return(as.character(pal[[pid]] %||% "#444444"))
+        }
+        "#444444"
+      }, character(1))
+      names(cols) <- levs
+      p <- p + scale_colour_manual(values = cols, drop = FALSE, name = "Population")
+    } else if (mode == "marker" || (mode == "coldata" && is.numeric(df$color_val))) {
+      p <- p + scale_colour_gradientn(colours = hcl.colors(10, "Viridis"),
+                                      name = if (mode == "marker") input$umap_color_marker
+                                             else input$umap_color_coldata)
+    }
+    if (label_pops && mode == "populations") {
+      lbl_df <- aggregate(cbind(x, y) ~ color_val, data = df, FUN = mean)
+      if (requireNamespace("ggrepel", quietly = TRUE)) {
+        p <- p + ggrepel::geom_label_repel(
+          data = lbl_df, aes(x = x, y = y, label = color_val),
+          inherit.aes = FALSE, size = text_size * 0.32, alpha = 0.8, show.legend = FALSE)
+      } else {
+        p <- p + geom_label(
+          data = lbl_df, aes(x = x, y = y, label = color_val),
+          inherit.aes = FALSE, size = text_size * 0.32, alpha = 0.8, show.legend = FALSE)
+      }
+    }
+    dr_label <- input$umap_dr_name %||% "UMAP"
+    p <- p +
+      labs(x = paste(dr_label, "dim. 1"), y = paste(dr_label, "dim. 2")) +
+      theme_minimal() +
+      theme(text = element_text(size = text_size),
+            panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.text = element_text(colour = "black"),
+            panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+            aspect.ratio = 1,
+            legend.key.height = unit(0.9, "lines"))
+    if (hide_axis)
+      p <- p + theme(axis.text.x = element_blank(), axis.text.y = element_blank(),
+                     axis.ticks.x = element_blank(), axis.ticks.y = element_blank())
+    if (!show_legend) p <- p + theme(legend.position = "none")
+    p
+  })
+
+  output$umap_export_svg_dl <- downloadHandler(
+    filename = function() paste0(rv$sce_name %||% "umap", "_",
+                                 format(Sys.time(), "%Y%m%d_%H%M%S"), ".svg"),
+    content  = function(file) .umap_save(file, device = "svg")
+  )
+  output$umap_export_pdf_dl <- downloadHandler(
+    filename = function() paste0(rv$sce_name %||% "umap", "_",
+                                 format(Sys.time(), "%Y%m%d_%H%M%S"), ".pdf"),
+    content  = function(file) .umap_save(file, device = "pdf")
+  )
+
+  # Make the UMAP plot render even when the tab is not currently visible.
+  # Without this, Shiny suspends the output; the plot then stays blank until
+  # the user navigates back to the tab and something else triggers a refresh.
+  outputOptions(output, "umap_plot", suspendWhenHidden = FALSE)
 
   # ── Close app ─────────────────────────────────────────────────────────────
   observeEvent(input$close_app_btn, {

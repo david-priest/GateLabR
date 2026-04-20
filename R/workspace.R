@@ -100,7 +100,9 @@ export_population_to_coldata <- function(sce, population_id, pop_name,
     if (!nzchar(col_name)) col_name <- "population"
   }
 
-  # Add as factor column
+  # Always reset the column first so repeated exports with the same name
+  # never carry stale levels/assignments from a previous gating definition.
+  SummarizedExperiment::colData(sce)[[col_name]] <- NULL
   SummarizedExperiment::colData(sce)[[col_name]] <- factor(
     pop_mask,
     levels = c(TRUE, FALSE),
