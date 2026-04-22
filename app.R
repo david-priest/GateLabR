@@ -125,60 +125,72 @@ ui <- fluidPage(
     column(3,
       tags$div(class = "panel-section",
 
-        # ── SCE + Assay on one row (plain CSS grid – avoids Bootstrap float issues) ──
-        tags$div(style = "display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:4px;",
-          tags$div(
-            tags$label("SCE:", class = "control-label", style = "font-size:12px; margin-bottom:2px;"),
-            selectInput("sce_select", NULL, choices = NULL, width = "100%")
+        # ── Data selection card ──────────────────────────────────────────────
+        tags$div(class = "workspace-block", style = "margin-bottom:6px;",
+          tags$div(class = "workspace-block-title", "Data"),
+          tags$div(style = "display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:4px;",
+            tags$div(
+              tags$label("SCE:", class = "control-label"),
+              selectInput("sce_select", NULL, choices = NULL, width = "100%")
+            ),
+            tags$div(
+              tags$label("Assay:", class = "control-label"),
+              selectInput("assay_select", NULL, choices = NULL, width = "100%")
+            )
           ),
-          tags$div(
-            tags$label("Assay:", class = "control-label", style = "font-size:12px; margin-bottom:2px;"),
-            selectInput("assay_select", NULL, choices = NULL, width = "100%")
+          tags$div(style = "display:flex; gap:4px;",
+            actionButton("rename_sce_btn", "Rename SCE",
+                         class = "btn-xs btn-default"),
+            actionButton("refresh_sce_btn", "\u21ba Refresh",
+                         class = "btn-xs btn-default",
+                         title = "Re-scan global environment for SCE objects")
           )
-        ),
-        tags$div(style = "display:flex; gap:6px; align-items:center; margin-bottom:6px;",
-          actionButton("rename_sce_btn", "Rename Loaded SCE",
-                       class = "btn-xs btn-default"),
-          actionButton("refresh_sce_btn", "\u21ba Refresh SCEs",
-                       class = "btn-xs btn-default",
-                       title = "Re-scan global environment for SCE objects")
         ),
 
-        # ── FCS import ──
-        tags$div(class = "section-header", "Import FCS"),
-        tags$div(class = "fcs-inline-controls",
-          tags$div(class = "fcs-inline-item",
-            fileInput("fcs_upload", NULL,
-                      multiple = TRUE, accept = ".fcs",
-                      buttonLabel = "Choose FCS...",
-                      placeholder = "No files selected")
-          ),
-          tags$div(class = "fcs-inline-item",
-            fileInput("fcs_append_upload", NULL,
-                      multiple = TRUE, accept = ".fcs",
-                      buttonLabel = "Choose Append FCS...",
-                      placeholder = "No files selected")
-          ),
-          tags$div(class = "fcs-inline-action",
-            actionButton("append_fcs_btn", "Append",
-                         class = "btn-sm btn-default")
+        # ── FCS import card ──────────────────────────────────────────────────
+        tags$div(class = "workspace-block", style = "margin-bottom:6px;",
+          tags$div(class = "workspace-block-title", "Import FCS"),
+          tags$div(class = "fcs-inline-controls",
+            tags$div(class = "fcs-inline-item",
+              fileInput("fcs_upload", NULL,
+                        multiple = TRUE, accept = ".fcs",
+                        buttonLabel = "New FCS...",
+                        placeholder = "No files selected")
+            ),
+            tags$div(class = "fcs-inline-item",
+              fileInput("fcs_append_upload", NULL,
+                        multiple = TRUE, accept = ".fcs",
+                        buttonLabel = "Append FCS...",
+                        placeholder = "No files selected")
+            ),
+            tags$div(class = "fcs-inline-action",
+              actionButton("append_fcs_btn", "Append",
+                           class = "btn-sm btn-default")
+            )
           )
         ),
-        radioButtons("instrument_mode", "Instrument mode:",
-               choices = c("Auto-detect" = "auto",
-               "Force CyTOF" = "cytof",
-               "Force Flow" = "flow"),
-               selected = "auto", inline = TRUE),
-        actionButton("apply_instrument_mode_btn", "Apply Mode to Loaded SCE",
-               class = "btn-sm btn-default", style = "margin-bottom: 6px;"),
-        uiOutput("instrument_badge_ui"),
+
+        # ── Instrument mode card ─────────────────────────────────────────────
+        tags$div(class = "workspace-block", style = "margin-bottom:6px;",
+          tags$div(class = "workspace-block-title", "Instrument Mode"),
+          radioButtons("instrument_mode", NULL,
+                 choices = c("Auto-detect" = "auto",
+                 "Force CyTOF" = "cytof",
+                 "Force Flow" = "flow"),
+                 selected = "auto", inline = TRUE),
+          tags$div(style = "display:flex; align-items:center; gap:8px; margin-top:2px;",
+            actionButton("apply_instrument_mode_btn", "Apply to Loaded SCE",
+                         class = "btn-xs btn-default"),
+            uiOutput("instrument_badge_ui")
+          )
+        ),
 
         # ── Sample filter ──
         tags$div(class = "section-header",
           "Sample Filter",
           tags$span(
             textOutput("sample_filter_summary", inline = TRUE),
-            style = "font-weight: normal; font-size: 11px; color: #888;"
+            style = "font-weight: normal; font-size: 11px; color: #888; text-transform:none; letter-spacing:0;"
           )
         ),
         tags$div(class = "sample-filter-panel",
@@ -193,35 +205,37 @@ ui <- fluidPage(
 
           # ── In-memory ops ──
           tags$div(class = "workspace-block",
-            tags$div(class = "workspace-block-title", "SCE workspace"),
-            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;",
-              actionButton("save_workspace_btn","💾 Save WS",class="btn-sm btn-primary",style="width:100%"),
-              actionButton("load_workspace_btn","📂 Load WS",class="btn-sm btn-default",style="width:100%"),
-              actionButton("export_pop_btn","→ colData",class="btn-sm btn-info",style="width:100%")
+            tags$div(class = "workspace-block-title", "SCE Workspace"),
+            tags$div(style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;",
+              actionButton("save_workspace_btn","💾 Save WS",class="btn-xs btn-primary",style="width:100%"),
+              actionButton("load_workspace_btn","📂 Load WS",class="btn-xs btn-default",style="width:100%"),
+              actionButton("export_pop_btn","→ colData",class="btn-xs btn-info",style="width:100%")
             )
           ),
 
           # ── File persistence ──
-          tags$div(class = "workspace-block",style="margin-top:6px;",
+          tags$div(class = "workspace-block",style="margin-top:4px;",
             tags$div(class = "workspace-block-title", "File"),
             tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;",
-              downloadButton("save_rds_dl","⬇ Save RDS",class="btn-sm btn-success",style="width:100%;padding:5px 8px;"),
-              actionButton("export_fcs_btn","⬆ Export FCS",class="btn-sm btn-warning",style="width:100%")
+              downloadButton("save_rds_dl","⬇ Save RDS",class="btn-xs btn-success",style="width:100%;"),
+              actionButton("export_fcs_btn","⬆ Export FCS",class="btn-xs btn-warning",style="width:100%")
             ),
             fileInput("load_rds_upload",NULL,accept=c(".rds",".RDS"),
                       buttonLabel="Load RDS...",placeholder="No file selected",multiple=FALSE)
           ),
 
           # ── GatingML ──
-          tags$div(class="workspace-block",style="margin-top:6px;",
+          tags$div(class="workspace-block",style="margin-top:4px;",
             tags$div(class="workspace-block-title","GatingML"),
             fileInput("import_gatingml_upload",NULL,
                       accept=c(".xml",".gatingml",".Gating-ML"),
                       buttonLabel="Import GatingML...",placeholder="No file selected",multiple=FALSE),
-            downloadButton("export_gatingml_dl","Export GatingML (Cytobank)...",
-                           class="btn-default btn-block",style="margin-bottom:2px;text-align:left;"),
-            downloadButton("export_gatingml_standard_dl","Export GatingML (Standard)...",
-                           class="btn-default btn-block",style="margin-bottom:4px;text-align:left;")
+            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;",
+              downloadButton("export_gatingml_dl","Export (Cytobank)",
+                             class="btn-xs btn-default",style="width:100%;text-align:left;"),
+              downloadButton("export_gatingml_standard_dl","Export (Standard)",
+                             class="btn-xs btn-default",style="width:100%;text-align:left;")
+            )
           ),
 
           tags$div(class="status-bar", textOutput("status_text",inline=TRUE)),
@@ -276,31 +290,27 @@ ui <- fluidPage(
             # ── Gating controls panel (Strategy-style card) ─────────────────
             tags$div(class = "strategy-controls",
 
-              # Top row: display mode + opacity (like strategy-top-actions)
-              tags$div(class = "strategy-top-actions",
-                tags$div(style = "display:flex; align-items:center; gap:10px; flex-wrap:wrap;",
+              # Parameter grid: 3-column, strategy-block cards
+              tags$div(class = "strategy-control-grid",
+
+                # Card 0: Display mode
+                tags$div(class = "strategy-block",
+                  tags$div(class = "gating-control-box-title", "Display"),
                   radioButtons("display_mode", NULL,
                                choices = c("Scatter"="scatter","Pseudo"="pseudocolor","Contour"="contour"),
-                               selected = "pseudocolor", inline = TRUE),
-                  tags$div(style = "display:flex; align-items:center; gap:4px;",
-                    tags$span("Opacity:", style = "font-size:11px; color:#555;"),
-                    tags$div(class = "opacity-slider-wrap", style = "width:130px;",
-                      sliderInput("point_alpha", NULL, min=0.05, max=1.0, value=0.35, step=0.05, width="100%")
-                    )
+                               selected = "pseudocolor", inline = FALSE),
+                  tags$div(style = "margin-top:4px;",
+                    sliderInput("point_alpha", "Opacity:", min=0.05, max=1.0, value=0.35, step=0.05, width="100%", ticks=FALSE)
                   ),
                   conditionalPanel("input.display_mode == 'contour'",
-                    tags$div(style = "display:flex; align-items:center; gap:4px;",
+                    tags$div(style = "display:flex; align-items:center; gap:4px; margin-top:4px;",
                       tags$span("Outer:", style = "font-size:11px; color:#555;"),
                       selectInput("contour_threshold", NULL,
                                   choices = c("1%"=1,"2%"=2,"5%"=5,"10%"=10,"20%"=20,"30%"=30),
                                   selected = 5, width = "80px")
                     )
                   )
-                )
-              ),
-
-              # Parameter grid: 2-column, strategy-block cards
-              tags$div(class = "strategy-control-grid",
+                ),
 
                 # Card 1: Sampling
                 tags$div(class = "strategy-block",
@@ -327,16 +337,21 @@ ui <- fluidPage(
                     actionButton("recompute_full_counts_btn", "Run Full", class = "btn-xs btn-default"),
                     tags$span("Fast: approx counts", style = "font-size:10px; color:#999;")
                   )
+                ),
+
+                # Card 3: Color by marker / metadata
+                tags$div(class = "strategy-block",
+                  tags$div(class = "gating-control-box-title",
+                    "Color by marker / metadata",
+                    tags$span(style = "float:right; margin-top:-2px;",
+                      actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default"))
+                  ),
+                  selectInput("overlay_coldata", NULL,
+                              choices = c("(none)" = ""), selected = "", width = "100%"),
+                  uiOutput("overlay_checkboxes_ui")
                 )
               )
-            ),
-
-              # Color by marker / metadata
-            tags$div(class = "section-header", style = "margin-top:6px;",
-                     "Color by marker / metadata",
-                     actionButton("clear_overlay_btn", "Clear", class = "btn-xs btn-default")),
-            selectInput("overlay_coldata", NULL, choices = c("(none)" = ""), selected = ""),
-            uiOutput("overlay_checkboxes_ui")
+            )
           ),
           uiOutput("subset_stats_ui")
         ),
@@ -362,11 +377,13 @@ ui <- fluidPage(
             conditionalPanel("input.strategy_mode === 'single'",
               tags$div(class = "strategy-control-grid",
                 tags$div(class = "strategy-block strategy-pop-block",
-                  selectInput("strategy_pop", "Population:", choices = NULL),
+                  tags$div(class = "gating-control-box-title", "Population"),
+                  selectInput("strategy_pop", NULL, choices = NULL),
                   checkboxInput("strategy_full_path", "Use full path from root", FALSE)
                 ),
-                tags$div(class = "strategy-block",
-                  checkboxGroupInput("strategy_gate_view", "Gate view:",
+                tags$div(class = "strategy-block", style = "align-self:start;",
+                  tags$div(class = "gating-control-box-title", "Gate view"),
+                  checkboxGroupInput("strategy_gate_view", NULL,
                                      choices = c("Forward gated" = "forward",
                                                  "Back-gated" = "back"),
                                      selected = "forward", inline = TRUE)
@@ -389,8 +406,9 @@ ui <- fluidPage(
             ),
 
             tags$div(class = "strategy-control-grid",
-              tags$div(class = "strategy-block",
-                radioButtons("strategy_display", "Display mode:",
+              tags$div(class = "strategy-block", style = "align-self:start;",
+                tags$div(class = "gating-control-box-title", "Display mode"),
+                radioButtons("strategy_display", NULL,
                              choices = c("Scatter" = "scatter",
                                          "Pseudo" = "pseudocolor",
                                          "Contour" = "contour"),
@@ -401,46 +419,76 @@ ui <- fluidPage(
             tags$div(class = "strategy-params-grid",
               style = "display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;",
               tags$div(class = "strategy-param-card",
-                numericInput("strategy_max_events", "Max events / panel (0 = all):",
-                             value = 10000, min = 0, max = 100000, step = 1000),
+                tags$div(class = "gating-control-box-title", "Sampling"),
+                tags$div(style = "display:flex; align-items:center; gap:6px; flex-wrap:wrap;",
+                  tags$div(
+                    tags$label("Max events / panel:", style = "font-size:11px; color:#555; margin-bottom:2px; display:block;"),
+                    numericInput("strategy_max_events", NULL,
+                                 value = 10000, min = 0, max = 100000, step = 1000, width = "100px")
+                  )
+                ),
                 checkboxInput("strategy_all_events", "Plot all events", value = FALSE)
               ),
               tags$div(class = "strategy-param-card",
-                numericInput("strategy_plot_size", "Plot size (px):",
-                             value = 200, min = 150, max = 500, step = 25),
+                tags$div(class = "gating-control-box-title", "Layout"),
+                tags$div(style = "display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;",
+                  tags$div(
+                    tags$label("Plot size (px):", style = "font-size:11px; color:#555; margin-bottom:2px; display:block;"),
+                    numericInput("strategy_plot_size", NULL,
+                                 value = 200, min = 150, max = 500, step = 25, width = "80px")
+                  ),
+                  conditionalPanel("input.strategy_mode === 'single'",
+                    tags$div(
+                      tags$label("Columns:", style = "font-size:11px; color:#555; margin-bottom:2px; display:block;"),
+                      numericInput("strategy_n_columns", NULL,
+                                   value = 4, min = 1, max = 12, step = 1, width = "70px")
+                    )
+                  )
+                ),
                 conditionalPanel("input.strategy_mode === 'single'",
-                  numericInput("strategy_n_columns", "Columns:",
-                               value = 4, min = 1, max = 12, step = 1),
                   checkboxInput("strategy_fit_to_columns", "Fit panels to columns", value = TRUE)
                 )
               ),
               tags$div(class = "strategy-param-card strategy-font-card",
-                tags$div(class = "strategy-font-grid",
-                  style = "display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 8px;",
-                  numericInput("strategy_tick_font_size", "Tick labels (px):",
-                               value = 8, min = 6, max = 24, step = 1),
-                  numericInput("strategy_axis_label_font_size", "Axis labels (px):",
-                               value = 10, min = 6, max = 28, step = 1),
-                  numericInput("strategy_title_font_size", "Titles (px):",
-                               value = 10, min = 6, max = 28, step = 1),
-                  numericInput("strategy_gate_label_font_size", "Gate labels (px):",
-                               value = 8, min = 6, max = 24, step = 1)
+                tags$div(class = "gating-control-box-title", "Font sizes (px)"),
+                tags$div(style = "display:grid; grid-template-columns:repeat(2, auto); gap:4px 12px; align-items:center;",
+                  tags$label("Tick labels:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_tick_font_size", NULL,
+                               value = 8, min = 6, max = 24, step = 1, width = "70px"),
+                  tags$label("Axis labels:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_axis_label_font_size", NULL,
+                               value = 10, min = 6, max = 28, step = 1, width = "70px"),
+                  tags$label("Titles:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_title_font_size", NULL,
+                               value = 10, min = 6, max = 28, step = 1, width = "70px"),
+                  tags$label("Gate labels:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_gate_label_font_size", NULL,
+                               value = 8, min = 6, max = 24, step = 1, width = "70px")
                 )
               ),
               tags$div(class = "strategy-param-card",
-                numericInput("strategy_pdf_dpi", "SVG raster DPI:",
-                             value = 300, min = 72, max = 1200, step = 50),
-                numericInput("strategy_point_size", "Point size (px):",
-                             value = 1.2, min = 0.1, max = 5, step = 0.1),
+                tags$div(class = "gating-control-box-title", "Points & export"),
+                tags$div(style = "display:grid; grid-template-columns:repeat(2, auto); gap:4px 12px; align-items:center; margin-bottom:6px;",
+                  tags$label("Point size:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_point_size", NULL,
+                               value = 1.2, min = 0.1, max = 5, step = 0.1, width = "70px"),
+                  tags$label("SVG raster DPI:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_pdf_dpi", NULL,
+                               value = 300, min = 72, max = 1200, step = 50, width = "70px")
+                ),
                 sliderInput("strategy_point_alpha", "Point opacity:",
-                            min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
+                            min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%", ticks = FALSE)
               ),
               tags$div(class = "strategy-param-card",
+                tags$div(class = "gating-control-box-title", "Style"),
                 checkboxInput("strategy_pub_style",
                               "Publication style (black gates, no label background)",
                               value = FALSE),
-                numericInput("strategy_gate_line_width", "Gate line width:",
-                             value = 1.5, min = 0.5, max = 5, step = 0.25)
+                tags$div(style = "display:flex; align-items:center; gap:8px; margin-top:4px;",
+                  tags$label("Gate line width:", style = "font-size:11px; color:#555; margin:0;"),
+                  numericInput("strategy_gate_line_width", NULL,
+                               value = 1.5, min = 0.5, max = 5, step = 0.25, width = "70px")
+                )
               )
             ),
 
@@ -455,7 +503,7 @@ ui <- fluidPage(
                 tags$span("Contour smoothing:", style = "font-size:11px; color:#555; white-space:nowrap;"),
                 tags$div(style = "width:220px;",
                   sliderInput("strategy_kde_bandwidth", NULL,
-                              min = 0, max = 14, value = 0, step = 0.2, width = "100%")
+                              min = 0, max = 14, value = 0, step = 0.2, width = "100%", ticks = FALSE)
                 ),
                 tags$span("0 = auto", style = "font-size:10px; color:#888; white-space:nowrap;")
               )
@@ -482,41 +530,40 @@ ui <- fluidPage(
             ),
 
             # ── Illustration Presets ────────────────────────────────────────────
-            tags$div(class = "illust-presets-bar",
-              tags$details(
-                tags$summary(
-                  tags$span(icon("bookmark"), " Illustration Presets",
-                            style = "font-size:12px; font-weight:600; cursor:pointer; user-select:none;")
+            tags$details(id = "illust_presets_section", style = "margin-bottom:6px;",
+              tags$summary(
+                tags$span(class = "umap-run-toggle",
+                  icon("bookmark"),
+                  tags$span(class = "umap-run-chev-closed", HTML("&nbsp;▸&nbsp;Illustration Presets")),
+                  tags$span(class = "umap-run-chev-open",   HTML("&nbsp;▾&nbsp;Illustration Presets"))
+                )
+              ),
+              tags$div(class = "illust-presets-body",
+                       style = "padding:8px; border:1px solid #7892c7; border-radius:4px; margin-top:2px; background:#fbfcff;",
+                tags$div(style = "display:flex; align-items:center; gap:6px; margin-bottom:6px;",
+                  tags$span("Name:", style = "font-size:11px; white-space:nowrap; color:#555;"),
+                  textInput("illust_preset_name", NULL, value = "",
+                            placeholder = "Preset name…", width = "160px"),
+                  actionButton("illust_preset_save_btn", "Save",
+                               class = "btn-xs btn-primary",
+                               title = "Save current illustration settings as a named preset")
                 ),
-                tags$div(class = "illust-presets-body",
-                  tags$div(class = "illust-preset-save-row",
-                    tags$span("Name:", style = "font-size:11px; white-space:nowrap; margin-right:4px;"),
-                    textInput("illust_preset_name", NULL, value = "",
-                              placeholder = "Preset name…",
-                              width = "160px"),
-                    actionButton("illust_preset_save_btn", "Save",
-                                 class = "btn-xs btn-primary",
-                                 title = "Save current illustration settings as a named preset",
-                                 style = "margin-left:4px;")
-                  ),
-                  tags$div(class = "illust-preset-load-row",
-                    uiOutput("illust_preset_select_ui"),
-                    actionButton("illust_preset_load_btn", "Load",
-                                 class = "btn-xs btn-default",
-                                 title = "Restore this preset",
-                                 style = "margin-left:4px;"),
-                    actionButton("illust_preset_delete_btn", "Delete",
-                                 class = "btn-xs btn-danger",
-                                 title = "Delete this preset",
-                                 style = "margin-left:4px;")
-                  )
+                tags$div(style = "display:flex; align-items:center; gap:6px;",
+                  uiOutput("illust_preset_select_ui"),
+                  actionButton("illust_preset_load_btn", "Load",
+                               class = "btn-xs btn-default",
+                               title = "Restore this preset"),
+                  actionButton("illust_preset_delete_btn", "Delete",
+                               class = "btn-xs btn-danger",
+                               title = "Delete this preset")
                 )
               )
             ),
 
             tags$div(class = "illust-control-grid",
               tags$div(class = "illust-block",
-                radioButtons("illust_plot_type", "Plot type:",
+                tags$div(class = "gating-control-box-title", "Plot Type"),
+                radioButtons("illust_plot_type", NULL,
                              choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
                              selected = "biplot", inline = TRUE),
                 conditionalPanel(
@@ -525,9 +572,10 @@ ui <- fluidPage(
                 )
               ),
               tags$div(class = "illust-block",
+                tags$div(class = "gating-control-box-title", "Display"),
                 conditionalPanel(
                   "input.illust_plot_type == 'biplot'",
-                  radioButtons("illust_display", "Display mode:",
+                  radioButtons("illust_display", NULL,
                                choices = c("Scatter" = "scatter",
                                            "Pseudo" = "pseudocolor",
                                            "Contour" = "contour"),
@@ -540,6 +588,7 @@ ui <- fluidPage(
                               value = FALSE)
               ),
               tags$div(class = "illust-block",
+                tags$div(class = "gating-control-box-title", "Notes"),
                 tags$div(style = "font-size:11px; color:#555; margin-top:2px;",
                   "Global channel scales from the Scales tab are always used."
                 )
@@ -548,11 +597,13 @@ ui <- fluidPage(
 
             tags$div(class = "illust-params-grid",
               tags$div(class = "illust-param-card",
+                tags$div(class = "gating-control-box-title", "Sampling"),
                 numericInput("illust_max_events", "Max events / panel (0 = all):",
                              value = 10000, min = 0, max = 50000, step = 1000),
                 checkboxInput("illust_all_events", "Plot all events", value = FALSE)
               ),
               tags$div(class = "illust-param-card",
+                tags$div(class = "gating-control-box-title", "Layout"),
                 numericInput("illust_plot_size", "Plot size (px):",
                              value = 200, min = 150, max = 400, step = 25),
                 numericInput("illust_n_columns", "Columns:",
@@ -560,18 +611,20 @@ ui <- fluidPage(
                 checkboxInput("illust_fit_to_columns", "Fit panels to columns", value = TRUE)
               ),
               tags$div(class = "illust-param-card illust-font-card",
+                tags$div(class = "gating-control-box-title", "Font Sizes (px)"),
                 tags$div(class = "illust-font-grid",
-                  numericInput("illust_tick_font_size", "Tick labels (px):",
+                  numericInput("illust_tick_font_size", "Tick labels:",
                                value = 8, min = 6, max = 24, step = 1),
-                  numericInput("illust_axis_label_font_size", "Axis labels (px):",
+                  numericInput("illust_axis_label_font_size", "Axis labels:",
                                value = 10, min = 6, max = 28, step = 1),
-                  numericInput("illust_title_font_size", "Titles (px):",
+                  numericInput("illust_title_font_size", "Titles:",
                                value = 10, min = 6, max = 28, step = 1),
-                  numericInput("illust_gate_label_font_size", "Gate labels (px):",
+                  numericInput("illust_gate_label_font_size", "Gate labels:",
                                value = 8, min = 6, max = 24, step = 1)
                 )
               ),
               tags$div(class = "illust-param-card",
+                tags$div(class = "gating-control-box-title", "Points & Export"),
                 numericInput("illust_pdf_dpi", "SVG raster DPI:",
                              value = 300, min = 72, max = 1200, step = 50),
                 conditionalPanel(
@@ -579,7 +632,7 @@ ui <- fluidPage(
                   numericInput("illust_point_size", "Point size (px):",
                                value = 1.2, min = 0.1, max = 5, step = 0.1),
                   sliderInput("illust_point_alpha", "Point opacity:",
-                              min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%")
+                              min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%", ticks = FALSE)
                 ),
                 conditionalPanel(
                   "input.illust_plot_type == 'histogram'",
@@ -587,7 +640,7 @@ ui <- fluidPage(
                                value = 1.8, min = 0.5, max = 6, step = 0.1),
                   checkboxInput("illust_hist_fill", "Fill histogram area", value = FALSE),
                   sliderInput("illust_hist_fill_alpha", "Histogram fill opacity:",
-                              min = 0, max = 1.0, value = 0.22, step = 0.05, width = "100%"),
+                              min = 0, max = 1.0, value = 0.22, step = 0.05, width = "100%", ticks = FALSE),
                   selectInput("illust_hist_overlay_mode", "Overlay fill behavior:",
                               choices = c("Blend fills" = "blend",
                                           "Front histogram opaque" = "front_opaque"),
@@ -597,6 +650,7 @@ ui <- fluidPage(
               conditionalPanel(
                 "input.illust_plot_type == 'biplot'",
                 tags$div(class = "illust-param-card",
+                  tags$div(class = "gating-control-box-title", "Style"),
                   checkboxInput("illust_pub_style",
                                 "Publication style (black gates, no label background)",
                                 value = FALSE),
@@ -612,7 +666,7 @@ ui <- fluidPage(
                 tags$span("Contour smoothing:", style = "font-size:11px; color:#555; white-space:nowrap;"),
                 tags$div(style = "width:220px;",
                   sliderInput("illust_kde_bandwidth", NULL,
-                              min = 0, max = 14, value = 0, step = 0.2, width = "100%")
+                              min = 0, max = 14, value = 0, step = 0.2, width = "100%", ticks = FALSE)
                 ),
                 tags$span("0 = auto", style = "font-size:10px; color:#888; white-space:nowrap;")
               )
@@ -706,31 +760,31 @@ ui <- fluidPage(
                         style = "font-size:11px; color:#666;")
             ),
 
-            # ── Color / display controls ──────────────────────────────────────
-            tags$div(class = "umap-flex-row umap-compact",
-              tags$div(class = "umap-field",
+            # ── Controls grid: Populations | Reduction + Appearance ───────────
+            tags$div(class = "strategy-control-grid umap-compact",
+                     style = "grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1fr);",
+
+              # ── Block 1: Color / Populations ────────────────────────────────
+              tags$div(class = "strategy-block",
+                tags$div(class = "gating-control-box-title", "Color / Populations"),
                 selectInput("umap_color_mode", "Color by:",
                             choices = c("Populations" = "populations",
                                         "colData column" = "coldata",
                                         "Marker expression" = "marker"),
-                            selected = "populations")
-              ),
-              tags$div(class = "umap-field umap-field-wide",
+                            selected = "populations"),
                 conditionalPanel(
                   "input.umap_color_mode == 'coldata'",
-                  selectInput("umap_color_coldata", "colData column:",
-                              choices = NULL)
+                  selectInput("umap_color_coldata", "colData column:", choices = NULL)
                 ),
                 conditionalPanel(
                   "input.umap_color_mode == 'marker'",
-                  selectInput("umap_color_marker", "Marker:",
-                              choices = NULL)
+                  selectInput("umap_color_marker", "Marker:", choices = NULL)
                 ),
                 conditionalPanel(
                   "input.umap_color_mode == 'populations'",
                   tags$div(style = "font-size:11px; color:#666; margin-bottom:2px;",
                     "Show populations (rest → Ungated):"),
-                  tags$div(style = "display:flex; gap:4px; margin-bottom:2px;",
+                  tags$div(style = "display:flex; gap:4px; margin-bottom:4px;",
                     actionButton("umap_display_pops_all",   "All",
                                  class = "btn-xs btn-default", style = "padding:1px 6px; font-size:10px;"),
                     actionButton("umap_display_pops_clear", "None",
@@ -739,49 +793,54 @@ ui <- fluidPage(
                   tags$div(style = "max-height:130px; overflow-y:auto; border:1px solid #eee; padding:2px 4px; border-radius:3px; font-size:11px;",
                     checkboxGroupInput("umap_display_pops", NULL, choices = NULL, selected = NULL)
                   )
+                ),
+                tags$div(style = "display:flex; align-items:center; gap:6px; margin-top:6px;",
+                  tags$label("Ungated colour:", style = "font-size:11px; margin:0; color:#555;"),
+                  tags$input(id = "umap_ungated_color",
+                             type = "color", value = "#BBBBBB",
+                             style = "width:36px; height:24px; padding:1px; border:1px solid #bbb; border-radius:3px; cursor:pointer;",
+                             onchange = "Shiny.setInputValue('umap_ungated_color', this.value, {priority:'event'});")
                 )
               ),
-              tags$div(class = "umap-field umap-field-color",
-                tags$label("Ungated:", class = "control-label",
-                           style = "font-size:11px; margin-bottom:2px;"),
-                tags$input(id = "umap_ungated_color",
-                           type = "color", value = "#BBBBBB",
-                           onchange = "Shiny.setInputValue('umap_ungated_color', this.value, {priority:'event'});")
-              ),
-              tags$div(class = "umap-field umap-field-wide",
-                selectInput("umap_dr_name", "Reduction:",
-                            choices = NULL,
-                            selected = NULL),
-                tags$div(style = "font-size:11px; color:#666;",
-                         textOutput("umap_dr_info", inline = TRUE)),
-                tags$div(style = "display:flex; gap:4px; align-items:center; margin-top:3px;",
-                  tags$span("Markers used:", style = "font-size:10px; color:#444;"),
-                  actionButton("umap_reuse_features", "Reselect",
-                               class = "btn-xs btn-default",
-                               style = "padding:1px 6px; font-size:10px;",
-                               title = "Tick these markers as the Run-UMAP feature set")
-                ),
-                tags$div(class = "umap-features-used",
-                         textOutput("umap_features_used", inline = FALSE))
-              )
-            ),
 
-            tags$div(class = "umap-flex-row umap-compact",
-              tags$div(class = "umap-field",
-                numericInput("umap_point_size",  "Pt size:",  value = 0.6, min = 0.1, max = 5,   step = 0.1)),
-              tags$div(class = "umap-field", style = "min-width:140px;",
-                sliderInput("umap_point_alpha", "Opacity:", min = 0.05, max = 1, value = 0.8, step = 0.05)),
-              tags$div(class = "umap-field",
-                numericInput("umap_text_size",   "Font:",     value = 14,  min = 6,   max = 36,  step = 1)),
-              tags$div(class = "umap-field",
-                numericInput("umap_plot_width",  "W (in):",   value = 7,   min = 3,   max = 20,  step = 0.5)),
-              tags$div(class = "umap-field",
-                numericInput("umap_plot_height", "H (in):",   value = 7,   min = 3,   max = 20,  step = 0.5)),
-              tags$div(class = "umap-field", style = "font-size:11px;",
-                checkboxInput("umap_rasterize",  "Rasterize",   value = TRUE),
-                checkboxInput("umap_hide_axis",  "Hide axes",   value = TRUE),
-                checkboxInput("umap_show_legend","Legend",      value = TRUE),
-                checkboxInput("umap_label_pops", "Label pops",  value = FALSE)
+              # ── Block 2: Reduction + Appearance (stacked) ───────────────────
+              tags$div(style = "display:flex; flex-direction:column; gap:8px;",
+
+                # Reduction sub-block
+                tags$div(class = "strategy-block",
+                  tags$div(class = "gating-control-box-title", "Reduction"),
+                  selectInput("umap_dr_name", NULL, choices = NULL, selected = NULL),
+                  tags$div(style = "font-size:11px; color:#666; margin-bottom:2px;",
+                           textOutput("umap_dr_info", inline = TRUE)),
+                  tags$div(style = "display:flex; gap:4px; align-items:center; margin-top:3px;",
+                    tags$span("Markers used:", style = "font-size:10px; color:#444;"),
+                    actionButton("umap_reuse_features", "Reselect",
+                                 class = "btn-xs btn-default",
+                                 style = "padding:1px 6px; font-size:10px;",
+                                 title = "Tick these markers as the Run-UMAP feature set")
+                  ),
+                  tags$div(class = "umap-features-used",
+                           textOutput("umap_features_used", inline = FALSE))
+                ),
+
+                # Appearance sub-block
+                tags$div(class = "strategy-block",
+                  tags$div(class = "gating-control-box-title", "Appearance"),
+                  tags$div(style = "display:flex; flex-wrap:wrap; gap:6px 12px; align-items:flex-end; margin-bottom:6px;",
+                    tags$div(numericInput("umap_point_size",  "Pt size:", value = 0.6, min = 0.1, max = 5,  step = 0.1)),
+                    tags$div(style = "min-width:140px; flex:1;",
+                      sliderInput("umap_point_alpha", "Opacity:", min = 0.05, max = 1, value = 0.8, step = 0.05, ticks = FALSE, width = "100%")),
+                    tags$div(numericInput("umap_text_size",   "Font (pt):", value = 14, min = 6,  max = 36, step = 1)),
+                    tags$div(numericInput("umap_plot_width",  "W (in):",    value = 7,  min = 3,  max = 20, step = 0.5)),
+                    tags$div(numericInput("umap_plot_height", "H (in):",    value = 7,  min = 3,  max = 20, step = 0.5))
+                  ),
+                  tags$div(style = "display:flex; flex-wrap:wrap; gap:0 12px; font-size:11px;",
+                    checkboxInput("umap_rasterize",   "Rasterize",  value = TRUE),
+                    checkboxInput("umap_hide_axis",   "Hide axes",  value = TRUE),
+                    checkboxInput("umap_show_legend", "Legend",     value = TRUE),
+                    checkboxInput("umap_label_pops",  "Label pops", value = FALSE)
+                  )
+                )
               )
             ),
 
@@ -859,7 +918,13 @@ ui <- fluidPage(
 
             tags$div(class = "stats-options-grid",
               tags$div(class = "stats-block",
-                tags$div(class = "section-header", "Statistics"),
+                tags$div(class = "gating-control-box-title",
+                  "Statistics",
+                  tags$span(style = "float:right; margin-top:-2px;",
+                    actionButton("stats_types_all_btn",  "All",  class = "btn-xs btn-default"),
+                    actionButton("stats_types_none_btn", "None", class = "btn-xs btn-default")
+                  )
+                ),
                 checkboxGroupInput("stats_stat_types", NULL,
                   choices = c("Count" = "count",
                               "% of Parent" = "pct_parent",
@@ -873,7 +938,7 @@ ui <- fluidPage(
                   inline = FALSE)
               ),
               tags$div(class = "stats-block",
-                tags$div(class = "section-header", "Value Space (MFI)"),
+                tags$div(class = "gating-control-box-title", "Value Space (MFI)"),
                 radioButtons("stats_value_space", NULL,
                   choices = c("Raw (linear)" = "raw",
                               "Transformed (display)" = "transformed"),
@@ -885,14 +950,21 @@ ui <- fluidPage(
               )
             ),
 
-            tags$div(class = "section-header", "Channels",
-              tags$span(
+            tags$div(class = "gating-control-box-title", style = "margin-top:8px;",
+              "Channels",
+              tags$span(style = "float:right; margin-top:-2px;",
                 actionButton("stats_channels_all_btn",  "All",  class = "btn-xs btn-default"),
                 actionButton("stats_channels_none_btn", "None", class = "btn-xs btn-default")
               )
             ),
             uiOutput("stats_channels_ui"),
-            tags$div(class = "section-header", "Populations"),
+            tags$div(class = "gating-control-box-title", style = "margin-top:8px;",
+              "Populations",
+              tags$span(style = "float:right; margin-top:-2px;",
+                actionButton("stats_pops_all_btn",  "All",  class = "btn-xs btn-default"),
+                actionButton("stats_pops_none_btn", "None", class = "btn-xs btn-default")
+              )
+            ),
             uiOutput("stats_populations_ui")
           ),
           tags$div(class = "stats-table-container",
@@ -902,8 +974,8 @@ ui <- fluidPage(
 
         # ── Tab 5: Panel (marker rename) ─────────────────────────────────────
         tabPanel("Panel",
-          tags$div(class = "scales-controls",   # reuse same wrapper style as Scales tab
-            tags$div(class = "section-header", "Channel / Marker Names"),
+          tags$div(class = "scales-controls",
+            tags$div(class = "gating-control-box-title", "Channel / Marker Names"),
             tags$div(style = "font-size:11px; color:#666; margin-bottom:8px;",
               "Edit the display name (marker) for each channel.",
               " The FCS channel ID (e.g. metal or detector name) is shown for reference and",
@@ -917,7 +989,25 @@ ui <- fluidPage(
                            class = "btn-sm btn-default",
                            title = "Revert all edits to current names")
             ),
-            uiOutput("panel_rename_ui")
+            uiOutput("panel_rename_ui"),
+
+            # ── Bulk rename via CSV ──────────────────────────────────────────
+            tags$hr(style = "margin: 12px 0;"),
+            tags$div(class = "gating-control-box-title", "Bulk Rename (CSV / Excel)"),
+            tags$div(style = "font-size:11px; color:#666; margin-bottom:6px;",
+              "Upload a CSV with columns ", tags$code("fcs_channel"), " and ",
+              tags$code("new_marker"), " to rename multiple markers at once."
+            ),
+            tags$div(style = "display:flex; gap:6px; align-items:center; flex-wrap:wrap;",
+              fileInput("panel_bulk_rename_upload", NULL,
+                        accept = c(".csv", ".xlsx", ".xls"),
+                        width = "260px",
+                        placeholder = "No file selected"),
+              actionButton("apply_panel_bulk_rename_btn", "Apply Bulk Rename",
+                           class = "btn-sm btn-default"),
+              downloadButton("panel_bulk_rename_template_dl", "Download Template",
+                             class = "btn-sm btn-default")
+            )
           )
         ),
 
@@ -1711,9 +1801,9 @@ server <- function(input, output, session) {
     }
 
     tags$div(
-      class = "flow-transform-controls",
-      tags$div(style = "font-weight:600; font-size:11px; color:#555; margin-bottom:2px;",
-               "Current Channel Scales"),
+      class = "flow-transform-controls strategy-block",
+      style = "margin-top:6px;",
+      tags$div(class = "gating-control-box-title", "Channel Scales"),
       tags$div(class = "flow-transform-note", style = "margin:2px 0 4px 0;",
                "Edit Min/Max for current X/Y channels directly from Gating."),
 
@@ -1725,7 +1815,7 @@ server <- function(input, output, session) {
         if (has_logicle) tags$div(class = "flow-w-inline",
           sliderInput("x_logicle_w", NULL,
                       min = 0.1, max = 2.0, step = 0.05,
-                      value = x_w, width = "100%"),
+                      value = x_w, width = "100%", ticks = FALSE),
           actionButton("auto_w_x_btn", "A", class = "btn-xs btn-default",
                        title = "Reset to auto-estimated W")
         ) else NULL
@@ -1739,7 +1829,7 @@ server <- function(input, output, session) {
         if (has_logicle) tags$div(class = "flow-w-inline",
           sliderInput("y_logicle_w", NULL,
                       min = 0.1, max = 2.0, step = 0.05,
-                      value = y_w, width = "100%"),
+                      value = y_w, width = "100%", ticks = FALSE),
           actionButton("auto_w_y_btn", "A", class = "btn-xs btn-default",
                        title = "Reset to auto-estimated W")
         ) else NULL
@@ -6625,6 +6715,72 @@ server <- function(input, output, session) {
     rv$.panel_ui_version <- isolate(rv$.panel_ui_version) + 1L
   }, ignoreInit = TRUE)
 
+  # ── Panel bulk rename (CSV/Excel) ─────────────────────────────────────────
+  observeEvent(input$apply_panel_bulk_rename_btn, {
+    req(rv$sce, input$panel_bulk_rename_upload)
+    upload <- input$panel_bulk_rename_upload
+    ext <- tolower(tools::file_ext(upload$name %||% ""))
+    tbl <- tryCatch({
+      if (ext == "csv") {
+        utils::read.csv(upload$datapath, stringsAsFactors = FALSE, check.names = FALSE)
+      } else if (ext %in% c("xlsx", "xls")) {
+        if (!requireNamespace("readxl", quietly = TRUE))
+          stop("Package 'readxl' is needed for Excel uploads.")
+        as.data.frame(readxl::read_excel(upload$datapath), stringsAsFactors = FALSE)
+      } else {
+        stop("Unsupported file type. Use .csv or .xlsx.")
+      }
+    }, error = function(e) {
+      showNotification(paste("Could not read file:", conditionMessage(e)), type = "error", duration = 6)
+      NULL
+    })
+    if (is.null(tbl)) return()
+
+    col_keys <- tolower(trimws(colnames(tbl)))
+    ch_idx  <- match("fcs_channel",  col_keys)
+    new_idx <- match("new_marker",   col_keys)
+    if (is.na(ch_idx) || is.na(new_idx)) {
+      showNotification("File must have columns: fcs_channel, new_marker", type = "error", duration = 6)
+      return()
+    }
+    channels <- trimws(as.character(tbl[[ch_idx]]))
+    markers  <- trimws(as.character(tbl[[new_idx]]))
+    keep <- !is.na(channels) & nzchar(channels) & !is.na(markers) & nzchar(markers)
+    channels <- channels[keep]; markers <- markers[keep]
+    if (length(channels) == 0) {
+      showNotification("No valid rows found.", type = "warning", duration = 4); return()
+    }
+
+    # Apply renames via the same mechanism as manual renames
+    n_renamed <- 0L
+    for (i in seq_along(channels)) {
+      ch <- channels[i]
+      if (!ch %in% rv$channels) next
+      input_id <- paste0("panel_marker_", gsub("[^A-Za-z0-9]", "_", ch))
+      updateTextInput(session, input_id, value = markers[i])
+      n_renamed <- n_renamed + 1L
+    }
+    showNotification(
+      sprintf("Bulk rename: %d marker(s) updated. Click 'Apply Renames' to confirm.", n_renamed),
+      type = "message", duration = 5
+    )
+  })
+
+  output$panel_bulk_rename_template_dl <- downloadHandler(
+    filename = function() "marker_rename_template.csv",
+    content = function(file) {
+      req(rv$sce, length(rv$channels) > 0)
+      chs <- rv$channels
+      current_markers <- vapply(chs, function(ch) {
+        m <- rv$marker_names[[ch]]
+        if (!is.null(m) && nzchar(m)) m else ch
+      }, character(1))
+      tpl <- data.frame(fcs_channel = chs, new_marker = current_markers,
+                        stringsAsFactors = FALSE)
+      utils::write.csv(tpl, file, row.names = FALSE)
+    }
+  )
+
   # ══════════════════════════════════════════════════════════════════════════════
   # SCALES TAB
   # ══════════════════════════════════════════════════════════════════════════════
@@ -6816,6 +6972,22 @@ server <- function(input, output, session) {
   })
   observeEvent(input$stats_channels_none_btn, {
     updateCheckboxGroupInput(session, "stats_channels", selected = character(0))
+  })
+
+  observeEvent(input$stats_types_all_btn, {
+    updateCheckboxGroupInput(session, "stats_stat_types",
+      selected = c("count","pct_parent","pct_total","median","mean","geomean","sd","cv"))
+  })
+  observeEvent(input$stats_types_none_btn, {
+    updateCheckboxGroupInput(session, "stats_stat_types", selected = character(0))
+  })
+
+  observeEvent(input$stats_pops_all_btn, {
+    req(rv$populations)
+    updateCheckboxGroupInput(session, "stats_populations", selected = names(rv$populations))
+  })
+  observeEvent(input$stats_pops_none_btn, {
+    updateCheckboxGroupInput(session, "stats_populations", selected = character(0))
   })
 
   # Dynamic population checkboxes
