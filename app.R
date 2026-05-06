@@ -1480,8 +1480,11 @@ server <- function(input, output, session) {
     if (.is_qc_channel(channel)) return(NULL)
 
     # FSC/SSC scatter channels: log-decade labels showing raw values (e.g. 1K, 10K, 100K).
-    # These exist only in flow mode; never in CyTOF.
-    if (.is_scatter_channel(channel)) {
+    # Scatter channels only exist in flow sessions; CyTOF never has FSC/SSC.
+    # The is_flow_session() guard is belt-and-suspenders: .is_scatter_channel() should
+    # never fire for CyTOF metal names, but this makes the invariant explicit so that
+    # a mistakenly renamed channel cannot silently pull in scatter cofactor logic.
+    if (is_flow_session(rv$sce) && .is_scatter_channel(channel)) {
       cf <- suppressWarnings(as.numeric(rv$flow_scatter_cofactor[[channel]] %||% 150))
       if (!is.finite(cf) || cf <= 0) cf <- 150
       return(generate_scatter_ticks(axis_range, cofactor = cf))
@@ -3061,6 +3064,14 @@ server <- function(input, output, session) {
 
     overlay_active <- !is.null(rv$overlay_factor) && !is.null(rv$overlay_selected) && length(rv$overlay_selected) > 0
 
+    # Pre-compute scatter-channel flags for the gating plot (flow sessions only).
+    # These are passed into build_plot_data* so scatter-axis logic is self-contained.
+    is_flow_exprs <- !is.null(rv$sce) && is_flow_session(rv$sce) && rv$assay_name == "exprs"
+    x_is_sc <- is_flow_exprs && isTRUE(.is_scatter_channel(x_ch))
+    y_is_sc <- is_flow_exprs && isTRUE(.is_scatter_channel(y_ch))
+    x_sc_cf <- if (is_flow_exprs) as.numeric(rv$flow_scatter_cofactor[[x_ch]] %||% 150) else 150
+    y_sc_cf <- if (is_flow_exprs) as.numeric(rv$flow_scatter_cofactor[[y_ch]] %||% 150) else 150
+
     if (overlay_active) {
       factor_vals <- rv$overlay_factor
       selected <- rv$overlay_selected
@@ -3081,7 +3092,9 @@ server <- function(input, output, session) {
         color_indices = all_color_indices[include_mask],
         color_palette = palette, color_labels = selected,
         max_events = rv$max_events, reset_view = reset_view,
-        point_alpha = alpha, x_range_override = x_range, y_range_override = y_range
+        point_alpha = alpha, x_range_override = x_range, y_range_override = y_range,
+        x_is_scatter_log = x_is_sc, y_is_scatter_log = y_is_sc,
+        x_scatter_cofactor = x_sc_cf, y_scatter_cofactor = y_sc_cf
       )
     } else {
       plot_data <- build_plot_data(
@@ -3093,20 +3106,16 @@ server <- function(input, output, session) {
         active_pop_id = rv$active_population_id, pop_mask = combined_mask,
         gate_counts = gate_counts, max_events = rv$max_events,
         reset_view = reset_view, point_alpha = alpha,
-        x_range_override = x_range, y_range_override = y_range
+        x_range_override = x_range, y_range_override = y_range,
+        x_is_scatter_log = x_is_sc, y_is_scatter_log = y_is_sc,
+        x_scatter_cofactor = x_sc_cf, y_scatter_cofactor = y_sc_cf
       )
     }
 
-    # Attach channel list + contour threshold so JS can build axis pickers
+    # Attach channel list, contour threshold, and logicle/custom ticks.
     plot_data$channels          <- as.list(rv$channels)
     plot_data$contour_threshold <- as.numeric(input$contour_threshold %||% 5)
     if (!is.null(rv$sce) && rv$assay_name == "exprs") {
-      if (is_flow_session(rv$sce)) {
-        plot_data$x_is_log <- isTRUE(.is_scatter_channel(x_ch))
-        plot_data$y_is_log <- isTRUE(.is_scatter_channel(y_ch))
-        plot_data$x_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[x_ch]] %||% 150)
-        plot_data$y_scatter_cofactor <- as.numeric(rv$flow_scatter_cofactor[[y_ch]] %||% 150)
-      }
       xt <- generate_channel_ticks(x_ch, plot_data$x_range)
       if (!is.null(xt)) {
         plot_data$x_logicle_ticks <- xt

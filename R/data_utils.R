@@ -80,7 +80,13 @@ build_plot_data <- function(assay_data, x_channel, y_channel, assay_name,
                             reset_view = FALSE, gates_only = FALSE,
                             point_alpha = 0.35,
                             x_range_override = NULL,
-                            y_range_override = NULL) {
+                            y_range_override = NULL,
+                            # Flow scatter-channel flags.  Set TRUE only for FSC/SSC in
+                            # flow sessions; CyTOF must always leave these FALSE.
+                            x_is_scatter_log = FALSE,
+                            y_is_scatter_log = FALSE,
+                            x_scatter_cofactor = 150,
+                            y_scatter_cofactor = 150) {
 
   # Get event data for the active population
   if (!is.null(pop_mask)) {
@@ -121,8 +127,13 @@ build_plot_data <- function(assay_data, x_channel, y_channel, assay_name,
     y_range = y_range,
     x_label = x_channel,
     y_label = y_channel,
-    x_is_log = FALSE,
-    y_is_log = FALSE,
+    # x_is_log / y_is_log: TRUE only for flow FSC/SSC scatter channels.
+    # Used by cytof_plot.js to select the scatter-tick formatter.
+    # Must always be FALSE for CyTOF metal channels.
+    x_is_log = isTRUE(x_is_scatter_log),
+    y_is_log = isTRUE(y_is_scatter_log),
+    x_scatter_cofactor = as.numeric(x_scatter_cofactor),
+    y_scatter_cofactor = as.numeric(y_scatter_cofactor),
     x_is_logicle = FALSE,
     y_is_logicle = FALSE,
     gates = gate_overlays,
@@ -177,7 +188,11 @@ build_plot_data_overlay <- function(assay_data, x_channel, y_channel, assay_name
                                     color_labels, max_events = 50000L,
                                     reset_view = FALSE, point_alpha = 0.45,
                                     x_range_override = NULL,
-                                    y_range_override = NULL) {
+                                    y_range_override = NULL,
+                                    x_is_scatter_log = FALSE,
+                                    y_is_scatter_log = FALSE,
+                                    x_scatter_cofactor = 150,
+                                    y_scatter_cofactor = 150) {
   # Get event data for the active population
   if (!is.null(pop_mask)) {
     pop_data <- assay_data[pop_mask, , drop = FALSE]
@@ -219,8 +234,10 @@ build_plot_data_overlay <- function(assay_data, x_channel, y_channel, assay_name
     y_range = y_range,
     x_label = x_channel,
     y_label = y_channel,
-    x_is_log = FALSE,
-    y_is_log = FALSE,
+    x_is_log = isTRUE(x_is_scatter_log),
+    y_is_log = isTRUE(y_is_scatter_log),
+    x_scatter_cofactor = as.numeric(x_scatter_cofactor),
+    y_scatter_cofactor = as.numeric(y_scatter_cofactor),
     x_is_logicle = FALSE,
     y_is_logicle = FALSE,
     gates = gate_overlays,
