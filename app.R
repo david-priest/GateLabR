@@ -1466,22 +1466,28 @@ server <- function(input, output, session) {
   }
 
   # Generate display-space ticks for a single channel/axis.
-  # Dispatches: flow signal → logicle;  flow/cytof scatter → asinh(cofactor);
-  # cytof signal → asinh(cofactor=5).  QC channels → NULL (linear default).
-  # Returns list(ticks = ..., is_logicle = TRUE/FALSE) or NULL.
+  # Dispatches:
+  #   flow scatter (FSC/SSC) → generate_scatter_ticks  (log-decade labels in raw units)
+  #   flow signal            → generate_logicle_ticks  (logicle-space decade labels)
+  #   CyTOF metal            → NULL  (D3 linear default: simple 0-8 labels in display space)
+  #   QC / non-exprs         → NULL  (linear default)
+  # Returns a tick list or NULL (NULL → JS uses D3's built-in linear axis formatter).
   generate_channel_ticks <- function(channel, axis_range) {
     if (is.null(rv$sce)) return(NULL)
     if (!identical(rv$assay_name, "exprs")) return(NULL)
     if (!nzchar(channel %||% "")) return(NULL)
     if (is.null(axis_range) || length(axis_range) != 2) return(NULL)
     if (.is_qc_channel(channel)) return(NULL)
-    # Scatter channels (FSC/SSC) use regular log-style intervals in raw space.
+
+    # FSC/SSC scatter channels: log-decade labels showing raw values (e.g. 1K, 10K, 100K).
+    # These exist only in flow mode; never in CyTOF.
     if (.is_scatter_channel(channel)) {
       cf <- suppressWarnings(as.numeric(rv$flow_scatter_cofactor[[channel]] %||% 150))
       if (!is.finite(cf) || cf <= 0) cf <- 150
       return(generate_scatter_ticks(axis_range, cofactor = cf))
     }
 
+    # Flow signal channels: logicle-space ticks with decade raw-value labels.
     if (is_flow_session(rv$sce)) {
       raw_mat <- rv$flow_raw_data
       raw_vals <- if (!is.null(raw_mat) && channel %in% colnames(raw_mat)) raw_mat[, channel] else NULL
@@ -1490,8 +1496,13 @@ server <- function(input, output, session) {
       return(ticks)
     }
 
-    # CyTOF — metal channels use asinh(cofactor = 5)
-    generate_asinh_ticks(axis_range, cofactor = 5)
+    # CyTOF metal channels: return NULL so the JS uses D3's default linear
+    # tick formatter.  The display (exprs) space runs ~0–8 for metal channels,
+    # so D3 generates clean integer labels (0, 2, 4, 6, 8) automatically.
+    # DO NOT call generate_asinh_ticks here — that function produces FlowJo-
+    # style decade labels in raw units (0, 10, 100, 1K) which look like a log
+    # scale and are confusing in the CyTOF asinh-display context.
+    NULL
   }
 
   get_cytof_axis_range <- function(channel) {
