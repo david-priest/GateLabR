@@ -120,11 +120,14 @@
         ctx.fillRect(0, 0, size * CANVAS_SCALE, size * CANVAS_SCALE);
         ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
 
-        // SVG — force Arial/Helvetica so exported PDF text is not Times Roman
+        // SVG — force Arial/Helvetica so exported PDF text is not Times Roman.
+        // pointer-events:none lets right-clicks fall through to the canvas so
+        // the browser's native "Copy Image" context menu works (same as UMAP tab).
         var svg = d3.select(container).append('svg')
             .attr('width', size).attr('height', size)
             .style('position', 'absolute')
             .style('top', '0').style('left', '0')
+            .style('pointer-events', 'none')
             .style('font-family', 'Arial, Helvetica, sans-serif');
 
         var g = svg.append('g')
@@ -1051,12 +1054,6 @@
                 }]
             });
 
-            plotDiv.oncontextmenu = function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                _showMiniContextMenu(event, this);
-                return false;
-            };
         }
     }
 
@@ -1231,14 +1228,6 @@
                     gates:           []
                 });
 
-                plotDiv.oncontextmenu = (function (div) {
-                    return function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        _showMiniContextMenu(event, div);
-                        return false;
-                    };
-                })(plotDiv);
             }
 
         } else {
@@ -1311,14 +1300,6 @@
                         gates:           gateOvl
                     });
 
-                    plotDiv.oncontextmenu = (function (div) {
-                        return function (event) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            _showMiniContextMenu(event, div);
-                            return false;
-                        };
-                    })(plotDiv);
                 }
             }
         }
