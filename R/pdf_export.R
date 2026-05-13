@@ -129,24 +129,31 @@ POP_COLORS <- c('#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
   invisible(svg_path)
 }
 
-#' Remove duplicate white-halo text elements inserted by older versions of gridSVG.
+#' Strip duplicate/stroked text elements so Illustrator sees one text object per label.
 #'
-#' gridSVG (pre-1.7) renders each text grob TWICE: first as a white-stroked
-#' background copy (the "halo", to ensure legibility on any background), then
-#' as the actual filled text element.  In vector editors such as Illustrator or
-#' Inkscape this appears as two overlapping text objects — one black, one white-
-#' outlined — for every label in the figure.
+#' Two distinct sources of "duplicate text" exist in gridSVG output:
 #'
-#' The halo copy is identified by having stroke="white" (in any of its common
-#' representations).  We keep the filled element and delete the halo copy.
-#' This is safe for white gate labels too: their halo has stroke="white" and
-#' fill="white", while the keeper element has fill="white" and no stroke.
+#'  1. OLD halo: gridSVG (pre-1.7) renders each text grob twice — first as a
+#'     white-stroked halo copy for legibility, then as the actual filled element.
+#'     In Illustrator this appears as a stroked outline behind every label.
+#'     We delete the halo copy (any <text> with a white stroke attribute).
+#'
+#'  2. MODERN stroke-on-text: gridSVG (1.7+) writes a single <text> element but
+#'     with BOTH stroke="rgb(R,G,B)" AND fill="rgb(R,G,B)" set to the same colour.
+#'     When Adobe Illustrator imports such SVG, it splits the text into two
+#'     stacked text objects — one with the stroke appearance and one with the
+#'     fill appearance — making the labels impossible to edit cleanly.
+#'     We strip the stroke (and stroke-opacity / stroke-width) from every <text>
+#'     element so Illustrator sees a single, fill-only text object.
+#'
+#'  Both passes are safe for white gate labels: those have fill="white" with no
+#'  parent stroke contribution after this rewrite, so they continue to render
+#'  as plain white filled text on top of their dark backgrounds.
 .fix_svg_text_halo <- function(svg_path) {
   if (!file.exists(svg_path)) return(invisible(svg_path))
   lines <- readLines(svg_path, warn = FALSE, encoding = "UTF-8")
 
-  # Match any of: stroke="white", stroke="#fff", stroke="#FFF",
-  # stroke="#ffffff", stroke="#FFFFFF", or stroke="rgb(255, 255, 255)" etc.
+  # ── Pass 1: delete legacy white-halo <text> lines (pre-1.7 gridSVG) ────────
   white_col_re <- paste0(
     'white',
     '|#[Ff]{3,6}',
@@ -154,6 +161,25 @@ POP_COLORS <- c('#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
   )
   halo_pat <- paste0('<text\\b[^>]*\\bstroke\\s*=\\s*"(?:', white_col_re, ')"')
   lines <- lines[!grepl(halo_pat, lines, perl = TRUE)]
+
+  # ── Pass 2: strip stroke from any remaining <text> element ────────────────
+  # gridSVG 1.7+ writes <text ... stroke="rgb(R,G,B)" fill="rgb(R,G,B)" ...>.
+  # Illustrator interprets that as text-with-stroke and duplicates the object
+  # into two stacked frames (one outlined, one filled).  Force stroke="none"
+  # so only the filled appearance survives.  We do the substitution inside any
+  # line that contains "<text" (gridSVG writes one element per line for the
+  # ones we care about; titles, tick labels, axis titles, gate labels).
+  is_text_line <- grepl("<text\\b", lines, perl = TRUE)
+  if (any(is_text_line)) {
+    fix_one <- function(s) {
+      s <- gsub(' stroke="[^"]*"',         ' stroke="none"', s, perl = TRUE)
+      s <- gsub(' stroke-opacity="[^"]*"', ' stroke-opacity="0"', s, perl = TRUE)
+      s <- gsub(' stroke-width="[^"]*"',   ' stroke-width="0"', s, perl = TRUE)
+      s
+    }
+    lines[is_text_line] <- vapply(lines[is_text_line], fix_one,
+                                   character(1), USE.NAMES = FALSE)
+  }
 
   writeLines(lines, svg_path, useBytes = FALSE)
   invisible(svg_path)

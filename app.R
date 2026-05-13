@@ -111,8 +111,8 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260416d"),
-    tags$script(src = "mini_plot.js?v=20260416d"),
+    tags$script(src = "cytof_plot.js?v=20260513a"),
+    tags$script(src = "mini_plot.js?v=20260513a"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
 
@@ -1662,17 +1662,30 @@ server <- function(input, output, session) {
     )
   })
 
-  observeEvent(list(input$cytof_x_lo, input$cytof_x_hi,
-                    input$cytof_y_lo, input$cytof_y_hi), {
+  # Debounce the four CyTOF axis range inputs.  Without this, rapid arrow-
+  # button clicks or fast typing on Min/Max queues up one send_full_plot per
+  # keystroke; each render can take 100–500 ms with large datasets, so the
+  # app appears to "hang" until the queue drains.  A 250 ms debounce coalesces
+  # bursts into a single render with the latest values.
+  .cytof_x_lo_d <- shiny::debounce(reactive(input$cytof_x_lo), 250)
+  .cytof_x_hi_d <- shiny::debounce(reactive(input$cytof_x_hi), 250)
+  .cytof_y_lo_d <- shiny::debounce(reactive(input$cytof_y_lo), 250)
+  .cytof_y_hi_d <- shiny::debounce(reactive(input$cytof_y_hi), 250)
+
+  observeEvent(list(.cytof_x_lo_d(), .cytof_x_hi_d(),
+                    .cytof_y_lo_d(), .cytof_y_hi_d()), {
     req(rv$sce, input$x_channel, input$y_channel)
     x_ch <- input$x_channel %||% ""
     y_ch <- input$y_channel %||% ""
     if (!nzchar(x_ch) || !nzchar(y_ch)) return()
 
-    x_lo <- suppressWarnings(as.numeric(input$cytof_x_lo))
-    x_hi <- suppressWarnings(as.numeric(input$cytof_x_hi))
-    y_lo <- suppressWarnings(as.numeric(input$cytof_y_lo))
-    y_hi <- suppressWarnings(as.numeric(input$cytof_y_hi))
+    # Read the (already debounced) latest values via isolate to avoid setting
+    # up extra reactive dependencies — the observer is already retriggered by
+    # the four .cytof_*_d reactives above.
+    x_lo <- suppressWarnings(as.numeric(isolate(input$cytof_x_lo)))
+    x_hi <- suppressWarnings(as.numeric(isolate(input$cytof_x_hi)))
+    y_lo <- suppressWarnings(as.numeric(isolate(input$cytof_y_lo)))
+    y_hi <- suppressWarnings(as.numeric(isolate(input$cytof_y_hi)))
     .same_num <- function(a, b) is.finite(a) && is.finite(b) && abs(a - b) < 1e-9
     x_ok <- is.finite(x_lo) && is.finite(x_hi) && x_hi > x_lo
     y_ok <- is.finite(y_lo) && is.finite(y_hi) && y_hi > y_lo
@@ -3206,7 +3219,11 @@ server <- function(input, output, session) {
     rv$.population_tree_cache_key <- NULL; rv$.population_tree_cache <- NULL
     rv$.range_cache <- list()
     rv$.last_combined_pop_mask <- NULL
-    send_full_plot()
+    # reset_view = TRUE is required so that any pending zoom transform on the
+    # client (cytof_plot.js _zt) is discarded; otherwise a Refresh after a
+    # Min/Max scale edit on the current channels appears to do nothing because
+    # the new ranges are masked by a stale zoom transform on the same axes.
+    send_full_plot(reset_view = TRUE)
   })
 
   observeEvent(input$recompute_full_counts_btn, {

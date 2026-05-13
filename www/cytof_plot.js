@@ -1593,7 +1593,28 @@
             plotData.y_scatter_cofactor !== _plotData.y_scatter_cofactor
         );
 
-        if (axisChanged || plotData.reset_view || cofactorChanged) {
+        // Range change without channel change happens when the user edits Min/Max
+        // for the current channel(s).  Without clearing _zt, the stale zoom
+        // transform masks the new axis range so the plot appears unchanged until
+        // the user pans/zooms or flips axes.  Tolerance is loose so harmless
+        // floating-point jitter (e.g. gate-driven auto-expansion within 0.5%)
+        // does NOT trigger an unwanted view reset that would lose the user's zoom.
+        var rangeChanged = false;
+        if (_plotData && plotData.x_range && _plotData.x_range &&
+                          plotData.y_range && _plotData.y_range) {
+            var _xspan = Math.abs(_plotData.x_range[1] - _plotData.x_range[0]) || 1;
+            var _yspan = Math.abs(_plotData.y_range[1] - _plotData.y_range[0]) || 1;
+            var _tolX = _xspan * 0.005;
+            var _tolY = _yspan * 0.005;
+            if (Math.abs(plotData.x_range[0] - _plotData.x_range[0]) > _tolX ||
+                Math.abs(plotData.x_range[1] - _plotData.x_range[1]) > _tolX ||
+                Math.abs(plotData.y_range[0] - _plotData.y_range[0]) > _tolY ||
+                Math.abs(plotData.y_range[1] - _plotData.y_range[1]) > _tolY) {
+                rangeChanged = true;
+            }
+        }
+
+        if (axisChanged || plotData.reset_view || cofactorChanged || rangeChanged) {
             _zt = d3.zoomIdentity;
         }
         // Always clear density cache (pseudocolor). For contour, only clear if data changed.
