@@ -278,13 +278,46 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     })
   }
 
-  # fasinh / arcsinh: GateLabR now arcsinh-transforms ALL CyTOF channels
-  # except Time/Event_length/Cell_length (which have no transform ref in
-  # GatingML and are caught by the is.null(trans_ref) check above).
-  # Both metal AND Gaussian parameter channels are in arcsinh space in exprs,
-  # matching GatingML vertex coordinates.  No conversion needed — identity.
+  # fasinh / arcsinh: two distinct cases.
+  #
+  #   • CyTOF metal / Gaussian channels: rv$gates stores vertices in arcsinh
+  #     EXPRS space (display space), and the GatingML export wrote them out
+  #     in that same space.  Identity round-trip.
+  #
+  #   • FLOW scatter (FSC/SSC/...) channels: rv$gates stores vertices in RAW
+  #     counts space, but the GatingML export forward-transformed them to
+  #     arcsinh display space (so files are portable to Cytobank / FlowJo).
+  #     We must apply the fasinh inverse here to put vertices BACK into raw
+  #     counts space — otherwise an export+import roundtrip squashes flow
+  #     scatter gates down to a tiny region near zero (raw≈display values get
+  #     forward-transformed again at render time → asinh(raw/cf) ≈ 0).
+  #
+  # Gating-ML 2.0 fasinh:
+  #     f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
+  # Inverse:
+  #     f^-1(y) = T/sinh(M*ln10) * sinh(y*(M+A)*ln10 + A*ln10)
   if (is.list(tr_def) && identical(tr_def$type, "fasinh")) {
-    return(function(v) v)
+    is_scatter <- exists(".is_scatter_channel", mode = "function") &&
+                  isTRUE(.is_scatter_channel(resolved_channel))
+    if (!is_scatter) return(function(v) v)
+
+    t_v <- suppressWarnings(as.numeric(tr_def$T))
+    m_v <- suppressWarnings(as.numeric(tr_def$M %||% log10(exp(1))))
+    a_v <- suppressWarnings(as.numeric(tr_def$A %||% 0))
+    if (!is.finite(t_v) || t_v <= 0 || !is.finite(m_v) || m_v <= 0) {
+      return(function(v) v)
+    }
+    if (!is.finite(a_v)) a_v <- 0
+    ln10  <- log(10)
+    denom <- sinh(m_v * ln10)
+    if (!is.finite(denom) || denom == 0) return(function(v) v)
+    cf_eff <- t_v / denom
+    k1 <- (m_v + a_v) * ln10
+    k0 <- a_v * ln10
+    return(function(v) {
+      vv <- as.numeric(v)
+      cf_eff * sinh(vv * k1 + k0)
+    })
   }
 
   # Legacy fallback: plain numeric T (old saved state or unknown format).

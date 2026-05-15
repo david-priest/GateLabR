@@ -203,25 +203,35 @@ ui <- fluidPage(
         tags$div(class = "workspace-panel",
           tags$div(class = "section-header", "Workspace"),
 
-          # ── In-memory ops ──
+          # ── Gates & populations (auto-saved to SCE metadata) ──
           tags$div(class = "workspace-block",
-            tags$div(class = "workspace-block-title", "SCE Workspace"),
+            tags$div(class = "workspace-block-title",
+                     "Gates & populations",
+                     tags$span(" — auto-saved to SCE",
+                       style = "font-weight:normal;color:#7a8493;font-size:10px;")),
             tags$div(style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;",
-              actionButton("save_workspace_btn","💾 Save WS",class="btn-xs btn-primary",style="width:100%"),
-              actionButton("load_workspace_btn","📂 Load WS",class="btn-xs btn-default",style="width:100%"),
-              actionButton("export_pop_btn","→ colData",class="btn-xs btn-info",style="width:100%")
+              actionButton("load_workspace_btn","📂 From SCE",class="btn-xs btn-default",style="width:100%"),
+              actionButton("export_pop_btn","→ colData",class="btn-xs btn-info",style="width:100%"),
+              actionButton("reset_workspace_btn","🗑 Reset",class="btn-xs btn-danger",style="width:100%")
+            ),
+            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;",
+              downloadButton("save_workspace_rds_dl","⬇ Save .rds",class="btn-xs btn-primary",style="width:100%;"),
+              tags$div(style="position:relative;",
+                fileInput("load_workspace_rds_upload",NULL,accept=c(".rds",".RDS"),
+                          buttonLabel="📂 Load .rds...",placeholder="",multiple=FALSE,width="100%")
+              )
             )
           ),
 
-          # ── File persistence ──
+          # ── Full SCE file persistence ──
           tags$div(class = "workspace-block",style="margin-top:4px;",
-            tags$div(class = "workspace-block-title", "File"),
+            tags$div(class = "workspace-block-title", "SCE file"),
             tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;",
-              downloadButton("save_rds_dl","⬇ Save RDS",class="btn-xs btn-success",style="width:100%;"),
+              downloadButton("save_rds_dl","⬇ Save SCE",class="btn-xs btn-success",style="width:100%;"),
               actionButton("export_fcs_btn","⬆ Export FCS",class="btn-xs btn-warning",style="width:100%")
             ),
             fileInput("load_rds_upload",NULL,accept=c(".rds",".RDS"),
-                      buttonLabel="Load RDS...",placeholder="No file selected",multiple=FALSE)
+                      buttonLabel="Load SCE...",placeholder="No file selected",multiple=FALSE)
           ),
 
           # ── GatingML ──
@@ -1395,6 +1405,159 @@ server <- function(input, output, session) {
       illust_presets = rv$illust_presets %||% list()
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
+  }
+
+  # Build a portable workspace payload (same shape as save_workspace embeds
+  # into SCE metadata, plus diagnostic fields for cross-SCE .rds transfer).
+  build_workspace_payload <- function() {
+    persist_flow_transform_state()
+    gate_value_space <- if (!is.null(rv$sce) && is_flow_session(rv$sce) &&
+                            rv$assay_name == "exprs" && !is.null(rv$flow_raw_data)) {
+      "raw"
+    } else {
+      "display"
+    }
+    illust_settings <- capture_illust_settings(input, rv)
+    inst <- if (!is.null(rv$sce)) S4Vectors::metadata(rv$sce)$instrument_type else NA_character_
+    list(
+      gates                = rv$gates,
+      gate_order           = rv$gate_order,
+      populations          = rv$populations,
+      root_population_id   = rv$root_population_id,
+      gate_value_space     = gate_value_space,
+      cytof_axis_range     = rv$cytof_axis_range %||% list(),
+      global_scale_ranges  = rv$global_scale_ranges %||% list(),
+      plot_range_override  = rv$.plot_range_override,
+      illust_pop_palette   = rv$illust_pop_palette %||% list(),
+      illust_pop_selected  = rv$illust_pop_selected,
+      illust_settings      = illust_settings,
+      illust_presets       = rv$illust_presets %||% list(),
+      version              = 2L,
+      saved_at             = as.character(Sys.time()),
+      # Diagnostic header for portable .rds files
+      file_format            = "GateLabR-workspace-v2",
+      source_instrument_type = if (is.null(inst)) NA_character_ else as.character(inst),
+      source_channels        = as.character(rv$channels %||% character(0)),
+      source_sce_name        = if (is.null(rv$sce_name)) NA_character_ else as.character(rv$sce_name)
+    )
+  }
+
+  # Apply a workspace list (from another SCE or a .rds file) to the current
+  # session.  Skips gates whose channels are absent in the current SCE and
+  # prunes any population that ends up with zero gate references as a result.
+  apply_workspace <- function(ws, source_label = "workspace") {
+    if (is.null(ws)) {
+      showNotification("No workspace to load.", type = "error", duration = 4)
+      return(invisible(FALSE))
+    }
+    ws <- normalize_workspace_gate_space(ws)
+
+    # Channel-mismatch handling: drop gates whose x/y channels are missing.
+    invalid <- validate_workspace_channels(ws, rv$channels)
+    n_skipped <- length(invalid)
+    if (n_skipped > 0) {
+      for (gid in invalid) ws$gates[[gid]] <- NULL
+      ws$gate_order <- setdiff(ws$gate_order %||% names(ws$gates), invalid)
+      # Prune gate_refs in populations to drop refs to missing gates, then
+      # drop populations that no longer reference any gate (except root).
+      valid_ids <- names(ws$gates)
+      root_id   <- ws$root_population_id
+      if (!is.null(ws$populations)) {
+        ws$populations <- lapply(ws$populations, function(pop) {
+          if (is.null(pop) || is.null(pop$gate_refs)) return(pop)
+          pop$gate_refs <- Filter(function(r) r$gate_id %in% valid_ids, pop$gate_refs)
+          pop
+        })
+        ws$populations <- Filter(function(pop) {
+          if (is.null(pop)) return(FALSE)
+          identical(pop$population_id, root_id) ||
+            (length(pop$gate_refs %||% list()) > 0)
+        }, ws$populations)
+      }
+    }
+
+    # Cross-instrument warning (non-blocking).
+    src_inst <- ws$source_instrument_type %||% NA_character_
+    cur_inst <- if (!is.null(rv$sce)) S4Vectors::metadata(rv$sce)$instrument_type else NA_character_
+    if (!is.na(src_inst) && !is.na(cur_inst) && nzchar(src_inst) && nzchar(cur_inst) &&
+        !identical(as.character(src_inst), as.character(cur_inst))) {
+      showNotification(
+        sprintf("Workspace was saved from a %s SCE but the current SCE is %s. Gates may not render correctly.",
+                src_inst, cur_inst),
+        type = "warning", duration = 6
+      )
+    }
+
+    save_undo_snapshot()
+    rv$gates              <- ws$gates %||% list()
+    rv$gate_order         <- ws$gate_order %||% names(rv$gates)
+    rv$populations        <- ws$populations
+    rv$root_population_id <- ws$root_population_id
+    sort_population_tree_state()
+    rv$active_population_id <- ws$root_population_id
+    rv$selected_gate_id     <- NULL
+    rv$gate_version         <- rv$gate_version + 1L
+    if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
+    rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
+    initialize_missing_global_scales(rv$channels)
+    rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
+    rv$.plot_range_override <- ws$plot_range_override %||% NULL
+    rv$illust_pop_palette   <- ws$illust_pop_palette %||% list()
+    rv$illust_pop_selected  <- if (!is.null(ws$illust_pop_selected)) {
+      as.character(ws$illust_pop_selected)
+    } else NULL
+    if (!is.null(ws$illust_presets)) rv$illust_presets <- ws$illust_presets
+    if (!is.null(ws$illust_settings)) {
+      rv$.illust_settings_pending     <- ws$illust_settings
+      rv$.illust_ui_restore_version   <- isolate(rv$.illust_ui_restore_version) + 1L
+    }
+    if (isTRUE(sync_illust_palette_state())) {
+      rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+    }
+    # Channels don't change on workspace load → force the scale controls to
+    # rebuild with the just-loaded override / global scale values.
+    rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
+    update_rescale_btn(!is.null(rv$.plot_range_override))
+    autosave(); send_full_plot()
+
+    msg <- if (n_skipped > 0) {
+      sprintf("Loaded %s (%d gate(s) skipped due to missing channels)",
+              source_label, n_skipped)
+    } else {
+      paste("Loaded", source_label)
+    }
+    showNotification(msg, type = "message", duration = 4)
+    output$status_text <- renderText(msg)
+    invisible(TRUE)
+  }
+
+  # Clear all gates and populations back to a fresh root-only state.
+  reset_gating_state <- function() {
+    if (is.null(rv$sce)) return(invisible(FALSE))
+    save_undo_snapshot()
+    rv$gates              <- list()
+    rv$gate_order         <- character(0)
+    root                  <- new_root_population(ncol(rv$sce))
+    rv$populations        <- setNames(list(root), root$population_id)
+    rv$root_population_id <- root$population_id
+    rv$active_population_id <- root$population_id
+    rv$selected_gate_id     <- NULL
+    rv$gate_version         <- rv$gate_version + 1L
+    rv$pop_events_map        <- list()
+    rv$.gate_counts_cache_key <- NULL
+    rv$.gate_counts_cache     <- NULL
+    rv$.population_tree_cache_key <- NULL
+    rv$.population_tree_cache     <- NULL
+    rv$.last_combined_pop_mask    <- NULL
+    rv$.strategy_stale <- FALSE
+    rv$.illust_stale   <- FALSE
+    autosave()
+    send_full_plot(reset_view = FALSE)
+    showNotification("Reset: all gates and populations cleared.",
+                     type = "message", duration = 3)
+    output$status_text <- renderText(
+      paste("Reset workspace at", format(Sys.time(), "%H:%M:%S")))
+    invisible(TRUE)
   }
 
   sanitize_mode_choice <- function(mode_choice) {
@@ -7150,11 +7313,10 @@ server <- function(input, output, session) {
   # WORKSPACE SAVE / LOAD / EXPORT
   # ══════════════════════════════════════════════════════════════════════════════
 
-  observeEvent(input$save_workspace_btn, {
-    req(rv$sce, rv$sce_name); autosave()
-    showNotification(paste("Workspace saved to", rv$sce_name, "metadata"), type = "message", duration = 3)
-    output$status_text <- renderText(paste("Saved workspace at", format(Sys.time(), "%H:%M:%S")))
-  })
+  # NOTE: there is no longer an explicit "Save WS" button — autosave() runs on
+  # every gate / population / scale change, so the SCE's workspace metadata is
+  # always up to date.  The downloadHandler `save_workspace_rds_dl` (below)
+  # writes a portable .rds for cross-SCE / cross-session use.
 
   observeEvent(input$load_workspace_btn, {
     req(rv$sce)
@@ -7171,9 +7333,12 @@ server <- function(input, output, session) {
       return()
     }
     showModal(modalDialog(
-      title = "Load Workspace",
-      selectInput("load_ws_source", "Load workspace from:", choices = sce_with_ws),
-      tags$p("This will replace the current gates and populations.", style = "color: #c00; font-size: 12px;"),
+      title = "Load workspace from another SCE",
+      selectInput("load_ws_source", "Source SCE:", choices = sce_with_ws),
+      tags$p("Gates whose channels are not present in this SCE will be skipped.",
+             style = "color: #555; font-size: 12px;"),
+      tags$p("This will replace the current gates and populations.",
+             style = "color: #c00; font-size: 12px;"),
       footer = tagList(modalButton("Cancel"),
                        actionButton("confirm_load_ws", "Load", class = "btn-primary"))
     ))
@@ -7185,35 +7350,86 @@ server <- function(input, output, session) {
     if (is.null(source_sce)) { showNotification("Could not find SCE object", type = "error"); return() }
     ws <- load_workspace(source_sce)
     if (is.null(ws)) { showNotification("No workspace found in that SCE", type = "error"); return() }
-    invalid <- validate_workspace_channels(ws, rv$channels)
-    if (length(invalid) > 0) {
-      showNotification(paste("Warning:", length(invalid), "gate(s) skipped"), type = "warning", duration = 5)
-      for (gid in invalid) ws$gates[[gid]] <- NULL
-      ws$gate_order <- setdiff(ws$gate_order, invalid)
+    # Annotate the source's instrument_type so apply_workspace can warn on
+    # cross-instrument loads (the embedded ws list doesn't carry this field).
+    if (is.null(ws$source_instrument_type)) {
+      src_inst <- tryCatch(S4Vectors::metadata(source_sce)$instrument_type,
+                            error = function(e) NULL)
+      ws$source_instrument_type <- if (!is.null(src_inst)) as.character(src_inst) else NA_character_
     }
-    ws <- normalize_workspace_gate_space(ws)
-    save_undo_snapshot()
-    rv$gates <- ws$gates; rv$gate_order <- ws$gate_order %||% names(ws$gates)
-    rv$populations <- ws$populations; rv$root_population_id <- ws$root_population_id
-    sort_population_tree_state()
-    rv$active_population_id <- ws$root_population_id; rv$selected_gate_id <- NULL
-    rv$gate_version <- rv$gate_version + 1L
-    if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
-    rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
-    initialize_missing_global_scales(rv$channels)
-    rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
-    rv$.plot_range_override <- ws$plot_range_override %||% NULL
-    rv$illust_pop_palette <- ws$illust_pop_palette %||% list()
-    rv$illust_pop_selected <- if (!is.null(ws$illust_pop_selected)) as.character(ws$illust_pop_selected) else NULL
-    if (isTRUE(sync_illust_palette_state())) {
-      rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
+    apply_workspace(ws, source_label = paste("workspace from", source_name))
+  })
+
+  # ── Reset all gates and populations ───────────────────────────────────────
+  observeEvent(input$reset_workspace_btn, {
+    req(rv$sce)
+    n_gates <- length(rv$gates %||% list())
+    n_pops  <- max(0L, length(rv$populations %||% list()) - 1L)  # minus root
+    if (n_gates == 0 && n_pops == 0) {
+      showNotification("Workspace is already empty.", type = "message", duration = 2)
+      return()
     }
-    # Channels don't change on workspace load, so force the scale controls to
-    # re-render with the just-loaded override / global scale values.
-    rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
-    update_rescale_btn(!is.null(rv$.plot_range_override))
-    autosave(); send_full_plot()
-    showNotification(paste("Loaded workspace from", source_name), type = "message", duration = 3)
+    showModal(modalDialog(
+      title = "Reset workspace?",
+      tags$p(sprintf("This will delete all %d gate(s) and %d population(s) from this SCE.",
+                     n_gates, n_pops)),
+      tags$p("This action can be undone via the Undo button.",
+             style = "color:#555; font-size:12px;"),
+      footer = tagList(modalButton("Cancel"),
+                       actionButton("confirm_reset_workspace_btn", "Reset", class = "btn-danger"))
+    ))
+  })
+
+  observeEvent(input$confirm_reset_workspace_btn, {
+    removeModal()
+    reset_gating_state()
+  })
+
+  # ── Save / load workspace as portable .rds ────────────────────────────────
+  output$save_workspace_rds_dl <- downloadHandler(
+    filename = function() {
+      nm <- rv$sce_name %||% "workspace"
+      paste0(nm, "_workspace_", format(Sys.time(), "%Y%m%d_%H%M%S"), ".rds")
+    },
+    content = function(file) {
+      req(rv$sce)
+      ws <- build_workspace_payload()
+      saveRDS(ws, file)
+    }
+  )
+
+  observeEvent(input$load_workspace_rds_upload, {
+    req(rv$sce)
+    f <- input$load_workspace_rds_upload
+    req(f$datapath)
+    ws <- tryCatch(readRDS(f$datapath), error = function(e) {
+      showNotification(paste("Could not read .rds:", e$message),
+                       type = "error", duration = 6)
+      NULL
+    })
+    if (is.null(ws)) return()
+    if (!is.list(ws)) {
+      showNotification("File does not contain a workspace list.",
+                       type = "error", duration = 5)
+      return()
+    }
+    # Accept either: (a) a standalone workspace list, or (b) an entire SCE
+    # object — in case the user picks the SCE .rds by mistake.
+    if (methods::is(ws, "SingleCellExperiment")) {
+      ws <- load_workspace(ws)
+      if (is.null(ws)) {
+        showNotification("That SCE does not contain a saved workspace.",
+                         type = "error", duration = 5)
+        return()
+      }
+    }
+    required <- c("gates", "populations", "root_population_id")
+    if (!all(required %in% names(ws))) {
+      showNotification(".rds file is not a GateLabR workspace.",
+                       type = "error", duration = 5)
+      return()
+    }
+    apply_workspace(ws, source_label = paste("workspace from", f$name))
   })
 
   observeEvent(input$export_pop_btn, {
@@ -8372,12 +8588,14 @@ ui_with_runjs <- tagList(
     $(document).ready(function() {
       var tips = {
         // Left column
-        'save_workspace_btn': 'Save current gates & populations to SCE metadata (in memory)',
-        'load_workspace_btn': 'Load a workspace from another SCE object currently in memory',
+        'load_workspace_btn':   'Load gates & populations from another SCE object currently in memory (channels are matched by name; missing ones are skipped)',
+        'reset_workspace_btn':  'Delete all gates and populations from this SCE (undoable)',
+        'save_workspace_rds_dl': 'Download the current gates, populations, scales and illustration settings as a portable workspace .rds file',
+        'load_workspace_rds_upload': 'Load a workspace .rds file (channels are matched by name; missing ones are skipped)',
         'apply_instrument_mode_btn': 'Apply selected instrument mode to the loaded SCE (recomputes exprs from counts when available)',
         'export_pop_btn':     'Export the active population as a colData column on the SCE',
         'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
-        'save_rds_dl':        'Download the SCE with embedded workspace as an .rds file',
+        'save_rds_dl':        'Download the SCE (with embedded workspace) as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
         'import_gatingml_upload': 'Import Cytobank Gating-ML XML and replace current gates/populations',
         'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML (uses FCS $PnN channel names, BooleanGate definitions)',
