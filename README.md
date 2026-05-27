@@ -1,5 +1,8 @@
 # GateLabR
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg)](https://doi.org/10.5281/zenodo.20404387)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 **Interactive manual gating for `SingleCellExperiment` objects in R / Shiny.**
 
 GateLabR is a desktop-style Shiny application for hand-gating mass cytometry
@@ -127,15 +130,28 @@ name, missing ones are skipped with a warning.
 
 ## Citation
 
-If you use GateLabR in published work, please cite the GitHub repository:
+If you use GateLabR in published work, please cite the Zenodo archive:
 
 > Priest, D. G. (2026). *GateLabR: Interactive manual gating for
-> SingleCellExperiment objects.* Version 1.0.0.
-> https://github.com/david-priest/GateLabR
+> SingleCellExperiment objects.* Version 1.0.0. Zenodo.
+> https://doi.org/10.5281/zenodo.20404387
 
-A versioned archive with a permanent DOI is available via Zenodo
-(see `CITATION.cff` for the BibTeX / formatted citations rendered by GitHub's
-"Cite this repository" button).
+BibTeX:
+
+```bibtex
+@software{priest_gatelabr_2026,
+  author    = {Priest, David G.},
+  title     = {GateLabR: Interactive manual gating for SingleCellExperiment objects},
+  year      = {2026},
+  version   = {1.0.0},
+  doi       = {10.5281/zenodo.20404387},
+  url       = {https://github.com/david-priest/GateLabR},
+  publisher = {Zenodo}
+}
+```
+
+GitHub's "Cite this repository" button (powered by [`CITATION.cff`](CITATION.cff))
+renders formatted citations in several styles.
 
 ## License
 

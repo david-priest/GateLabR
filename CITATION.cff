@@ -13,6 +13,11 @@ url: "https://github.com/david-priest/GateLabR"
 license: MIT
 version: 1.0.0
 date-released: "2026-05-27"
+doi: "10.5281/zenodo.20404387"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.20404387"
+    description: "Zenodo archive of GateLabR v1.0.0"
 abstract: >-
   GateLabR is an R / Shiny application for interactive manual gating of
   mass cytometry (CyTOF) and flow cytometry data stored as
