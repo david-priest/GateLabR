@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: "GateLabR: Interactive manual gating for SingleCellExperiment objects"
+message: "If you use this software, please cite it using the metadata below."
+type: software
+authors:
+  - given-names: David
+    family-names: Priest
+    name-particle: G.
+    affiliation: "Wing Lab, Immunology Frontier Research Center (IFReC), Osaka University, Japan"
+    orcid: "https://orcid.org/0000-0003-0095-6718"
+repository-code: "https://github.com/david-priest/GateLabR"
+url: "https://github.com/david-priest/GateLabR"
+license: MIT
+version: 1.0.0
+date-released: "2026-05-27"
+abstract: >-
+  GateLabR is an R / Shiny application for interactive manual gating of
+  mass cytometry (CyTOF) and flow cytometry data stored as
+  SingleCellExperiment objects. It supports polygon and rectangle gates,
+  Boolean population hierarchies, Cytobank-compatible Gating-ML 2.0
+  import / export, FCS export, and Adobe Illustrator-friendly vector SVG
+  figure export. Gates, populations and display settings are persisted
+  inside the SCE metadata so the entire gating workspace is reloaded
+  with the SCE.
+keywords:
+  - cytometry
+  - mass cytometry
+  - CyTOF
+  - flow cytometry
+  - gating
+  - Gating-ML
+  - single-cell
+  - R
+  - Shiny
+  - SingleCellExperiment
+  - Bioconductor
+  - immunology
+# Once the accompanying paper is accepted, add it here under
+# `preferred-citation:` so GitHub's "Cite this repository" button points
+# readers to the article rather than just the software.
