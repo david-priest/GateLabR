@@ -419,12 +419,13 @@ body { font-size: 13px; }
 .gate-card {
   display: flex;
   align-items: center;
-  padding: 4px 8px;
-  margin: 2px 0;
+  padding: 1px 8px;
+  margin: 0;
   border-radius: 3px;
   cursor: pointer;
   border: 1px solid transparent;
   font-size: 13px;
+  line-height: 1.25;
 }
 
 .gate-card:hover {
@@ -434,6 +435,21 @@ body { font-size: 13px; }
 .gate-card.selected {
   background: #dde8ff;
   border-color: #88a8ff;
+}
+
+.gate-card-select-col {
+  flex: 0 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+}
+
+.gate-card-select {
+  margin: 0;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
 }
 
 .gate-color-swatch {

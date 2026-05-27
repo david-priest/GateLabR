@@ -1057,7 +1057,11 @@ ui <- fluidPage(
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("redo_btn", "", icon = icon("repeat"),
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
+            actionButton("clear_selected_gates_btn", "", icon = icon("times"),
+                         title = "Clear gate selection",
+                         class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("delete_gate_btn", "", icon = icon("trash"),
+                         title = "Delete checked gates (or selected gate if none checked)",
                          class = "btn-xs btn-danger", style = "padding: 1px 5px;")
           )
         ),
@@ -1147,7 +1151,9 @@ server <- function(input, output, session) {
     .pending_delete_gate_id = NULL,
     .pending_delete_pop_id = NULL,
     .pending_bulk_delete_pop_ids = character(0),
+    .pending_bulk_delete_gate_ids = character(0),
     .selected_pop_ids = character(0),
+    .selected_gate_ids = character(0),
     .pending_gatingml_import = NULL,
     flow_logicle_w = list(),
     flow_logicle_w_auto = list(),
@@ -1496,6 +1502,7 @@ server <- function(input, output, session) {
     sort_population_tree_state()
     rv$active_population_id <- ws$root_population_id
     rv$selected_gate_id     <- NULL
+    rv$.selected_gate_ids   <- character(0)
     rv$gate_version         <- rv$gate_version + 1L
     if (!is.null(ws$cytof_axis_range)) rv$cytof_axis_range <- ws$cytof_axis_range
     rv$global_scale_ranges <- ws$global_scale_ranges %||% list()
@@ -1542,6 +1549,7 @@ server <- function(input, output, session) {
     rv$root_population_id <- root$population_id
     rv$active_population_id <- root$population_id
     rv$selected_gate_id     <- NULL
+    rv$.selected_gate_ids   <- character(0)
     rv$gate_version         <- rv$gate_version + 1L
     rv$pop_events_map        <- list()
     rv$.gate_counts_cache_key <- NULL
@@ -3479,7 +3487,34 @@ server <- function(input, output, session) {
                        actionButton("confirm_gate_btn", "Create", class = "btn-success"))
     ))
     rv$.gate_pop_name_manual <- FALSE
-    runjs("setTimeout(function(){var el=document.getElementById('gate_name_input'); if(el){el.focus(); el.select();}}, 80);")
+    runjs("
+      (function(){
+        var focusInput = function(){
+          var el = document.getElementById('gate_name_input');
+          if (el) { el.focus(); el.select(); }
+        };
+        var bindEnter = function(){
+          var nameEl = document.getElementById('gate_name_input');
+          var popEl  = document.getElementById('gate_pop_name_input');
+          var submit = function(e){
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+              e.preventDefault();
+              var btn = document.getElementById('confirm_gate_btn');
+              if (btn) btn.click();
+            }
+          };
+          if (nameEl) nameEl.addEventListener('keydown', submit);
+          if (popEl)  popEl.addEventListener('keydown', submit);
+        };
+        // Prefer the Bootstrap shown event so focus lands after the fade-in.
+        // Fall back to a delayed call in case the event already fired.
+        var $modal = (typeof $ !== 'undefined') ? $('.modal').last() : null;
+        if ($modal && $modal.length) {
+          $modal.one('shown.bs.modal', function(){ focusInput(); bindEnter(); });
+        }
+        setTimeout(function(){ focusInput(); bindEnter(); }, 250);
+      })();
+    ")
   })
 
   observeEvent(input$gate_pop_name_input, {
@@ -3627,12 +3662,83 @@ server <- function(input, output, session) {
       }
     }
     rv$selected_gate_id <- NULL
+    rv$.selected_gate_ids <- setdiff(rv$.selected_gate_ids, gate_id)
     rv$gate_version <- rv$gate_version + 1L
     autosave()
     send_full_plot()
   }
 
+  delete_gates_by_ids <- function(gate_ids) {
+    gate_ids <- intersect(gate_ids, names(rv$gates))
+    if (length(gate_ids) == 0) return()
+    save_undo_snapshot()
+    for (gid in gate_ids) {
+      rv$gates[[gid]] <- NULL
+    }
+    rv$gate_order <- setdiff(rv$gate_order, gate_ids)
+    for (pid in names(rv$populations)) {
+      pop <- rv$populations[[pid]]
+      if (length(pop$gate_refs) > 0) {
+        rv$populations[[pid]]$gate_refs <-
+          Filter(function(ref) !ref$gate_id %in% gate_ids, pop$gate_refs)
+      }
+    }
+    if (!is.null(rv$selected_gate_id) && rv$selected_gate_id %in% gate_ids) {
+      rv$selected_gate_id <- NULL
+    }
+    rv$.selected_gate_ids <- setdiff(rv$.selected_gate_ids, gate_ids)
+    rv$gate_version <- rv$gate_version + 1L
+    autosave()
+    send_full_plot()
+  }
+
+  observeEvent(input$gate_list_toggle_select, {
+    evt <- input$gate_list_toggle_select
+    req(evt, evt$gate_id)
+    gid <- as.character(evt$gate_id)
+    if (!gid %in% names(rv$gates)) return()
+    checked <- isTRUE(evt$checked)
+    if (checked) {
+      rv$.selected_gate_ids <- unique(c(rv$.selected_gate_ids, gid))
+    } else {
+      rv$.selected_gate_ids <- setdiff(rv$.selected_gate_ids, gid)
+    }
+  })
+
+  observeEvent(input$clear_selected_gates_btn, {
+    rv$.selected_gate_ids <- character(0)
+    # Visually uncheck without forcing a renderUI (preserves scroll position).
+    runjs("document.querySelectorAll('.gate-card-select').forEach(function(cb){ cb.checked = false; });")
+  }, ignoreInit = TRUE)
+
   observeEvent(input$delete_gate_btn, {
+    checked <- intersect(rv$.selected_gate_ids %||% character(0), names(rv$gates))
+
+    # Bulk delete path: any gates checked → delete all of them
+    if (length(checked) > 0) {
+      rv$.pending_bulk_delete_gate_ids <- checked
+      gate_names <- vapply(checked, function(gid) rv$gates[[gid]]$name %||% gid, character(1))
+      preview <- if (length(gate_names) <= 8) {
+        paste(gate_names, collapse = ", ")
+      } else {
+        paste0(paste(gate_names[1:8], collapse = ", "), ", …")
+      }
+      showModal(modalDialog(
+        title = "Delete Selected Gates",
+        tags$p(sprintf("Delete %d checked gate(s)?", length(checked))),
+        tags$p(preview, style = "color:#777; font-size:12px;"),
+        tags$p("Any populations referencing these gates will lose those references.",
+               style = "color:#777;"),
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton("confirm_bulk_delete_gates_btn", "OK", class = "btn-danger")
+        ),
+        easyClose = TRUE
+      ))
+      return()
+    }
+
+    # Single-delete path: fall back to highlighted gate
     req(rv$selected_gate_id)
     gate <- rv$gates[[rv$selected_gate_id]]
     req(gate)
@@ -3654,6 +3760,14 @@ server <- function(input, output, session) {
     rv$.pending_delete_gate_id <- NULL
     req(gate_id)
     delete_gate_by_id(gate_id)
+  })
+
+  observeEvent(input$confirm_bulk_delete_gates_btn, {
+    removeModal()
+    ids <- rv$.pending_bulk_delete_gate_ids
+    rv$.pending_bulk_delete_gate_ids <- character(0)
+    if (length(ids) == 0) return()
+    delete_gates_by_ids(ids)
   })
 
   observeEvent(input$gate_list_click, {
@@ -3720,6 +3834,10 @@ server <- function(input, output, session) {
 
   output$gate_list_ui <- renderUI({
     rv$gates; rv$gate_order; rv$selected_gate_id; rv$gate_version
+    # Read once via isolate so toggling a checkbox does NOT re-render the whole
+    # list (which would reset scroll position).  The DOM keeps the user's click
+    # state; the server tracks rv$.selected_gate_ids for bulk-delete.
+    checked_ids <- isolate(rv$.selected_gate_ids)
     if (length(rv$gates) == 0) {
       return(tags$div(class = "gate-list-panel",
                       tags$em("No gates. Draw one using the toolbar.", style = "color:#999; font-size:12px;")))
@@ -3729,12 +3847,25 @@ server <- function(input, output, session) {
     cards <- lapply(ordered_ids, function(gid) {
       gate <- rv$gates[[gid]]; if (is.null(gate)) return(NULL)
       is_sel <- identical(gid, rv$selected_gate_id)
+      is_checked <- gid %in% checked_ids
       counts <- gate_counts[[gid]]
       count_text <- if (!is.null(counts)) paste0(format(counts$event_count, big.mark = ","),
                                                   " (", counts$percent_of_parent, "%)") else ""
       tags$div(
         class = paste("gate-card", if (is_sel) "selected" else ""),
         onclick = sprintf("Shiny.setInputValue('gate_list_click', '%s', {priority:'event'})", gid),
+        tags$span(
+          class = "gate-card-select-col",
+          tags$input(
+            type = "checkbox",
+            class = "gate-card-select",
+            checked = if (is_checked) "checked" else NULL,
+            onclick = sprintf(
+              "event.stopPropagation(); Shiny.setInputValue('gate_list_toggle_select', {gate_id:'%s', checked:this.checked, nonce:Date.now()}, {priority:'event'})",
+              gid
+            )
+          )
+        ),
         tags$div(class = "gate-color-swatch", style = paste0("background:", gate$color)),
         tags$div(class = "gate-card-name", gate$name),
         tags$div(class = "gate-card-channels", paste0(gate$x_channel, " / ", gate$y_channel)),
@@ -3761,9 +3892,7 @@ server <- function(input, output, session) {
         tags$span(gate$name,
                   style = "font-size:12px; min-width:90px; flex-shrink:0;"),
         tags$div(class = "gate-ref-row",
-          radioButtons(paste0("gate_ref_", gid), NULL,
-                       choices = c("Off" = "off", "In" = "include", "Ex" = "exclude"),
-                       selected = "off", inline = TRUE)
+          checkboxInput(paste0("gate_ref_", gid), "Include", value = FALSE)
         )
       )
     })
@@ -3787,9 +3916,9 @@ server <- function(input, output, session) {
     parent_id <- input$new_pop_parent %||% rv$root_population_id
     gate_refs <- list()
     for (gid in names(rv$gates)) {
-      val <- input[[paste0("gate_ref_", gid)]]
-      if (!is.null(val) && val != "off")
-        gate_refs[[length(gate_refs) + 1L]] <- new_gate_ref(gid, include = (val == "include"))
+      if (isTRUE(input[[paste0("gate_ref_", gid)]])) {
+        gate_refs[[length(gate_refs) + 1L]] <- new_gate_ref(gid, include = TRUE)
+      }
     }
     pop <- new_population(pop_name, gate_refs = gate_refs, parent_id = parent_id)
     rv$populations[[pop$population_id]] <- pop
@@ -4465,19 +4594,19 @@ server <- function(input, output, session) {
       # All gates are editable; applying a gate already filtered by a parent is
       # a logical no-op (the parent mask already excludes those events).
       all_gids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
+      # Any existing gate_ref (include or legacy exclude) shows up as checked.
+      # Applying the editor normalises checked refs to include = TRUE.
       current_refs <- list()
-      for (ref in pop$gate_refs) current_refs[[ref$gate_id]] <- if (ref$include) "include" else "exclude"
+      for (ref in pop$gate_refs) current_refs[[ref$gate_id]] <- TRUE
 
       ref_rows <- lapply(all_gids, function(gid) {
-        gate <- rv$gates[[gid]]; current_val <- current_refs[[gid]] %||% "off"
+        gate <- rv$gates[[gid]]; is_checked <- isTRUE(current_refs[[gid]])
         tags$div(class = "gate-ref-edit-row",
           tags$span(class = "gate-color-swatch",
                     style = paste0("background:", gate$color,
                                    "; width:10px; height:10px; border-radius:2px;")),
           tags$span(class = "gate-ref-name", gate$name),
-          radioButtons(paste0("edit_ref_", gid), NULL,
-                       choices = c("Off" = "off", "Include" = "include", "Exclude" = "exclude"),
-                       selected = current_val, inline = TRUE))
+          checkboxInput(paste0("edit_ref_", gid), "Include", value = is_checked))
       })
       gate_refs_ui <- tagList(
         tags$div(class = "pop-editor-row",
@@ -4540,9 +4669,9 @@ server <- function(input, output, session) {
 
     new_refs <- list()
     for (gid in all_gate_ids) {
-      val <- input[[paste0("edit_ref_", gid)]]
-      if (!is.null(val) && val != "off")
-        new_refs[[length(new_refs) + 1L]] <- new_gate_ref(gid, include = (val == "include"))
+      if (isTRUE(input[[paste0("edit_ref_", gid)]])) {
+        new_refs[[length(new_refs) + 1L]] <- new_gate_ref(gid, include = TRUE)
+      }
     }
     rv$populations[[rv$active_population_id]]$gate_refs <- new_refs
     rv$gate_version <- rv$gate_version + 1L; autosave(); send_full_plot()
