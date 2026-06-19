@@ -6378,6 +6378,40 @@ server <- function(input, output, session) {
     )
   })
 
+  # Rebuild full-resolution point arrays for export. The interactive grid is fed
+  # a capped preview payload (see render_illustration_tab); this re-computes the
+  # batch at the user's full event setting and splices the full x/y arrays back
+  # into the preview payload. Axis ranges, ticks, gate overlays and population
+  # names/counts are independent of the display subsample, so they are reused
+  # unchanged — only the plotted points are upgraded to full resolution.
+  .illustration_full_res_payload <- function(preview_payload, full_max_events, plot_type) {
+    if (is.null(preview_payload) || length(preview_payload$plots %||% list()) == 0) {
+      return(preview_payload)
+    }
+    assay <- get_filtered_assay_data()
+    if (is.null(assay) || nrow(assay) == 0) return(preview_payload)
+    pop_ids    <- as.character(preview_payload$pop_ids %||% character(0))
+    x_channels <- as.character(preview_payload$x_channels %||% character(0))
+    y_channel  <- preview_payload$y_channel
+    if (length(pop_ids) == 0 || length(x_channels) == 0) return(preview_payload)
+    display_gates <- get_plot_gates()
+    batch <- compute_illustration_batch(
+      assay, display_gates, rv$gate_order,
+      rv$populations, rv$root_population_id,
+      pop_ids, x_channels, y_channel,
+      plot_type = plot_type, max_events = full_max_events
+    )
+    out <- preview_payload
+    for (key in names(out$plots)) {
+      pd_full <- batch$plots[[key]]
+      if (is.null(pd_full)) next
+      out$plots[[key]]$x <- unname(as.numeric(pd_full$x))
+      out$plots[[key]]$y <- if (!is.null(pd_full$y)) unname(as.numeric(pd_full$y)) else out$plots[[key]]$y
+      out$plots[[key]]$n_events <- pd_full$n_events
+    }
+    out
+  }
+
   render_illustration_tab <- function() {
     illust_plot_type <- as.character(input$illust_plot_type %||% "biplot")
     if (!illust_plot_type %in% c("biplot", "histogram")) illust_plot_type <- "biplot"
@@ -6418,7 +6452,26 @@ server <- function(input, output, session) {
       if (!is.null(ch) && length(ch) == 1L && !is.na(ch) && nzchar(ch)) ch else NULL
     } else NULL
 
-    max_events_key <- if (is.finite(illust_max_events)) as.integer(illust_max_events) else "all"
+    # ── Interactive-preview event cap ─────────────────────────────────────────
+    # Drawing every event (e.g. "all events" on ~1M-event CyTOF data) across many
+    # marker panels serialises tens of millions of points to the browser and
+    # locks it up. The on-screen grid is only a preview, so bound the points it
+    # receives by a total budget; preview_max_events is the per-population-row
+    # cap (each row's marker panels share the same subsampled events). The SVG
+    # export rebuilds at the user's full setting (full_max_events) on download.
+    full_max_events <- illust_max_events  # user setting; Inf = all events
+    n_panels_est <- max(1L, length(pop_ids) * length(x_channels))
+    ILLUST_PREVIEW_POINT_BUDGET <- 2000000L
+    preview_cap <- max(2000L, min(100000L, ILLUST_PREVIEW_POINT_BUDGET %/% n_panels_est))
+    preview_max_events <- if (is.finite(full_max_events)) {
+      min(as.integer(full_max_events), preview_cap)
+    } else {
+      preview_cap
+    }
+    preview_capped <- !is.finite(full_max_events) ||
+      as.integer(full_max_events) > preview_max_events
+
+    max_events_key <- as.integer(preview_max_events)
     mask_sig <- if (is.null(rv$sample_mask)) {
       "none"
     } else {
@@ -6478,7 +6531,7 @@ server <- function(input, output, session) {
           rv$populations, rv$root_population_id,
           pop_ids, x_channels, y_channel,
           plot_type = illust_plot_type,
-          max_events = illust_max_events
+          max_events = preview_max_events
         )
 
         .gs_range <- function(ch, span_scale) {
@@ -6562,9 +6615,16 @@ server <- function(input, output, session) {
         pop_names <- list()
         pop_counts <- list()
         for (pid in pop_ids) {
-          pop <- batch$populations[[pid]] %||% rv$populations[[pid]]
-          pop_names[[pid]] <- if (!is.null(pop)) pop$name else "Unknown"
-          pop_counts[[pid]] <- if (!is.null(pop) && !is.null(pop$event_count)) pop$event_count else 0L
+          # Resolve the user-facing name from rv$populations (authoritative) and
+          # the event count from the freshly-computed batch (apply_gating_strategy
+          # sets it). Guard every branch so we never assign NULL into the list —
+          # a NULL silently drops the key, which the client renders as "Unknown".
+          pop <- rv$populations[[pid]] %||% batch$populations[[pid]]
+          nm  <- pop$name
+          if (is.null(nm) || is.na(nm) || !nzchar(nm)) nm <- "Unknown"
+          ec  <- batch$populations[[pid]]$event_count %||% pop$event_count %||% 0L
+          pop_names[[pid]]  <- nm
+          pop_counts[[pid]] <- as.integer(ec)
         }
 
         base_payload <- list(
@@ -6655,9 +6715,13 @@ server <- function(input, output, session) {
       })
     }
 
-    # Cache payload for server-side PDF export
+    # Cache payload for server-side PDF export. `payload` is the capped preview
+    # (also reused by the raster PNG export); the SVG export rebuilds full-res
+    # point arrays from full_max_events at download time.
     rv$.illustration_pdf_payload <- list(
       payload = base_payload,
+      full_max_events = full_max_events,
+      plot_type = illust_plot_type,
       population_colors = illust_population_colors,
       plot_size = illust_plot_size,
       n_columns = illust_n_columns,
@@ -6700,6 +6764,15 @@ server <- function(input, output, session) {
       ),
       base_payload
     ))
+
+    if (isTRUE(preview_capped) && length(base_payload$plots %||% list()) > 0) {
+      showNotification(
+        sprintf(paste0("Preview limited to ~%s events/panel for responsiveness. ",
+                       "The SVG export uses full resolution."),
+                format(preview_max_events, big.mark = ",")),
+        type = "message", duration = 5
+      )
+    }
   }
 
   observeEvent(input$illust_all_events, {
@@ -6810,7 +6883,12 @@ server <- function(input, output, session) {
       data$pdf_point_size <- max(0.1, min(5, as.numeric(data$point_size %||% 1.2) / 2))
       data$pdf_point_alpha <- max(0.05, min(1, as.numeric(data$point_alpha %||% 0.35)))
       showNotification("Generating SVG\u2026", duration = 2, type = "message")
-      export_illustration_pdf(file, data$payload, data)
+      # The cached payload is the capped on-screen preview; rebuild full-resolution
+      # point arrays so the exported figure is not limited by the preview cap.
+      full_payload <- .illustration_full_res_payload(
+        data$payload, data$full_max_events %||% Inf, illust_plot_type
+      )
+      export_illustration_pdf(file, full_payload, data)
     }
   )
 
