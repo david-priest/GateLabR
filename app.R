@@ -111,7 +111,7 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260513a"),
+    tags$script(src = "cytof_plot.js?v=20260619a"),
     tags$script(src = "mini_plot.js?v=20260513a"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
@@ -1939,7 +1939,7 @@ server <- function(input, output, session) {
     if (!changed_plot_range && !changed_global) return()
 
     rv$.range_cache <- list()
-    send_full_plot(reset_view = TRUE)
+    send_full_plot(reset_view = TRUE, force = TRUE)
   }, ignoreInit = TRUE)
 
   output$flow_transform_controls_ui <- renderUI({
@@ -2057,7 +2057,7 @@ server <- function(input, output, session) {
     # in the channel-change observer (low-frequency, safe checkpoint).
     refresh_assay_data(reset_cache = FALSE,
                       channels_to_update = c(input$x_channel, input$y_channel))
-    send_full_plot(reset_view = TRUE)
+    send_full_plot(reset_view = TRUE, force = TRUE)
   }, ignoreInit = TRUE)
 
   observeEvent(input$y_logicle_w, {
@@ -2076,7 +2076,7 @@ server <- function(input, output, session) {
     # Do NOT call persist_flow_transform_state() here — see comment in x_logicle_w observer.
     refresh_assay_data(reset_cache = FALSE,
                       channels_to_update = c(input$x_channel, input$y_channel))
-    send_full_plot(reset_view = TRUE)
+    send_full_plot(reset_view = TRUE, force = TRUE)
   }, ignoreInit = TRUE)
 
   observeEvent(input$auto_w_x_btn, {
@@ -3183,7 +3183,7 @@ server <- function(input, output, session) {
   # PLOT RENDERING (Gating Tab)
   # ══════════════════════════════════════════════════════════════════════════════
 
-  send_full_plot <- function(reset_view = FALSE, refresh_pop_masks = TRUE) {
+  send_full_plot <- function(reset_view = FALSE, refresh_pop_masks = TRUE, force = FALSE) {
     req(rv$assay_data, input$x_channel, input$y_channel)
     x_ch <- input$x_channel; y_ch <- input$y_channel
     if (!x_ch %in% colnames(rv$assay_data) || !y_ch %in% colnames(rv$assay_data)) return()
@@ -3314,6 +3314,10 @@ server <- function(input, output, session) {
 
     rv$.plot_msg_seq <- as.integer(rv$.plot_msg_seq %||% 0L) + 1L
     plot_data$`_plot_seq` <- rv$.plot_msg_seq
+    # force_full = TRUE makes the client bypass its stale-seq guard and gates-only
+    # fast path, guaranteeing a full canvas+gate redraw. Set for explicit user
+    # scale edits and the Refresh button so a scale change always takes effect.
+    plot_data$force_full <- isTRUE(force)
 
     rv$current_plot_data <- plot_data
     session$sendCustomMessage("updatePlot", plot_data)
@@ -3390,11 +3394,11 @@ server <- function(input, output, session) {
     rv$.population_tree_cache_key <- NULL; rv$.population_tree_cache <- NULL
     rv$.range_cache <- list()
     rv$.last_combined_pop_mask <- NULL
-    # reset_view = TRUE is required so that any pending zoom transform on the
-    # client (cytof_plot.js _zt) is discarded; otherwise a Refresh after a
-    # Min/Max scale edit on the current channels appears to do nothing because
-    # the new ranges are masked by a stale zoom transform on the same axes.
-    send_full_plot(reset_view = TRUE)
+    # reset_view = TRUE discards any pending client zoom transform; force = TRUE
+    # makes the client bypass its stale-seq guard and gates-only fast path so the
+    # Refresh button always forces a full canvas+gate redraw (previously it could
+    # be a no-op if the message was deduped against an already-recorded seq).
+    send_full_plot(reset_view = TRUE, force = TRUE)
   })
 
   observeEvent(input$recompute_full_counts_btn, {
@@ -7268,7 +7272,7 @@ server <- function(input, output, session) {
                 x_ch <- isolate(input$x_channel %||% ""); y_ch <- isolate(input$y_channel %||% "")
                 if (.ch == x_ch) updateSliderInput(session, "x_logicle_w", value = new_w)
                 if (.ch == y_ch) updateSliderInput(session, "y_logicle_w", value = new_w)
-                if (.ch %in% c(x_ch, y_ch)) send_full_plot(reset_view = TRUE)
+                if (.ch %in% c(x_ch, y_ch)) send_full_plot(reset_view = TRUE, force = TRUE)
                 mark_renders_stale()
               }
             }

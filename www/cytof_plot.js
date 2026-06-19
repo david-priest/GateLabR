@@ -1521,7 +1521,16 @@
     function render(plotData, mode) {
         if (!plotData) return;
 
-        if (_isStalePlot(plotData)) return;
+        // Forced renders — explicit scale edits (Min/Max, logicle W) and the
+        // Refresh button — must never be swallowed by the seq guard or the
+        // gates-only fast path below. Those optimisations can otherwise drop a
+        // scale change outright, or apply only the gate overlays on top of a
+        // stale canvas scale, leaving the plot looking unchanged until the user
+        // flips to another biplot and back. A forced payload always runs a full
+        // _redraw(), which rebuilds the axis scales from the new ranges.
+        var forced = plotData.force_full === true;
+
+        if (!forced && _isStalePlot(plotData)) return;
 
         if (_dragging) {
             if (!_deferredPlot) {
@@ -1554,7 +1563,7 @@
         }
 
         // ── Fast path: only gate overlays changed, no canvas redraw needed ───
-        if (plotData.gates_only && _ready && _xBase && _plotData) {
+        if (!forced && plotData.gates_only && _ready && _xBase && _plotData) {
             _plotData.gates = _mergePendingEditsIntoGates(plotData.gates);
             _plotData.selected_gate_id = plotData.selected_gate_id;
             _recordPlotSeq(plotData);
