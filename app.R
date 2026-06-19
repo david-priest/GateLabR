@@ -7828,7 +7828,14 @@ server <- function(input, output, session) {
     )
     showModal(modalDialog(
       title = "Export FCS Files",
-      checkboxGroupInput("fcs_export_pop_ids", "Populations to export:",
+      tags$label("Populations to export:", style = "font-weight:700;"),
+      tags$div(style = "margin-bottom:4px;",
+        actionButton("fcs_export_pops_all_btn", "Select all",
+                     class = "btn-xs btn-default", style = "padding:1px 8px;"),
+        actionButton("fcs_export_pops_none_btn", "None",
+                     class = "btn-xs btn-default", style = "padding:1px 8px; margin-left:4px;")
+      ),
+      checkboxGroupInput("fcs_export_pop_ids", NULL,
                          choices = pop_choices,
                          selected = default_pop_ids,
                          inline = FALSE),
@@ -7854,6 +7861,14 @@ server <- function(input, output, session) {
                        onclick = "setTimeout(function(){ if(window.jQuery){ $('.modal').modal('hide'); } }, 50);")
       )
     ))
+  })
+
+  observeEvent(input$fcs_export_pops_all_btn, {
+    req(rv$populations)
+    updateCheckboxGroupInput(session, "fcs_export_pop_ids", selected = names(rv$populations))
+  })
+  observeEvent(input$fcs_export_pops_none_btn, {
+    updateCheckboxGroupInput(session, "fcs_export_pop_ids", selected = character(0))
   })
 
   output$do_export_fcs_dl <- downloadHandler(
