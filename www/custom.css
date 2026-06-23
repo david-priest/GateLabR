@@ -415,6 +415,14 @@ body { font-size: 13px; }
   max-height: 68vh;
 }
 
+/* The container is focusable (tabindex=0) so Up/Down arrows navigate the list;
+   show a subtle blue ring on the panel while focused to signal it's armed. */
+#population_tree_container { outline: none; }
+#population_tree_container:focus .population-tree-panel {
+  box-shadow: 0 0 0 2px rgba(47, 128, 237, 0.40);
+  border-color: #b9d4fb;
+}
+
 /* ── Gate card ─────────────────────────────────────────────────── */
 .gate-card {
   display: flex;
