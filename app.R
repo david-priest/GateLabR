@@ -8160,7 +8160,7 @@ server <- function(input, output, session) {
                      style = "color:#888; font-size:11px; margin-top:-4px;")),
       radioButtons("fcs_export_assay", "Data to include:",
                    choices  = assay_choices,
-                   selected = if ("exprs" %in% available_assays) "exprs" else available_assays[1]),
+                   selected = if ("counts" %in% available_assays) "counts" else available_assays[1]),
       radioButtons("fcs_export_split", "Output format:",
                    choices  = c("One FCS file per sample" = "per_sample",
                                 "Single combined FCS file" = "combined"),
