@@ -252,6 +252,37 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     '  </transforms:transformation>')
 }
 
+# Build a JSON blob of per-channel scale settings — display Min/Max range,
+# logicle W, and scatter cofactor — for round-tripping into GateLabR via a
+# custom_info block. GatingML's transforms section already carries W/cofactor for
+# gated channels, but the display range (the Scales-tab view window) has no
+# native home, so we persist the full set here. Keys are display channel names.
+# Returns NULL when there is nothing to save.
+.gml_ex_build_scales_json <- function(channel_names, global_scale_ranges,
+                                      logicle_w_params, scatter_cofactor_params) {
+  if (!requireNamespace("jsonlite", quietly = TRUE)) return(NULL)
+  gsr <- as.list(global_scale_ranges %||% list())
+  wl  <- as.list(logicle_w_params %||% list())
+  cf  <- as.list(scatter_cofactor_params %||% list())
+  channels <- list()
+  for (ch in channel_names) {
+    rng   <- gsr[[ch]]
+    lo    <- suppressWarnings(as.numeric(rng$lo %||% NA))
+    hi    <- suppressWarnings(as.numeric(rng$hi %||% NA))
+    w     <- suppressWarnings(as.numeric(wl[[ch]] %||% NA))
+    cofac <- suppressWarnings(as.numeric(cf[[ch]] %||% NA))
+    entry <- list()
+    if (is.finite(lo))    entry$lo <- lo
+    if (is.finite(hi))    entry$hi <- hi
+    if (is.finite(w))     entry$w <- w
+    if (is.finite(cofac)) entry$cofactor <- cofac
+    if (length(entry) > 0) channels[[ch]] <- entry
+  }
+  if (length(channels) == 0) return(NULL)
+  as.character(jsonlite::toJSON(list(version = 1L, channels = channels),
+                                auto_unbox = TRUE, null = "null"))
+}
+
 # ── Main export function ──────────────────────────────────────────────────────
 
 #' Export GateLabR workspace as Gating-ML 2.0 XML
@@ -286,7 +317,8 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
                                         format = c("cytobank", "standard"),
                                         logicle_w_params = NULL,
                                         scatter_cofactor_params = NULL,
-                                        counts_mat = NULL) {
+                                        counts_mat = NULL,
+                                        global_scale_ranges = NULL) {
   format <- match.arg(format)
   cytobank_mode <- identical(format, "cytobank")
   if (!requireNamespace("base64enc", quietly = TRUE))
@@ -321,6 +353,11 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
                                         counts_mat)
   ch_to_tr <- tr_reg$ch_to_tr
   tr_defs  <- tr_reg$tr_defs
+
+  # Per-channel scale settings (display Min/Max range + logicle W + cofactor),
+  # saved into the root custom_info block so GateLabR can restore them on import.
+  scales_json <- .gml_ex_build_scales_json(ch_names, global_scale_ranges,
+                                           logicle_w_params, scatter_cofactor_params)
 
   # ── Gate vertices in display (export) space ─────────────────────────────────
   # Flow: gates stored in raw space → forward-transform to logicle/arcsinh space.
@@ -590,6 +627,11 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     paste0('      <about>', .gml_ex_esc(about_str), '</about>'),
     paste0('      <export_timestamp>', format(Sys.time(), "%Y-%m-%dT%H:%M:%S"), '</export_timestamp>'),
     '    </cytobank>',
+    if (!is.null(scales_json)) c(
+      '    <gatelabr_scales>',
+      paste0('      <definition>', .gml_ex_esc_text(scales_json), '</definition>'),
+      '    </gatelabr_scales>'
+    ) else character(0),
     '  </data-type:custom_info>',
     # Transform definitions
     unlist(lapply(names(tr_defs), function(id) .gml_ex_transform(id, tr_defs[[id]]))),

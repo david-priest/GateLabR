@@ -60,6 +60,24 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   tryCatch(jsonlite::fromJSON(txt), error = function(e) NULL)
 }
 
+#' Parse the GateLabR per-channel scales block written into the root-level
+#' custom_info by the exporter. Returns a named list (channel -> list with any of
+#' lo/hi/w/cofactor) or NULL when absent. Other tools' custom_info is ignored.
+.gml_parse_gatelabr_scales <- function(root_node) {
+  ci <- .gml_first_child_local(root_node, "custom_info")
+  if (is.null(ci)) return(NULL)
+  gs <- .gml_first_child_local(ci, "gatelabr_scales")
+  if (is.null(gs)) return(NULL)
+  def <- .gml_first_child_local(gs, "definition")
+  if (is.null(def)) return(NULL)
+  txt <- trimws(xml2::xml_text(def))
+  if (nchar(txt) == 0) return(NULL)
+  parsed <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = FALSE),
+                     error = function(e) NULL)
+  if (is.null(parsed) || is.null(parsed$channels)) return(NULL)
+  parsed$channels
+}
+
 #' Extract Cytobank gate_id (primitive gates) or gate_set_id (boolean gates)
 .gml_parse_cytobank_ids <- function(node) {
   ci <- .gml_first_child_local(node, "custom_info")
@@ -776,6 +794,7 @@ import_gatingml_from_cytobank <- function(file_path,
     root_population_id = root_pop_id,
     n_gates_imported = length(app_gates),
     n_gates_skipped = as.integer(n_skipped),
-    n_pops_imported = max(0L, length(populations) - 1L)
+    n_pops_imported = max(0L, length(populations) - 1L),
+    scales = .gml_parse_gatelabr_scales(root)
   )
 }

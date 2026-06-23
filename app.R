@@ -7835,11 +7835,47 @@ server <- function(input, output, session) {
     rv$selected_gate_id <- NULL
     rv$gate_version <- rv$gate_version + 1L
 
+    # Restore per-channel scales saved in the GatingML custom_info (if present).
+    # Only channels in the current SCE are touched; W/cofactor apply to flow.
+    n_scales <- 0L
+    sc <- parsed$scales
+    if (is.list(sc) && length(sc) > 0) {
+      sess_ch <- rv$channels %||% character(0)
+      changed_range <- FALSE; changed_transform <- FALSE
+      for (ch in intersect(names(sc), sess_ch)) {
+        e  <- sc[[ch]]
+        lo <- suppressWarnings(as.numeric(e$lo %||% NA))
+        hi <- suppressWarnings(as.numeric(e$hi %||% NA))
+        if (is.finite(lo) && is.finite(hi) && hi > lo) {
+          rv$global_scale_ranges[[ch]] <- list(lo = lo, hi = hi)
+          changed_range <- TRUE; n_scales <- n_scales + 1L
+        }
+        w <- suppressWarnings(as.numeric(e$w %||% NA))
+        if (is.finite(w)) {
+          rv$flow_logicle_w[[ch]] <- max(0.1, min(w, 2.0)); changed_transform <- TRUE
+        }
+        cofac <- suppressWarnings(as.numeric(e$cofactor %||% NA))
+        if (is.finite(cofac) && cofac > 0) {
+          rv$flow_scatter_cofactor[[ch]] <- cofac; changed_transform <- TRUE
+        }
+      }
+      if (changed_range || changed_transform) {
+        rv$.range_cache <- list()
+        rv$.scales_ui_version      <- isolate(rv$.scales_ui_version) + 1L
+        rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
+      }
+      # W / cofactor feed the display transform, so re-transform for flow sessions.
+      if (changed_transform && is_flow_session(rv$sce) && rv$assay_name == "exprs") {
+        refresh_assay_data(reset_cache = TRUE)
+      }
+    }
+
     autosave()
     send_full_plot(reset_view = TRUE)
 
     msg <- paste0("Imported ", parsed$n_gates_imported, " gates and ",
                   parsed$n_pops_imported, " populations from GatingML")
+    if (n_scales > 0) msg <- paste0(msg, "; restored scales for ", n_scales, " channel(s)")
     if (isTRUE(parsed$n_gates_skipped > 0)) {
       msg <- paste0(msg, " (", parsed$n_gates_skipped, " skipped)")
     }
@@ -7865,7 +7901,8 @@ server <- function(input, output, session) {
         format                  = fmt,
         logicle_w_params        = isolate(rv$flow_logicle_w),
         scatter_cofactor_params = isolate(rv$flow_scatter_cofactor),
-        counts_mat              = isolate(rv$flow_raw_data)
+        counts_mat              = isolate(rv$flow_raw_data),
+        global_scale_ranges     = isolate(rv$global_scale_ranges)
       )
     }, error = function(e) {
       showNotification(paste("GatingML export error:", e$message),
