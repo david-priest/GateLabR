@@ -284,6 +284,7 @@ ui <- fluidPage(
               actionButton("refresh_plot_btn", "Refresh", class = "btn-xs btn-default")
             )
           ),
+          uiOutput("gating_display_pops_ui"),
           tags$div(id = "cytof-plot-container",
                    style = "width: 100%;"),
 
@@ -1170,6 +1171,7 @@ server <- function(input, output, session) {
     .pending_bulk_delete_pop_ids = character(0),
     .pending_bulk_delete_gate_ids = character(0),
     .selected_pop_ids = character(0),
+    .last_display_pop_mask = NULL,   # union mask of populations shown in the biplot
     .selected_gate_ids = character(0),
     .pending_gatingml_import = NULL,
     flow_logicle_w = list(),
@@ -3006,6 +3008,56 @@ server <- function(input, output, session) {
     pop_mask
   }
 
+  # Populations whose events are shown in the biplot: the checked populations in
+  # the tree (left-column checkboxes), or — when none are checked — the active
+  # (blue-highlighted) population, preserving the original single-population view.
+  get_display_pop_ids <- function() {
+    checked <- intersect(as.character(rv$.selected_pop_ids %||% character(0)),
+                         names(rv$populations %||% list()))
+    if (length(checked) > 0) return(checked)
+    aid <- rv$active_population_id %||% rv$root_population_id
+    if (!is.null(aid)) aid else character(0)
+  }
+
+  # Union mask of all displayed populations (so an arbitrary number can be shown
+  # at once). Cached in rv$.last_display_pop_mask for the gates-only fast path.
+  get_display_pop_mask <- function() {
+    ids <- get_display_pop_ids()
+    if (length(ids) == 0) { rv$.last_display_pop_mask <- NULL; return(NULL) }
+    masks <- lapply(ids, get_pop_mask)
+    masks <- masks[!vapply(masks, is.null, logical(1))]
+    if (length(masks) == 0) { rv$.last_display_pop_mask <- NULL; return(NULL) }
+    m <- Reduce(`|`, masks)
+    rv$.last_display_pop_mask <- m
+    m
+  }
+
+  # Text indicator above the biplot: which populations' data is being shown.
+  output$gating_display_pops_ui <- renderUI({
+    rv$populations; rv$active_population_id; rv$.selected_pop_ids
+    ids <- get_display_pop_ids()
+    if (length(ids) == 0) return(NULL)
+    nm <- function(pid) rv$populations[[pid]]$name %||% pid
+    names_vec <- vapply(ids, nm, character(1))
+    multi <- length(intersect(as.character(rv$.selected_pop_ids %||% character(0)),
+                              names(rv$populations %||% list()))) > 0
+    show_names <- names_vec; extra <- 0L
+    if (length(show_names) > 10L) { extra <- length(show_names) - 10L; show_names <- show_names[seq_len(10L)] }
+    label_txt <- paste(show_names, collapse = ", ")
+    if (extra > 0L) label_txt <- paste0(label_txt, " (+", extra, " more)")
+    tags$div(
+      style = paste0(
+        "font-size:11px; color:#23354d; border-radius:4px; padding:3px 8px; margin:0 0 6px 0;",
+        if (multi) " background:#e8f1fe; border:1px solid #b9d4fb;"
+        else       " background:#f3f4f6; border:1px solid #e3e3e3;"),
+      tags$strong(if (multi) sprintf("Displaying %d populations: ", length(ids)) else "Displaying: "),
+      label_txt,
+      if (multi) tags$span(
+        "  — from checked rows; uncheck all to return to the active population.",
+        style = "color:#6b7a90;") else NULL
+    )
+  })
+
   is_subset_count_mode <- function() {
     identical(input$count_compute_mode %||% "subset", "subset")
   }
@@ -3269,18 +3321,30 @@ server <- function(input, output, session) {
     if (!x_ch %in% colnames(rv$assay_data) || !y_ch %in% colnames(rv$assay_data)) return()
 
     pop_mask <- if (isTRUE(refresh_pop_masks)) {
-      get_pop_mask()
+      get_display_pop_mask()
     } else {
-      pid <- rv$active_population_id %||% rv$root_population_id
-      rv$pop_events_map[[pid]] %||% rv$.last_combined_pop_mask
+      rv$.last_display_pop_mask %||% {
+        pid <- rv$active_population_id %||% rv$root_population_id
+        rv$pop_events_map[[pid]] %||% rv$.last_combined_pop_mask
+      }
     }
     plot_sample_mask <- get_effective_sample_mask(for_plot = TRUE)
+    # combined_mask = the events DISPLAYED in the biplot (union of shown
+    # populations, intersected with the sample filter).
     combined_mask <- if (!is.null(plot_sample_mask)) {
       if (!is.null(pop_mask)) pop_mask & plot_sample_mask else plot_sample_mask
     } else {
       pop_mask
     }
-    rv$.last_combined_pop_mask <- combined_mask
+    # Gate counts/percentages stay relative to the ACTIVE population (the gating
+    # context), independent of how many populations are displayed — so ticking
+    # display checkboxes never changes the gate statistics.
+    active_mask <- get_pop_mask(rv$active_population_id %||% rv$root_population_id)
+    rv$.last_combined_pop_mask <- if (!is.null(plot_sample_mask)) {
+      if (!is.null(active_mask)) active_mask & plot_sample_mask else plot_sample_mask
+    } else {
+      active_mask
+    }
     gate_counts <- get_gate_counts()
     plot_gates <- get_plot_gates(x_ch, y_ch)
     alpha <- input$point_alpha %||% 0.35
@@ -4114,10 +4178,13 @@ server <- function(input, output, session) {
     } else {
       rv$.selected_pop_ids <- setdiff(rv$.selected_pop_ids, pid)
     }
+    # Checked populations drive what the biplot displays (union of their events).
+    send_full_plot()
   })
 
   observeEvent(input$clear_selected_pops_btn, {
     rv$.selected_pop_ids <- character(0)
+    send_full_plot()
   }, ignoreInit = TRUE)
 
   observeEvent(input$delete_selected_pops_btn, {
