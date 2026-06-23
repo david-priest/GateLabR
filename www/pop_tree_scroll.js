@@ -1,8 +1,11 @@
 /*
  * pop_tree_scroll.js — preserve the population-tree scroll position.
  *
- * The population tree (#population_tree_container > .population-tree-panel) is a
- * Shiny renderUI output. It re-renders on many reactive changes — selecting a
+ * The population tree (#population_tree_container > #population_tree_ui >
+ * .population-tree-panel) is a Shiny renderUI output — note Shiny inserts the
+ * #population_tree_ui wrapper, so the scrollable panel is a grandchild, not a
+ * direct child, of the container. It re-renders on many reactive changes —
+ * selecting a
  * gate, clicking a population, gate counts updating — and each render replaces
  * the scrollable .population-tree-panel with a brand-new element whose scrollTop
  * is 0. The result: the list jumps back to the top while you're working partway
@@ -27,8 +30,12 @@
     }
 
     function isOurPanel(el) {
-        return el && el.classList && el.classList.contains(PANEL_CLASS) &&
-               el.parentElement && el.parentElement.id === CONTAINER_ID;
+        // Shiny's uiOutput wraps the panel in an intermediate
+        // <div id="population_tree_ui">, so the panel is NOT a direct child of
+        // the container — match by containment, not by parentElement.id.
+        var c = container();
+        return el && el.nodeType === 1 && el.classList &&
+               el.classList.contains(PANEL_CLASS) && c && c.contains(el);
     }
 
     // Record scrollTop as the user scrolls. 'scroll' does not bubble, so listen
