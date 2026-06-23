@@ -2311,6 +2311,10 @@ server <- function(input, output, session) {
     rv$sample_mask <- NULL
     rv$sample_filter_key <- "all"
     rv$.last_combined_pop_mask <- NULL
+    # Discard the previous SCE's illustration cache so a render on the new SCE
+    # never serves a stale payload (cache is now also keyed by SCE name).
+    rv$.illustration_cache_key <- NULL
+    rv$.illustration_cache_payload <- NULL
     # Clear any DT row selections from the previous SCE
     proxy <- DT::dataTableProxy("sample_filter_table")
     DT::selectRows(proxy, NULL)
@@ -6541,6 +6545,21 @@ server <- function(input, output, session) {
       if (!is.null(ch) && length(ch) == 1L && !is.na(ch) && nzchar(ch)) ch else NULL
     } else NULL
 
+    # Explicit feedback instead of a silent req() abort: after switching between
+    # SCEs the previous population / channel selections may not carry over, which
+    # otherwise makes the Render button appear to do nothing.
+    if (length(pop_ids) == 0 || length(x_channels) == 0) {
+      msg <- if (length(pop_ids) == 0 && length(x_channels) == 0) {
+        "Nothing to render: select at least one population and one X-channel."
+      } else if (length(pop_ids) == 0) {
+        "Nothing to render: no populations selected (check the Populations list — selections don't carry over between SCEs)."
+      } else {
+        "Nothing to render: no X-channels selected (check the Channels list)."
+      }
+      showNotification(msg, type = "warning", duration = 6)
+      return(invisible(NULL))
+    }
+
     # ── Interactive-preview event cap ─────────────────────────────────────────
     # Drawing every event (e.g. "all events" on ~1M-event CyTOF data) across many
     # marker panels serialises tens of millions of points to the browser and
@@ -6576,6 +6595,7 @@ server <- function(input, output, session) {
       }, character(1)), collapse = "|")
     }
     illustration_cache_key <- jsonlite::toJSON(list(
+      sce_name = rv$sce_name %||% "",
       assay_version = rv$assay_version %||% 0L,
       gate_version = rv$gate_version %||% 0L,
       sample_filter_key = rv$sample_filter_key %||% "all",
