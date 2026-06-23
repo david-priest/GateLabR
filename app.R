@@ -112,7 +112,7 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623a"),
-    tags$script(src = "mini_plot.js?v=20260513a"),
+    tags$script(src = "mini_plot.js?v=20260623a"),
     tags$script(src = "pop_tree_scroll.js?v=20260623a"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
@@ -655,7 +655,20 @@ ui <- fluidPage(
                   selectInput("illust_hist_overlay_mode", "Overlay fill behavior:",
                               choices = c("Blend fills" = "blend",
                                           "Front histogram opaque" = "front_opaque"),
-                              selected = "front_opaque")
+                              selected = "front_opaque"),
+                  selectInput("illust_hist_layout", "Layout:",
+                              choices = c("Grid (one panel per population)" = "grid",
+                                          "Ridgeline (stacked populations)" = "ridgeline"),
+                              selected = "grid"),
+                  conditionalPanel(
+                    "input.illust_hist_layout == 'ridgeline'",
+                    sliderInput("illust_ridge_overlap", "Ridge overlap (compactness):",
+                                min = 0, max = 0.95, value = 0.6, step = 0.05,
+                                width = "100%", ticks = FALSE),
+                    checkboxInput("illust_ridge_gradient",
+                                  "Heat gradient fill (black→yellow by signal)",
+                                  value = TRUE)
+                  )
                 )
               ),
               conditionalPanel(
@@ -1376,6 +1389,9 @@ server <- function(input, output, session) {
       hist_fill            = isTRUE(isolate(input$illust_hist_fill)),
       hist_fill_alpha      = isolate(input$illust_hist_fill_alpha)                   %||% 0.22,
       hist_overlay_mode    = as.character(isolate(input$illust_hist_overlay_mode)    %||% "front_opaque"),
+      hist_layout          = as.character(isolate(input$illust_hist_layout)          %||% "grid"),
+      ridge_overlap        = isolate(input$illust_ridge_overlap)                     %||% 0.6,
+      ridge_gradient       = isTRUE(isolate(input$illust_ridge_gradient) %||% TRUE),
       pub_style            = isTRUE(isolate(input$illust_pub_style)),
       gate_line_width      = isolate(input$illust_gate_line_width)                   %||% 1.5,
       kde_bandwidth        = isolate(input$illust_kde_bandwidth)                     %||% 0,
@@ -5021,7 +5037,14 @@ server <- function(input, output, session) {
       hist_line_width = hist_line_width,
       hist_fill = hist_fill,
       hist_fill_alpha = hist_fill_alpha,
-      hist_overlay_mode = hist_overlay_mode
+      hist_overlay_mode = hist_overlay_mode,
+      hist_layout = if (is_strategy) "grid" else {
+        hl <- as.character(input$illust_hist_layout %||% "grid")
+        if (hl %in% c("grid", "ridgeline")) hl else "grid"
+      },
+      ridge_overlap = if (is_strategy) 0.6 else
+        .clamp_num(input$illust_ridge_overlap, default = 0.6, lo = 0, hi = 0.95),
+      ridge_gradient = if (is_strategy) FALSE else isTRUE(input$illust_ridge_gradient %||% TRUE)
     )
   }
 
@@ -6130,6 +6153,9 @@ server <- function(input, output, session) {
     if (!is.null(s$hist_fill))           updateCheckboxInput(session,  "illust_hist_fill",           value = isTRUE(s$hist_fill))
     if (!is.null(s$hist_fill_alpha))     updateSliderInput(session,    "illust_hist_fill_alpha",     value = s$hist_fill_alpha)
     if (!is.null(s$hist_overlay_mode))   updateSelectInput(session,    "illust_hist_overlay_mode",   selected = s$hist_overlay_mode)
+    if (!is.null(s$hist_layout))         updateSelectInput(session,    "illust_hist_layout",         selected = s$hist_layout)
+    if (!is.null(s$ridge_overlap))       updateSliderInput(session,    "illust_ridge_overlap",       value = s$ridge_overlap)
+    if (!is.null(s$ridge_gradient))      updateCheckboxInput(session,  "illust_ridge_gradient",      value = isTRUE(s$ridge_gradient))
     if (!is.null(s$pub_style))           updateCheckboxInput(session,  "illust_pub_style",           value = isTRUE(s$pub_style))
     if (!is.null(s$gate_line_width))     updateNumericInput(session,   "illust_gate_line_width",     value = s$gate_line_width)
     if (!is.null(s$kde_bandwidth))       updateSliderInput(session,    "illust_kde_bandwidth",       value = s$kde_bandwidth)
@@ -6790,6 +6816,9 @@ server <- function(input, output, session) {
       hist_fill = style$hist_fill,
       hist_fill_alpha = style$hist_fill_alpha,
       hist_overlay_mode = style$hist_overlay_mode,
+      hist_layout = style$hist_layout,
+      ridge_overlap = style$ridge_overlap,
+      ridge_gradient = style$ridge_gradient,
       kde_bandwidth = style$kde_bandwidth,
       font_sizes = illust_font_sizes,
       gate_style = illust_gate_style,
@@ -6811,6 +6840,9 @@ server <- function(input, output, session) {
         hist_fill            = style$hist_fill,
         hist_fill_alpha      = style$hist_fill_alpha,
         hist_overlay_mode    = style$hist_overlay_mode,
+        hist_layout          = style$hist_layout,
+        ridge_overlap        = style$ridge_overlap,
+        ridge_gradient       = style$ridge_gradient,
         kde_bandwidth        = style$kde_bandwidth,
         font_sizes           = illust_font_sizes,
         gate_style           = illust_gate_style,
@@ -6851,6 +6883,7 @@ server <- function(input, output, session) {
     input$illust_point_size, input$illust_point_alpha,
     input$illust_hist_line_width, input$illust_hist_fill,
     input$illust_hist_fill_alpha, input$illust_hist_overlay_mode,
+    input$illust_hist_layout, input$illust_ridge_overlap, input$illust_ridge_gradient,
     input$illust_pub_style, input$illust_gate_line_width,
     input$illust_kde_bandwidth
   ), {

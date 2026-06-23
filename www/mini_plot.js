@@ -1057,6 +1057,192 @@
         }
     }
 
+    // ── Ridgeline (stacked histogram) rendering ─────────────────────────────
+    // Heat colour ramp (black → red → orange → yellow): Cytobank-style density
+    // fill. Applied as a horizontal gradient across the x-axis so colour encodes
+    // signal intensity (black = low signal, yellow = high).
+    var _HEAT_STOPS = [
+        [0.00, '#000000'], [0.32, '#5a0000'], [0.52, '#c41200'],
+        [0.72, '#ff7b00'], [0.90, '#ffd000'], [1.00, '#ffff3a']
+    ];
+    function _makeHeatGradient(ctx, x0, x1) {
+        var g = ctx.createLinearGradient(x0, 0, x1, 0);
+        for (var i = 0; i < _HEAT_STOPS.length; i++) {
+            g.addColorStop(_HEAT_STOPS[i][0], _HEAT_STOPS[i][1]);
+        }
+        return g;
+    }
+
+    // Gaussian KDE evaluated on a fixed grid across `dom`. Returns {pts,maxD}.
+    function _kdeCurve(x, dom, nPts) {
+        var n = x.length, i, j;
+        if (n === 0) return null;
+        var mean = 0;
+        for (i = 0; i < n; i++) mean += x[i];
+        mean /= n;
+        var variance = 0;
+        for (i = 0; i < n; i++) { var d = x[i] - mean; variance += d * d; }
+        variance /= n;
+        var std = Math.sqrt(variance);
+        var domSpan = dom[1] - dom[0];
+        var bw = (std > 0) ? 1.06 * std * Math.pow(n, -0.2) : domSpan / 20;
+        bw = Math.max(bw, domSpan / 200);
+        var evalX = x;
+        if (n > 3000) {
+            evalX = [];
+            var step = Math.ceil(n / 3000);
+            for (i = 0; i < n; i += step) evalX.push(x[i]);
+        }
+        var nEval = evalX.length;
+        var pts = [], maxD = 0;
+        for (i = 0; i < nPts; i++) {
+            var xi = dom[0] + (i / (nPts - 1)) * domSpan;
+            var density = 0;
+            for (j = 0; j < nEval; j++) { var u = (xi - evalX[j]) / bw; density += Math.exp(-0.5 * u * u); }
+            density /= (nEval * bw * 2.5066);
+            pts.push({ xi: xi, d: density });
+            if (density > maxD) maxD = density;
+        }
+        return { pts: pts, maxD: maxD };
+    }
+
+    // Render one channel's stacked-ridgeline panel: every population as an
+    // overlapping KDE ridge with a left-side label and a single shared x-axis.
+    function renderRidgelinePanel(container, cfg) {
+        container.innerHTML = '';
+        var traces = cfg.traces || [];
+        var n = traces.length;
+        if (n === 0) return;
+
+        var fs = cfg.font_sizes || {};
+        var tickFs  = (fs.tick || 9);
+        var axisFs  = (fs.axis_label || 11);
+        var labelFs = (fs.tick || 9) + 1;
+
+        var plotW  = Math.max(150, Number(cfg.plot_size) - 40);
+        var labelW = Math.max(70, Math.min(160, Number(cfg.label_width) || 112));
+        var rightM = 10, topM = 8, axisH = 36;
+
+        var overlap = Number(cfg.overlap);
+        if (!isFinite(overlap)) overlap = 0.6;
+        overlap = Math.max(0, Math.min(0.95, overlap));
+        var rowStep = 22;                          // baseline-to-baseline spacing
+        var ridgeH  = rowStep * (1 + overlap * 3); // peak height (overlaps neighbours)
+
+        var left          = labelW;
+        var firstBaseline = topM + ridgeH;
+        var panelW        = left + plotW + rightM;
+        var lastBaseline  = firstBaseline + (n - 1) * rowStep;
+        var panelH        = lastBaseline + axisH;
+
+        container.style.position = 'relative';
+        container.style.width  = panelW + 'px';
+        container.style.height = panelH + 'px';
+        container.style.display = 'inline-block';
+        container.style.verticalAlign = 'top';
+        container.__miniPlotCfg = Object.assign({}, cfg, { ridgeline: true });
+
+        var CANVAS_SCALE = Number(cfg.canvas_scale);
+        if (!isFinite(CANVAS_SCALE) || CANVAS_SCALE <= 0) CANVAS_SCALE = 2;
+        var canvas = document.createElement('canvas');
+        canvas.width  = panelW * CANVAS_SCALE;
+        canvas.height = panelH * CANVAS_SCALE;
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0'; canvas.style.left = '0';
+        canvas.style.width  = panelW + 'px';
+        canvas.style.height = panelH + 'px';
+        container.appendChild(canvas);
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, panelW * CANVAS_SCALE, panelH * CANVAS_SCALE);
+        ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
+
+        var dom = (cfg.x_range && cfg.x_range.length === 2) ? cfg.x_range : [0, 1];
+        var xScale = d3.scaleLinear().domain(dom).range([0, plotW]);
+        var lineWidth = Number(cfg.line_width);
+        if (!isFinite(lineWidth) || lineWidth <= 0) lineWidth = 1;
+        var gradient = !!cfg.gradient;
+        var nPts = 256;
+
+        // Back-to-front: top row first, bottom row last so front ridges overlap.
+        for (var r = 0; r < n; r++) {
+            var tr = traces[r];
+            if (!tr || !tr.x || tr.x.length === 0) continue;
+            var curve = _kdeCurve(tr.x, dom, nPts);
+            if (!curve || !curve.maxD) continue;
+            var baseline = firstBaseline + r * rowStep;
+            var pts = curve.pts, maxD = curve.maxD;
+            var k;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(left + xScale(pts[0].xi), baseline);
+            for (k = 0; k < nPts; k++) {
+                ctx.lineTo(left + xScale(pts[k].xi), baseline - (pts[k].d / maxD) * ridgeH);
+            }
+            ctx.lineTo(left + xScale(pts[nPts - 1].xi), baseline);
+            ctx.closePath();
+            if (gradient) {
+                ctx.fillStyle = _makeHeatGradient(ctx, left, left + plotW);
+                ctx.globalAlpha = 1;
+            } else {
+                ctx.fillStyle = tr.color || '#888888';
+                ctx.globalAlpha = 0.85;
+            }
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(left + xScale(pts[0].xi), baseline - (pts[0].d / maxD) * ridgeH);
+            for (k = 1; k < nPts; k++) {
+                ctx.lineTo(left + xScale(pts[k].xi), baseline - (pts[k].d / maxD) * ridgeH);
+            }
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = gradient ? '#1a1a1a' : (tr.color || '#444444');
+            ctx.lineWidth = lineWidth;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+            ctx.restore();
+
+            // Row label, right-aligned in the gutter, truncated to fit.
+            ctx.save();
+            ctx.fillStyle = '#222222';
+            ctx.font = labelFs + 'px Arial, Helvetica, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'alphabetic';
+            var full = String(tr.name || ''), label = full;
+            while (label.length > 3 && ctx.measureText(label + '…').width > labelW - 8) {
+                label = label.slice(0, -1);
+            }
+            if (label !== full) label = label + '…';
+            ctx.fillText(label, left - 6, baseline - 2);
+            ctx.restore();
+        }
+
+        // Shared x-axis (SVG overlay) at the bottom + channel name as x-label.
+        var svg = d3.select(container).append('svg')
+            .attr('width', panelW).attr('height', panelH)
+            .style('position', 'absolute').style('top', '0').style('left', '0')
+            .style('pointer-events', 'none')
+            .style('font-family', 'Arial, Helvetica, sans-serif');
+        var axisG = svg.append('g')
+            .attr('transform', 'translate(' + left + ',' + lastBaseline + ')');
+        if (cfg.x_is_logicle && cfg.x_logicle_ticks &&
+            cfg.x_logicle_ticks.major_pos && cfg.x_logicle_ticks.major_pos.length) {
+            var lg = _buildLogicleAxis(xScale, cfg.x_logicle_ticks, d3.axisBottom);
+            axisG.call(lg.axis);
+            _styleLogicleAxis(axisG, lg.majorSet, true);
+        } else {
+            axisG.call(d3.axisBottom(xScale).ticks(5).tickFormat(_formatLinearVal));
+        }
+        axisG.selectAll('.tick text').style('font-size', tickFs + 'px');
+        axisG.selectAll('path,line').attr('stroke', '#333');
+        svg.append('text')
+            .attr('x', left + plotW / 2).attr('y', panelH - 4)
+            .attr('text-anchor', 'middle')
+            .style('font-size', axisFs + 'px').style('fill', '#222')
+            .text(cfg.channel || '');
+    }
+
     function renderIllustrationGrid(containerId, data) {
         var container = document.getElementById(containerId);
         if (!container) return;
@@ -1142,6 +1328,64 @@
         gridDiv.style.width = 'max-content';
         gridDiv.style.minWidth = rowTargetWidth + 'px';
         container.appendChild(gridDiv);
+
+        // ── RIDGELINE MODE: one stacked panel per x-channel (histograms only) ──
+        var histLayout = String(data.hist_layout || 'grid');
+        var sampleKey  = (popIds.length && xChannels.length) ? (popIds[0] + '|' + xChannels[0]) : null;
+        var isHistogram = !!(sampleKey && plots[sampleKey] &&
+                             (!plots[sampleKey].y || plots[sampleKey].y.length === 0));
+        if (isHistogram && histLayout === 'ridgeline') {
+            var ridgeOverlap  = Number(data.ridge_overlap);
+            if (!isFinite(ridgeOverlap)) ridgeOverlap = 0.6;
+            var ridgeGradient = !!data.ridge_gradient;
+
+            var rRow = document.createElement('div');
+            rRow.className = 'illustration-row';
+            rRow.style.display = 'grid';
+            rRow.style.gridTemplateColumns = 'repeat(' + nColumns + ', max-content)';
+            rRow.style.gap = gapPx + 'px';
+            gridDiv.appendChild(rRow);
+
+            for (var rc = 0; rc < xChannels.length; rc++) {
+                var rch = xChannels[rc];
+                var rTraces = [];
+                var rRef = null;
+                for (var rp = 0; rp < popIds.length; rp++) {
+                    var rpd = plots[popIds[rp] + '|' + rch];
+                    if (!rpd || !rpd.x || rpd.x.length === 0) continue;
+                    if (!rRef) rRef = rpd;
+                    rTraces.push({
+                        x: rpd.x,
+                        name: popNames[popIds[rp]] || popIds[rp],
+                        color: popColorMap[popIds[rp]]
+                    });
+                }
+                if (!rRef || rTraces.length === 0) continue;
+
+                var rCell = document.createElement('div');
+                rCell.className = 'mini-plot-cell';
+                rCell.style.justifySelf = 'start';
+                rCell.setAttribute('data-render-family', 'illustration');
+                rCell.setAttribute('data-plot-key', 'ridge|' + rch);
+                rCell.setAttribute('data-render-version', renderVersion);
+                rRow.appendChild(rCell);
+
+                renderRidgelinePanel(rCell, {
+                    channel:         rch,
+                    traces:          rTraces,
+                    x_range:         rRef.x_range,
+                    x_is_logicle:    rRef.x_is_logicle,
+                    x_logicle_ticks: rRef.x_logicle_ticks,
+                    plot_size:       effectivePlotSize,
+                    overlap:         ridgeOverlap,
+                    gradient:        ridgeGradient,
+                    line_width:      Number(data.hist_line_width),
+                    font_sizes:      fontSizes,
+                    kde_bandwidth:   kdeBandwidth
+                });
+            }
+            return;
+        }
 
         if (overlayPops) {
             // ── OVERLAY MODE: one panel per x-channel, all populations overlaid ──
