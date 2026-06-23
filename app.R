@@ -2904,13 +2904,68 @@ server <- function(input, output, session) {
     ws
   }
 
+  # ── Gate-mask cache ─────────────────────────────────────────────────────────
+  # The costly part of apply_gating_strategy is testing every event against each
+  # gate (polygon point-in-polygon in particular). Cache each gate's full-data
+  # mask keyed by a fingerprint of its geometry, so editing one gate recomputes
+  # only that gate's mask; every other gate is a cache hit and the strategy is
+  # left with cheap per-population logical-AND intersections. Self-managing and
+  # fail-safe: any geometry change flips the fingerprint, an assay or row-count
+  # change clears the whole cache, and a missing/wrong-length mask is simply not
+  # cached (apply_gating_strategy then recomputes it itself). Stored in a plain
+  # env so updating it never triggers Shiny reactivity.
+  .gate_mask_cache <- new.env(parent = emptyenv())
+  .gate_mask_cache$assay_version <- NULL
+  .gate_mask_cache$nrow          <- NULL
+  .gate_mask_cache$masks         <- list()
+
+  .gate_fingerprint <- function(gate) {
+    paste(gate$gate_type %||% "", gate$x_channel %||% "", gate$y_channel %||% "",
+          paste(unlist(gate$vertices), collapse = ","), sep = "|")
+  }
+
+  get_cached_gate_masks <- function(gating_data) {
+    n  <- nrow(gating_data)
+    av <- rv$assay_version %||% 0L
+    if (!identical(.gate_mask_cache$assay_version, av) ||
+        !identical(.gate_mask_cache$nrow, n)) {
+      .gate_mask_cache$masks         <- list()
+      .gate_mask_cache$assay_version <- av
+      .gate_mask_cache$nrow          <- n
+    }
+    # Drop entries for gates that no longer exist (keeps memory bounded).
+    keep <- intersect(names(.gate_mask_cache$masks), names(rv$gates))
+    if (length(keep) != length(.gate_mask_cache$masks)) {
+      .gate_mask_cache$masks <- .gate_mask_cache$masks[keep]
+    }
+    out <- list()
+    for (gid in names(rv$gates)) {
+      gate <- rv$gates[[gid]]
+      if (is.null(gate)) next
+      fp  <- .gate_fingerprint(gate)
+      ent <- .gate_mask_cache$masks[[gid]]
+      if (!is.null(ent) && identical(ent$fp, fp) && length(ent$mask) == n) {
+        out[[gid]] <- ent$mask
+      } else {
+        m <- tryCatch(get_gate_mask(gate, gating_data), error = function(e) NULL)
+        if (!is.null(m) && length(m) == n) {
+          .gate_mask_cache$masks[[gid]] <- list(fp = fp, mask = m)
+          out[[gid]] <- m
+        }
+        # else: leave unset — apply_gating_strategy recomputes it (fail-safe).
+      }
+    }
+    out
+  }
+
   get_pop_mask <- function(pop_id = NULL) {
     gating_data <- get_gating_data()
     if (is.null(gating_data) || nrow(gating_data) == 0) return(NULL)
     pop_id <- pop_id %||% rv$active_population_id %||% rv$root_population_id
     if (rv$cache_version == rv$gate_version && !is.null(rv$pop_events_map[[pop_id]]))
       return(rv$pop_events_map[[pop_id]])
-    result <- apply_gating_strategy(rv$gates, rv$populations, rv$root_population_id, gating_data)
+    result <- apply_gating_strategy(rv$gates, rv$populations, rv$root_population_id, gating_data,
+                                    gate_masks = get_cached_gate_masks(gating_data))
     rv$pop_events_map <- result$masks
     rv$populations <- result$populations
     rv$cache_version <- rv$gate_version

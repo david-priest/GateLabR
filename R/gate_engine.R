@@ -51,9 +51,21 @@ get_gate_mask <- function(gate, assay_data) {
 #'
 #' This mirrors gate_engine.py::apply_gating_strategy()
 apply_gating_strategy <- function(gates, populations, root_population_id,
-                                  assay_data) {
+                                  assay_data, gate_masks = NULL) {
   n_events <- nrow(assay_data)
   result <- list()
+
+  # Resolve a gate's event mask, preferring a caller-supplied precomputed mask
+  # (see get_cached_gate_masks in the server) and falling back to a fresh
+  # computation. The fallback guarantees correctness whenever the cache is
+  # absent, incomplete, or the wrong length, so caching can never desync results.
+  .resolve_gate_mask <- function(gate_id, gate_def) {
+    if (!is.null(gate_masks)) {
+      m <- gate_masks[[gate_id]]
+      if (!is.null(m) && length(m) == n_events) return(m)
+    }
+    get_gate_mask(gate_def, assay_data)
+  }
 
   # Root gets all events
   root_mask <- rep(TRUE, n_events)
@@ -84,7 +96,7 @@ apply_gating_strategy <- function(gates, populations, root_population_id,
           for (ref in child$gate_refs) {
             gate_def <- gates[[ref$gate_id]]
             if (is.null(gate_def)) next
-            gate_mask <- get_gate_mask(gate_def, assay_data)
+            gate_mask <- .resolve_gate_mask(ref$gate_id, gate_def)
             or_mask <- or_mask | if (isTRUE(ref$include)) gate_mask else !gate_mask
           }
           child_mask <- parent_mask & or_mask
@@ -94,7 +106,7 @@ apply_gating_strategy <- function(gates, populations, root_population_id,
           for (ref in child$gate_refs) {
             gate_def <- gates[[ref$gate_id]]
             if (is.null(gate_def)) next
-            gate_mask <- get_gate_mask(gate_def, assay_data)
+            gate_mask <- .resolve_gate_mask(ref$gate_id, gate_def)
             if (isTRUE(ref$include)) {
               child_mask <- child_mask & gate_mask
             } else {
