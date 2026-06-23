@@ -1335,3 +1335,176 @@ export_illustration_pdf <- function(file_path, payload, opts) {
     grid.draw(gTree(children = do.call(gList, entry_grobs), name = "legend"))
   }
 }
+
+# ── Stacked ridgeline histogram export (direct SVG) ──────────────────────────
+# The grid/overlay paths above use grid + gridSVG. Ridgelines instead build the
+# SVG string directly: this gives a true <linearGradient> heat fill and full
+# control over the stacked layout, mirroring renderRidgelinePanel() in
+# www/mini_plot.js so the export matches the on-screen preview.
+#
+# payload$plots is keyed "pop_id|channel"; each entry has $x (full-res values),
+# $x_range, and optional $x_logicle_ticks. opts carries style/layout (font_sizes,
+# hist_line_width, ridge_overlap, ridge_gradient, population_colors, plot_size,
+# n_columns, color_by_population).
+export_ridgeline_svg <- function(file_path, payload, opts) {
+  plots      <- payload$plots %||% list()
+  pop_ids    <- as.character(payload$pop_ids %||% character(0))
+  pop_names  <- payload$pop_names %||% list()
+  x_channels <- as.character(payload$x_channels %||% character(0))
+  if (length(plots) == 0 || length(x_channels) == 0 || length(pop_ids) == 0) {
+    return(invisible(NULL))
+  }
+
+  fs        <- opts$font_sizes %||% list()
+  tick_fs   <- as.numeric(fs$tick %||% 9)
+  axis_fs   <- as.numeric(fs$axis_label %||% 11)
+  label_fs  <- tick_fs + 1
+  line_w    <- max(0.5, min(6, as.numeric(opts$hist_line_width %||% 1)))
+  overlap   <- max(0, min(0.95, as.numeric(opts$ridge_overlap %||% 0.7)))
+  gradient  <- isTRUE(opts$ridge_gradient)
+  color_by  <- isTRUE(opts$color_by_population)
+  plot_size <- max(120, min(900, as.integer(opts$plot_size %||% 300)))
+  n_cols    <- max(1L, min(24L, as.integer(opts$n_columns %||% length(x_channels))))
+
+  # Geometry — mirrors www/mini_plot.js renderRidgelinePanel.
+  plot_w   <- max(150, plot_size - 40)
+  label_w  <- 112
+  right_pad <- 10; top_pad <- 8; axis_h <- 36
+  ridge_h  <- 44
+  row_step <- max(6, round(ridge_h * (1 - overlap)))
+  n_pop    <- length(pop_ids)
+
+  panel_w  <- label_w + plot_w + right_pad
+  first_baseline <- top_pad + ridge_h
+  last_baseline  <- first_baseline + (n_pop - 1) * row_step
+  panel_h  <- last_baseline + axis_h
+
+  gap <- 6; margin <- 10
+  n_plot_cols <- min(n_cols, length(x_channels))
+  n_plot_rows <- ceiling(length(x_channels) / n_cols)
+  page_w <- n_plot_cols * panel_w + (n_plot_cols - 1) * gap + 2 * margin
+  page_h <- n_plot_rows * panel_h + (n_plot_rows - 1) * gap + 2 * margin
+
+  POP_COLS <- c("#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
+                "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf")
+  prov_cols <- opts$population_colors %||% payload$population_colors %||% list()
+  norm_hex <- function(x, fb) {
+    raw <- toupper(trimws(as.character(x %||% "")))
+    if (grepl("^#[0-9A-F]{6}$", raw)) return(raw)
+    if (grepl("^[0-9A-F]{6}$", raw)) return(paste0("#", raw))
+    fb
+  }
+  pop_color <- function(i) {
+    pid <- pop_ids[i]; fb <- POP_COLS[((i - 1L) %% length(POP_COLS)) + 1L]
+    if (color_by) norm_hex(prov_cols[[pid]], fb) else "#888888"
+  }
+
+  HEAT <- list(c(0,"#000000"), c(0.32,"#5a0000"), c(0.52,"#c41200"),
+               c(0.72,"#ff7b00"), c(0.90,"#ffd000"), c(1,"#ffff3a"))
+  esc <- function(s) { s <- gsub("&","&amp;",s,fixed=TRUE); s <- gsub("<","&lt;",s,fixed=TRUE); gsub(">","&gt;",s,fixed=TRUE) }
+  nf  <- function(v) sprintf("%.2f", v)
+
+  kde_eval <- function(xv, d0, d1, npts) {
+    xv <- xv[is.finite(xv)]
+    if (length(xv) < 2 || !is.finite(d0) || !is.finite(d1) || d1 <= d0) return(NULL)
+    d <- tryCatch(stats::density(xv, from = d0, to = d1, n = npts), error = function(e) NULL)
+    if (is.null(d)) return(NULL)
+    md <- max(d$y); if (!is.finite(md) || md <= 0) return(NULL)
+    list(x = d$x, y = d$y, maxD = md)
+  }
+
+  lines <- c(
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    sprintf('<svg xmlns="http://www.w3.org/2000/svg" width="%dpx" height="%dpx" viewBox="0 0 %d %d" version="1.1" font-family="Arial, Helvetica, sans-serif">',
+            round(page_w), round(page_h), round(page_w), round(page_h)),
+    '<rect x="0" y="0" width="100%" height="100%" fill="#ffffff"/>'
+  )
+  defs <- character(0)
+  npts <- 200
+
+  for (ci in seq_along(x_channels)) {
+    x_ch <- x_channels[ci]
+    col_idx <- (ci - 1L) %% n_cols
+    row_idx <- (ci - 1L) %/% n_cols
+    panel_x <- margin + col_idx * (panel_w + gap)
+    panel_y <- margin + row_idx * (panel_h + gap)
+    plot_left <- panel_x + label_w
+
+    # x-range + logicle ticks from the first available population for this channel
+    dom <- NULL; lticks <- NULL
+    for (pid in pop_ids) {
+      pd <- plots[[paste0(pid, "|", x_ch)]]
+      if (!is.null(pd) && length(pd$x_range) == 2) { dom <- as.numeric(pd$x_range); lticks <- pd$x_logicle_ticks; break }
+    }
+    if (is.null(dom)) next
+    d0 <- dom[1]; d1 <- dom[2]; if (!(d1 > d0)) next
+    xsc <- function(xv) plot_left + (xv - d0) / (d1 - d0) * plot_w
+
+    grad_id <- paste0("heat", ci)
+    if (gradient) {
+      stops <- vapply(HEAT, function(s) sprintf('<stop offset="%s" stop-color="%s"/>', s[[1]], s[[2]]), character(1))
+      defs <- c(defs, sprintf('<linearGradient id="%s" gradientUnits="userSpaceOnUse" x1="%s" y1="0" x2="%s" y2="0">',
+                              grad_id, nf(plot_left), nf(plot_left + plot_w)),
+                stops, '</linearGradient>')
+    }
+
+    for (r in seq_len(n_pop)) {
+      pid <- pop_ids[r]
+      pd  <- plots[[paste0(pid, "|", x_ch)]]
+      if (is.null(pd) || is.null(pd$x) || length(pd$x) == 0) next
+      cur <- kde_eval(as.numeric(pd$x), d0, d1, npts)
+      if (is.null(cur)) next
+      baseline <- panel_y + first_baseline + (r - 1L) * row_step
+      yof <- function(dv) baseline - (dv / cur$maxD) * ridge_h
+
+      px <- xsc(cur$x); py <- yof(cur$y)
+      # filled polygon
+      fillpts <- paste0(nf(px), ",", nf(py), collapse = " ")
+      dstr <- paste0("M", nf(px[1]), ",", nf(baseline),
+                     " L", paste0(nf(px), ",", nf(py), collapse = " L"),
+                     " L", nf(px[length(px)]), ",", nf(baseline), " Z")
+      fill <- if (gradient) paste0("url(#", grad_id, ")") else pop_color(r)
+      fillop <- if (gradient) "1" else "0.85"
+      lines <- c(lines, sprintf('<path d="%s" fill="%s" fill-opacity="%s" stroke="none"/>', dstr, fill, fillop))
+      # outline
+      ostr <- paste0("M", paste0(nf(px), ",", nf(py), collapse = " L"))
+      ostroke <- if (gradient) "#1a1a1a" else pop_color(r)
+      lines <- c(lines, sprintf('<path d="%s" fill="none" stroke="%s" stroke-width="%s" stroke-linejoin="round"/>',
+                                ostr, ostroke, nf(line_w)))
+      # row label
+      full <- as.character(pop_names[[pid]] %||% pid)
+      maxch <- max(3L, floor((label_w - 8) / (0.58 * label_fs)))
+      lab <- if (nchar(full) > maxch) paste0(substr(full, 1, maxch - 1), "…") else full
+      lines <- c(lines, sprintf('<text x="%s" y="%s" text-anchor="end" font-size="%s" fill="#222222">%s</text>',
+                                nf(plot_left - 6), nf(baseline - 2), nf(label_fs), esc(lab)))
+    }
+
+    # x-axis line + ticks
+    ax_y <- panel_y + last_baseline
+    lines <- c(lines, sprintf('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#333333" stroke-width="0.8"/>',
+                              nf(plot_left), nf(ax_y), nf(plot_left + plot_w), nf(ax_y)))
+    tick_pos <- NULL; tick_lab <- NULL
+    if (!is.null(lticks) && length(lticks$major_pos) > 0) {
+      tick_pos <- as.numeric(lticks$major_pos); tick_lab <- as.character(lticks$major_labels %||% tick_pos)
+    } else {
+      pp <- pretty(c(d0, d1), n = 5); pp <- pp[pp >= d0 & pp <= d1]
+      tick_pos <- pp; tick_lab <- as.character(pp)
+    }
+    for (ti in seq_along(tick_pos)) {
+      tx <- xsc(tick_pos[ti])
+      if (!is.finite(tx) || tx < plot_left - 1 || tx > plot_left + plot_w + 1) next
+      lines <- c(lines,
+        sprintf('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#333333" stroke-width="0.8"/>', nf(tx), nf(ax_y), nf(tx), nf(ax_y + 4)),
+        sprintf('<text x="%s" y="%s" text-anchor="middle" font-size="%s" fill="#333333">%s</text>', nf(tx), nf(ax_y + 4 + tick_fs), nf(tick_fs), esc(tick_lab[ti])))
+    }
+    # channel name (x-axis label)
+    lines <- c(lines, sprintf('<text x="%s" y="%s" text-anchor="middle" font-size="%s" fill="#222222">%s</text>',
+                              nf(plot_left + plot_w / 2), nf(panel_y + panel_h - 4), nf(axis_fs), esc(x_ch)))
+  }
+
+  if (length(defs) > 0) lines <- append(lines, c("<defs>", defs, "</defs>"), after = 3L)
+  lines <- c(lines, '</svg>')
+  writeLines(lines, con = file_path, useBytes = TRUE)
+  message("Ridgeline SVG exported: ", length(x_channels), " channel(s) × ", n_pop, " population(s) → ", file_path)
+  invisible(file_path)
+}

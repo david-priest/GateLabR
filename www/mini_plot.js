@@ -1124,10 +1124,12 @@
         var rightM = 10, topM = 8, axisH = 36;
 
         var overlap = Number(cfg.overlap);
-        if (!isFinite(overlap)) overlap = 0.6;
+        if (!isFinite(overlap)) overlap = 0.7;
         overlap = Math.max(0, Math.min(0.95, overlap));
-        var rowStep = 22;                          // baseline-to-baseline spacing
-        var ridgeH  = rowStep * (1 + overlap * 3); // peak height (overlaps neighbours)
+        // Ridges have a constant peak height; overlap compresses the baseline
+        // spacing, so higher overlap = less vertical whitespace (more compact).
+        var ridgeH  = 44;
+        var rowStep = Math.max(6, Math.round(ridgeH * (1 - overlap)));
 
         var left          = labelW;
         var firstBaseline = topM + ridgeH;

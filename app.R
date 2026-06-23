@@ -663,7 +663,7 @@ ui <- fluidPage(
                   conditionalPanel(
                     "input.illust_hist_layout == 'ridgeline'",
                     sliderInput("illust_ridge_overlap", "Ridge overlap (compactness):",
-                                min = 0, max = 0.95, value = 0.6, step = 0.05,
+                                min = 0, max = 0.95, value = 0.7, step = 0.05,
                                 width = "100%", ticks = FALSE),
                     checkboxInput("illust_ridge_gradient",
                                   "Heat gradient fill (black→yellow by signal)",
@@ -1390,7 +1390,7 @@ server <- function(input, output, session) {
       hist_fill_alpha      = isolate(input$illust_hist_fill_alpha)                   %||% 0.22,
       hist_overlay_mode    = as.character(isolate(input$illust_hist_overlay_mode)    %||% "front_opaque"),
       hist_layout          = as.character(isolate(input$illust_hist_layout)          %||% "grid"),
-      ridge_overlap        = isolate(input$illust_ridge_overlap)                     %||% 0.6,
+      ridge_overlap        = isolate(input$illust_ridge_overlap)                     %||% 0.7,
       ridge_gradient       = isTRUE(isolate(input$illust_ridge_gradient) %||% TRUE),
       pub_style            = isTRUE(isolate(input$illust_pub_style)),
       gate_line_width      = isolate(input$illust_gate_line_width)                   %||% 1.5,
@@ -5042,8 +5042,8 @@ server <- function(input, output, session) {
         hl <- as.character(input$illust_hist_layout %||% "grid")
         if (hl %in% c("grid", "ridgeline")) hl else "grid"
       },
-      ridge_overlap = if (is_strategy) 0.6 else
-        .clamp_num(input$illust_ridge_overlap, default = 0.6, lo = 0, hi = 0.95),
+      ridge_overlap = if (is_strategy) 0.7 else
+        .clamp_num(input$illust_ridge_overlap, default = 0.7, lo = 0, hi = 0.95),
       ridge_gradient = if (is_strategy) FALSE else isTRUE(input$illust_ridge_gradient %||% TRUE)
     )
   }
@@ -6928,6 +6928,9 @@ server <- function(input, output, session) {
         hist_fill           = latest_style$hist_fill,
         hist_fill_alpha     = latest_style$hist_fill_alpha,
         hist_overlay_mode   = latest_style$hist_overlay_mode,
+        hist_layout         = latest_style$hist_layout,
+        ridge_overlap       = latest_style$ridge_overlap,
+        ridge_gradient      = latest_style$ridge_gradient,
         kde_bandwidth       = latest_style$kde_bandwidth,
         font_sizes          = latest_style$font_sizes,
         gate_style          = latest_style$gate_style,
@@ -6977,7 +6980,13 @@ server <- function(input, output, session) {
       full_payload <- .illustration_full_res_payload(
         data$payload, data$full_max_events %||% Inf, illust_plot_type
       )
-      export_illustration_pdf(file, full_payload, data)
+      is_ridgeline <- identical(illust_plot_type, "histogram") &&
+        identical(as.character(data$hist_layout %||% "grid"), "ridgeline")
+      if (is_ridgeline) {
+        export_ridgeline_svg(file, full_payload, data)
+      } else {
+        export_illustration_pdf(file, full_payload, data)
+      }
     }
   )
 
