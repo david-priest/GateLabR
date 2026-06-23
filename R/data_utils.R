@@ -88,29 +88,36 @@ build_plot_data <- function(assay_data, x_channel, y_channel, assay_name,
                             x_scatter_cofactor = 150,
                             y_scatter_cofactor = 150) {
 
-  # Get event data for the active population
+  # Resolve the active-population row indices WITHOUT copying the full,
+  # all-channel matrix. For a large SCE that copy (every channel × every event)
+  # dominated plot-change time even though only two channels are plotted and the
+  # result is immediately downsampled — so downsampling never helped. Instead we
+  # downsample the row indices first, then pull only the two plotted channels at
+  # only the sampled rows.
   if (!is.null(pop_mask)) {
-    pop_data <- assay_data[pop_mask, , drop = FALSE]
+    pop_idx <- which(pop_mask)
   } else {
-    pop_data <- assay_data
+    pop_idx <- seq_len(nrow(assay_data))
   }
+  n_total <- length(pop_idx)
 
-  # assay_data is already in display coordinates (pre-transformed in server)
-  x_vals <- pop_data[, x_channel]
-  y_vals <- pop_data[, y_channel]
-
-  # Use overridden ranges (from full dataset) or compute from pop data
-  x_range <- if (!is.null(x_range_override)) x_range_override else compute_axis_range(x_vals)
-  y_range <- if (!is.null(y_range_override)) y_range_override else compute_axis_range(y_vals)
-
-  # Downsample for display
-  n_total <- length(x_vals)
   max_events_num <- suppressWarnings(as.numeric(max_events))
   if (is.finite(max_events_num) && max_events_num > 0 && n_total > max_events_num) {
-    idx <- round(seq(1, n_total, length.out = as.integer(max_events_num)))
-    x_vals <- x_vals[idx]
-    y_vals <- y_vals[idx]
+    draw_idx <- pop_idx[round(seq(1, n_total, length.out = as.integer(max_events_num)))]
+  } else {
+    draw_idx <- pop_idx
   }
+
+  # assay_data is already in display coordinates (pre-transformed in server).
+  # Gather only the sampled rows of the two plotted channels.
+  x_vals <- assay_data[draw_idx, x_channel]
+  y_vals <- assay_data[draw_idx, y_channel]
+
+  # Prefer caller-supplied ranges (computed from the full dataset); otherwise
+  # fall back to the sampled values. The gating path always supplies overrides,
+  # so the fallback only matters for ad-hoc callers.
+  x_range <- if (!is.null(x_range_override)) x_range_override else compute_axis_range(x_vals)
+  y_range <- if (!is.null(y_range_override)) y_range_override else compute_axis_range(y_vals)
 
   # Base64 encode
   x_b64 <- encode_float32_base64(x_vals)
