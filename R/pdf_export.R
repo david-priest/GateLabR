@@ -1368,21 +1368,24 @@ export_ridgeline_svg <- function(file_path, payload, opts) {
 
   # Geometry — mirrors www/mini_plot.js renderRidgelinePanel.
   plot_w   <- max(150, plot_size - 40)
-  label_w  <- 112
+  # Population labels are identical across channels, so only the first column of
+  # each panel row carries the label gutter; the rest drop it to pack tightly.
+  label_w_full <- 112; label_w_none <- 8
   right_pad <- 10; top_pad <- 8; axis_h <- 36
   ridge_h  <- 44
   row_step <- max(6, round(ridge_h * (1 - overlap)))
   n_pop    <- length(pop_ids)
 
-  panel_w  <- label_w + plot_w + right_pad
   first_baseline <- top_pad + ridge_h
   last_baseline  <- first_baseline + (n_pop - 1) * row_step
   panel_h  <- last_baseline + axis_h
 
-  gap <- 6; margin <- 10
+  gap <- max(0, as.numeric(opts$ridge_col_gap %||% 8)); margin <- 10
+  full_panel_w   <- label_w_full + plot_w + right_pad
+  narrow_panel_w <- label_w_none + plot_w + right_pad
   n_plot_cols <- min(n_cols, length(x_channels))
   n_plot_rows <- ceiling(length(x_channels) / n_cols)
-  page_w <- n_plot_cols * panel_w + (n_plot_cols - 1) * gap + 2 * margin
+  page_w <- full_panel_w + (n_plot_cols - 1) * (narrow_panel_w + gap) + 2 * margin
   page_h <- n_plot_rows * panel_h + (n_plot_rows - 1) * gap + 2 * margin
 
   POP_COLS <- c("#1f77b4","#ff7f0e","#2ca02c","#d62728","#9467bd",
@@ -1426,9 +1429,12 @@ export_ridgeline_svg <- function(file_path, payload, opts) {
     x_ch <- x_channels[ci]
     col_idx <- (ci - 1L) %% n_cols
     row_idx <- (ci - 1L) %/% n_cols
-    panel_x <- margin + col_idx * (panel_w + gap)
+    show_labels <- (col_idx == 0L)
+    this_label_w <- if (show_labels) label_w_full else label_w_none
+    panel_x <- if (col_idx == 0L) margin
+               else margin + full_panel_w + (col_idx - 1L) * narrow_panel_w + col_idx * gap
     panel_y <- margin + row_idx * (panel_h + gap)
-    plot_left <- panel_x + label_w
+    plot_left <- panel_x + this_label_w
 
     # x-range + logicle ticks from the first available population for this channel
     dom <- NULL; lticks <- NULL
@@ -1471,12 +1477,14 @@ export_ridgeline_svg <- function(file_path, payload, opts) {
       ostroke <- if (gradient) "#1a1a1a" else pop_color(r)
       lines <- c(lines, sprintf('<path d="%s" fill="none" stroke="%s" stroke-width="%s" stroke-linejoin="round"/>',
                                 ostr, ostroke, nf(line_w)))
-      # row label
-      full <- as.character(pop_names[[pid]] %||% pid)
-      maxch <- max(3L, floor((label_w - 8) / (0.58 * label_fs)))
-      lab <- if (nchar(full) > maxch) paste0(substr(full, 1, maxch - 1), "…") else full
-      lines <- c(lines, sprintf('<text x="%s" y="%s" text-anchor="end" font-size="%s" fill="#222222">%s</text>',
-                                nf(plot_left - 6), nf(baseline - 2), nf(label_fs), esc(lab)))
+      # row label (first column only)
+      if (show_labels) {
+        full <- as.character(pop_names[[pid]] %||% pid)
+        maxch <- max(3L, floor((label_w_full - 8) / (0.58 * label_fs)))
+        lab <- if (nchar(full) > maxch) paste0(substr(full, 1, maxch - 1), "…") else full
+        lines <- c(lines, sprintf('<text x="%s" y="%s" text-anchor="end" font-size="%s" fill="#222222">%s</text>',
+                                  nf(plot_left - 6), nf(baseline - 2), nf(label_fs), esc(lab)))
+      }
     }
 
     # x-axis line + ticks

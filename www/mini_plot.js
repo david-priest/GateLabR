@@ -1120,7 +1120,10 @@
         var labelFs = (fs.tick || 9) + 1;
 
         var plotW  = Math.max(150, Number(cfg.plot_size) - 40);
-        var labelW = Math.max(70, Math.min(160, Number(cfg.label_width) || 112));
+        // Population labels are identical across channel panels, so only the
+        // first column of each panel row draws them; the rest drop the gutter.
+        var showLabels = cfg.show_labels !== false;
+        var labelW = showLabels ? Math.max(70, Math.min(160, Number(cfg.label_width) || 112)) : 8;
         var rightM = 10, topM = 8, axisH = 36;
 
         var overlap = Number(cfg.overlap);
@@ -1206,18 +1209,20 @@
             ctx.restore();
 
             // Row label, right-aligned in the gutter, truncated to fit.
-            ctx.save();
-            ctx.fillStyle = '#222222';
-            ctx.font = labelFs + 'px Arial, Helvetica, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'alphabetic';
-            var full = String(tr.name || ''), label = full;
-            while (label.length > 3 && ctx.measureText(label + '…').width > labelW - 8) {
-                label = label.slice(0, -1);
+            if (showLabels) {
+                ctx.save();
+                ctx.fillStyle = '#222222';
+                ctx.font = labelFs + 'px Arial, Helvetica, sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'alphabetic';
+                var full = String(tr.name || ''), label = full;
+                while (label.length > 3 && ctx.measureText(label + '…').width > labelW - 8) {
+                    label = label.slice(0, -1);
+                }
+                if (label !== full) label = label + '…';
+                ctx.fillText(label, left - 6, baseline - 2);
+                ctx.restore();
             }
-            if (label !== full) label = label + '…';
-            ctx.fillText(label, left - 6, baseline - 2);
-            ctx.restore();
         }
 
         // Shared x-axis (SVG overlay) at the bottom + channel name as x-label.
@@ -1338,14 +1343,16 @@
                              (!plots[sampleKey].y || plots[sampleKey].y.length === 0));
         if (isHistogram && histLayout === 'ridgeline') {
             var ridgeOverlap  = Number(data.ridge_overlap);
-            if (!isFinite(ridgeOverlap)) ridgeOverlap = 0.6;
+            if (!isFinite(ridgeOverlap)) ridgeOverlap = 0.7;
             var ridgeGradient = !!data.ridge_gradient;
+            var ridgeColGap   = Number(data.ridge_col_gap);
+            if (!isFinite(ridgeColGap) || ridgeColGap < 0) ridgeColGap = 8;
 
             var rRow = document.createElement('div');
             rRow.className = 'illustration-row';
             rRow.style.display = 'grid';
             rRow.style.gridTemplateColumns = 'repeat(' + nColumns + ', max-content)';
-            rRow.style.gap = gapPx + 'px';
+            rRow.style.gap = ridgeColGap + 'px';
             gridDiv.appendChild(rRow);
 
             for (var rc = 0; rc < xChannels.length; rc++) {
@@ -1381,6 +1388,7 @@
                     plot_size:       effectivePlotSize,
                     overlap:         ridgeOverlap,
                     gradient:        ridgeGradient,
+                    show_labels:     (rc % nColumns) === 0,
                     line_width:      Number(data.hist_line_width),
                     font_sizes:      fontSizes,
                     kde_bandwidth:   kdeBandwidth

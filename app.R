@@ -112,7 +112,7 @@ ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623a"),
-    tags$script(src = "mini_plot.js?v=20260623a"),
+    tags$script(src = "mini_plot.js?v=20260623b"),
     tags$script(src = "pop_tree_scroll.js?v=20260623a"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
   ),
@@ -664,6 +664,9 @@ ui <- fluidPage(
                     "input.illust_hist_layout == 'ridgeline'",
                     sliderInput("illust_ridge_overlap", "Ridge overlap (compactness):",
                                 min = 0, max = 0.95, value = 0.7, step = 0.05,
+                                width = "100%", ticks = FALSE),
+                    sliderInput("illust_ridge_col_gap", "Column spacing (px):",
+                                min = 0, max = 60, value = 8, step = 2,
                                 width = "100%", ticks = FALSE),
                     checkboxInput("illust_ridge_gradient",
                                   "Heat gradient fill (black→yellow by signal)",
@@ -1391,6 +1394,7 @@ server <- function(input, output, session) {
       hist_overlay_mode    = as.character(isolate(input$illust_hist_overlay_mode)    %||% "front_opaque"),
       hist_layout          = as.character(isolate(input$illust_hist_layout)          %||% "grid"),
       ridge_overlap        = isolate(input$illust_ridge_overlap)                     %||% 0.7,
+      ridge_col_gap        = isolate(input$illust_ridge_col_gap)                     %||% 8,
       ridge_gradient       = isTRUE(isolate(input$illust_ridge_gradient) %||% TRUE),
       pub_style            = isTRUE(isolate(input$illust_pub_style)),
       gate_line_width      = isolate(input$illust_gate_line_width)                   %||% 1.5,
@@ -5044,6 +5048,8 @@ server <- function(input, output, session) {
       },
       ridge_overlap = if (is_strategy) 0.7 else
         .clamp_num(input$illust_ridge_overlap, default = 0.7, lo = 0, hi = 0.95),
+      ridge_col_gap = if (is_strategy) 8 else
+        .clamp_num(input$illust_ridge_col_gap, default = 8, lo = 0, hi = 60),
       ridge_gradient = if (is_strategy) FALSE else isTRUE(input$illust_ridge_gradient %||% TRUE)
     )
   }
@@ -6155,6 +6161,7 @@ server <- function(input, output, session) {
     if (!is.null(s$hist_overlay_mode))   updateSelectInput(session,    "illust_hist_overlay_mode",   selected = s$hist_overlay_mode)
     if (!is.null(s$hist_layout))         updateSelectInput(session,    "illust_hist_layout",         selected = s$hist_layout)
     if (!is.null(s$ridge_overlap))       updateSliderInput(session,    "illust_ridge_overlap",       value = s$ridge_overlap)
+    if (!is.null(s$ridge_col_gap))       updateSliderInput(session,    "illust_ridge_col_gap",       value = s$ridge_col_gap)
     if (!is.null(s$ridge_gradient))      updateCheckboxInput(session,  "illust_ridge_gradient",      value = isTRUE(s$ridge_gradient))
     if (!is.null(s$pub_style))           updateCheckboxInput(session,  "illust_pub_style",           value = isTRUE(s$pub_style))
     if (!is.null(s$gate_line_width))     updateNumericInput(session,   "illust_gate_line_width",     value = s$gate_line_width)
@@ -6818,6 +6825,7 @@ server <- function(input, output, session) {
       hist_overlay_mode = style$hist_overlay_mode,
       hist_layout = style$hist_layout,
       ridge_overlap = style$ridge_overlap,
+      ridge_col_gap = style$ridge_col_gap,
       ridge_gradient = style$ridge_gradient,
       kde_bandwidth = style$kde_bandwidth,
       font_sizes = illust_font_sizes,
@@ -6842,6 +6850,7 @@ server <- function(input, output, session) {
         hist_overlay_mode    = style$hist_overlay_mode,
         hist_layout          = style$hist_layout,
         ridge_overlap        = style$ridge_overlap,
+        ridge_col_gap        = style$ridge_col_gap,
         ridge_gradient       = style$ridge_gradient,
         kde_bandwidth        = style$kde_bandwidth,
         font_sizes           = illust_font_sizes,
@@ -6883,7 +6892,8 @@ server <- function(input, output, session) {
     input$illust_point_size, input$illust_point_alpha,
     input$illust_hist_line_width, input$illust_hist_fill,
     input$illust_hist_fill_alpha, input$illust_hist_overlay_mode,
-    input$illust_hist_layout, input$illust_ridge_overlap, input$illust_ridge_gradient,
+    input$illust_hist_layout, input$illust_ridge_overlap, input$illust_ridge_col_gap,
+    input$illust_ridge_gradient,
     input$illust_pub_style, input$illust_gate_line_width,
     input$illust_kde_bandwidth
   ), {
@@ -6930,6 +6940,7 @@ server <- function(input, output, session) {
         hist_overlay_mode   = latest_style$hist_overlay_mode,
         hist_layout         = latest_style$hist_layout,
         ridge_overlap       = latest_style$ridge_overlap,
+        ridge_col_gap       = latest_style$ridge_col_gap,
         ridge_gradient      = latest_style$ridge_gradient,
         kde_bandwidth       = latest_style$kde_bandwidth,
         font_sizes          = latest_style$font_sizes,
