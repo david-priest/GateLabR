@@ -631,10 +631,23 @@ body { font-size: 13px; }
 
 .pop-tree-gate-badge {
   cursor: pointer;
+  transition: box-shadow 0.1s ease, filter 0.1s ease;
 }
 
+/* Subtle affordance when hovering an unselected gate badge. */
 .pop-tree-gate-badge:hover {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18) inset;
+}
+
+/* Hovering a *selected* gate keeps the persistent blue ring on this instance
+   (box-shadow does not stack across rules, so the generic hover above would
+   otherwise erase it) and adds a brighter halo + slight lift, so the hovered
+   instance stands out from the other still-outlined instances of the gate. */
+.pop-tree-gate-badge.selected-gate:hover {
+  box-shadow: 0 0 0 2px #2f80ed,
+              0 0 0 4px rgba(47, 128, 237, 0.38),
+              inset 0 0 0 1px rgba(255, 255, 255, 0.95);
+  filter: brightness(1.08);
 }
 
 /* ── Mode toolbar ─────────────────────────────────────────────── */

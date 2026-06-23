@@ -114,7 +114,7 @@ ui <- fluidPage(
     tags$script(src = "cytof_plot.js?v=20260623a"),
     tags$script(src = "mini_plot.js?v=20260623b"),
     tags$script(src = "pop_tree_scroll.js?v=20260623a"),
-    tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260623a")
   ),
 
   titlePanel("GateLabR"),
