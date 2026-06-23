@@ -111,7 +111,7 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260619a"),
+    tags$script(src = "cytof_plot.js?v=20260623a"),
     tags$script(src = "mini_plot.js?v=20260513a"),
     tags$script(src = "pop_tree_scroll.js?v=20260619a"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260414a")

@@ -1048,6 +1048,7 @@
     function _drawGates(zx, zy) {
         var gl = _g.select('.gate-layer');
         gl.selectAll('*').remove();
+        _hideVertexTip();  // clear any stray drag tooltip
         if (!_plotData || !_plotData.gates) return;
 
         var xCh   = _plotData.x_label;
@@ -1328,6 +1329,48 @@
             });
     }
 
+    // ── Live vertex-position tooltip ──────────────────────────────────────────
+    // Shown next to a gate vertex while it is being dragged (rectangle corners
+    // and polygon vertices alike) and removed on mouse release. The numbers are
+    // the plot's x/y axis values at the cursor — i.e. display/transformed space,
+    // the same space as the stored gate vertices and the Min/Max scale inputs.
+    function _fmtCoord(v) {
+        if (!isFinite(v)) return '–';
+        var a = Math.abs(v);
+        var d = a >= 100 ? 0 : (a >= 10 ? 1 : 2);
+        return v.toFixed(d);
+    }
+
+    function _showVertexTip(px, py, vx, vy) {
+        if (!_g) return;
+        var layer = _g.select('.vertex-tip-layer');
+        if (layer.empty()) {
+            layer = _g.append('g').attr('class', 'vertex-tip-layer')
+                      .style('pointer-events', 'none');
+        }
+        layer.selectAll('*').remove();
+        var g    = layer.append('g');
+        var rect = g.append('rect').attr('rx', 3).attr('fill', 'rgba(20,20,20,0.85)');
+        var t    = g.append('text')
+            .style('font-size', '11px')
+            .style('font-family', 'monospace')
+            .style('fill', '#fff')
+            .text(_fmtCoord(vx) + ',  ' + _fmtCoord(vy));
+        var bb   = t.node().getBBox();
+        var padX = 5, padY = 3;
+        var tw   = bb.width + padX * 2, th = bb.height + padY * 2;
+        t.attr('x', padX).attr('y', th / 2).attr('dominant-baseline', 'middle');
+        rect.attr('width', tw).attr('height', th);
+        // Keep the tip on-screen: flip to the other side of the cursor near edges.
+        var ox = (px + 14 + tw > W) ? (px - 14 - tw) : (px + 14);
+        var oy = (py - 14 - th < 0) ? (py + 14)      : (py - 14 - th);
+        g.attr('transform', 'translate(' + ox + ',' + oy + ')');
+    }
+
+    function _hideVertexTip() {
+        if (_g) _g.select('.vertex-tip-layer').remove();
+    }
+
     // ── Drag: move a single vertex ────────────────────────────────────────────
     function _makeVertexDrag(gate, vertIdx, gg, fillEl, outlineEl,
                               vertCircles, labelG, zx, zy, flipped) {
@@ -1335,6 +1378,8 @@
             .on('start', function (event) {
                 _dragging = true;
                 event.sourceEvent.stopPropagation();
+                var p = _ptr(event);
+                _showVertexTip(p[0], p[1], zx.invert(p[0]), zy.invert(p[1]));
             })
             .on('drag', function (event) {
                 var [px, py] = _ptr(event);
@@ -1361,9 +1406,13 @@
                 }
 
                 _updateGateElements(gate, gg, zx, zy, flipped);
+                // Tooltip tracks the plot's x/y axis values at the cursor, so it
+                // reads correctly for both normal and flipped gate orientations.
+                _showVertexTip(px, py, zx.invert(px), zy.invert(py));
             })
             .on('end', function () {
                 _dragging = false;
+                _hideVertexTip();
                 _notifyGateEdit(gate);
                 _flushDeferredPlot();
             });
