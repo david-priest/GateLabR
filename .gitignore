@@ -26,3 +26,6 @@ rsconnect/
 # R package build artifacts
 *.tar.gz
 *.Rcheck/
+
+# pkgdown built site
+docs/

@@ -1,0 +1,28 @@
+url: https://david-priest.github.io/GateLabR
+
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#2f80ed"
+
+home:
+  title: GateLabR — interactive gating for SingleCellExperiment objects
+  description: >
+    A free, MIT-licensed Shiny app for hand-gating flow and mass cytometry
+    (CyTOF) data directly on SingleCellExperiment objects.
+
+navbar:
+  structure:
+    left:  [intro, articles, reference, news]
+    right: [search, github]
+
+articles:
+  - title: Guides
+    navbar: ~
+    contents:
+      - getting-started
+
+reference:
+  - title: Launching the app
+    contents:
+      - launchGatingApp

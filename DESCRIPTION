@@ -14,7 +14,7 @@ Description: A desktop-style Shiny application for interactive manual gating of
     settings persist inside the object's metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
-URL: https://github.com/david-priest/GateLabR
+URL: https://david-priest.github.io/GateLabR, https://github.com/david-priest/GateLabR
 BugReports: https://github.com/david-priest/GateLabR/issues
 biocViews: FlowCytometry, SingleCell, Software
 Imports:
@@ -35,5 +35,9 @@ Imports:
     flowCore,
     xml2
 Suggests:
-    BiocManager
-RoxygenNote: 7.3.1
+    BiocManager,
+    knitr,
+    rmarkdown,
+    pkgdown
+VignetteBuilder: knitr
+RoxygenNote: 7.3.3
