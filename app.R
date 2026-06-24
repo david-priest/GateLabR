@@ -3907,10 +3907,49 @@ server <- function(input, output, session) {
 
   observeEvent(input$gate_select, { rv$selected_gate_id <- input$gate_select; send_gates_only() })
 
+  # Population ids that are quadrant children of a given gate (refs carry a
+  # `quadrant` index). Used so a quadrant gate and its 4 populations stay in sync.
+  .quadrant_pops_for_gate <- function(gate_id) {
+    Filter(function(pid) {
+      refs <- rv$populations[[pid]]$gate_refs %||% list()
+      any(vapply(refs, function(r) identical(r$gate_id, gate_id) && !is.null(r$quadrant),
+                 logical(1)))
+    }, names(rv$populations %||% list()))
+  }
+
+  # Remove any quadrant gate left with no populations referencing it (e.g. after
+  # the user deletes all four quadrant populations).
+  .prune_orphaned_quadrant_gates <- function() {
+    for (gid in names(rv$gates %||% list())) {
+      g <- rv$gates[[gid]]
+      if (is.null(g) || !identical(g$gate_type, "quadrant")) next
+      if (length(.quadrant_pops_for_gate(gid)) == 0) {
+        rv$gates[[gid]] <- NULL
+        rv$gate_order <- setdiff(rv$gate_order, gid)
+        if (identical(rv$selected_gate_id, gid)) rv$selected_gate_id <- NULL
+        rv$.selected_gate_ids <- setdiff(rv$.selected_gate_ids, gid)
+      }
+    }
+  }
+
   delete_gate_by_id <- function(gate_id) {
     req(gate_id)
-    if (is.null(rv$gates[[gate_id]])) return()
+    g <- rv$gates[[gate_id]]
+    if (is.null(g)) return()
     save_undo_snapshot()
+    # Cascade: deleting a quadrant gate also removes its four populations.
+    if (identical(g$gate_type, "quadrant")) {
+      for (pid in .quadrant_pops_for_gate(gate_id)) {
+        if (!is.null(rv$populations[[pid]])) {
+          rv$populations <- remove_population_reparent_children(rv$populations, pid)
+        }
+      }
+      sort_population_tree_state()
+      if (is.null(rv$populations[[rv$active_population_id %||% ""]])) {
+        rv$active_population_id <- rv$root_population_id
+      }
+      rv$.selected_pop_ids <- intersect(rv$.selected_pop_ids, names(rv$populations))
+    }
     rv$gates[[gate_id]] <- NULL
     rv$gate_order <- setdiff(rv$gate_order, gate_id)
     for (pid in names(rv$populations)) {
@@ -3931,6 +3970,22 @@ server <- function(input, output, session) {
     gate_ids <- intersect(gate_ids, names(rv$gates))
     if (length(gate_ids) == 0) return()
     save_undo_snapshot()
+    # Cascade: quadrant gates take their four populations with them.
+    quad_ids <- Filter(function(gid) identical(rv$gates[[gid]]$gate_type, "quadrant"), gate_ids)
+    for (gid in quad_ids) {
+      for (pid in .quadrant_pops_for_gate(gid)) {
+        if (!is.null(rv$populations[[pid]])) {
+          rv$populations <- remove_population_reparent_children(rv$populations, pid)
+        }
+      }
+    }
+    if (length(quad_ids) > 0) {
+      sort_population_tree_state()
+      if (is.null(rv$populations[[rv$active_population_id %||% ""]])) {
+        rv$active_population_id <- rv$root_population_id
+      }
+      rv$.selected_pop_ids <- intersect(rv$.selected_pop_ids, names(rv$populations))
+    }
     for (gid in gate_ids) {
       rv$gates[[gid]] <- NULL
     }
@@ -4108,8 +4163,14 @@ server <- function(input, output, session) {
       is_sel <- identical(gid, rv$selected_gate_id)
       is_checked <- gid %in% checked_ids
       counts <- gate_counts[[gid]]
-      count_text <- if (!is.null(counts)) paste0(format(counts$event_count, big.mark = ","),
-                                                  " (", counts$percent_of_parent, "%)") else ""
+      is_quad <- identical(gate$gate_type, "quadrant")
+      count_text <- if (is_quad) {
+        "4 populations"
+      } else if (!is.null(counts)) {
+        paste0(format(counts$event_count, big.mark = ","), " (", counts$percent_of_parent, "%)")
+      } else ""
+      ch_text <- paste0(gate$x_channel, " / ", gate$y_channel,
+                        if (is_quad) "  · quadrant" else "")
       tags$div(
         class = paste("gate-card", if (is_sel) "selected" else ""),
         onclick = sprintf("Shiny.setInputValue('gate_list_click', '%s', {priority:'event'})", gid),
@@ -4127,7 +4188,7 @@ server <- function(input, output, session) {
         ),
         tags$div(class = "gate-color-swatch", style = paste0("background:", gate$color)),
         tags$div(class = "gate-card-name", gate$name),
-        tags$div(class = "gate-card-channels", paste0(gate$x_channel, " / ", gate$y_channel)),
+        tags$div(class = "gate-card-channels", ch_text),
         tags$div(class = "gate-card-info", count_text)
       )
     })
@@ -4234,6 +4295,7 @@ server <- function(input, output, session) {
     if (is.null(rv$populations[[pop_id]])) return()
     save_undo_snapshot()
     rv$populations <- remove_population_reparent_children(rv$populations, pop_id)
+    .prune_orphaned_quadrant_gates()   # drop a quadrant gate once all its quadrants are gone
     sort_population_tree_state()
     if (identical(rv$active_population_id, pop_id) || is.null(rv$populations[[rv$active_population_id]])) {
       rv$active_population_id <- rv$root_population_id
@@ -4256,6 +4318,7 @@ server <- function(input, output, session) {
         rv$populations <- remove_population_reparent_children(rv$populations, pid)
       }
     }
+    .prune_orphaned_quadrant_gates()   # drop a quadrant gate once all its quadrants are gone
     sort_population_tree_state()
     if (is.null(rv$populations[[rv$active_population_id]])) {
       rv$active_population_id <- rv$root_population_id
