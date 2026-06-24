@@ -5,18 +5,17 @@
 
 **Interactive manual gating for `SingleCellExperiment` objects in R / Shiny.**
 
-GateLabR is a desktop-style Shiny application for hand-gating mass cytometry
-(CyTOF) and flow cytometry data directly on
+GateLabR is a desktop-style Shiny application for hand-gating flow cytometry
+and mass cytometry (CyTOF) data directly on
 [`SingleCellExperiment`](https://bioconductor.org/packages/SingleCellExperiment/)
-objects. It is designed to slot into Bioconductor-based analysis pipelines
-(e.g. CATALYST, diffcyt) where the events live in R as an SCE and you want a
-fast, reproducible alternative to round-tripping through Cytobank or FlowJo
-just to draw a few gates.
+objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST,
+diffcyt) where the events already live in R as an SCE and you want a fast,
+reproducible alternative to round-tripping through FlowJo or Cytobank just to
+draw a few gates.
 
-The interactive plot is rendered with D3.js for responsive zoom / pan and
-on-canvas gate drawing; gates, populations, scales and illustration settings
-are persisted inside the SCE itself via `metadata()`, so loading the SCE again
-restores the entire workspace.
+Gates are drawn on an interactive D3.js canvas, and gates, populations, scales
+and illustration settings are persisted inside the SCE itself via `metadata()`,
+so loading the SCE again restores the entire workspace.
 
 ## Features
 
@@ -25,10 +24,10 @@ restores the entire workspace.
   redo, and per-gate colour and label.
 - **Boolean population trees.** Build hierarchies of populations from gate
   references with AND / OR logic; counts and percentages update live.
-- **CyTOF and flow modes.** Auto-detects the instrument type from channel
-  names. CyTOF channels use arcsinh (cofactor 5); flow uses per-channel
-  logicle for fluorescence and arcsinh for FSC / SSC scatter, with editable W
-  and cofactor.
+- **Flow and CyTOF modes.** Auto-detects the instrument type from channel
+  names. Flow uses per-channel logicle for fluorescence and arcsinh for
+  FSC / SSC scatter, with editable W and cofactor; CyTOF channels use arcsinh
+  (cofactor 5).
 - **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip gates
   through Cytobank, FlowJo and other ISAC-compliant tools.
 - **Workspace persistence.** Gates, populations, scales and illustration
@@ -172,5 +171,6 @@ Built on top of the Bioconductor stack
 
 ## Issues and contributions
 
-Bug reports and feature requests:
-[GitHub issues](https://github.com/david-priest/GateLabR/issues).
+If you run into a bug, or there's a feature you'd find useful, please
+[open an issue](https://github.com/david-priest/GateLabR/issues) or get in
+touch — I'm happy to take a look and would be glad to implement it.
