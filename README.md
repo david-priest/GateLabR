@@ -28,6 +28,12 @@ so loading the SCE again restores the entire workspace.
   names. Flow uses per-channel logicle for fluorescence and arcsinh for
   FSC / SSC scatter, with editable W and cofactor; CyTOF channels use arcsinh
   (cofactor 5).
+- **Compensation.** When an `.fcs` carries an embedded spillover matrix
+  (`$SPILLOVER`), it can be applied to the raw fluorescence data before gating —
+  toggled on/off from the Scales tab, with a read-only matrix viewer. Scatter
+  and time channels are left untouched. Defaults off; apply it before drawing
+  gates, since it changes the linear space the gates live in. Already-compensated
+  / spectral-unmixed and CyTOF files (no usable matrix) hide the option.
 - **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip gates
   through Cytobank, FlowJo and other ISAC-compliant tools.
 - **Workspace persistence.** Gates, populations, scales and illustration
@@ -184,3 +190,11 @@ Coulter, Cytek, Sony, Thermo, Miltenyi, …). Channel and instrument detection
 is designed to be vendor-agnostic, but if a file imports incorrectly — missing
 markers, wrong channels, or a mis-detected flow/CyTOF mode — please let me
 know (ideally with the file's channel names) and I'll get it sorted.
+
+**A note on compensation:** embedded-`$SPILLOVER` compensation has been
+validated on conventional fluorescence data from a BD FACSAria III /
+FACSymphony S6, with compensated values matching `flowCore::compensate`. It has
+not yet been exercised on embedded matrices from other vendors' acquisition
+software; the matrix is read vendor-agnostically (`flowCore::spillover`), so if
+compensation looks wrong for a given file please send me its channel names and
+spillover keyword and I'll take a look.

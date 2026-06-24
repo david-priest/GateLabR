@@ -1046,6 +1046,7 @@ ui <- fluidPage(
         # ── Tab 6: Scales ─────────────────────────────────────────────────────
         tabPanel("Scales",
           tags$div(class = "scales-controls",
+            uiOutput("compensation_ui"),
             tags$div(class = "section-header", "Global Channel Scales"),
             tags$div(style = "font-size:11px; color:#666; margin-bottom:8px;",
               "Define per-channel axis ranges used across Gating, Strategy, and Illustration.",
@@ -1183,6 +1184,8 @@ server <- function(input, output, session) {
     flow_logicle_w_auto = list(),
     flow_scatter_cofactor = list(),
     flow_raw_data = NULL,
+    spillover_matrix = NULL,   # embedded $SPILLOVER (display-named), flow only
+    comp_on = FALSE,           # apply compensation to the linear data (pre-gating)
     cytof_axis_range = list(),
     global_scale_ranges = list(),
     .scales_ui_version = 0L,
@@ -1420,6 +1423,7 @@ server <- function(input, output, session) {
     if (is.null(rv$sce) || is.null(rv$sce_name)) return()
     # Flush latest logicle W / scatter cofactor into SCE metadata before saving
     persist_flow_transform_state()
+    persist_compensation_state()   # flush comp matrix + comp_on flag
     gate_value_space <- if (!is.null(rv$sce) && is_flow_session(rv$sce) &&
                             rv$assay_name == "exprs" && !is.null(rv$flow_raw_data)) {
       "raw"
@@ -1445,6 +1449,7 @@ server <- function(input, output, session) {
   # into SCE metadata, plus diagnostic fields for cross-SCE .rds transfer).
   build_workspace_payload <- function() {
     persist_flow_transform_state()
+    persist_compensation_state()
     gate_value_space <- if (!is.null(rv$sce) && is_flow_session(rv$sce) &&
                             rv$assay_name == "exprs" && !is.null(rv$flow_raw_data)) {
       "raw"
@@ -1466,6 +1471,7 @@ server <- function(input, output, session) {
       illust_pop_selected  = rv$illust_pop_selected,
       illust_settings      = illust_settings,
       illust_presets       = rv$illust_presets %||% list(),
+      comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
       # Diagnostic header for portable .rds files
@@ -1552,6 +1558,15 @@ server <- function(input, output, session) {
     # Channels don't change on workspace load → force the scale controls to
     # rebuild with the just-loaded override / global scale values.
     rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
+    # Restore compensation toggle (only meaningful if this SCE carries a matrix).
+    if (has_compensation() && !is.null(ws$comp_on)) {
+      want_comp <- isTRUE(ws$comp_on)
+      if (!identical(want_comp, isTRUE(rv$comp_on))) {
+        rv$comp_on <- want_comp
+        refresh_assay_data(reset_cache = TRUE)
+        rv$.scales_ui_version <- isolate(rv$.scales_ui_version) + 1L
+      }
+    }
     update_rescale_btn(!is.null(rv$.plot_range_override))
     autosave(); send_full_plot()
 
@@ -1760,6 +1775,35 @@ server <- function(input, output, session) {
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
 
+  # Compensation state mirrors the flow-transform state pattern above.
+  # The matrix rides in metadata(sce)$spillover_matrix (written at import); the
+  # comp_on flag is persisted alongside it so it round-trips on SCE reload.
+  init_compensation_state <- function(sce) {
+    rv$spillover_matrix <- NULL
+    rv$comp_on <- FALSE
+    if (!is_flow_session(sce)) return()
+    md <- S4Vectors::metadata(sce)
+    m <- md$spillover_matrix
+    if (is.null(m) || !is.matrix(m) || nrow(m) < 2) return()
+    rv$spillover_matrix <- m
+    rv$comp_on <- isTRUE(md$comp_on)
+  }
+
+  persist_compensation_state <- function() {
+    if (is.null(rv$sce) || is.null(rv$sce_name) || !is_flow_session(rv$sce)) return()
+    if (!is.null(rv$spillover_matrix)) {
+      S4Vectors::metadata(rv$sce)$spillover_matrix <- rv$spillover_matrix
+    }
+    S4Vectors::metadata(rv$sce)$comp_on <- isTRUE(rv$comp_on)
+    assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
+  }
+
+  # TRUE when a usable (non-NULL) compensation matrix exists for this session.
+  has_compensation <- function() {
+    is_flow_session(rv$sce) && !is.null(rv$spillover_matrix) &&
+      is.matrix(rv$spillover_matrix) && nrow(rv$spillover_matrix) >= 2
+  }
+
   refresh_assay_data <- function(reset_cache = TRUE, channels_to_update = NULL) {
     req(rv$sce)
 
@@ -1774,6 +1818,12 @@ server <- function(input, output, session) {
       counts_mat <- rv$flow_raw_data
       if (is.null(counts_mat) || nrow(counts_mat) != ncol(rv$sce) || isTRUE(reset_cache)) {
         counts_mat <- extract_assay_data(rv$sce, "counts")
+        # Apply compensation to the LINEAR data before any transform, so display,
+        # gating and rv$flow_raw_data all share one compensated coordinate space.
+        # Only on a fresh fetch — a cached rv$flow_raw_data is already compensated.
+        if (isTRUE(rv$comp_on) && !is.null(rv$spillover_matrix)) {
+          counts_mat <- compensate_matrix(counts_mat, rv$spillover_matrix)
+        }
       }
       rv$flow_raw_data <- counts_mat
 
@@ -2296,6 +2346,7 @@ server <- function(input, output, session) {
     rv$sce <- sce
     rv$sce_name <- sce_name
     init_flow_transform_state(sce)
+    init_compensation_state(sce)   # set comp matrix + comp_on before refresh_assay_data
 
     assays <- get_assay_names(sce)
     default_assay <- if ("exprs" %in% assays) "exprs" else assays[1]
@@ -7571,6 +7622,72 @@ server <- function(input, output, session) {
   .scales_safe_id <- function(ch) gsub("[^A-Za-z0-9]", "_", ch)
 
   # Render the per-channel table of scale controls (2-column compact layout)
+  # ── Compensation (embedded $SPILLOVER) ──────────────────────────────────────
+  # Only shown for flow sessions that carry a usable spillover matrix; CyTOF and
+  # spectral / already-compensated files (no/identity matrix) get nothing.
+  output$compensation_ui <- renderUI({
+    rv$.scales_ui_version          # re-render on SCE / workspace load
+    rv$comp_on                     # re-render checkbox state on toggle
+    req(rv$sce)
+    if (!has_compensation()) return(NULL)
+    n <- nrow(isolate(rv$spillover_matrix))
+    tags$div(
+      style = "margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #e0e0e0;",
+      tags$div(class = "section-header", "Compensation"),
+      tags$div(style = "font-size:11px; color:#666; margin-bottom:6px;",
+        sprintf("Embedded spillover matrix found (%d fluorochrome channels). ", n),
+        "Apply it to the raw data before gating (do this before drawing gates)."),
+      checkboxInput("comp_apply", "Apply compensation",
+                    value = isolate(isTRUE(rv$comp_on))),
+      tags$div(style = "font-size:11px; color:#666; margin:4px 0 2px;", "Spillover matrix"),
+      tags$div(style = "max-height:200px; overflow:auto; font-size:10px;",
+               tableOutput("comp_matrix_display"))
+    )
+  })
+
+  output$comp_matrix_display <- renderTable({
+    req(has_compensation())
+    m <- rv$spillover_matrix
+    df <- as.data.frame(round(m, 4))
+    cbind(` ` = colnames(m), df)
+  }, rownames = FALSE, digits = 4, spacing = "xs", width = "100%")
+
+  # Toggle: comp is a pre-gating decision. Flipping it changes the linear
+  # coordinate space, so we warn if gates exist, re-estimate auto logicle-W and
+  # reset cached ranges, then force a full reset_cache refresh + replot.
+  observeEvent(input$comp_apply, {
+    req(rv$sce, has_compensation())
+    new_on <- isTRUE(input$comp_apply)
+    if (identical(new_on, isTRUE(rv$comp_on))) return()
+
+    if (length(rv$gates) > 0) {
+      showNotification(
+        "Compensation changes the linear data beneath existing gates — re-check gate positions after toggling.",
+        type = "warning", duration = 7)
+    }
+
+    rv$comp_on <- new_on
+
+    # Re-estimate auto logicle-W from the new linear space; the cached W/ranges
+    # were derived from the other space and are now stale.
+    counts_mat <- extract_assay_data(rv$sce, "counts")
+    if (new_on && !is.null(rv$spillover_matrix)) {
+      counts_mat <- compensate_matrix(counts_mat, rv$spillover_matrix)
+    }
+    auto_w <- as.list(estimate_logicle_w_params(counts_mat, colnames(counts_mat)))
+    rv$flow_logicle_w_auto <- auto_w
+    rv$flow_logicle_w      <- auto_w
+    rv$global_scale_ranges <- list()
+    initialize_missing_global_scales(rv$channels)
+    rv$cytof_axis_range    <- list()
+    rv$.range_cache        <- list()
+    rv$.scales_ui_version  <- isolate(rv$.scales_ui_version) + 1L
+
+    refresh_assay_data(reset_cache = TRUE)   # bumps assay_version, clears caches
+    persist_compensation_state()
+    send_full_plot(reset_view = TRUE)
+  }, ignoreInit = TRUE)
+
   output$scales_channels_ui <- renderUI({
     rv$.scales_ui_version   # forced-refresh trigger
     req(rv$sce, length(rv$channels) > 0)

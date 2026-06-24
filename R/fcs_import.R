@@ -240,6 +240,118 @@ filter_flow_channels <- function(ff) {
 }
 
 # ---------------------------------------------------------------------------
+# Robust FCS reading
+# ---------------------------------------------------------------------------
+
+#' Byte offsets (1-based) of every occurrence of `pat` within raw vector `raw`
+.find_raw_matches <- function(raw, pat) {
+  n <- length(raw); m <- length(pat)
+  if (m == 0L || n < m) return(integer(0))
+  starts <- which(raw[seq_len(n - m + 1L)] == pat[1L])
+  starts[vapply(starts, function(s) identical(raw[s:(s + m - 1L)], pat), logical(1))]
+}
+
+#' Read an FCS file, recovering from a malformed `$SPILLOVER` keyword
+#'
+#' A malformed `$SPILLOVER` (wrong channel count) makes \code{flowCore::read.FCS}
+#' abort the entire import — before any compensation logic runs. When that
+#' happens we rewrite a temp copy with the keyword NAME neutralised
+#' (\code{$SPILLOVER -> $IGNOREDSP}, same byte length so the FCS HEADER offsets
+#' stay valid) and re-read, so the file still imports — compensation is simply
+#' unavailable for it. All other read errors propagate unchanged.
+.read_fcs_robust <- function(path) {
+  tryCatch(
+    flowCore::read.FCS(path, transformation = FALSE, truncate_max_range = FALSE),
+    error = function(e) {
+      if (!grepl("spill", conditionMessage(e), ignore.case = TRUE)) stop(e)
+      raw <- readBin(path, "raw", n = file.info(path)$size)
+      hits <- .find_raw_matches(raw, charToRaw("$SPILLOVER"))
+      if (length(hits) == 0L) stop(e)
+      repl <- charToRaw("$IGNOREDSP")   # same 10 bytes -> offsets preserved
+      for (pos in hits) raw[pos:(pos + length(repl) - 1L)] <- repl
+      tmp <- tempfile(fileext = ".fcs")
+      on.exit(unlink(tmp), add = TRUE)
+      writeBin(raw, tmp)
+      warning("Ignored a malformed $SPILLOVER keyword in ", basename(path),
+              "; compensation unavailable for this file.", call. = FALSE)
+      flowCore::read.FCS(tmp, transformation = FALSE, truncate_max_range = FALSE)
+    }
+  )
+}
+
+# ---------------------------------------------------------------------------
+# Compensation (embedded $SPILLOVER) helpers
+# ---------------------------------------------------------------------------
+
+#' Extract a display-named, fluorochrome-only spillover matrix from a flowFrame
+#'
+#' Reads the embedded compensation matrix (\code{$SPILLOVER} / \code{$SPILL} /
+#' \code{$COMP}) via \code{flowCore::spillover()}, remaps its \code{$PnN} channel
+#' names to the app's display names using \code{pnn_map} (the \code{$PnN -> display}
+#' mapping built during import), and restricts it to fluorochrome channels
+#' (dropping scatter / QC). Returns \code{NULL} — never an error — when no usable
+#' matrix exists, so a malformed or absent \code{$SPILLOVER} can never abort import.
+#'
+#' @param ff       flowFrame (may be channel-subset; the keyword is still read)
+#' @param pnn_map  named character vector mapping \code{$PnN -> display name}
+#' @return square numeric matrix with display-name dimnames, or NULL
+.extract_display_spillover <- function(ff, pnn_map) {
+  sp <- tryCatch(flowCore::spillover(ff), error = function(e) NULL)
+  if (is.null(sp)) return(NULL)
+  if (is.list(sp)) {
+    sp <- sp[!vapply(sp, is.null, logical(1))]
+    if (length(sp) == 0) return(NULL)
+    sp <- sp[[1]]
+  }
+  if (!is.matrix(sp) || nrow(sp) < 2 || ncol(sp) != nrow(sp)) return(NULL)
+
+  cn <- colnames(sp)
+  if (is.null(cn) || anyNA(cn)) return(NULL)
+
+  # Map $PnN -> display; drop channels we can't map or that are scatter/QC.
+  # Use single-bracket indexing: unmatched names return NA (not an error, which
+  # `[[` would throw — e.g. spectral files whose matrix names aren't kept).
+  disp <- unname(as.character(pnn_map[cn]))
+  keep <- !is.na(disp) & !.is_scatter_channel(disp) & !.is_qc_channel(disp)
+  if (sum(keep) < 2) return(NULL)
+
+  m <- sp[keep, keep, drop = FALSE]
+  dn <- disp[keep]
+  dimnames(m) <- list(dn, dn)
+
+  # Identity matrix (already-compensated / spectral-unmixed export) -> no-op.
+  offdiag <- m[row(m) != col(m)]
+  if (all(abs(offdiag) < 1e-8)) return(NULL)
+
+  m
+}
+
+#' Apply a spillover matrix to a raw (linear) event x channel matrix
+#'
+#' Compensates only the fluorochrome channels named in \code{spill}
+#' (\code{X_fluor \%*\% solve(spill)} — the flowCore::compensate convention,
+#' validated numerically against instrument-compensated exports). Scatter, QC
+#' and any other columns pass through untouched. Degrades to the input matrix
+#' unchanged when \code{spill} is NULL / too small / not invertible.
+#'
+#' @param mat   event x channel matrix (raw linear), display-named columns
+#' @param spill square spillover matrix with display-name dimnames
+#' @return matrix the same shape as \code{mat}, fluor columns compensated
+compensate_matrix <- function(mat, spill) {
+  if (is.null(spill) || !is.matrix(spill) || nrow(spill) < 2) return(mat)
+  fl <- intersect(colnames(spill), colnames(mat))
+  if (length(fl) < 2) return(mat)
+
+  S   <- spill[fl, fl, drop = FALSE]            # align spill to mat's fluor cols
+  inv <- tryCatch(solve(S), error = function(e) NULL)
+  if (is.null(inv)) return(mat)
+
+  out <- mat
+  out[, fl] <- mat[, fl, drop = FALSE] %*% inv  # columns stay in `fl` order
+  out
+}
+
+# ---------------------------------------------------------------------------
 # Transformation helpers
 # ---------------------------------------------------------------------------
 
@@ -838,11 +950,11 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
   detected_type <- NULL
   pnn_to_channel <- NULL
   channel_to_pnn <- NULL
+  spillover_matrix <- NULL
 
   for (i in seq_along(file_paths)) {
 
-    ff <- flowCore::read.FCS(file_paths[i], transformation = FALSE,
-                              truncate_max_range = FALSE)
+    ff <- .read_fcs_robust(file_paths[i])
 
     # Detect instrument type from the first file
     if (is.null(instrument_type)) {
@@ -896,6 +1008,17 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
       } else {
         channel_to_pnn <- c(channel_to_pnn, inv_now)
         channel_to_pnn <- channel_to_pnn[!duplicated(names(channel_to_pnn))]
+      }
+    }
+
+    # Embedded compensation matrix (flow only) — read once from the first file.
+    # The matrix is keyed by $PnN; remap to display names. Never aborts import.
+    if (instrument_type == "flow" && is.null(spillover_matrix) &&
+        !is.null(pnn_to_channel)) {
+      spillover_matrix <- .extract_display_spillover(ff, pnn_to_channel)
+      if (!is.null(spillover_matrix)) {
+        message("  Embedded spillover matrix found: ",
+                nrow(spillover_matrix), " fluorochrome channel(s)")
       }
     }
 
@@ -968,6 +1091,9 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
   S4Vectors::metadata(sce)$cofactor <- cofactor
   if (!is.null(pnn_to_channel) && length(pnn_to_channel) > 0) {
     S4Vectors::metadata(sce)$pnn_to_channel <- as.list(pnn_to_channel)
+  }
+  if (!is.null(spillover_matrix)) {
+    S4Vectors::metadata(sce)$spillover_matrix <- spillover_matrix
   }
   if (!is.null(channel_to_pnn) && length(channel_to_pnn) > 0) {
     S4Vectors::metadata(sce)$channel_to_pnn <- as.list(channel_to_pnn)
