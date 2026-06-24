@@ -1,0 +1,9 @@
+pandoc: 3.8.3
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  getting-started: getting-started.html
+last_built: 2026-06-24T06:06Z
+urls:
+  reference: https://david-priest.github.io/GateLabR/reference
+  article: https://david-priest.github.io/GateLabR/articles

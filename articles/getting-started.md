@@ -1,0 +1,155 @@
+# Getting started with GateLabR
+
+GateLabR is a desktop-style Shiny app for **hand-gating flow and mass
+cytometry (CyTOF) data directly on `SingleCellExperiment` objects** — a
+free, MIT-licensed alternative to round-tripping through Cytobank or
+FlowJo. Gates, populations, scales and figure settings live inside the
+object’s `metadata()`, so your gated data *is* the record.
+
+> 📸 *Screenshot: the full app with the gating biplot in the centre,
+> gate/population lists on the right.* — add `man/figures/overview.png`
+
+## 1. Install and launch
+
+Install once as a package (Bioconductor dependencies are resolved
+automatically; install `BiocManager` first if you don’t have it):
+
+``` r
+
+# install.packages(c("remotes", "BiocManager"))
+remotes::install_github("david-priest/GateLabR")
+library(GateLabR)
+launchGatingApp()
+```
+
+Or run from a clone:
+
+``` r
+
+source("path/to/GateLabR/launch.R")
+launchGatingApp()
+```
+
+[`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+prints which copy it’s launching (installed package vs source clone). It
+opens in your browser.
+
+## 2. Get your data in
+
+Two entry points:
+
+- **Import `.fcs` files** in the app — it builds the
+  `SingleCellExperiment`, auto-detects flow vs CyTOF, and sets up the
+  per-channel transforms.
+- **Pass an existing SCE** — e.g. from CATALYST `prepData()` (CyTOF) or
+  one you built with `flowCore` / your own pipeline:
+
+``` r
+
+launchGatingApp(my_sce)          # use a specific object
+launchGatingApp()                # or pick from SCEs in your session / Import FCS
+```
+
+Flow data uses per-channel **logicle** for fluorescence and **arcsinh**
+for FSC/SSC scatter (editable W and cofactor); CyTOF uses arcsinh
+(cofactor 5).
+
+> 📸 *Screenshot: the FCS import dialog / SCE picker.* — add
+> `man/figures/import.png`
+
+## 3. The layout
+
+| Panel | Contents |
+|----|----|
+| Left | Sample filter, scale controls, FCS / GatingML / workspace import-export, UMAP |
+| Centre | Interactive plot — tabs: **Gating · Strategy · Illustration · Statistics · Panel** |
+| Right | Gates list, population tree, bulk-rename |
+
+## 4. Draw gates
+
+On the **Gating** tab, pick the X/Y channels (click the axis labels) and
+choose a tool from the toolbar:
+
+- **Rect** — drag a rectangle.
+- **Poly** — click vertices; click the first point (or near it) to
+  close.
+- **Quad** — click once to drop a **quadrant** crosshair (see below).
+
+Drag a vertex to adjust it; a live `x, y` readout follows the cursor.
+Gates get a name and an optional population on creation.
+
+> 📸 *Screenshot: a polygon gate being drawn, with the live vertex
+> readout.* — add `man/figures/draw-gate.png`
+
+## 5. Build populations
+
+Populations are boolean combinations of gates (AND / OR, include /
+exclude), shown as a tree on the right with live counts and percentages.
+Click a population to make it active (blue) and gate within it; the
+biplot and counts follow.
+
+Tips:
+
+- **Arrow keys** move the active population up/down the list.
+- The **left-column checkboxes** let you display *several* populations’
+  events at once (a banner tells you which are shown); clicking a gate
+  badge outlines that gate in every population it appears in.
+
+> 📸 *Screenshot: the population tree with a small hierarchy and live
+> counts.* — add `man/figures/population-tree.png`
+
+## 6. Quadrant gates
+
+The **Quad** tool drops a crosshair that splits the X/Y plane into four
+populations at once (e.g. `CD4- CD8+`, `CD4+ CD8+`, `CD4+ CD8-`,
+`CD4- CD8-`), each labelled with its count and %. Drag the centre to
+move all four together; deleting the quadrant gate removes its four
+populations (and vice-versa).
+
+> 📸 *Screenshot: a quadrant gate with the four corner counts.* — add
+> `man/figures/quadrant.png`
+
+## 7. Compensation (flow)
+
+For conventional flow data carrying a spillover matrix, toggle **Apply
+compensation** to linearly compensate fluorescence channels from the
+embedded `$SPILLOVER`. (CyTOF and pre-compensated/spectral data don’t
+need it.)
+
+> 📸 *Screenshot: the compensation toggle + matrix viewer.* — add
+> `man/figures/compensation.png`
+
+## 8. Figures: Strategy & Illustration
+
+- **Strategy** lays out your gating hierarchy as a multi-panel figure.
+- **Illustration** renders a grid of biplots/histograms across
+  populations and channels — including a **stacked ridgeline** mode with
+  a black→yellow heat-gradient fill, adjustable overlap and column
+  spacing.
+
+Both export to **SVG** (vector, Illustrator-friendly) and **PNG**.
+
+> 📸 *Screenshot: a ridgeline illustration across markers.* — add
+> `man/figures/ridgeline.png`
+
+## 9. Export & persistence
+
+- **Populations → `colData`** (`Export Population`) for downstream
+  `diffcyt`, `CATALYST`, or any SCE-aware analysis.
+- **FCS export** of gated events (defaults to the raw counts assay).
+- **GatingML 2.0** import/export to round-trip gates with Cytobank /
+  FlowJo.
+- **Workspace** is embedded in `metadata(sce)$gating_workspace`;
+  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) the object (or
+  export a portable `.rds`) and re-loading restores everything.
+
+``` r
+
+saveRDS(sce, "gated.rds")   # gates, populations, scales — all preserved
+```
+
+## Feedback
+
+Found a bug or want a feature? Please [open an
+issue](https://github.com/david-priest/GateLabR/issues) — contributions
+and suggestions are very welcome.
