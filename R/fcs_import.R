@@ -73,8 +73,8 @@
 #' Flow scatter channels (FSC / SSC / LightLoss and variants)
 .is_scatter_channel <- function(channel_names) {
   grepl(
-    paste0("^FSC|^SSC",
-           "|^FS[[:space:]\\-_]|^SS[[:space:]\\-_]",  # Beckman-Coulter: FS INT, SS LOG
+    paste0("^FSC|^SSC|^BSC",                            # BD/most; Sony back-scatter (BSC)
+           "|^FS[[:space:]\\-_]|^SS[[:space:]\\-_]|^BS[[:space:]\\-_]",  # Beckman: FS INT, SS LOG
            "|^FS$|^SS$",                                # bare FS / SS
            "|^LightLoss|^Extinction"),
     channel_names, ignore.case = TRUE
@@ -145,6 +145,22 @@ filter_flow_channels <- function(ff) {
   pnn    <- as.character(pdata$name)  # $PnN
   pns    <- if ("desc" %in% colnames(pdata)) as.character(pdata$desc) else rep(NA, length(pnn))
   pnr    <- if ("range" %in% colnames(pdata)) as.numeric(pdata$range) else rep(NA, length(pnn))
+
+  # The per-channel keep/rename logic below targets BD/spectral *unmixed* files,
+  # which carry raw detector channels (to drop) alongside unmixed population
+  # channels whose $PnS is a marker ending in "-A". Conventional flow (BD or any
+  # other vendor: Beckman, Cytek, Sony, Thermo, Miltenyi, …) has no such unmixed
+  # channels — applying the filter there would wrongly drop every fluorescence
+  # marker. So only filter when the file actually looks spectral-unmixed;
+  # otherwise keep all channels, using $PnS (marker) as the display name.
+  is_unmixed <- !is.na(pns) & nchar(trimws(pns)) > 0 & pns != pnn &
+    grepl("-A$", pns, ignore.case = TRUE)
+  if (sum(is_unmixed) < 2) {
+    display_name <- ifelse(is.na(pns) | nchar(trimws(pns)) == 0, pnn, pns)
+    message("  Conventional flow: keeping all ", length(pnn), " channels")
+    return(list(ff = ff, display_names = display_name,
+                pnr_values = setNames(pnr, display_name)))
+  }
 
   # Build keep/rename logic
   keep_idx     <- logical(length(pnn))
