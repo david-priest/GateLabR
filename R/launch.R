@@ -14,6 +14,15 @@
 launchGatingApp <- function(sce = NULL, port = NULL, launch.browser = TRUE) {
   app_dir <- .gatelabr_app_dir()
 
+  # Say which copy is running. When sourced, launchGatingApp lives in the global
+  # environment and shadows the installed package's, so this disambiguates.
+  installed <- system.file("app", package = "GateLabR")
+  is_installed <- nzchar(installed) &&
+    identical(normalizePath(installed, mustWork = FALSE),
+              normalizePath(app_dir,   mustWork = FALSE))
+  message("GateLabR: launching the ", if (is_installed) "installed package" else "source clone",
+          " app\n  ", app_dir)
+
   # Discover SingleCellExperiment objects already in the global environment.
   sce_names <- character(0)
   for (nm in ls(envir = .GlobalEnv)) {
@@ -61,14 +70,17 @@ launchGatingApp <- function(sce = NULL, port = NULL, launch.browser = TRUE) {
 #' @keywords internal
 #' @noRd
 .gatelabr_app_dir <- function() {
-  d <- system.file("app", package = "GateLabR")
-  if (nzchar(d) && file.exists(file.path(d, "app.R"))) return(d)
+  # When launched via source() from a clone, prefer THAT clone's app so local
+  # edits take effect — even if an installed copy also exists. Fall back to the
+  # installed package when loaded as a library (no source dir captured).
   if (!is.null(.gatelabr_src_dir)) {
     dev <- file.path(.gatelabr_src_dir, "..", "inst", "app")
     if (file.exists(file.path(dev, "app.R"))) return(normalizePath(dev))
   }
-  stop("Could not locate the GateLabR app directory (looked in the installed ",
-       "package and ../inst/app). When using source(), source R/launch.R from a ",
+  d <- system.file("app", package = "GateLabR")
+  if (nzchar(d) && file.exists(file.path(d, "app.R"))) return(d)
+  stop("Could not locate the GateLabR app directory (looked in ../inst/app and ",
+       "the installed package). When using source(), source launch.R from a ",
        "GateLabR clone.")
 }
 
