@@ -1,0 +1,39 @@
+Package: GateLabR
+Title: Interactive Manual Gating for SingleCellExperiment Objects
+Version: 1.1.0
+Authors@R:
+    person("David", "Priest", email = "david.priest898@gmail.com",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-0095-6718"))
+Description: A desktop-style Shiny application for interactive manual gating of
+    flow cytometry and mass cytometry (CyTOF) data directly on
+    SingleCellExperiment objects. Supports polygon, rectangle and quadrant
+    gates, boolean population hierarchies, per-channel logicle / arcsinh
+    transforms, embedded-spillover compensation, GatingML 2.0 import and export,
+    FCS export, and publication-style figure export. Gates, populations and
+    settings persist inside the object's metadata.
+License: MIT + file LICENSE
+Encoding: UTF-8
+URL: https://github.com/david-priest/GateLabR
+BugReports: https://github.com/david-priest/GateLabR/issues
+biocViews: FlowCytometry, SingleCell, Software
+Imports:
+    shiny,
+    methods,
+    DT,
+    jsonlite,
+    base64enc,
+    uuid,
+    sp,
+    png,
+    grid,
+    gridSVG,
+    ggplot2,
+    SingleCellExperiment,
+    SummarizedExperiment,
+    S4Vectors,
+    flowCore,
+    xml2
+Suggests:
+    BiocManager
+RoxygenNote: 7.3.1

@@ -22,3 +22,7 @@ rsconnect/
 
 # Logs
 *.log
+
+# R package build artifacts
+*.tar.gz
+*.Rcheck/

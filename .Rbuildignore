@@ -1,0 +1,9 @@
+^launch\.R$
+^install_dependencies\.R$
+^.*\.xml$
+^session\.log$
+^\.gitignore$
+^\.DS_Store$
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.git$

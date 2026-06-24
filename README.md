@@ -54,21 +54,36 @@ so loading the SCE again restores the entire workspace.
 
 ## Installation
 
-GateLabR is a Shiny project, not an installed R package. Clone the repository
-and install dependencies once:
+GateLabR can be used either as an installed R package or straight from a clone.
+
+### Option A — install as a package (recommended)
 
 ```r
-# 1. Clone or download the repository
-#    git clone https://github.com/david-priest/GateLabR.git
+# install.packages("remotes")            # if needed
+# Bioconductor dependencies are resolved automatically; if you don't already
+# have BiocManager, install it first: install.packages("BiocManager")
+remotes::install_github("david-priest/GateLabR")
 
-# 2. From an R session, install dependencies (CRAN + Bioconductor)
-source("path/to/GateLabR/install_dependencies.R")
+library(GateLabR)
+launchGatingApp()        # or launchGatingApp(my_sce)
 ```
 
-The installer pulls these packages:
+### Option B — clone and run from source
+
+```r
+# 1. git clone https://github.com/david-priest/GateLabR.git
+# 2. From an R session, install dependencies once (CRAN + Bioconductor):
+source("path/to/GateLabR/install_dependencies.R")
+# 3. Source the launcher and run (see Quick start):
+source("path/to/GateLabR/launch.R")
+launchGatingApp()
+```
+
+Dependencies (installed automatically by Option A, or by
+`install_dependencies.R` for Option B):
 
 - **CRAN:** `shiny`, `DT`, `jsonlite`, `base64enc`, `uuid`, `sp`, `gridSVG`,
-  `png`
+  `png`, `ggplot2`
 - **Bioconductor:** `SingleCellExperiment`, `SummarizedExperiment`,
   `S4Vectors`, `flowCore`, `xml2`
 
@@ -77,8 +92,8 @@ R ≥ 4.2 and Bioconductor ≥ 3.16 are recommended.
 ## Quick start
 
 ```r
-# Source the launcher
-source("path/to/GateLabR/launch.R")
+# Installed package:           Or from a clone:
+library(GateLabR)              # source("path/to/GateLabR/launch.R")
 
 # Option A: launch and pass an existing SCE
 launchGatingApp(my_sce)
