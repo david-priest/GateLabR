@@ -177,3 +177,10 @@ Built on top of the Bioconductor stack
 If you run into a bug, or there's a feature you'd find useful, please
 [open an issue](https://github.com/david-priest/GateLabR/issues) or get in
 touch — I'm happy to take a look and would be glad to implement it.
+
+**A note on `.fcs` import:** import has been thoroughly tested on files from a
+BD spectral flow cytometer, but not yet on files from other vendors (Beckman
+Coulter, Cytek, Sony, Thermo, Miltenyi, …). Channel and instrument detection
+is designed to be vendor-agnostic, but if a file imports incorrectly — missing
+markers, wrong channels, or a mis-detected flow/CyTOF mode — please let me
+know (ideally with the file's channel names) and I'll get it sorted.
