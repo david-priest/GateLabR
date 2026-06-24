@@ -384,13 +384,25 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
   gate_numeric_ids <- list()   # app gate_id → integer
   gate_seq_ids     <- list()   # app gate_id → sequential index (used in <gate_id> and definition JSON)
 
+  n_quadrant_skipped <- 0L
   for (i in seq_along(gate_order)) {
     gid <- gate_order[[i]]
     if (is.null(display_gates[[gid]])) next
+    # Quadrant gates have no GatingML 2.0 representation here yet — skip them so
+    # they get no id; populations referencing them are filtered out below (the
+    # workspace .rds still preserves quadrant gates in full).
+    if (identical(display_gates[[gid]]$gate_type, "quadrant")) {
+      n_quadrant_skipped <- n_quadrant_skipped + 1L
+      next
+    }
     num_id               <- 180000000L + i
     gate_numeric_ids[[gid]] <- num_id
     gate_to_gml_id[[gid]]   <- .gml_ex_gate_id(num_id, display_gates[[gid]]$name)
     gate_seq_ids[[gid]]      <- i
+  }
+  if (n_quadrant_skipped > 0) {
+    warning(n_quadrant_skipped, " quadrant gate(s) were not exported to GatingML ",
+            "(use the .rds workspace to preserve them).")
   }
 
   # ── Build gate XML lines ─────────────────────────────────────────────────────

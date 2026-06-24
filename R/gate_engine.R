@@ -17,11 +17,28 @@ gate_mask_rectangle <- function(x_vals, y_vals, vertices) {
   x_vals >= min(xs) & x_vals <= max(xs) & y_vals >= min(ys) & y_vals <= max(ys)
 }
 
+#' Compute boolean mask for one quadrant of a quadrant gate
+#' Quadrant numbering: 1 = x-/y+, 2 = x+/y+, 3 = x+/y-, 4 = x-/y- (>= on the
+#' positive side). A point exactly on the crosshair falls in quadrant 2.
+gate_mask_quadrant <- function(x_vals, y_vals, center, quadrant) {
+  cx <- center[1]; cy <- center[2]
+  q  <- suppressWarnings(as.integer(quadrant))
+  if (length(q) != 1 || is.na(q)) q <- 1L
+  switch(as.character(q),
+    "1" = x_vals <  cx & y_vals >= cy,
+    "2" = x_vals >= cx & y_vals >= cy,
+    "3" = x_vals >= cx & y_vals <  cy,
+    "4" = x_vals <  cx & y_vals <  cy,
+    rep(FALSE, length(x_vals)))
+}
+
 #' Compute boolean mask for any gate type
 #' @param gate Gate definition list
 #' @param assay_data Matrix (events x channels), already transformed for display
+#' @param quadrant For quadrant gates, which quadrant (1-4) to return; ignored
+#'   for polygon/rectangle gates.
 #' @return Logical vector of length nrow(assay_data)
-get_gate_mask <- function(gate, assay_data) {
+get_gate_mask <- function(gate, assay_data, quadrant = NULL) {
   x_ch <- gate$x_channel
   y_ch <- gate$y_channel
 
@@ -40,6 +57,8 @@ get_gate_mask <- function(gate, assay_data) {
     gate_mask_polygon(x, y, gate$vertices)
   } else if (gate$gate_type == "rectangle") {
     gate_mask_rectangle(x, y, gate$vertices)
+  } else if (gate$gate_type == "quadrant") {
+    gate_mask_quadrant(x, y, gate$center, quadrant %||% 1L)
   } else {
     warning("Unknown gate type: ", gate$gate_type)
     rep(FALSE, nrow(assay_data))
@@ -59,12 +78,14 @@ apply_gating_strategy <- function(gates, populations, root_population_id,
   # (see get_cached_gate_masks in the server) and falling back to a fresh
   # computation. The fallback guarantees correctness whenever the cache is
   # absent, incomplete, or the wrong length, so caching can never desync results.
-  .resolve_gate_mask <- function(gate_id, gate_def) {
-    if (!is.null(gate_masks)) {
+  .resolve_gate_mask <- function(gate_id, gate_def, quadrant = NULL) {
+    # Quadrant masks are cheap comparisons and not cached (the cache keys by
+    # gate_id only); compute them directly. Polygon/rectangle masks use the cache.
+    if (is.null(quadrant) && !is.null(gate_masks)) {
       m <- gate_masks[[gate_id]]
       if (!is.null(m) && length(m) == n_events) return(m)
     }
-    get_gate_mask(gate_def, assay_data)
+    get_gate_mask(gate_def, assay_data, quadrant)
   }
 
   # Root gets all events
@@ -96,7 +117,7 @@ apply_gating_strategy <- function(gates, populations, root_population_id,
           for (ref in child$gate_refs) {
             gate_def <- gates[[ref$gate_id]]
             if (is.null(gate_def)) next
-            gate_mask <- .resolve_gate_mask(ref$gate_id, gate_def)
+            gate_mask <- .resolve_gate_mask(ref$gate_id, gate_def, ref$quadrant)
             or_mask <- or_mask | if (isTRUE(ref$include)) gate_mask else !gate_mask
           }
           child_mask <- parent_mask & or_mask
@@ -106,7 +127,7 @@ apply_gating_strategy <- function(gates, populations, root_population_id,
           for (ref in child$gate_refs) {
             gate_def <- gates[[ref$gate_id]]
             if (is.null(gate_def)) next
-            gate_mask <- .resolve_gate_mask(ref$gate_id, gate_def)
+            gate_mask <- .resolve_gate_mask(ref$gate_id, gate_def, ref$quadrant)
             if (isTRUE(ref$include)) {
               child_mask <- child_mask & gate_mask
             } else {
@@ -149,10 +170,20 @@ compute_gate_counts <- function(gates, pop_mask, assay_data) {
   counts <- list()
   for (gid in names(gates)) {
     gate <- gates[[gid]]
-    mask <- get_gate_mask(gate, pop_data)
-    n_in <- sum(mask)
-    pct <- if (parent_count > 0) round(n_in / parent_count * 100, 2) else 0
-    counts[[gid]] <- list(event_count = n_in, percent_of_parent = pct)
+    if (identical(gate$gate_type, "quadrant")) {
+      # Four counts, one per quadrant, all relative to the parent population.
+      quads <- lapply(1:4, function(q) {
+        n_in <- sum(get_gate_mask(gate, pop_data, q))
+        list(event_count = n_in,
+             percent_of_parent = if (parent_count > 0) round(n_in / parent_count * 100, 2) else 0)
+      })
+      counts[[gid]] <- list(event_count = NULL, percent_of_parent = NULL, quadrants = quads)
+    } else {
+      mask <- get_gate_mask(gate, pop_data)
+      n_in <- sum(mask)
+      pct <- if (parent_count > 0) round(n_in / parent_count * 100, 2) else 0
+      counts[[gid]] <- list(event_count = n_in, percent_of_parent = pct)
+    }
   }
   counts
 }

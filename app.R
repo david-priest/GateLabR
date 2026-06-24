@@ -111,7 +111,7 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260623a"),
+    tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
@@ -275,6 +275,10 @@ ui <- fluidPage(
                 HTML('<svg width="14" height="14" viewBox="0 0 14 14"><polygon points="7,1 13,5 11,12 3,12 1,5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> Poly'),
                 class = "btn-sm btn-default", title = "Draw polygon gate",
                 onclick = "window.CytofD3 && window.CytofD3.setMode('draw-poly')"),
+              actionButton("mode_quadrant",
+                HTML('<svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="1.8"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.8"/></svg> Quad'),
+                class = "btn-sm btn-default", title = "Place quadrant gate (click the crosshair centre)",
+                onclick = "window.CytofD3 && window.CytofD3.setMode('draw-quadrant')"),
               actionButton("mode_cancel", "✕ Cancel", class = "btn-sm btn-warning",
                            onclick = "window.CytofD3 && window.CytofD3.setMode('navigate')")
             ),
@@ -2798,6 +2802,18 @@ server <- function(input, output, session) {
     if (!is_flow_display_context()) return(gate)
 
     gate_disp <- gate
+    if (identical(gate$gate_type, "quadrant")) {
+      # Forward-transform the crosshair centre (treat as a single vertex).
+      ctr <- flow_forward_vertices(
+        vertices = list(as.numeric(gate$center)),
+        x_channel = gate$x_channel, y_channel = gate$y_channel,
+        raw_mat = rv$flow_raw_data, channel_names = colnames(rv$flow_raw_data),
+        logicle_w_params = rv$flow_logicle_w,
+        scatter_cofactor_params = rv$flow_scatter_cofactor
+      )
+      gate_disp$center <- as.numeric(ctr[[1]])
+      return(gate_disp)
+    }
     gate_disp$vertices <- flow_forward_vertices(
       vertices = gate$vertices,
       x_channel = gate$x_channel,
@@ -2969,6 +2985,9 @@ server <- function(input, output, session) {
     for (gid in names(rv$gates)) {
       gate <- rv$gates[[gid]]
       if (is.null(gate)) next
+      # Quadrant gates are cheap per-quadrant comparisons, computed on demand
+      # (the cache keys by gate_id only, which can't hold 4 masks) — skip them.
+      if (identical(gate$gate_type, "quadrant")) next
       fp  <- .gate_fingerprint(gate)
       ent <- .gate_mask_cache$masks[[gid]]
       if (!is.null(ent) && identical(ent$fp, fp) && length(ent$mask) == n) {
@@ -3583,12 +3602,13 @@ server <- function(input, output, session) {
   # GATE DRAWING + CREATION + EDITING
   # ══════════════════════════════════════════════════════════════════════════════
 
-  observeEvent(input$mode_rect,   { session$sendCustomMessage("setMode", "draw-rect"); update_mode_buttons("draw-rect") })
-  observeEvent(input$mode_poly,   { session$sendCustomMessage("setMode", "draw-poly"); update_mode_buttons("draw-poly") })
-  observeEvent(input$mode_cancel, { session$sendCustomMessage("setMode", "navigate");  update_mode_buttons("navigate")   })
+  observeEvent(input$mode_rect,     { session$sendCustomMessage("setMode", "draw-rect");     update_mode_buttons("draw-rect")     })
+  observeEvent(input$mode_poly,     { session$sendCustomMessage("setMode", "draw-poly");     update_mode_buttons("draw-poly")     })
+  observeEvent(input$mode_quadrant, { session$sendCustomMessage("setMode", "draw-quadrant"); update_mode_buttons("draw-quadrant") })
+  observeEvent(input$mode_cancel,   { session$sendCustomMessage("setMode", "navigate");      update_mode_buttons("navigate")      })
 
   update_mode_buttons <- function(active_mode) {
-    modes <- list(mode_rect = "draw-rect", mode_poly = "draw-poly")
+    modes <- list(mode_rect = "draw-rect", mode_poly = "draw-poly", mode_quadrant = "draw-quadrant")
     for (btn_id in names(modes)) {
       if (modes[[btn_id]] == active_mode) runjs(sprintf("$('#%s').addClass('active-mode')", btn_id))
       else runjs(sprintf("$('#%s').removeClass('active-mode')", btn_id))
@@ -3625,6 +3645,24 @@ server <- function(input, output, session) {
     parent_choices <- setNames(names(rv$populations),
                                vapply(rv$populations, function(p) p$name, character(1)))
     default_parent <- rv$active_population_id %||% rv$root_population_id
+
+    # Quadrant gates create four populations at once — use a dedicated dialog.
+    if (identical(gate_data$gate_type, "quadrant")) {
+      showModal(modalDialog(
+        title = "Create quadrant gate",
+        tags$p(sprintf("Splits %s × %s into four quadrant populations at the crosshair.",
+                       gate_data$x_channel, gate_data$y_channel),
+               style = "font-size:12px; color:#666;"),
+        textInput("quadrant_name_input", "Name prefix (optional):", value = ""),
+        selectInput("quadrant_parent", "Parent population:",
+                    choices = parent_choices, selected = default_parent),
+        footer = tagList(modalButton("Cancel"),
+                         actionButton("confirm_quadrant_btn", "Create 4 populations",
+                                      class = "btn-success"))
+      ))
+      return()
+    }
+
     showModal(modalDialog(
       title = "Name this gate",
       textInput("gate_name_input", "Gate name:", value = ""),
@@ -3680,6 +3718,57 @@ server <- function(input, output, session) {
     if (isTRUE(rv$.gate_pop_name_manual)) return()
     updateTextInput(session, "gate_pop_name_input", value = trimws(as.character(input$gate_name_input %||% "")))
   }, ignoreInit = TRUE)
+
+  observeEvent(input$confirm_quadrant_btn, {
+    removeModal(); gate_data <- rv$.pending_gate; req(gate_data); rv$.pending_gate <- NULL
+    if (!identical(gate_data$gate_type, "quadrant")) return()
+    save_undo_snapshot()
+
+    x_ch <- gate_data$x_channel; y_ch <- gate_data$y_channel
+    # The drawn point (display space) is the crosshair centre.
+    ctr_disp <- as.numeric(gate_data$vertices[[1]])
+    center <- ctr_disp
+    if (is_flow_display_context()) {
+      v <- vertices_display_to_gating_space(list(ctr_disp), x_ch, y_ch)
+      center <- as.numeric(v[[1]])
+    }
+
+    prefix <- trimws(as.character(input$quadrant_name_input %||% ""))
+    base_name <- if (nzchar(prefix)) prefix else paste0(x_ch, "/", y_ch)
+    qgate <- new_quadrant_gate(name = paste(base_name, "quadrant"),
+                               x_channel = x_ch, y_channel = y_ch,
+                               center = center, color = next_gate_color(length(rv$gates)))
+    rv$gates[[qgate$gate_id]] <- qgate
+    rv$gate_order <- c(rv$gate_order, qgate$gate_id)
+    rv$selected_gate_id <- qgate$gate_id
+
+    pop_parent <- input$quadrant_parent %||% rv$active_population_id %||% rv$root_population_id
+    if (is.null(rv$populations[[pop_parent]])) pop_parent <- rv$root_population_id
+
+    # Quadrant 1=x-/y+, 2=x+/y+, 3=x+/y-, 4=x-/y- ; name each by channel signs.
+    sgn <- list(c("-", "+"), c("+", "+"), c("+", "-"), c("-", "-"))
+    last_pop <- NULL
+    for (q in 1:4) {
+      qn <- paste0(x_ch, sgn[[q]][1], " ", y_ch, sgn[[q]][2])
+      if (nzchar(prefix)) qn <- paste0(prefix, ": ", qn)
+      np <- new_population(qn,
+                           gate_refs = list(new_gate_ref(qgate$gate_id, include = TRUE, quadrant = q)),
+                           parent_id = pop_parent)
+      rv$populations[[np$population_id]] <- np
+      rv$populations <- link_child_to_parent(rv$populations, np$population_id, pop_parent)
+      last_pop <- np$population_id
+    }
+    sort_population_tree_state()
+    rv$active_population_id <- last_pop
+    rv$gate_version <- rv$gate_version + 1L
+    rv$cache_version <- -1L; rv$pop_events_map <- list()
+    session$sendCustomMessage("setMode", "navigate"); update_mode_buttons("navigate")
+    autosave()
+    send_full_plot(reset_view = FALSE)
+    showNotification(sprintf("Created quadrant gate with 4 populations under %s.",
+                             rv$populations[[pop_parent]]$name %||% "parent"),
+                     type = "message", duration = 4)
+  })
 
   observeEvent(input$confirm_gate_btn, {
     removeModal(); gate_data <- rv$.pending_gate; req(gate_data); rv$.pending_gate <- NULL
@@ -3785,6 +3874,27 @@ server <- function(input, output, session) {
         send_full_plot(reset_view = FALSE, refresh_pop_masks = TRUE)
       }
     }
+  })
+
+  observeEvent(input$gate_quadrant_move, {
+    edit <- input$gate_quadrant_move; req(edit, edit$gate_id, edit$center)
+    g <- rv$gates[[edit$gate_id]]
+    if (is.null(g) || !identical(g$gate_type, "quadrant")) return()
+    seq_in <- suppressWarnings(as.integer(edit$seq %||% 0L))
+    seq_last <- suppressWarnings(as.integer(rv$.last_gate_edit_seq[[edit$gate_id]] %||% 0L))
+    if (is.finite(seq_in) && is.finite(seq_last) && seq_in <= seq_last) return()
+    rv$.last_gate_edit_seq[[edit$gate_id]] <- seq_in
+    save_undo_snapshot()
+    center <- as.numeric(edit$center)
+    if (is_flow_display_context()) {
+      v <- vertices_display_to_gating_space(list(center), g$x_channel, g$y_channel)
+      center <- as.numeric(v[[1]])
+    }
+    rv$gates[[edit$gate_id]]$center <- center
+    rv$gate_version <- rv$gate_version + 1L
+    rv$cache_version <- -1L; rv$pop_events_map <- list()
+    autosave()
+    send_full_plot(reset_view = FALSE, refresh_pop_masks = TRUE)
   })
 
   observeEvent(input$gate_label_move, {

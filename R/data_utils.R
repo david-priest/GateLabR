@@ -307,18 +307,34 @@ build_gate_overlay_list <- function(gates, gate_order, gate_counts) {
     gate <- gates[[gid]]
     if (is.null(gate)) next
     counts <- gate_counts[[gid]]
-    overlays[[length(overlays) + 1L]] <- list(
-      gate_id = gate$gate_id,
-      name = gate$name,
-      gate_type = gate$gate_type,
-      x_channel = gate$x_channel,
-      y_channel = gate$y_channel,
-      vertices = gate$vertices,
-      color = gate$color,
-      label_offset = gate$label_offset,
-      event_count = if (!is.null(counts)) counts$event_count else NULL,
-      percent_of_parent = if (!is.null(counts)) counts$percent_of_parent else NULL
-    )
+    if (identical(gate$gate_type, "quadrant")) {
+      q <- counts$quadrants
+      overlays[[length(overlays) + 1L]] <- list(
+        gate_id = gate$gate_id,
+        name = gate$name,
+        gate_type = "quadrant",
+        x_channel = gate$x_channel,
+        y_channel = gate$y_channel,
+        center = as.numeric(gate$center),
+        color = gate$color,
+        label_offset = gate$label_offset,
+        quadrant_counts = if (!is.null(q)) vapply(q, function(z) as.numeric(z$event_count %||% 0), numeric(1)) else NULL,
+        quadrant_pcts   = if (!is.null(q)) vapply(q, function(z) as.numeric(z$percent_of_parent %||% 0), numeric(1)) else NULL
+      )
+    } else {
+      overlays[[length(overlays) + 1L]] <- list(
+        gate_id = gate$gate_id,
+        name = gate$name,
+        gate_type = gate$gate_type,
+        x_channel = gate$x_channel,
+        y_channel = gate$y_channel,
+        vertices = gate$vertices,
+        color = gate$color,
+        label_offset = gate$label_offset,
+        event_count = if (!is.null(counts)) counts$event_count else NULL,
+        percent_of_parent = if (!is.null(counts)) counts$percent_of_parent else NULL
+      )
+    }
   }
   overlays
 }

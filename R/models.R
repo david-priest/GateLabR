@@ -46,9 +46,33 @@ new_root_population <- function(event_count = NULL) {
   pop
 }
 
+#' Create a new quadrant gate definition
+#'
+#' A quadrant gate divides a channel pair into four regions at a crosshair
+#' centre. It carries `center = c(cx, cy)` instead of `vertices`; each of its
+#' four quadrants becomes a population (gate_refs reference it with a `quadrant`
+#' index 1-4). Quadrant numbering: 1 = x-/y+, 2 = x+/y+, 3 = x+/y-, 4 = x-/y-.
+new_quadrant_gate <- function(name, x_channel, y_channel, center,
+                              color = NULL, label_offset = c(0, 0)) {
+  list(
+    gate_id = uuid::UUIDgenerate(),
+    name = name,
+    gate_type = "quadrant",
+    x_channel = x_channel,
+    y_channel = y_channel,
+    center = as.numeric(center),
+    color = color %||% GATE_COLORS[1],
+    label_offset = as.numeric(label_offset)
+  )
+}
+
 #' Create a gate reference (for population boolean expressions)
-new_gate_ref <- function(gate_id, include = TRUE) {
-  list(gate_id = gate_id, include = include)
+#' @param quadrant For quadrant gates, which quadrant (1-4) this ref selects;
+#'   NULL for ordinary polygon/rectangle gates.
+new_gate_ref <- function(gate_id, include = TRUE, quadrant = NULL) {
+  ref <- list(gate_id = gate_id, include = include)
+  if (!is.null(quadrant)) ref$quadrant <- as.integer(quadrant)
+  ref
 }
 
 #' Validate a gate definition
@@ -59,14 +83,17 @@ validate_gate <- function(gate) {
   if (is.null(gate$name) || nchar(gate$name) == 0) {
     stop("Gate must have a name")
   }
-  if (!gate$gate_type %in% c("polygon", "rectangle")) {
-    stop("Gate type must be 'polygon' or 'rectangle', got: ", gate$gate_type)
+  if (!gate$gate_type %in% c("polygon", "rectangle", "quadrant")) {
+    stop("Gate type must be 'polygon', 'rectangle' or 'quadrant', got: ", gate$gate_type)
   }
   if (gate$gate_type == "polygon" && length(gate$vertices) < 3) {
     stop("Polygon gate must have at least 3 vertices")
   }
   if (gate$gate_type == "rectangle" && length(gate$vertices) < 2) {
     stop("Rectangle gate must have at least 2 vertices (corners)")
+  }
+  if (gate$gate_type == "quadrant" && length(gate$center) != 2) {
+    stop("Quadrant gate must have a center of length 2")
   }
   TRUE
 }

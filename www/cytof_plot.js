@@ -250,6 +250,14 @@
                 return;
             }
         }
+        // Quadrant gate: a single click places the crosshair centre.
+        if (_mode === 'draw-quadrant') {
+            event.preventDefault();
+            var [qpx, qpy] = _ptr(event);
+            var qzx = _zx(), qzy = _zy();
+            _notifyNewGate('quadrant', [[qzx.invert(qpx), qzy.invert(qpy)]]);
+            return;
+        }
         if (_mode !== 'draw-rect') return;
         event.preventDefault();
         var [px, py] = _ptr(event);
@@ -1045,6 +1053,97 @@
     //   • initial render / data change
     //   • drag END (to sync the fully-updated state)
     //
+    // ── Quadrant gate rendering ────────────────────────────────────────────────
+    // A crosshair at the gate centre dividing the plot into four quadrants, each
+    // labelled with its count/%. The centre is draggable when the gate is
+    // selected; clicking a crosshair line selects the gate.
+    function _drawQuadrantGate(gl, gate, zx, zy, isFlipped, isSel) {
+        var c  = gate.center || [0, 0];
+        var cx = c[0], cy = c[1];
+        var cxp = isFlipped ? zx(cy) : zx(cx);
+        var cyp = isFlipped ? zy(cx) : zy(cy);
+        if (!isFinite(cxp) || !isFinite(cyp)) return;
+        var color = gate.color || '#e41a1c';
+        var lw = isSel ? 2.5 : 1.5;
+        var gg = gl.append('g').attr('class', 'saved-gate quadrant-gate');
+
+        // Visible crosshair (non-interactive).
+        var vline = gg.append('line').attr('class', 'q-vline')
+            .attr('x1', cxp).attr('y1', 0).attr('x2', cxp).attr('y2', H)
+            .attr('stroke', color).attr('stroke-width', lw).style('pointer-events', 'none');
+        var hline = gg.append('line').attr('class', 'q-hline')
+            .attr('x1', 0).attr('y1', cyp).attr('x2', W).attr('y2', cyp)
+            .attr('stroke', color).attr('stroke-width', lw).style('pointer-events', 'none');
+
+        // Transparent hit lines for click-to-select.
+        function _hit(x1, y1, x2, y2) {
+            gg.append('line').attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
+                .attr('stroke', 'rgba(0,0,0,0)').attr('stroke-width', 12)
+                .style('pointer-events', 'stroke').style('cursor', 'pointer')
+                .on('click', function (event) { event.stopPropagation(); _selectGate(gate.gate_id); });
+        }
+        _hit(cxp, 0, cxp, H);
+        _hit(0, cyp, W, cyp);
+
+        // Four quadrant count/% labels, one per screen quadrant. The data quadrant
+        // for each screen corner is derived by inverting the midpoint, so it's
+        // correct in both normal and flipped orientation.
+        var counts = gate.quadrant_counts || [];
+        var pcts   = gate.quadrant_pcts || [];
+        var mids = [[cxp / 2, cyp / 2], [(cxp + W) / 2, cyp / 2],
+                    [(cxp + W) / 2, (cyp + H) / 2], [cxp / 2, (cyp + H) / 2]];
+        mids.forEach(function (pt) {
+            var dataX = isFlipped ? zy.invert(pt[1]) : zx.invert(pt[0]);
+            var dataY = isFlipped ? zx.invert(pt[0]) : zy.invert(pt[1]);
+            var q = (dataX < cx) ? (dataY >= cy ? 1 : 4) : (dataY >= cy ? 2 : 3);
+            var n = counts[q - 1], p = pcts[q - 1];
+            var txt = (n != null ? Number(n).toLocaleString() : '') +
+                      (p != null ? '  ' + Number(p).toFixed(1) + '%' : '');
+            if (!txt) return;
+            var lx = Math.max(6, Math.min(W - 6, pt[0]));
+            var ly = Math.max(12, Math.min(H - 6, pt[1]));
+            var lg = gg.append('g').attr('transform', 'translate(' + lx + ',' + ly + ')')
+                .style('pointer-events', 'none');
+            var t = lg.append('text').attr('text-anchor', 'middle').attr('fill', color)
+                .style('font-size', '11px').style('font-weight', '600').text(txt);
+            var bb = t.node().getBBox();
+            lg.insert('rect', 'text').attr('x', bb.x - 3).attr('y', bb.y - 1)
+                .attr('width', bb.width + 6).attr('height', bb.height + 2)
+                .attr('rx', 2).attr('fill', 'rgba(255,255,255,0.78)');
+        });
+
+        // Draggable centre handle (selected gate only).
+        if (isSel) {
+            var handle = gg.append('circle').attr('class', 'vh')
+                .attr('cx', cxp).attr('cy', cyp).attr('r', VRAD)
+                .attr('fill', color).attr('fill-opacity', 0.9)
+                .attr('stroke', 'white').attr('stroke-width', 2)
+                .style('cursor', 'move').style('pointer-events', 'all');
+            var drag = d3.drag()
+                .on('start', function (event) { _dragging = true; event.sourceEvent.stopPropagation(); })
+                .on('drag', function (event) {
+                    var p = _ptr(event);
+                    var nx = isFlipped ? zy.invert(p[1]) : zx.invert(p[0]);
+                    var ny = isFlipped ? zx.invert(p[0]) : zy.invert(p[1]);
+                    gate.center = [nx, ny];
+                    var ncxp = isFlipped ? zx(ny) : zx(nx);
+                    var ncyp = isFlipped ? zy(nx) : zy(ny);
+                    vline.attr('x1', ncxp).attr('x2', ncxp);
+                    hline.attr('y1', ncyp).attr('y2', ncyp);
+                    handle.attr('cx', ncxp).attr('cy', ncyp);
+                    _showVertexTip(p[0], p[1], zx.invert(p[0]), zy.invert(p[1]));
+                })
+                .on('end', function () {
+                    _dragging = false; _hideVertexTip();
+                    _editSeq++;
+                    _shinyInput('gate_quadrant_move',
+                        { gate_id: gate.gate_id, center: gate.center, seq: _editSeq });
+                    _flushDeferredPlot();
+                });
+            handle.call(drag);
+        }
+    }
+
     function _drawGates(zx, zy) {
         var gl = _g.select('.gate-layer');
         gl.selectAll('*').remove();
@@ -1070,6 +1169,10 @@
             var isNormal  = gate.x_channel === xCh && gate.y_channel === yCh;
             var isFlipped = gate.x_channel === yCh && gate.y_channel === xCh;
             if (!isNormal && !isFlipped) return;
+            if (gate.gate_type === 'quadrant') {
+                _drawQuadrantGate(gl, gate, zx, zy, isFlipped, gate.gate_id === selId);
+                return;
+            }
             if (!gate.vertices || gate.vertices.length < 2) return;
 
             var isSel = gate.gate_id === selId;
