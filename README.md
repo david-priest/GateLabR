@@ -92,14 +92,20 @@ The app opens in your default browser. The three-column layout is:
 
 ### Typical workflow
 
-1. Load an SCE into your R session (e.g. from CATALYST `prepData()`).
-2. `launchGatingApp(sce)`.
+1. Get your events into the app, either way:
+   - **Import `.fcs` files** directly in the app — it builds the SCE and
+     auto-detects flow vs CyTOF (and the per-channel transforms).
+   - Or **load an existing `SingleCellExperiment`** — e.g. from CATALYST
+     `prepData()` (CyTOF) or one you've built from `flowCore` / your own
+     pipeline.
+2. `launchGatingApp()` (then pick a loaded SCE or Import FCS), or
+   `launchGatingApp(sce)` to start from an object already in your session.
 3. Draw gates on the central plot; the gate list and population tree update
    live.
 4. Build populations by referencing gates with AND / OR logic.
-5. Optionally export populations as new `colData` columns on the SCE
-   (`Export Population` button) for downstream analysis with `diffcyt`,
-   `CATALYST::plotAbundances`, etc.
+5. Export results for downstream work — populations as new `colData` columns
+   on the SCE (`Export Population`, e.g. for `diffcyt`, `CATALYST`, or any
+   SCE-aware analysis), or gated events back out as `.fcs`.
 6. Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is embedded
    in `metadata()` and reloaded next time.
 
@@ -159,10 +165,7 @@ MIT — see [`LICENSE`](LICENSE).
 ## Acknowledgements
 
 GateLabR is developed in the [Wing Lab](https://www.ifrec.osaka-u.ac.jp/) at
-the Immunology Frontier Research Center (IFReC), Osaka University. The
-interaction model was prototyped in an earlier Python / Dash app
-(`cytof-gating`) and ported to R / Shiny on `SingleCellExperiment` to fit
-Bioconductor workflows.
+the Immunology Frontier Research Center (IFReC), Osaka University.
 
 Built on top of the Bioconductor stack
 (`SingleCellExperiment`, `SummarizedExperiment`, `flowCore`), the
