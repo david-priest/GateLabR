@@ -1084,6 +1084,17 @@ ui <- fluidPage(
                                style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;")
                 )
               ),
+              tags$div(style = "display:flex; flex-direction:column; gap:3px;",
+                tags$label("Shift all", style = "font-size:11px; color:#555; margin:0; font-weight:normal;"),
+                tags$div(style = "display:flex; gap:4px;",
+                  actionButton("division_shift_down_btn", "←", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;",
+                               title = "Nudge all gates toward lower dye (left)"),
+                  actionButton("division_shift_up_btn", "→", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;",
+                               title = "Nudge all gates toward higher dye (right)")
+                )
+              ),
               tags$div(numericInput("division_spacing", "Spacing (even):", value = NA, min = 0,
                                     step = 0.05, width = "110px")),
               tags$div(numericInput("division_xmin", "X min:", value = NA, step = 0.2, width = "92px")),
@@ -3691,14 +3702,37 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
-  # Changing N (typed, or via +Div / -Div) reseeds the WORKING ladder to N gates.
+  # A typical inter-gate gap for the current working ladder (falls back to a
+  # fraction of the x-range when there are <2 gates).
+  division_typical_gap <- function(b) {
+    b <- sort(as.numeric(b))
+    g <- if (length(b) >= 2L) stats::median(diff(b)) else NA_real_
+    if (!is.finite(g) || g <= 0) {
+      xr <- suppressWarnings(as.numeric(rv$division_xrange))
+      span <- if (length(xr) == 2L) diff(xr) else if (length(b)) max(abs(b)) else 8
+      g <- span / (as.integer(rv$division_n %||% 6L) + 2L)
+    }
+    g
+  }
+
+  # Changing N (typed, or via +Div / -Div) adjusts the WORKING ladder to N gates
+  # WITHOUT disturbing the existing ones: add/remove gates at the dim end, keeping
+  # the brighter gates exactly in place. Only a full reseed when there are none.
   observeEvent(input$division_n, {
     n <- suppressWarnings(as.integer(input$division_n))
     if (is.na(n) || n < 1L) return()
     n <- min(11L, n)                                   # N+1 <= 12 Paired colours
     if (identical(as.integer(rv$division_n), n)) return()
     rv$division_n <- n
-    rv$division_boundaries <- numeric(0)               # force reseed to new N
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (length(b)) {
+      gap <- division_typical_gap(b)
+      while (length(b) < n) b <- c(min(b) - gap, b)    # extend at the dim end
+      while (length(b) > n) b <- b[-1]                 # drop the dimmest
+      rv$division_boundaries <- sort(b)
+    } else {
+      rv$division_boundaries <- numeric(0)             # nothing yet -> seed on render
+    }
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
@@ -3711,11 +3745,34 @@ server <- function(input, output, session) {
                        value = max(1L, as.integer(rv$division_n %||% 6L) - 1L))
   })
 
-  # Re-seed the WORKING boundaries (even spacing from the displayed data).
+  # "Space evenly" tidies the CURRENT gates to a uniform gap WITHOUT throwing them
+  # away: anchor the brightest cut (Div0/Div1, rightmost) and re-lay the rest at
+  # the current median gap. Only reseed from the data when there are no gates yet.
   observeEvent(input$division_space_evenly_btn, {
-    rv$division_boundaries <- numeric(0)
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (length(b) >= 2L) {
+      anchor <- max(b)
+      sp <- stats::median(diff(b))
+      if (!is.finite(sp) || sp <= 0) sp <- (max(b) - min(b)) / (length(b) - 1L)
+      rv$division_boundaries <- sort(anchor - sp * (seq_along(b) - 1L))
+    } else {
+      rv$division_boundaries <- numeric(0)
+    }
     send_division_plot()
   })
+
+  # Nudge ALL gates along the dye axis together (preserves relative spacing).
+  shift_division_gates <- function(dir) {
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (!length(b)) return()
+    xr <- suppressWarnings(as.numeric(rv$division_xrange))
+    span <- if (length(xr) == 2L) diff(xr) else diff(range(b))
+    if (!is.finite(span) || span <= 0) span <- 8
+    rv$division_boundaries <- sort(b + dir * 0.02 * span)
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }
+  observeEvent(input$division_shift_down_btn, { shift_division_gates(-1) })
+  observeEvent(input$division_shift_up_btn,   { shift_division_gates(+1) })
 
   # User-fixed x-axis (min/max). Re-render when edited; echo-guarded so the
   # seeding updateNumericInput() above doesn't loop.

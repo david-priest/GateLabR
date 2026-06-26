@@ -130,31 +130,44 @@ export_population_to_coldata <- function(sce, population_id, pop_name,
 
 #' Seed N division-gate boundaries from a dye-channel value vector.
 #'
-#' Best-effort: finds the brightest (undivided) peak and the first valley to its
-#' left, then lays down `n` evenly-spaced boundaries stepping down from there.
-#' The Division tab lets the user drag each line afterwards, so this only needs
-#' to be a reasonable starting point; falls back to even quantile spacing if the
-#' peak/valley heuristics misfire. Returns a sorted-ascending numeric vector.
+#' Models CFSE/CellTrace dilution as evenly-spaced peaks on the dye axis: it finds
+#' the brightest (undivided, Div0) peak, estimates the inter-division spacing from
+#' the median gap between prominent density peaks (falling back to a fraction of
+#' the bulk range), then places boundaries at the VALLEYS between successive
+#' division peaks (p0 - spacing/2, p0 - 3·spacing/2, …), anchored on the bright end.
+#' The Division tab lets the user drag/nudge afterwards, so this just needs to be a
+#' good starting point. Returns a sorted-ascending numeric vector.
 seed_division_boundaries <- function(values, n = 6) {
   values <- values[is.finite(values)]
   n <- as.integer(n)
   if (length(values) < 10L || n < 1L) return(numeric(0))
-  rng <- stats::quantile(values, c(0.005, 0.995), names = FALSE)
-  d <- tryCatch(stats::density(values, n = 512), error = function(e) NULL)
-  peak_x <- if (!is.null(d)) {
-    up <- d$x > stats::median(values)
-    if (any(up)) d$x[up][which.max(d$y[up])] else rng[2]
-  } else rng[2]
-  first_valley <- NA_real_
-  if (!is.null(d)) {
-    mins <- which(diff(sign(diff(d$y))) > 0) + 1L     # local minima (slope - -> +)
-    left <- mins[d$x[mins] < peak_x]
-    if (length(left)) first_valley <- d$x[left[length(left)]]
+  rng <- stats::quantile(values, c(0.002, 0.998), names = FALSE)
+  span <- rng[2] - rng[1]
+  d <- tryCatch(stats::density(values, n = 1024), error = function(e) NULL)
+  if (is.null(d) || !is.finite(span) || span <= 0) {
+    sp <- if (is.finite(span) && span > 0) span / (n + 2L) else 0.5
+    p0 <- if (is.null(d)) stats::quantile(values, 0.9, names = FALSE) else rng[2]
+    return(sort(p0 - sp * (seq_len(n) - 0.5)))
   }
-  if (!is.finite(first_valley)) first_valley <- peak_x - 0.12 * (rng[2] - rng[1])
-  spacing <- (first_valley - rng[1]) / max(1L, n)
-  if (!is.finite(spacing) || spacing <= 0) spacing <- (rng[2] - rng[1]) / (n + 2L)
-  sort(first_valley - spacing * (seq_len(n) - 1L))
+  # prominent local maxima of the density
+  dy <- d$y
+  is_peak <- c(FALSE, diff(sign(diff(dy))) < 0, FALSE)
+  pk_x <- d$x[is_peak]; pk_y <- dy[is_peak]
+  if (length(pk_x)) {
+    keep <- pk_y >= 0.05 * max(dy)
+    pk_x <- pk_x[keep]; pk_y <- pk_y[keep]
+  }
+  # brightest (undivided) peak = rightmost prominent peak
+  p0 <- if (length(pk_x)) max(pk_x) else stats::quantile(values, 0.9, names = FALSE)
+  # inter-division spacing = median gap between prominent peaks (ignoring wobble)
+  spacing <- NA_real_
+  if (length(pk_x) >= 2L) {
+    gaps <- diff(sort(pk_x))
+    gaps <- gaps[gaps > 0.04 * span]
+    if (length(gaps)) spacing <- stats::median(gaps)
+  }
+  if (!is.finite(spacing) || spacing <= 0) spacing <- span / (n + 2L)
+  sort(p0 - spacing * (seq_len(n) - 0.5))
 }
 
 #' Assign each cell an integer division level from sorted boundaries.
