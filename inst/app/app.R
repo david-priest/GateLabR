@@ -113,7 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
-    tags$script(src = "division_plot.js?v=20260626d"),
+    tags$script(src = "division_plot.js?v=20260626e"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -1092,6 +1092,8 @@ ui <- fluidPage(
                                     step = 10, width = "90px")),
               tags$div(numericInput("division_subsample", "Subsample:", value = 50000, min = 1000,
                                     step = 1000, width = "110px")),
+              tags$div(selectInput("division_ymarker", "Y marker (biplot):",
+                                   choices = c("(none)" = ""), width = "170px")),
               tags$div(style = "font-size:11px; color:#888; max-width:240px;",
                 "Drag any line to fit. Div0 = brightest (undivided).")
             ),
@@ -1244,7 +1246,7 @@ server <- function(input, output, session) {
     .illust_ui_restore_version = 0L,   # bumped to trigger deferred restore observer
     illust_presets = list(),           # named illustration presets stored in workspace
     # ── Division profiling tab (isolated from rv$gates) ──
-    division_channel = NULL, division_n = 6L,
+    division_channel = NULL, division_ymarker = NULL, division_n = 6L,
     division_boundaries = numeric(0),          # the single WORKING boundary set (stable across sample selection)
     division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
     division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
@@ -1500,7 +1502,8 @@ server <- function(input, output, session) {
       division_channel = rv$division_channel,
       division_xrange = rv$division_xrange,
       division_bins = rv$division_bins,
-      division_subsample = rv$division_subsample
+      division_subsample = rv$division_subsample,
+      division_ymarker = rv$division_ymarker
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1536,6 +1539,7 @@ server <- function(input, output, session) {
       division_xrange      = rv$division_xrange,
       division_bins        = rv$division_bins,
       division_subsample   = rv$division_subsample,
+      division_ymarker     = rv$division_ymarker,
       comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
@@ -1624,6 +1628,7 @@ server <- function(input, output, session) {
       rv$division_subsample <- ws$division_subsample
       updateNumericInput(session, "division_subsample", value = ws$division_subsample)
     }
+    if (!is.null(ws$division_ymarker)) rv$division_ymarker <- ws$division_ymarker
     if (!is.null(ws$illust_settings)) {
       rv$.illust_settings_pending     <- ws$illust_settings
       rv$.illust_ui_restore_version   <- isolate(rv$.illust_ui_restore_version) + 1L
@@ -2492,6 +2497,7 @@ server <- function(input, output, session) {
       rv$division_xrange <- ws$division_xrange %||% NULL
       rv$division_bins <- ws$division_bins %||% 120L
       rv$division_subsample <- ws$division_subsample %||% 50000L
+      rv$division_ymarker <- ws$division_ymarker %||% NULL
       updateNumericInput(session, "division_bins", value = rv$division_bins)
       updateNumericInput(session, "division_subsample", value = rv$division_subsample)
       if (isTRUE(sync_illust_palette_state())) {
@@ -2528,6 +2534,7 @@ server <- function(input, output, session) {
       rv$division_xrange <- NULL
       rv$division_bins <- 120L
       rv$division_subsample <- 50000L
+      rv$division_ymarker <- NULL
       updateNumericInput(session, "division_bins", value = 120L)
       updateNumericInput(session, "division_subsample", value = 50000L)
       rv$.illust_settings_pending <- NULL
@@ -3654,7 +3661,7 @@ server <- function(input, output, session) {
     grDevices::colorRampPalette(paired)(k)
   }
 
-  # keep the dye-channel dropdown populated; guess a CFSE/CellTrace-like default
+  # keep the dye-channel + biplot Y-marker dropdowns populated; guess defaults
   observeEvent(rv$channels, {
     chs <- rv$channels
     if (!length(chs)) return()
@@ -3662,6 +3669,10 @@ server <- function(input, output, session) {
     if (is.na(guess)) guess <- chs[1]
     updateSelectInput(session, "division_channel", choices = chs,
                       selected = rv$division_channel %||% guess)
+    yguess <- chs[grep("Ki.?67|MKI67|PCNA", chs, ignore.case = TRUE)][1]
+    if (is.na(yguess)) yguess <- ""
+    updateSelectInput(session, "division_ymarker", choices = c("(none)" = "", chs),
+                      selected = rv$division_ymarker %||% yguess)
   }, ignoreInit = FALSE)
 
   observeEvent(input$division_channel, {
@@ -3669,6 +3680,14 @@ server <- function(input, output, session) {
     rv$division_channel <- input$division_channel
     rv$division_xrange <- NULL          # new channel -> reseed the x-axis from its data
     rv$division_boundaries <- numeric(0) # ...and reseed the working ladder for its scale
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Biplot Y marker — pure display; "(none)" hides the biplot.
+  observeEvent(input$division_ymarker, {
+    ym <- input$division_ymarker %||% ""
+    if (identical(rv$division_ymarker %||% "", ym)) return()
+    rv$division_ymarker <- if (nzchar(ym)) ym else NULL
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
@@ -3834,6 +3853,26 @@ server <- function(input, output, session) {
       bin_labels = paste0("Div", seq_len(nb + 1L) - 1L),
       point_alpha = 0.4
     )
+    # Biplot data: dye (x, shared scale + division lines) vs a picked Y marker,
+    # paired on the SAME displayed cells (both finite), capped for canvas perf.
+    ym <- rv$division_ymarker %||% input$division_ymarker
+    if (!is.null(ym) && nzchar(ym) && ym %in% colnames(rv$assay_data)) {
+      xraw <- as.numeric(rv$assay_data[idx, ch])
+      yraw <- as.numeric(rv$assay_data[idx, ym])
+      ok <- is.finite(xraw) & is.finite(yraw)
+      bx <- xraw[ok]; by <- yraw[ok]
+      bsub <- min(sub, 30000L)
+      if (length(bx) > bsub) {
+        keep <- round(seq(1, length(bx), length.out = bsub))
+        bx <- bx[keep]; by <- by[keep]
+      }
+      if (length(bx)) {
+        payload$bx_b64 <- encode_float32_base64(bx)
+        payload$y_b64 <- encode_float32_base64(by)
+        payload$y_label <- ym
+        payload$y_range <- compute_axis_range(by)
+      }
+    }
     rv$.division_msg_seq <- as.integer(rv$.division_msg_seq %||% 0L) + 1L
     payload$`_div_seq` <- rv$.division_msg_seq
     rv$division_plot_data <- payload

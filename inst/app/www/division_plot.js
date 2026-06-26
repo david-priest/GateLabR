@@ -14,6 +14,7 @@
 
   var CTNR = "division-plot-container";
   var H = 430;
+  var BH = 330;   // biplot height (only drawn when a Y marker is supplied)
   var M = { top: 26, right: 16, bottom: 46, left: 58 };
   var PAIRED = ["#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c",
                 "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928"];
@@ -36,7 +37,8 @@
     return S.palette[Math.max(0, Math.min(S.palette.length - 1, lv))];
   }
 
-  // recolour bars + reposition per-bin labels for the current S.bounds
+  // recolour bars + reposition per-bin labels for the current S.bounds; the
+  // biplot's mirror lines track live too (its points recolour on drag-end).
   function _refresh() {
     S.bars.attr("fill", function (d, i) { return _colorFor(S.xr[0] + (i + 0.5) * S.binW); });
     var edges = [S.xr[0]].concat(S.bounds).concat([S.xr[1]]);
@@ -45,6 +47,35 @@
               var lv = _level((edges[k] + edges[k + 1]) / 2, S.bounds);
               return (S.binLabels[lv] || ("Div" + lv));
             });
+    if (S.biplot) _drawBiplotLines();
+  }
+
+  // canvas scatter of (dye x, marker y), coloured by division level
+  function _drawBiplot() {
+    var B = S.biplot; if (!B) return;
+    var ctx = B.ctx;
+    ctx.clearRect(0, 0, B.cw, B.ch);
+    ctx.globalAlpha = B.alpha;
+    for (var i = 0; i < B.bx.length; i++) {
+      var lv = _level(B.bx[i], S.bounds);
+      ctx.fillStyle = S.palette[Math.max(0, Math.min(S.palette.length - 1, lv))];
+      var px = B.ox + B.xs(B.bx[i]);
+      var py = B.oy + B.ys(B.by[i]);
+      ctx.beginPath(); ctx.arc(px, py, 1.5, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // read-only dashed division lines mirrored onto the biplot
+  function _drawBiplotLines() {
+    var B = S.biplot; if (!B) return;
+    var sel = B.lineLayer.selectAll("line.dl").data(S.bounds);
+    sel.enter().append("line").attr("class", "dl")
+      .merge(sel)
+      .attr("x1", function (d) { return B.xs(d); }).attr("x2", function (d) { return B.xs(d); })
+      .attr("y1", 0).attr("y2", B.ih)
+      .attr("stroke", "#111").attr("stroke-width", 1).attr("stroke-dasharray", "3,3")
+      .attr("opacity", 0.7);
+    sel.exit().remove();
   }
 
   function _emit() {
@@ -93,6 +124,7 @@
     var ys = d3.scaleSqrt().domain([0, ymax]).range([ih, 0]).nice();
 
     d3.select(el).selectAll("svg").remove();
+    d3.select(el).selectAll(".division-biplot-wrap").remove();
     var svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
     var g = svg.append("g").attr("transform", "translate(" + M.left + "," + M.top + ")");
 
@@ -154,7 +186,7 @@
           _refresh();
           _showTip(npx, nx);
         })
-        .on("end", function () { _dragging = false; _hideTip(); _emit(); }));
+        .on("end", function () { _dragging = false; _hideTip(); if (S.biplot) _drawBiplot(); _emit(); }));
     });
 
     // drag tooltip (hidden until a drag)
@@ -164,10 +196,48 @@
     S.tip.append("text").attr("y", -3).attr("text-anchor", "middle")
       .attr("font-size", 10).attr("fill", "#fff");
 
+    // ── biplot (optional): dye x (shared scale + division lines) vs Y marker ──
+    S.biplot = null;
+    if (data.bx_b64 && data.y_b64) {
+      var bx = _decodeF32(data.bx_b64), by = _decodeF32(data.y_b64);
+      var yr = data.y_range || [d3.min(by) || 0, d3.max(by) || 1];
+      var bih = BH - M.top - M.bottom;
+      var bys = d3.scaleLinear().domain(yr).range([bih, 0]).nice();
+
+      var wrap = d3.select(el).append("div")
+        .attr("class", "division-biplot-wrap")
+        .style("position", "relative").style("width", W + "px").style("height", BH + "px");
+      var canvas = wrap.append("canvas")
+        .attr("width", W).attr("height", BH)
+        .style("position", "absolute").style("left", "0").style("top", "0").node();
+      var bsvg = wrap.append("svg").attr("width", W).attr("height", BH)
+        .style("position", "absolute").style("left", "0").style("top", "0");
+      var bg = bsvg.append("g").attr("transform", "translate(" + M.left + "," + M.top + ")");
+      bg.append("g").attr("transform", "translate(0," + bih + ")")
+        .call(d3.axisBottom(xs).ticks(6)).attr("font-size", 12);
+      bg.append("g").call(d3.axisLeft(bys).ticks(5)).attr("font-size", 12);
+      bsvg.append("text").attr("x", M.left + iw / 2).attr("y", BH - 8)
+        .attr("text-anchor", "middle").attr("font-size", 14)
+        .text((data.x_label || "channel") + " expression");
+      bsvg.append("text").attr("transform", "rotate(-90)")
+        .attr("x", -(M.top + bih / 2)).attr("y", 14)
+        .attr("text-anchor", "middle").attr("font-size", 14).text(data.y_label || "marker");
+      var lineLayer = bg.append("g").attr("class", "division-biplot-lines");
+
+      S.biplot = { ctx: canvas.getContext("2d"), cw: W, ch: BH, bx: bx, by: by,
+                   xs: xs, ys: bys, ox: M.left, oy: M.top, ih: bih,
+                   lineLayer: lineLayer, alpha: data.point_alpha || 0.4 };
+      _drawBiplot();
+      _drawBiplotLines();
+    }
+
     _refresh();
   }
 
-  function clear() { var el = _container(); if (el) d3.select(el).selectAll("svg").remove(); }
+  function clear() {
+    var el = _container();
+    if (el) { d3.select(el).selectAll("svg").remove(); d3.select(el).selectAll(".division-biplot-wrap").remove(); }
+  }
 
   function _register() {
     if (!window.Shiny) return;
