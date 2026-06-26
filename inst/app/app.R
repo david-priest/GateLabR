@@ -1069,7 +1069,7 @@ ui <- fluidPage(
               actionButton("division_load_btn", "Load saved", class = "btn-sm btn-default",
                            title = "Load the selected sample's previously-applied boundaries (one sample selected)"),
               actionButton("division_write_btn", "Apply to selected", class = "btn-sm btn-info",
-                           title = "Apply the current boundaries to every selected sample: store per-sample, write Div0..DivN into colData$div, and persist to metadata"),
+                           title = "Apply the current boundaries to every selected sample: store per-sample, write Div0..DivN into colData$div for the WHOLE sample (ignores the population filter), and persist to metadata"),
               tags$span(textOutput("division_status", inline = TRUE),
                         style = "font-size:11px; color:#666;")
             ),
@@ -1109,8 +1109,9 @@ ui <- fluidPage(
                                    choices = c("(none)" = ""), width = "170px")),
               tags$div(numericInput("division_point_alpha", "Biplot opacity:", value = 0.4,
                                     min = 0.02, max = 1, step = 0.05, width = "120px")),
-              tags$div(style = "font-size:11px; color:#888; max-width:240px;",
-                "Drag any line to fit. Div0 = brightest (undivided).")
+              tags$div(style = "font-size:11px; color:#888; max-width:320px;",
+                "Drag any line to fit. Div0 = brightest. Display follows the sample + population filters; ",
+                tags$b("Apply writes the WHOLE sample"), " (ignores the population filter).")
             ),
             tags$div(id = "division-plot-container",
                      style = "padding:8px 4px; min-height:430px; position:relative; width:75%; min-width:560px;")
@@ -1265,6 +1266,7 @@ server <- function(input, output, session) {
     division_boundaries = numeric(0),          # the single WORKING boundary set (stable across sample selection)
     division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
     division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
+    division_pop_label = NULL,                  # active population filter label (display only)
     division_spacing = NA_real_,               # last even-spacing gap (display hint + override)
     division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
     division_bins = 120L,                       # histogram bin count
@@ -3872,13 +3874,33 @@ server <- function(input, output, session) {
     sort(if (is.null(mask)) unique(sid) else unique(sid[which(mask)]))
   }
 
-  # Cell indices of the currently-selected samples (combined), for the histogram.
+  # Union mask of the displayed populations (checked tree boxes, else the active
+  # population), WITHOUT touching the gating tab's display-mask cache. NULL = all.
+  division_pop_mask <- function() {
+    ids <- get_display_pop_ids()
+    if (!length(ids)) return(NULL)
+    masks <- lapply(ids, get_pop_mask)
+    masks <- masks[!vapply(masks, is.null, logical(1))]
+    if (!length(masks)) return(NULL)
+    Reduce(`|`, masks)
+  }
+
+  # Cell indices DISPLAYED in the histogram/biplot: the selected samples AND the
+  # population filter from the tree (so gating the right-hand population narrows
+  # what you see). NOTE: this is display only — "Apply to selected" deliberately
+  # writes the WHOLE sample (see division_cell_idx), not this filtered subset.
   division_display_idx <- function() {
-    mask <- get_effective_sample_mask(for_plot = FALSE)
-    if (is.null(mask)) seq_len(nrow(rv$assay_data)) else which(mask)
+    n <- nrow(rv$assay_data)
+    smp <- get_effective_sample_mask(for_plot = FALSE)
+    pop <- division_pop_mask()
+    if (is.null(smp) && is.null(pop)) return(seq_len(n))
+    m <- if (is.null(smp)) rep(TRUE, n) else smp
+    if (!is.null(pop) && length(pop) == n) m <- m & pop
+    which(m)
   }
 
   # Cell indices belonging to one APPLIED sample profile (used by Apply's write).
+  # WHOLE sample — independent of the population filter on the display.
   division_cell_idx <- function(smp) {
     if (is.null(smp) || identical(smp, "__all__")) return(seq_len(nrow(rv$assay_data)))
     which(as.character(SummarizedExperiment::colData(rv$sce)$sample_id) == smp)
@@ -3892,6 +3914,15 @@ server <- function(input, output, session) {
     if (is.null(ch) || !ch %in% colnames(rv$assay_data)) return()
     rv$division_channel <- ch
     rv$division_selected_samples <- selected_division_samples()
+    # population filter label (display only) for the status line
+    pids <- get_display_pop_ids()
+    rv$division_pop_label <- if (!length(pids) ||
+        (length(pids) == 1L && identical(pids[1], rv$root_population_id))) {
+      NULL
+    } else {
+      paste(vapply(pids, function(i) rv$populations[[i]]$name %||% i, character(1)),
+            collapse = ", ")
+    }
     idx <- division_display_idx()
     vals <- as.numeric(rv$assay_data[idx, ch]); vals <- vals[is.finite(vals)]
     if (!length(vals)) {
@@ -3998,6 +4029,11 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
   observeEvent(rv$sample_filter_key, {
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+  # also re-render when the population selection / gates change, so the display
+  # follows the right-hand population filter (write target is unaffected).
+  observeEvent(list(rv$active_population_id, rv$.selected_pop_ids, rv$gate_version), {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
@@ -4125,7 +4161,11 @@ server <- function(input, output, session) {
       paste0(format(pd$n_drawn %||% pd$n_events, big.mark = ","), "/",
              format(pd$n_events, big.mark = ","), " events  |  ")
     } else ""
-    paste0(sel_txt, "  |  ", ev, nb, " gates (Div0..Div", nb, ")  |  ", applied_txt)
+    pop_txt <- if (!is.null(rv$division_pop_label)) {
+      paste0("  |  display filtered to pop: ", rv$division_pop_label,
+             " (Apply still writes whole sample)")
+    } else ""
+    paste0(sel_txt, "  |  ", ev, nb, " gates (Div0..Div", nb, ")  |  ", applied_txt, pop_txt)
   })
 
   observeEvent(input$gating_max_events, {
