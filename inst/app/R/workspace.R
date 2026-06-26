@@ -14,7 +14,9 @@ save_workspace <- function(sce, gates, gate_order, populations,
                            illust_presets = list(),
                            division_profiles = list(),
                            division_channel = NULL,
-                           division_xrange = NULL) {
+                           division_xrange = NULL,
+                           division_bins = NULL,
+                           division_subsample = NULL) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
@@ -31,6 +33,8 @@ save_workspace <- function(sce, gates, gate_order, populations,
     division_profiles = division_profiles,
     division_channel = division_channel,
     division_xrange = division_xrange,
+    division_bins = division_bins,
+    division_subsample = division_subsample,
     version = 3L,
     saved_at = as.character(Sys.time())
   )

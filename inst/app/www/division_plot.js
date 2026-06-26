@@ -81,7 +81,8 @@
     var binLabels = data.bin_labels || [];
 
     var xs = d3.scaleLinear().domain(xr).range([0, iw]);
-    var nbin = 120, binW = (xr[1] - xr[0]) / nbin;
+    var nbin = (data.bins && data.bins >= 2) ? Math.round(data.bins) : 120;
+    var binW = (xr[1] - xr[0]) / nbin;
     var counts = new Array(nbin).fill(0);
     for (var i = 0; i < x.length; i++) {
       var v = x[i];

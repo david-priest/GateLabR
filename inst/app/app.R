@@ -113,7 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
-    tags$script(src = "division_plot.js?v=20260626b"),
+    tags$script(src = "division_plot.js?v=20260626c"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -1079,6 +1079,10 @@ ui <- fluidPage(
               ),
               tags$div(numericInput("division_xmin", "X min:", value = NA, step = 0.2, width = "92px")),
               tags$div(numericInput("division_xmax", "X max:", value = NA, step = 0.2, width = "92px")),
+              tags$div(numericInput("division_bins", "Bins:", value = 120, min = 10, max = 400,
+                                    step = 10, width = "90px")),
+              tags$div(numericInput("division_subsample", "Subsample:", value = 50000, min = 1000,
+                                    step = 1000, width = "110px")),
               tags$div(style = "font-size:11px; color:#888; max-width:240px;",
                 "Drag any line to fit. Div0 = brightest (undivided).")
             ),
@@ -1236,6 +1240,8 @@ server <- function(input, output, session) {
     division_by_sample = list(),               # sample_id -> list(boundaries, n) (PER SAMPLE)
     division_current_sample = NULL,            # the single sample_id being profiled
     division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
+    division_bins = 120L,                       # histogram bin count
+    division_subsample = 50000L,                # events drawn in the histogram (stride)
     division_plot_data = NULL, .division_msg_seq = 0L,
     .last_division_drag_seq = 0L
   )
@@ -1482,7 +1488,9 @@ server <- function(input, output, session) {
       illust_presets = rv$illust_presets %||% list(),
       division_profiles = rv$division_by_sample %||% list(),
       division_channel = rv$division_channel,
-      division_xrange = rv$division_xrange
+      division_xrange = rv$division_xrange,
+      division_bins = rv$division_bins,
+      division_subsample = rv$division_subsample
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1516,6 +1524,8 @@ server <- function(input, output, session) {
       division_profiles    = rv$division_by_sample %||% list(),
       division_channel     = rv$division_channel,
       division_xrange      = rv$division_xrange,
+      division_bins        = rv$division_bins,
+      division_subsample   = rv$division_subsample,
       comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
@@ -1596,6 +1606,14 @@ server <- function(input, output, session) {
     if (!is.null(ws$division_profiles)) rv$division_by_sample <- ws$division_profiles
     if (!is.null(ws$division_channel))  rv$division_channel  <- ws$division_channel
     if (!is.null(ws$division_xrange))   rv$division_xrange    <- ws$division_xrange
+    if (!is.null(ws$division_bins)) {
+      rv$division_bins <- ws$division_bins
+      updateNumericInput(session, "division_bins", value = ws$division_bins)
+    }
+    if (!is.null(ws$division_subsample)) {
+      rv$division_subsample <- ws$division_subsample
+      updateNumericInput(session, "division_subsample", value = ws$division_subsample)
+    }
     if (!is.null(ws$illust_settings)) {
       rv$.illust_settings_pending     <- ws$illust_settings
       rv$.illust_ui_restore_version   <- isolate(rv$.illust_ui_restore_version) + 1L
@@ -2462,6 +2480,10 @@ server <- function(input, output, session) {
       rv$division_by_sample <- ws$division_profiles %||% list()
       rv$division_channel <- ws$division_channel %||% NULL
       rv$division_xrange <- ws$division_xrange %||% NULL
+      rv$division_bins <- ws$division_bins %||% 120L
+      rv$division_subsample <- ws$division_subsample %||% 50000L
+      updateNumericInput(session, "division_bins", value = rv$division_bins)
+      updateNumericInput(session, "division_subsample", value = rv$division_subsample)
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
       }
@@ -2494,6 +2516,10 @@ server <- function(input, output, session) {
       rv$division_by_sample <- list()
       rv$division_channel <- NULL
       rv$division_xrange <- NULL
+      rv$division_bins <- 120L
+      rv$division_subsample <- 50000L
+      updateNumericInput(session, "division_bins", value = 120L)
+      updateNumericInput(session, "division_subsample", value = 50000L)
       rv$.illust_settings_pending <- NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
@@ -3676,6 +3702,24 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
+  # Histogram bin count — pure display, re-render only (boundaries untouched).
+  observeEvent(input$division_bins, {
+    b <- suppressWarnings(as.integer(input$division_bins))
+    if (is.na(b) || b < 2L) return()
+    if (identical(as.integer(rv$division_bins), b)) return()
+    rv$division_bins <- b
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Subsampling depth for the drawn histogram — pure display, re-render only.
+  observeEvent(input$division_subsample, {
+    s <- suppressWarnings(as.integer(input$division_subsample))
+    if (is.na(s) || s < 1L) return()
+    if (identical(as.integer(rv$division_subsample), s)) return()
+    rv$division_subsample <- s
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
   # Division gates are PER SAMPLE. current_division_sample() returns the single
   # sample_id selected in the sample filter, "__all__" when the SCE has no
   # sample_id column, or NULL when 0 or >1 samples are selected (gate one at a time).
@@ -3733,13 +3777,16 @@ server <- function(input, output, session) {
     }
     x_range <- xr
     ticks <- generate_channel_ticks(ch, x_range)
+    sub <- suppressWarnings(as.integer(rv$division_subsample %||% 50000L))
+    if (is.na(sub) || sub < 1L) sub <- length(vals)
     vp <- vals
-    if (length(vp) > rv$max_events && is.finite(rv$max_events)) {
-      vp <- vp[round(seq(1, length(vp), length.out = rv$max_events))]
-    }
+    if (length(vp) > sub) vp <- vp[round(seq(1, length(vp), length.out = sub))]
+    bins <- suppressWarnings(as.integer(rv$division_bins %||% 120L))
+    if (is.na(bins) || bins < 2L) bins <- 120L
     payload <- list(
       x_b64 = encode_float32_base64(vp), n_events = length(vals),
-      x_range = x_range, x_label = ch,
+      n_drawn = length(vp),
+      x_range = x_range, x_label = ch, bins = bins,
       x_is_logicle = !is.null(ticks), x_logicle_ticks = ticks,
       boundaries = sort(as.numeric(rv$division_boundaries)),
       palette = division_palette(n + 1L),
@@ -3840,9 +3887,22 @@ server <- function(input, output, session) {
     smp <- rv$division_current_sample
     samp_txt <- if (is.null(smp)) "⚠ select a single sample"
                 else if (identical(smp, "__all__")) "all cells"
-                else paste0("sample ", smp)
-    paste0(samp_txt, "  |  ", rv$division_plot_data$n_events, " events  |  ",
-           length(rv$division_boundaries), " boundaries  |  Div0..Div", rv$division_n)
+                else paste0("editing ", smp)
+    # which samples → colData$div on write (those with saved boundaries)
+    saved <- names(Filter(function(p) length(p$boundaries %||% numeric(0)) > 0,
+                          rv$division_by_sample))
+    saved_txt <- if (!length(saved)) "no profiles saved"
+                 else if (identical(saved, "__all__")) "→ writes all cells"
+                 else paste0("→ writes ", length(saved), " sample",
+                             if (length(saved) == 1L) "" else "s", ": ",
+                             paste(utils::head(saved, 6), collapse = ", "),
+                             if (length(saved) > 6L) " …" else "")
+    pd <- rv$division_plot_data
+    drawn <- pd$n_drawn %||% pd$n_events
+    paste0(samp_txt, "  |  ", format(drawn, big.mark = ","), "/",
+           format(pd$n_events, big.mark = ","), " events  |  ",
+           length(rv$division_boundaries), " gates (Div0..Div", rv$division_n, ")  |  ",
+           saved_txt)
   })
 
   observeEvent(input$gating_max_events, {
