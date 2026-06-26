@@ -222,6 +222,20 @@
       bsvg.append("text").attr("transform", "rotate(-90)")
         .attr("x", -(M.top + bih / 2)).attr("y", 14)
         .attr("text-anchor", "middle").attr("font-size", 14).text(data.y_label || "marker");
+      // 2D KDE contour overlay (black lines), drawn under the division lines
+      if (data.contours && data.contours.length) {
+        var cline = d3.line()
+          .x(function (p) { return xs(p[0]); })
+          .y(function (p) { return bys(p[1]); });
+        var clayer = bg.append("g").attr("class", "division-biplot-contours");
+        data.contours.forEach(function (c) {
+          if (!c.x || !c.x.length) return;
+          var pts = c.x.map(function (xx, i) { return [xx, c.y[i]]; });
+          clayer.append("path").attr("d", cline(pts))
+            .attr("fill", "none").attr("stroke", "#000")
+            .attr("stroke-width", 0.5).attr("opacity", 0.35);
+        });
+      }
       var lineLayer = bg.append("g").attr("class", "division-biplot-lines");
 
       S.biplot = { ctx: canvas.getContext("2d"), cw: W, ch: BH, bx: bx, by: by,

@@ -113,7 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
-    tags$script(src = "division_plot.js?v=20260626e"),
+    tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -1111,7 +1111,7 @@ ui <- fluidPage(
                 "Drag any line to fit. Div0 = brightest (undivided).")
             ),
             tags$div(id = "division-plot-container",
-                     style = "padding:8px 4px; min-height:430px; position:relative;")
+                     style = "padding:8px 4px; min-height:430px; position:relative; width:75%; min-width:560px;")
           )
         )
       )
@@ -3939,10 +3939,28 @@ server <- function(input, output, session) {
         bx <- bx[keep]; by <- by[keep]
       }
       if (length(bx)) {
+        yrng <- compute_axis_range(by)
         payload$bx_b64 <- encode_float32_base64(bx)
         payload$y_b64 <- encode_float32_base64(by)
         payload$y_label <- ym
-        payload$y_range <- compute_axis_range(by)
+        payload$y_range <- yrng
+        # 2D KDE contour overlay (mirrors DivisionProfiler's stat_density_2d):
+        # black contour lines over the division-coloured scatter.
+        if (requireNamespace("MASS", quietly = TRUE) && length(bx) >= 20L) {
+          kd <- tryCatch(
+            MASS::kde2d(bx, by, n = 60, lims = c(x_range, yrng)),
+            error = function(e) NULL)
+          if (!is.null(kd)) {
+            lev <- pretty(range(kd$z, finite = TRUE), 8)
+            lev <- lev[lev > max(kd$z) * 0.02]
+            cl <- tryCatch(grDevices::contourLines(kd$x, kd$y, kd$z, levels = lev),
+                           error = function(e) list())
+            if (length(cl)) {
+              payload$contours <- lapply(cl, function(p)
+                list(x = round(p$x, 3), y = round(p$y, 3)))
+            }
+          }
+        }
       }
     }
     rv$.division_msg_seq <- as.integer(rv$.division_msg_seq %||% 0L) + 1L

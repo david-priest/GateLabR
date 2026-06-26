@@ -29,6 +29,7 @@ Imports:
     grid,
     gridSVG,
     ggplot2,
+    MASS,
     SingleCellExperiment,
     SummarizedExperiment,
     S4Vectors,

@@ -141,32 +141,33 @@ seed_division_boundaries <- function(values, n = 6) {
   values <- values[is.finite(values)]
   n <- as.integer(n)
   if (length(values) < 10L || n < 1L) return(numeric(0))
-  rng <- stats::quantile(values, c(0.002, 0.998), names = FALSE)
-  span <- rng[2] - rng[1]
+  qs <- stats::quantile(values, c(0.01, 0.99), names = FALSE)
+  lo <- qs[1]; hi <- qs[2]; span <- hi - lo
   d <- tryCatch(stats::density(values, n = 1024), error = function(e) NULL)
-  if (is.null(d) || !is.finite(span) || span <= 0) {
-    sp <- if (is.finite(span) && span > 0) span / (n + 2L) else 0.5
-    p0 <- if (is.null(d)) stats::quantile(values, 0.9, names = FALSE) else rng[2]
-    return(sort(p0 - sp * (seq_len(n) - 0.5)))
+  # brightest (undivided) peak p0 = rightmost prominent density peak (else hi);
+  # detected = median gap between prominent peaks (a clean dilution ladder)
+  p0 <- hi; detected <- NA_real_
+  if (!is.null(d) && is.finite(span) && span > 0) {
+    dy <- d$y
+    is_peak <- c(FALSE, diff(sign(diff(dy))) < 0, FALSE)
+    pk_x <- d$x[is_peak]; pk_y <- dy[is_peak]
+    if (length(pk_x)) {
+      keep <- pk_y >= 0.05 * max(dy); pk_x <- pk_x[keep]; pk_y <- pk_y[keep]
+    }
+    if (length(pk_x)) p0 <- max(pk_x)
+    if (length(pk_x) >= 2L) {
+      gaps <- diff(sort(pk_x)); gaps <- gaps[gaps > 0.04 * span]
+      if (length(gaps)) detected <- stats::median(gaps)
+    }
   }
-  # prominent local maxima of the density
-  dy <- d$y
-  is_peak <- c(FALSE, diff(sign(diff(dy))) < 0, FALSE)
-  pk_x <- d$x[is_peak]; pk_y <- dy[is_peak]
-  if (length(pk_x)) {
-    keep <- pk_y >= 0.05 * max(dy)
-    pk_x <- pk_x[keep]; pk_y <- pk_y[keep]
-  }
-  # brightest (undivided) peak = rightmost prominent peak
-  p0 <- if (length(pk_x)) max(pk_x) else stats::quantile(values, 0.9, names = FALSE)
-  # inter-division spacing = median gap between prominent peaks (ignoring wobble)
-  spacing <- NA_real_
-  if (length(pk_x) >= 2L) {
-    gaps <- diff(sort(pk_x))
-    gaps <- gaps[gaps > 0.04 * span]
-    if (length(gaps)) spacing <- stats::median(gaps)
-  }
-  if (!is.finite(spacing) || spacing <= 0) spacing <- span / (n + 2L)
+  if (!is.finite(span) || span <= 0) return(sort(p0 - 0.5 * (seq_len(n) - 0.5)))
+  # "fit" spacing spreads N boundaries from just below p0 down to ~lo, so they all
+  # land within the data. Use the detected peak spacing ONLY when it is finer than
+  # the fit (a real ladder) — never coarser, which would shove most gates off the
+  # dim end / off-screen (the bug on broad, heavily-divided smears).
+  fit_sp <- (p0 - lo) / n
+  if (!is.finite(fit_sp) || fit_sp <= 0) fit_sp <- span / (n + 2L)
+  spacing <- if (is.finite(detected) && detected > 0 && detected <= fit_sp) detected else fit_sp
   sort(p0 - spacing * (seq_len(n) - 0.5))
 }
 
