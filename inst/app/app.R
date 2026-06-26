@@ -1107,6 +1107,8 @@ ui <- fluidPage(
                                     step = 1000, width = "110px")),
               tags$div(selectInput("division_ymarker", "Y marker (biplot):",
                                    choices = c("(none)" = ""), width = "170px")),
+              tags$div(numericInput("division_point_alpha", "Biplot opacity:", value = 0.4,
+                                    min = 0.02, max = 1, step = 0.05, width = "120px")),
               tags$div(style = "font-size:11px; color:#888; max-width:240px;",
                 "Drag any line to fit. Div0 = brightest (undivided).")
             ),
@@ -1259,7 +1261,7 @@ server <- function(input, output, session) {
     .illust_ui_restore_version = 0L,   # bumped to trigger deferred restore observer
     illust_presets = list(),           # named illustration presets stored in workspace
     # ── Division profiling tab (isolated from rv$gates) ──
-    division_channel = NULL, division_ymarker = NULL, division_n = 6L,
+    division_channel = NULL, division_ymarker = NULL, division_point_alpha = 0.4, division_n = 6L,
     division_boundaries = numeric(0),          # the single WORKING boundary set (stable across sample selection)
     division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
     division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
@@ -1516,7 +1518,8 @@ server <- function(input, output, session) {
       division_xrange = rv$division_xrange,
       division_bins = rv$division_bins,
       division_subsample = rv$division_subsample,
-      division_ymarker = rv$division_ymarker
+      division_ymarker = rv$division_ymarker,
+      division_point_alpha = rv$division_point_alpha
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1553,6 +1556,7 @@ server <- function(input, output, session) {
       division_bins        = rv$division_bins,
       division_subsample   = rv$division_subsample,
       division_ymarker     = rv$division_ymarker,
+      division_point_alpha = rv$division_point_alpha,
       comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
@@ -1642,6 +1646,10 @@ server <- function(input, output, session) {
       updateNumericInput(session, "division_subsample", value = ws$division_subsample)
     }
     if (!is.null(ws$division_ymarker)) rv$division_ymarker <- ws$division_ymarker
+    if (!is.null(ws$division_point_alpha)) {
+      rv$division_point_alpha <- ws$division_point_alpha
+      updateNumericInput(session, "division_point_alpha", value = ws$division_point_alpha)
+    }
     if (!is.null(ws$illust_settings)) {
       rv$.illust_settings_pending     <- ws$illust_settings
       rv$.illust_ui_restore_version   <- isolate(rv$.illust_ui_restore_version) + 1L
@@ -2511,8 +2519,10 @@ server <- function(input, output, session) {
       rv$division_bins <- ws$division_bins %||% 120L
       rv$division_subsample <- ws$division_subsample %||% 50000L
       rv$division_ymarker <- ws$division_ymarker %||% NULL
+      rv$division_point_alpha <- ws$division_point_alpha %||% 0.4
       updateNumericInput(session, "division_bins", value = rv$division_bins)
       updateNumericInput(session, "division_subsample", value = rv$division_subsample)
+      updateNumericInput(session, "division_point_alpha", value = rv$division_point_alpha)
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
       }
@@ -2548,8 +2558,10 @@ server <- function(input, output, session) {
       rv$division_bins <- 120L
       rv$division_subsample <- 50000L
       rv$division_ymarker <- NULL
+      rv$division_point_alpha <- 0.4
       updateNumericInput(session, "division_bins", value = 120L)
       updateNumericInput(session, "division_subsample", value = 50000L)
+      updateNumericInput(session, "division_point_alpha", value = 0.4)
       rv$.illust_settings_pending <- NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
@@ -3717,6 +3729,16 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
+  # Biplot point opacity — pure display, re-render only.
+  observeEvent(input$division_point_alpha, {
+    a <- suppressWarnings(as.numeric(input$division_point_alpha))
+    if (!is.finite(a)) return()
+    a <- max(0.02, min(1, a))
+    if (is.finite(rv$division_point_alpha) && abs(rv$division_point_alpha - a) < 1e-6) return()
+    rv$division_point_alpha <- a
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
   # A typical inter-gate gap for the current working ladder (falls back to a
   # fraction of the x-range when there are <2 gates).
   division_typical_gap <- function(b) {
@@ -3783,7 +3805,7 @@ server <- function(input, output, session) {
     xr <- suppressWarnings(as.numeric(rv$division_xrange))
     span <- if (length(xr) == 2L) diff(xr) else diff(range(b))
     if (!is.finite(span) || span <= 0) span <- 8
-    rv$division_boundaries <- sort(b + dir * 0.02 * span)
+    rv$division_boundaries <- sort(b + dir * 0.01 * span)
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }
   observeEvent(input$division_shift_down_btn, { shift_division_gates(-1) })
@@ -3923,7 +3945,7 @@ server <- function(input, output, session) {
       boundaries = sort(as.numeric(rv$division_boundaries)),
       palette = division_palette(nb + 1L),
       bin_labels = paste0("Div", seq_len(nb + 1L) - 1L),
-      point_alpha = 0.4
+      point_alpha = max(0.02, min(1, as.numeric(rv$division_point_alpha %||% 0.4)))
     )
     # Biplot data: dye (x, shared scale + division lines) vs a picked Y marker,
     # paired on the SAME displayed cells (both finite), capped for canvas perf.

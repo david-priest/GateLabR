@@ -17,7 +17,8 @@ save_workspace <- function(sce, gates, gate_order, populations,
                            division_xrange = NULL,
                            division_bins = NULL,
                            division_subsample = NULL,
-                           division_ymarker = NULL) {
+                           division_ymarker = NULL,
+                           division_point_alpha = NULL) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
@@ -37,6 +38,7 @@ save_workspace <- function(sce, gates, gate_order, populations,
     division_bins = division_bins,
     division_subsample = division_subsample,
     division_ymarker = division_ymarker,
+    division_point_alpha = division_point_alpha,
     version = 3L,
     saved_at = as.character(Sys.time())
   )
