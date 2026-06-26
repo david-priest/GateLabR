@@ -113,7 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
-    tags$script(src = "division_plot.js?v=20260626a"),
+    tags$script(src = "division_plot.js?v=20260626b"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -1230,9 +1230,11 @@ server <- function(input, output, session) {
     illust_presets = list(),           # named illustration presets stored in workspace
     # ── Division profiling tab (isolated from rv$gates) ──
     division_channel = NULL, division_n = 6L,
-    division_boundaries = numeric(0), division_seed_ok = FALSE,
+    division_boundaries = numeric(0),          # current sample's working boundaries
+    division_by_sample = list(),               # sample_id -> list(boundaries, n) (PER SAMPLE)
+    division_current_sample = NULL,            # the single sample_id being profiled
     division_plot_data = NULL, .division_msg_seq = 0L,
-    .last_division_drag_seq = 0L, division_profiles = list()
+    .last_division_drag_seq = 0L
   )
     valid_global_scale_range <- function(channel) {
       gs <- rv$global_scale_ranges[[channel]]
@@ -3608,24 +3610,57 @@ server <- function(input, output, session) {
                       selected = rv$division_channel %||% guess)
   }, ignoreInit = FALSE)
 
+  observeEvent(input$division_channel, {
+    rv$division_channel <- input$division_channel
+  }, ignoreInit = TRUE)
+
+  # Division gates are PER SAMPLE. current_division_sample() returns the single
+  # sample_id selected in the sample filter, "__all__" when the SCE has no
+  # sample_id column, or NULL when 0 or >1 samples are selected (gate one at a time).
+  current_division_sample <- function() {
+    if (is.null(rv$sce)) return(NULL)
+    cd <- SummarizedExperiment::colData(rv$sce)
+    if (!"sample_id" %in% colnames(cd)) return("__all__")
+    sid <- as.character(cd$sample_id)
+    mask <- get_effective_sample_mask(for_plot = FALSE)
+    sel <- if (is.null(mask)) unique(sid) else unique(sid[which(mask)])
+    if (length(sel) == 1L) sel else NULL
+  }
+
+  division_cell_idx <- function(smp) {
+    if (is.null(smp)) {
+      mask <- get_effective_sample_mask(for_plot = FALSE)
+      return(if (is.null(mask)) seq_len(nrow(rv$assay_data)) else which(mask))
+    }
+    if (identical(smp, "__all__")) return(seq_len(nrow(rv$assay_data)))
+    which(as.character(SummarizedExperiment::colData(rv$sce)$sample_id) == smp)
+  }
+
   send_division_plot <- function() {
     if (is.null(rv$assay_data)) return()
     ch <- input$division_channel %||% rv$division_channel
     if (is.null(ch) || !ch %in% colnames(rv$assay_data)) return()
     rv$division_channel <- ch
-    mask <- get_effective_sample_mask(for_plot = FALSE)
-    vals <- if (is.null(mask)) as.numeric(rv$assay_data[, ch]) else as.numeric(rv$assay_data[mask, ch])
-    vals <- vals[is.finite(vals)]
+    smp <- current_division_sample()
+    rv$division_current_sample <- smp
+    idx <- division_cell_idx(smp)
+    vals <- as.numeric(rv$assay_data[idx, ch]); vals <- vals[is.finite(vals)]
     if (!length(vals)) return()
     n <- as.integer(rv$division_n %||% 6L)
-    if (!length(rv$division_boundaries) || !isTRUE(rv$division_seed_ok)) {
-      rv$division_boundaries <- seed_division_boundaries(vals, n = n)
-      rv$division_seed_ok <- TRUE
+    # load THIS sample's saved boundaries, else seed from its data and store
+    prof <- if (!is.null(smp)) rv$division_by_sample[[smp]] else NULL
+    if (!is.null(prof) && length(prof$boundaries)) {
+      bounds <- as.numeric(prof$boundaries)
+      n <- as.integer(prof$n %||% n)
+      if (!identical(as.integer(rv$division_n), n)) updateNumericInput(session, "division_n", value = n)
+      rv$division_n <- n
+    } else {
+      bounds <- seed_division_boundaries(vals, n = n)
+      if (!is.null(smp)) rv$division_by_sample[[smp]] <- list(boundaries = bounds, n = n)
     }
+    rv$division_boundaries <- sort(bounds)
     x_range <- compute_axis_range(vals)
     ticks <- generate_channel_ticks(ch, x_range)
-    # downsample for the histogram payload (stride), so large samples stay snappy;
-    # boundaries/range/seed are computed on the FULL values above.
     vp <- vals
     if (length(vp) > rv$max_events && is.finite(rv$max_events)) {
       vp <- vp[round(seq(1, length(vp), length.out = rv$max_events))]
@@ -3647,11 +3682,42 @@ server <- function(input, output, session) {
 
   observeEvent(input$division_render_btn, { send_division_plot() })
 
+  # auto-render when entering the Division tab or switching the selected sample
+  observeEvent(input$main_tabs, {
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+  observeEvent(rv$sample_filter_key, {
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # drag round-trip: persist the moved boundaries to the CURRENT sample's store.
+  # Do NOT re-render here (the client already moved the line; re-rendering would
+  # fight the drag). The seq guard drops stale echoes.
+  observeEvent(input$division_gates, {
+    edit <- input$division_gates
+    req(edit, edit$boundaries)
+    seq <- as.integer(edit$seq %||% 0L)
+    if (seq <= as.integer(rv$.last_division_drag_seq %||% 0L)) return()
+    rv$.last_division_drag_seq <- seq
+    b <- sort(as.numeric(unlist(edit$boundaries)))
+    rv$division_boundaries <- b
+    smp <- rv$division_current_sample
+    if (!is.null(smp)) {
+      prof <- rv$division_by_sample[[smp]] %||% list()
+      prof$boundaries <- b
+      prof$n <- as.integer(rv$division_n %||% length(b))
+      rv$division_by_sample[[smp]] <- prof
+    }
+  })
+
   output$division_status <- renderText({
     if (is.null(rv$division_plot_data)) return("Pick a dye channel and click Render.")
-    paste0(rv$division_plot_data$n_events, " events  |  ",
-           length(rv$division_boundaries), " boundaries  |  ",
-           rv$division_n + 1L, " levels (Div0..Div", rv$division_n, ")")
+    smp <- rv$division_current_sample
+    samp_txt <- if (is.null(smp)) "⚠ select a single sample"
+                else if (identical(smp, "__all__")) "all cells"
+                else paste0("sample ", smp)
+    paste0(samp_txt, "  |  ", rv$division_plot_data$n_events, " events  |  ",
+           length(rv$division_boundaries), " boundaries  |  Div0..Div", rv$division_n)
   })
 
   observeEvent(input$gating_max_events, {
