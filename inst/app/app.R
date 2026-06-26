@@ -113,6 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
+    tags$script(src = "division_plot.js?v=20260626a"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -1054,6 +1055,34 @@ ui <- fluidPage(
             ),
             uiOutput("scales_channels_ui")
           )
+        ),
+
+        # ── Tab 7: Division profiling ─────────────────────────────────────────
+        tabPanel("Division",
+          tags$div(class = "division-controls", style = "padding:6px 4px;",
+            tags$div(style = "display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;",
+              actionButton("division_render_btn", "Render", class = "btn-sm btn-primary"),
+              actionButton("division_space_evenly_btn", "Space evenly", class = "btn-sm btn-default",
+                           title = "Re-seed boundaries from the data (even spacing)"),
+              actionButton("division_write_btn", "→ colData$div", class = "btn-sm btn-info",
+                           title = "Write Div0..DivN per-cell factor + persist boundaries"),
+              tags$span(textOutput("division_status", inline = TRUE),
+                        style = "font-size:11px; color:#666;")
+            ),
+            tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
+              tags$div(selectInput("division_channel", "Dye channel:", choices = NULL, width = "170px")),
+              tags$div(numericInput("division_n", "# divisions (N):", value = 6, min = 1, max = 11,
+                                    step = 1, width = "120px")),
+              tags$div(style = "display:flex; gap:4px;",
+                actionButton("division_add_btn", "+ Div", class = "btn-xs btn-default"),
+                actionButton("division_remove_btn", "− Div", class = "btn-xs btn-default")
+              ),
+              tags$div(style = "font-size:11px; color:#888; max-width:260px;",
+                "Drag any line to fit. Div0 = brightest (undivided).")
+            ),
+            tags$div(id = "division-plot-container",
+                     style = "padding:8px 4px; min-height:430px; position:relative;")
+          )
         )
       )
     ),
@@ -1198,7 +1227,12 @@ server <- function(input, output, session) {
     .illust_palette_ui_version = 0L,
     .illust_settings_pending = NULL,   # saved settings waiting for channel UI to render
     .illust_ui_restore_version = 0L,   # bumped to trigger deferred restore observer
-    illust_presets = list()            # named illustration presets stored in workspace
+    illust_presets = list(),           # named illustration presets stored in workspace
+    # ── Division profiling tab (isolated from rv$gates) ──
+    division_channel = NULL, division_n = 6L,
+    division_boundaries = numeric(0), division_seed_ok = FALSE,
+    division_plot_data = NULL, .division_msg_seq = 0L,
+    .last_division_drag_seq = 0L, division_profiles = list()
   )
     valid_global_scale_range <- function(channel) {
       gs <- rv$global_scale_ranges[[channel]]
@@ -3551,6 +3585,74 @@ server <- function(input, output, session) {
     rv$current_plot_data <- plot_data
     session$sendCustomMessage("updatePlot", plot_data)
   }
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # DIVISION PROFILING TAB  (fully isolated: own message "updateDivisionPlot",
+  # own input "division_gates", own rv$division_* state; never touches rv$gates)
+  # ════════════════════════════════════════════════════════════════════════════
+  division_palette <- function(k) {
+    paired <- c("#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c",
+                "#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928")
+    k <- max(1L, as.integer(k))
+    if (k <= length(paired)) return(paired[seq_len(k)])
+    grDevices::colorRampPalette(paired)(k)
+  }
+
+  # keep the dye-channel dropdown populated; guess a CFSE/CellTrace-like default
+  observeEvent(rv$channels, {
+    chs <- rv$channels
+    if (!length(chs)) return()
+    guess <- chs[grep("CFSE|CTV|CellTrace|Violet|Tag", chs, ignore.case = TRUE)][1]
+    if (is.na(guess)) guess <- chs[1]
+    updateSelectInput(session, "division_channel", choices = chs,
+                      selected = rv$division_channel %||% guess)
+  }, ignoreInit = FALSE)
+
+  send_division_plot <- function() {
+    if (is.null(rv$assay_data)) return()
+    ch <- input$division_channel %||% rv$division_channel
+    if (is.null(ch) || !ch %in% colnames(rv$assay_data)) return()
+    rv$division_channel <- ch
+    mask <- get_effective_sample_mask(for_plot = FALSE)
+    vals <- if (is.null(mask)) as.numeric(rv$assay_data[, ch]) else as.numeric(rv$assay_data[mask, ch])
+    vals <- vals[is.finite(vals)]
+    if (!length(vals)) return()
+    n <- as.integer(rv$division_n %||% 6L)
+    if (!length(rv$division_boundaries) || !isTRUE(rv$division_seed_ok)) {
+      rv$division_boundaries <- seed_division_boundaries(vals, n = n)
+      rv$division_seed_ok <- TRUE
+    }
+    x_range <- compute_axis_range(vals)
+    ticks <- generate_channel_ticks(ch, x_range)
+    # downsample for the histogram payload (stride), so large samples stay snappy;
+    # boundaries/range/seed are computed on the FULL values above.
+    vp <- vals
+    if (length(vp) > rv$max_events && is.finite(rv$max_events)) {
+      vp <- vp[round(seq(1, length(vp), length.out = rv$max_events))]
+    }
+    payload <- list(
+      x_b64 = encode_float32_base64(vp), n_events = length(vals),
+      x_range = x_range, x_label = ch,
+      x_is_logicle = !is.null(ticks), x_logicle_ticks = ticks,
+      boundaries = sort(as.numeric(rv$division_boundaries)),
+      palette = division_palette(n + 1L),
+      bin_labels = paste0("Div", seq_len(n + 1L) - 1L),
+      point_alpha = 0.4
+    )
+    rv$.division_msg_seq <- as.integer(rv$.division_msg_seq %||% 0L) + 1L
+    payload$`_div_seq` <- rv$.division_msg_seq
+    rv$division_plot_data <- payload
+    session$sendCustomMessage("updateDivisionPlot", payload)
+  }
+
+  observeEvent(input$division_render_btn, { send_division_plot() })
+
+  output$division_status <- renderText({
+    if (is.null(rv$division_plot_data)) return("Pick a dye channel and click Render.")
+    paste0(rv$division_plot_data$n_events, " events  |  ",
+           length(rv$division_boundaries), " boundaries  |  ",
+           rv$division_n + 1L, " levels (Div0..Div", rv$division_n, ")")
+  })
 
   observeEvent(input$gating_max_events, {
     val <- suppressWarnings(as.numeric(input$gating_max_events))

@@ -113,3 +113,43 @@ export_population_to_coldata <- function(sce, population_id, pop_name,
           "' (", in_label, " / ", out_label, ")")
   sce
 }
+
+# ── Division profiling helpers (pure; used by the Division tab) ────────────────
+
+#' Seed N division-gate boundaries from a dye-channel value vector.
+#'
+#' Best-effort: finds the brightest (undivided) peak and the first valley to its
+#' left, then lays down `n` evenly-spaced boundaries stepping down from there.
+#' The Division tab lets the user drag each line afterwards, so this only needs
+#' to be a reasonable starting point; falls back to even quantile spacing if the
+#' peak/valley heuristics misfire. Returns a sorted-ascending numeric vector.
+seed_division_boundaries <- function(values, n = 6) {
+  values <- values[is.finite(values)]
+  n <- as.integer(n)
+  if (length(values) < 10L || n < 1L) return(numeric(0))
+  rng <- stats::quantile(values, c(0.005, 0.995), names = FALSE)
+  d <- tryCatch(stats::density(values, n = 512), error = function(e) NULL)
+  peak_x <- if (!is.null(d)) {
+    up <- d$x > stats::median(values)
+    if (any(up)) d$x[up][which.max(d$y[up])] else rng[2]
+  } else rng[2]
+  first_valley <- NA_real_
+  if (!is.null(d)) {
+    mins <- which(diff(sign(diff(d$y))) > 0) + 1L     # local minima (slope - -> +)
+    left <- mins[d$x[mins] < peak_x]
+    if (length(left)) first_valley <- d$x[left[length(left)]]
+  }
+  if (!is.finite(first_valley)) first_valley <- peak_x - 0.12 * (rng[2] - rng[1])
+  spacing <- (first_valley - rng[1]) / max(1L, n)
+  if (!is.finite(spacing) || spacing <= 0) spacing <- (rng[2] - rng[1]) / (n + 2L)
+  sort(first_valley - spacing * (seq_len(n) - 1L))
+}
+
+#' Assign each cell an integer division level from sorted boundaries.
+#'
+#' Div0 = brightest (above the top boundary). With N boundaries, levels run 0..N.
+assign_division_levels <- function(expr, boundaries) {
+  b <- sort(boundaries[is.finite(boundaries)])
+  if (!length(b)) return(rep(0L, length(expr)))
+  as.integer(length(b) - findInterval(expr, b))
+}
