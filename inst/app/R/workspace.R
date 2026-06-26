@@ -11,7 +11,10 @@ save_workspace <- function(sce, gates, gate_order, populations,
                            illust_pop_palette = list(),
                            illust_pop_selected = NULL,
                            illust_settings = NULL,
-                           illust_presets = list()) {
+                           illust_presets = list(),
+                           division_profiles = list(),
+                           division_channel = NULL,
+                           division_xrange = NULL) {
   workspace <- list(
     gates = gates,
     gate_order = gate_order,
@@ -25,7 +28,10 @@ save_workspace <- function(sce, gates, gate_order, populations,
     illust_pop_selected = illust_pop_selected,
     illust_settings = illust_settings,
     illust_presets = illust_presets,
-    version = 2L,
+    division_profiles = division_profiles,
+    division_channel = division_channel,
+    division_xrange = division_xrange,
+    version = 3L,
     saved_at = as.character(Sys.time())
   )
   S4Vectors::metadata(sce)$gating_workspace <- workspace
@@ -152,4 +158,28 @@ assign_division_levels <- function(expr, boundaries) {
   b <- sort(boundaries[is.finite(boundaries)])
   if (!length(b)) return(rep(0L, length(expr)))
   as.integer(length(b) - findInterval(expr, b))
+}
+
+#' Write a per-cell division-level vector as an ordered colData factor.
+#'
+#' Thin writer: the caller computes the integer level vector (0 = Div0 = brightest)
+#' in DISPLAY space — see the Division tab — and passes it here. `NA` marks cells
+#' in samples for which no boundaries were set. Levels are ordered
+#' Div0 < Div1 < ... < Div`n_levels`. The column is reset first so repeated writes
+#' never carry stale levels. Returns the modified SCE.
+write_division_coldata <- function(sce, levels, n_levels, col_name = "div") {
+  if (length(levels) != ncol(sce)) {
+    stop("division level vector length (", length(levels),
+         ") != number of cells (", ncol(sce), ").")
+  }
+  hi <- suppressWarnings(max(as.numeric(levels), na.rm = TRUE))
+  if (!is.finite(hi)) hi <- 0
+  n_levels <- max(as.integer(n_levels), as.integer(hi), 0L)
+  labs <- paste0("Div", 0:n_levels)
+  SummarizedExperiment::colData(sce)[[col_name]] <- NULL
+  SummarizedExperiment::colData(sce)[[col_name]] <- factor(
+    ifelse(is.na(levels), NA_character_, paste0("Div", levels)),
+    levels = labs, ordered = TRUE
+  )
+  sce
 }

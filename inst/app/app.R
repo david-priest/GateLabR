@@ -1479,7 +1479,10 @@ server <- function(input, output, session) {
       illust_pop_palette = rv$illust_pop_palette %||% list(),
       illust_pop_selected = rv$illust_pop_selected,
       illust_settings = illust_settings,
-      illust_presets = rv$illust_presets %||% list()
+      illust_presets = rv$illust_presets %||% list(),
+      division_profiles = rv$division_by_sample %||% list(),
+      division_channel = rv$division_channel,
+      division_xrange = rv$division_xrange
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1510,6 +1513,9 @@ server <- function(input, output, session) {
       illust_pop_selected  = rv$illust_pop_selected,
       illust_settings      = illust_settings,
       illust_presets       = rv$illust_presets %||% list(),
+      division_profiles    = rv$division_by_sample %||% list(),
+      division_channel     = rv$division_channel,
+      division_xrange      = rv$division_xrange,
       comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
@@ -1587,6 +1593,9 @@ server <- function(input, output, session) {
       as.character(ws$illust_pop_selected)
     } else NULL
     if (!is.null(ws$illust_presets)) rv$illust_presets <- ws$illust_presets
+    if (!is.null(ws$division_profiles)) rv$division_by_sample <- ws$division_profiles
+    if (!is.null(ws$division_channel))  rv$division_channel  <- ws$division_channel
+    if (!is.null(ws$division_xrange))   rv$division_xrange    <- ws$division_xrange
     if (!is.null(ws$illust_settings)) {
       rv$.illust_settings_pending     <- ws$illust_settings
       rv$.illust_ui_restore_version   <- isolate(rv$.illust_ui_restore_version) + 1L
@@ -2450,6 +2459,9 @@ server <- function(input, output, session) {
       rv$illust_pop_palette <- ws$illust_pop_palette %||% list()
       rv$illust_pop_selected <- if (!is.null(ws$illust_pop_selected)) as.character(ws$illust_pop_selected) else NULL
       rv$illust_presets <- ws$illust_presets %||% list()
+      rv$division_by_sample <- ws$division_profiles %||% list()
+      rv$division_channel <- ws$division_channel %||% NULL
+      rv$division_xrange <- ws$division_xrange %||% NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
       }
@@ -2479,6 +2491,9 @@ server <- function(input, output, session) {
       rv$illust_pop_palette <- list()
       rv$illust_pop_selected <- NULL
       rv$illust_presets <- list()
+      rv$division_by_sample <- list()
+      rv$division_channel <- NULL
+      rv$division_xrange <- NULL
       rv$.illust_settings_pending <- NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
@@ -3765,6 +3780,59 @@ server <- function(input, output, session) {
       prof$n <- as.integer(rv$division_n %||% length(b))
       rv$division_by_sample[[smp]] <- prof
     }
+  })
+
+  # ── Write per-cell division levels to colData$div (PER SAMPLE) ───────────────
+  # Each sample's own boundaries are applied to that sample's cells. Levels are
+  # computed in rv$assay_data DISPLAY space (the space the boundaries were drawn
+  # in) — NOT by re-transforming the assay — so flow + logicle stays correct.
+  # autosave() then persists the boundaries into metadata (division_profiles).
+  observeEvent(input$division_write_btn, {
+    if (is.null(rv$sce) || is.null(rv$assay_data)) return()
+    ch <- rv$division_channel %||% input$division_channel
+    if (is.null(ch) || !ch %in% colnames(rv$assay_data)) {
+      showNotification("Pick a dye channel and Render first.", type = "warning", duration = 4)
+      return()
+    }
+    profs <- rv$division_by_sample
+    # Capture the on-screen sample's current boundaries even if it was never
+    # dragged since the last render (so a freshly-seeded sample still writes).
+    smp_cur <- rv$division_current_sample
+    if (!is.null(smp_cur) && length(rv$division_boundaries)) {
+      p <- profs[[smp_cur]] %||% list()
+      p$boundaries <- sort(as.numeric(rv$division_boundaries))
+      p$n <- as.integer(rv$division_n %||% length(p$boundaries))
+      profs[[smp_cur]] <- p
+    }
+    profs <- Filter(function(p) length(p$boundaries %||% numeric(0)) > 0, profs)
+    if (!length(profs)) {
+      showNotification("No division boundaries set yet — Render a sample first.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    ncell <- nrow(rv$assay_data)
+    lev <- rep(NA_integer_, ncell)
+    maxn <- 0L
+    for (smp in names(profs)) {
+      b <- sort(as.numeric(profs[[smp]]$boundaries))
+      if (!length(b)) next
+      idx <- division_cell_idx(smp)
+      idx <- idx[is.finite(idx) & idx >= 1L & idx <= ncell]
+      if (!length(idx)) next
+      lev[idx] <- assign_division_levels(rv$assay_data[idx, ch], b)
+      maxn <- max(maxn, length(b))
+    }
+    rv$division_by_sample <- profs
+    rv$sce <- write_division_coldata(rv$sce, lev, n_levels = maxn, col_name = "div")
+    assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
+    autosave()   # persists division_profiles into metadata alongside the write
+    n_assigned <- sum(!is.na(lev))
+    n_samp <- length(profs)
+    showNotification(
+      sprintf("Wrote colData$div: %s of %s cells across %d sample%s (Div0..Div%d).",
+              format(n_assigned, big.mark = ","), format(ncell, big.mark = ","),
+              n_samp, if (n_samp == 1L) "" else "s", maxn),
+      type = "message", duration = 5)
   })
 
   output$division_status <- renderText({
