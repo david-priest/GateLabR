@@ -365,6 +365,8 @@ ui <- fluidPage(
                   ),
                   selectInput("overlay_coldata", NULL,
                               choices = c("(none)" = ""), selected = "", width = "100%"),
+                  selectInput("overlay_palette", "Palette",
+                              choices = OVERLAY_PALETTES, selected = "paired", width = "100%"),
                   uiOutput("overlay_checkboxes_ui")
                 )
               )
@@ -1214,7 +1216,7 @@ server <- function(input, output, session) {
     assay_version = 0L,
     current_plot_data = NULL, max_events = 50000L,
     undo_stack = list(), redo_stack = list(),
-    overlay_factor = NULL, overlay_selected = NULL,
+    overlay_factor = NULL, overlay_selected = NULL, overlay_palette = "paired",
     sample_info = NULL, sample_mask = NULL, sample_filter_key = "all",
     .range_cache = list(),
     .gate_counts_cache_key = NULL, .gate_counts_cache = NULL,
@@ -2900,9 +2902,12 @@ server <- function(input, output, session) {
     }
     req(rv$sce)
     cd <- SummarizedExperiment::colData(rv$sce)
-    vals <- as.character(cd[[cd_col]])
+    raw <- cd[[cd_col]]
+    vals <- as.character(raw)
     rv$overlay_factor <- vals
-    all_levels <- sort(unique(vals))
+    # respect the factor's own level order (so e.g. div = Div0..DivN lines up with
+    # the Division tab's palette); otherwise fall back to a sorted unique set.
+    all_levels <- if (is.factor(raw)) levels(raw)[levels(raw) %in% vals] else sort(unique(vals))
 
     level_defaults <- all_levels
     if (!is.null(rv$sample_mask) && length(rv$sample_mask) == length(vals)) {
@@ -2923,6 +2928,16 @@ server <- function(input, output, session) {
     rv$overlay_selected <- input$overlay_levels
     if (!is.null(rv$assay_data)) send_full_plot()
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
+  # Overlay palette change — re-render with the new colours.
+  observeEvent(input$overlay_palette, {
+    if (identical(rv$overlay_palette, input$overlay_palette)) return()
+    rv$overlay_palette <- input$overlay_palette
+    if (!is.null(rv$assay_data) &&
+        !is.null(rv$overlay_factor) && length(rv$overlay_selected %||% character(0))) {
+      send_full_plot()
+    }
+  }, ignoreInit = TRUE)
 
   observeEvent(input$clear_overlay_btn, {
     updateSelectInput(session, "overlay_coldata", selected = "")
@@ -3587,7 +3602,7 @@ server <- function(input, output, session) {
       color_map <- setNames(seq_along(selected) - 1L, selected)
       all_color_indices <- rep(0L, length(factor_vals))
       for (lvl in selected) all_color_indices[factor_vals == lvl] <- color_map[[lvl]]
-      palette <- SAMPLE_COLORS[seq_along(selected)]
+      palette <- overlay_color_palette(rv$overlay_palette %||% "paired", length(selected))
       plot_data <- build_plot_data_overlay(
         assay_data = rv$assay_data[include_mask, , drop = FALSE],
         x_channel = x_ch, y_channel = y_ch, assay_name = rv$assay_name,

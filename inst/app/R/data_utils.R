@@ -177,6 +177,43 @@ SAMPLE_COLORS <- c(
   "#c49c94", "#f7b6d2", "#c7c7c7", "#dbdb8d", "#9edae5"
 )
 
+#' Named palettes offered for the gating "Color by marker / metadata" overlay.
+#' Keys are the selectInput values; the labels live in the UI.
+OVERLAY_PALETTES <- c(
+  "Paired (matches Division)" = "paired",
+  "Tableau (default)"         = "default",
+  "Viridis"                   = "viridis",
+  "Plasma"                    = "plasma",
+  "Cividis"                   = "cividis",
+  "Inferno"                   = "inferno",
+  "Set 2"                     = "set2",
+  "Dark 3"                    = "dark3"
+)
+
+#' Generate k colours for a named overlay palette (gating tab colour-by).
+#' "paired" matches the Division tab's Div0..DivN palette so colouring by `div`
+#' lines up with the division histogram. Sequential palettes (viridis, …) come
+#' from grDevices::hcl.colors so no extra package is needed.
+overlay_color_palette <- function(name, k) {
+  k <- max(1L, as.integer(k))
+  if (is.null(name) || !nzchar(name)) name <- "paired"
+  paired <- c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c",
+              "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a", "#ffff99", "#b15928")
+  ramp <- function(base) if (k <= length(base)) base[seq_len(k)] else
+    grDevices::colorRampPalette(base)(k)
+  switch(name,
+    paired  = ramp(paired),
+    default = ramp(SAMPLE_COLORS),
+    viridis = grDevices::hcl.colors(k, "Viridis"),
+    plasma  = grDevices::hcl.colors(k, "Plasma"),
+    cividis = grDevices::hcl.colors(k, "Cividis"),
+    inferno = grDevices::hcl.colors(k, "Inferno"),
+    set2    = grDevices::hcl.colors(k, "Set 2"),
+    dark3   = grDevices::hcl.colors(k, "Dark 3"),
+    ramp(paired)
+  )
+}
+
 #' Get colData factor values for a given column
 get_coldata_factor <- function(sce, coldata_name) {
   cd <- SummarizedExperiment::colData(sce)
