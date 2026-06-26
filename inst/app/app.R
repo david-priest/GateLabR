@@ -1063,9 +1063,11 @@ ui <- fluidPage(
             tags$div(style = "display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;",
               actionButton("division_render_btn", "Render", class = "btn-sm btn-primary"),
               actionButton("division_space_evenly_btn", "Space evenly", class = "btn-sm btn-default",
-                           title = "Re-seed boundaries from the data (even spacing)"),
-              actionButton("division_write_btn", "→ colData$div", class = "btn-sm btn-info",
-                           title = "Write Div0..DivN per-cell factor + persist boundaries"),
+                           title = "Re-seed boundaries from the displayed data (even spacing)"),
+              actionButton("division_load_btn", "Load saved", class = "btn-sm btn-default",
+                           title = "Load the selected sample's previously-applied boundaries (one sample selected)"),
+              actionButton("division_write_btn", "Apply to selected", class = "btn-sm btn-info",
+                           title = "Apply the current boundaries to every selected sample: store per-sample, write Div0..DivN into colData$div, and persist to metadata"),
               tags$span(textOutput("division_status", inline = TRUE),
                         style = "font-size:11px; color:#666;")
             ),
@@ -1236,9 +1238,9 @@ server <- function(input, output, session) {
     illust_presets = list(),           # named illustration presets stored in workspace
     # ── Division profiling tab (isolated from rv$gates) ──
     division_channel = NULL, division_n = 6L,
-    division_boundaries = numeric(0),          # current sample's working boundaries
-    division_by_sample = list(),               # sample_id -> list(boundaries, n) (PER SAMPLE)
-    division_current_sample = NULL,            # the single sample_id being profiled
+    division_boundaries = numeric(0),          # the single WORKING boundary set (stable across sample selection)
+    division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
+    division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
     division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
     division_bins = 120L,                       # histogram bin count
     division_subsample = 50000L,                # events drawn in the histogram (stride)
@@ -3657,19 +3659,19 @@ server <- function(input, output, session) {
   observeEvent(input$division_channel, {
     if (identical(rv$division_channel, input$division_channel)) return()
     rv$division_channel <- input$division_channel
-    rv$division_xrange <- NULL    # new channel -> reseed the x-axis from its data
+    rv$division_xrange <- NULL          # new channel -> reseed the x-axis from its data
+    rv$division_boundaries <- numeric(0) # ...and reseed the working ladder for its scale
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
-  # Changing N (typed, or via +Div / -Div) reseeds the current sample's ladder.
+  # Changing N (typed, or via +Div / -Div) reseeds the WORKING ladder to N gates.
   observeEvent(input$division_n, {
     n <- suppressWarnings(as.integer(input$division_n))
     if (is.na(n) || n < 1L) return()
     n <- min(11L, n)                                   # N+1 <= 12 Paired colours
     if (identical(as.integer(rv$division_n), n)) return()
     rv$division_n <- n
-    smp <- current_division_sample()
-    if (!is.null(smp)) rv$division_by_sample[[smp]] <- NULL   # force reseed to new N
+    rv$division_boundaries <- numeric(0)               # force reseed to new N
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
@@ -3682,10 +3684,8 @@ server <- function(input, output, session) {
                        value = max(1L, as.integer(rv$division_n %||% 6L) - 1L))
   })
 
-  # Re-seed the current sample's boundaries (even spacing from the data).
+  # Re-seed the WORKING boundaries (even spacing from the displayed data).
   observeEvent(input$division_space_evenly_btn, {
-    smp <- current_division_sample()
-    if (!is.null(smp)) rv$division_by_sample[[smp]] <- NULL
     rv$division_boundaries <- numeric(0)
     send_division_plot()
   })
@@ -3720,51 +3720,55 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
-  # Division gates are PER SAMPLE. current_division_sample() returns the single
-  # sample_id selected in the sample filter, "__all__" when the SCE has no
-  # sample_id column, or NULL when 0 or >1 samples are selected (gate one at a time).
-  current_division_sample <- function() {
-    if (is.null(rv$sce)) return(NULL)
+  # The left-pane sample selector drives BOTH what the histogram shows and which
+  # samples "Apply to selected" writes to. selected_division_samples() returns the
+  # selected sample_id(s), or "__all__" when the SCE has no sample_id column.
+  # Crucially, the WORKING boundaries (rv$division_boundaries) are independent of
+  # this selection — toggling samples re-renders the histogram data but never
+  # moves the gates (that was the old "gates jump around" bug).
+  selected_division_samples <- function() {
+    if (is.null(rv$sce)) return(character(0))
     cd <- SummarizedExperiment::colData(rv$sce)
     if (!"sample_id" %in% colnames(cd)) return("__all__")
     sid <- as.character(cd$sample_id)
     mask <- get_effective_sample_mask(for_plot = FALSE)
-    sel <- if (is.null(mask)) unique(sid) else unique(sid[which(mask)])
-    if (length(sel) == 1L) sel else NULL
+    sort(if (is.null(mask)) unique(sid) else unique(sid[which(mask)]))
   }
 
+  # Cell indices of the currently-selected samples (combined), for the histogram.
+  division_display_idx <- function() {
+    mask <- get_effective_sample_mask(for_plot = FALSE)
+    if (is.null(mask)) seq_len(nrow(rv$assay_data)) else which(mask)
+  }
+
+  # Cell indices belonging to one APPLIED sample profile (used by Apply's write).
   division_cell_idx <- function(smp) {
-    if (is.null(smp)) {
-      mask <- get_effective_sample_mask(for_plot = FALSE)
-      return(if (is.null(mask)) seq_len(nrow(rv$assay_data)) else which(mask))
-    }
-    if (identical(smp, "__all__")) return(seq_len(nrow(rv$assay_data)))
+    if (is.null(smp) || identical(smp, "__all__")) return(seq_len(nrow(rv$assay_data)))
     which(as.character(SummarizedExperiment::colData(rv$sce)$sample_id) == smp)
   }
 
   send_division_plot <- function() {
     if (is.null(rv$assay_data)) return()
-    ch <- input$division_channel %||% rv$division_channel
+    # rv$division_channel is authoritative (set before every call in the normal
+    # path); fall back to the dropdown only for the very first render.
+    ch <- rv$division_channel %||% input$division_channel
     if (is.null(ch) || !ch %in% colnames(rv$assay_data)) return()
     rv$division_channel <- ch
-    smp <- current_division_sample()
-    rv$division_current_sample <- smp
-    idx <- division_cell_idx(smp)
+    rv$division_selected_samples <- selected_division_samples()
+    idx <- division_display_idx()
     vals <- as.numeric(rv$assay_data[idx, ch]); vals <- vals[is.finite(vals)]
-    if (!length(vals)) return()
-    n <- as.integer(rv$division_n %||% 6L)
-    # load THIS sample's saved boundaries, else seed from its data and store
-    prof <- if (!is.null(smp)) rv$division_by_sample[[smp]] else NULL
-    if (!is.null(prof) && length(prof$boundaries)) {
-      bounds <- as.numeric(prof$boundaries)
-      n <- as.integer(prof$n %||% n)
-      if (!identical(as.integer(rv$division_n), n)) updateNumericInput(session, "division_n", value = n)
-      rv$division_n <- n
-    } else {
-      bounds <- seed_division_boundaries(vals, n = n)
-      if (!is.null(smp)) rv$division_by_sample[[smp]] <- list(boundaries = bounds, n = n)
+    if (!length(vals)) {
+      # nothing selected (or empty) — clear the plot but keep the working gates
+      session$sendCustomMessage("updateDivisionPlot", list(boundaries = numeric(0)))
+      rv$division_plot_data <- NULL
+      return()
     }
-    rv$division_boundaries <- sort(bounds)
+    n <- as.integer(rv$division_n %||% 6L)
+    # WORKING boundaries: seed once from the displayed data if empty, otherwise
+    # keep them exactly as-is so selection changes never move the gates.
+    if (!length(rv$division_boundaries)) {
+      rv$division_boundaries <- sort(seed_division_boundaries(vals, n = n))
+    }
     # User-fixed x-axis: use the stored range; seed it from the data only when
     # unset (e.g. first render or after a channel change). Never autoscale on
     # sample/N changes — the axis stays put so peaks are comparable.
@@ -3783,14 +3787,17 @@ server <- function(input, output, session) {
     if (length(vp) > sub) vp <- vp[round(seq(1, length(vp), length.out = sub))]
     bins <- suppressWarnings(as.integer(rv$division_bins %||% 120L))
     if (is.na(bins) || bins < 2L) bins <- 120L
+    # palette / labels follow the ACTUAL working-boundary count (N divisions = N
+    # boundaries -> Div0..DivN), independent of the N input which may lag a Load.
+    nb <- length(rv$division_boundaries)
     payload <- list(
       x_b64 = encode_float32_base64(vp), n_events = length(vals),
       n_drawn = length(vp),
       x_range = x_range, x_label = ch, bins = bins,
       x_is_logicle = !is.null(ticks), x_logicle_ticks = ticks,
       boundaries = sort(as.numeric(rv$division_boundaries)),
-      palette = division_palette(n + 1L),
-      bin_labels = paste0("Div", seq_len(n + 1L) - 1L),
+      palette = division_palette(nb + 1L),
+      bin_labels = paste0("Div", seq_len(nb + 1L) - 1L),
       point_alpha = 0.4
     )
     rv$.division_msg_seq <- as.integer(rv$.division_msg_seq %||% 0L) + 1L
@@ -3809,31 +3816,53 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
-  # drag round-trip: persist the moved boundaries to the CURRENT sample's store.
-  # Do NOT re-render here (the client already moved the line; re-rendering would
-  # fight the drag). The seq guard drops stale echoes.
+  # drag round-trip: update the WORKING boundaries only. Applying to samples is a
+  # deliberate step ("Apply to selected"), so a drag never silently rewrites a
+  # sample's stored profile. Do NOT re-render here (it would fight the drag); the
+  # seq guard drops stale echoes.
   observeEvent(input$division_gates, {
     edit <- input$division_gates
     req(edit, edit$boundaries)
     seq <- as.integer(edit$seq %||% 0L)
     if (seq <= as.integer(rv$.last_division_drag_seq %||% 0L)) return()
     rv$.last_division_drag_seq <- seq
-    b <- sort(as.numeric(unlist(edit$boundaries)))
-    rv$division_boundaries <- b
-    smp <- rv$division_current_sample
-    if (!is.null(smp)) {
-      prof <- rv$division_by_sample[[smp]] %||% list()
-      prof$boundaries <- b
-      prof$n <- as.integer(rv$division_n %||% length(b))
-      rv$division_by_sample[[smp]] <- prof
-    }
+    rv$division_boundaries <- sort(as.numeric(unlist(edit$boundaries)))
   })
 
-  # ── Write per-cell division levels to colData$div (PER SAMPLE) ───────────────
-  # Each sample's own boundaries are applied to that sample's cells. Levels are
-  # computed in rv$assay_data DISPLAY space (the space the boundaries were drawn
-  # in) — NOT by re-transforming the assay — so flow + logicle stays correct.
-  # autosave() then persists the boundaries into metadata (division_profiles).
+  # ── Load a selected sample's previously-applied boundaries into the working set
+  observeEvent(input$division_load_btn, {
+    sel <- selected_division_samples()
+    if (length(sel) != 1L) {
+      showNotification("Select exactly one sample to load its saved gates.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    prof <- rv$division_by_sample[[sel[1]]]
+    if (is.null(prof) || !length(prof$boundaries %||% numeric(0))) {
+      showNotification(sprintf("No applied gates saved for sample '%s'.", sel[1]),
+                       type = "warning", duration = 4)
+      return()
+    }
+    rv$division_boundaries <- sort(as.numeric(prof$boundaries))
+    nb <- length(rv$division_boundaries)
+    rv$division_n <- nb
+    updateNumericInput(session, "division_n", value = nb)
+    if (!is.null(prof$channel) && !identical(prof$channel, rv$division_channel) &&
+        prof$channel %in% (rv$channels %||% character(0))) {
+      rv$division_channel <- prof$channel
+      updateSelectInput(session, "division_channel", selected = prof$channel)
+    }
+    send_division_plot()
+    showNotification(sprintf("Loaded %d gate(s) from sample '%s'.", nb, sel[1]),
+                     type = "message", duration = 3)
+  })
+
+  # ── Apply: write the WORKING boundaries to every SELECTED sample ─────────────
+  # Stores each selected sample's profile (boundaries + channel), then writes
+  # colData$div for ALL applied samples cumulatively — each sample's own cells get
+  # its own boundaries, computed in rv$assay_data DISPLAY space (NOT by
+  # re-transforming the assay) so flow + logicle stays correct. autosave() then
+  # persists every applied profile into the SCE metadata so it reloads cleanly.
   observeEvent(input$division_write_btn, {
     if (is.null(rv$sce) || is.null(rv$assay_data)) return()
     ch <- rv$division_channel %||% input$division_channel
@@ -3841,68 +3870,71 @@ server <- function(input, output, session) {
       showNotification("Pick a dye channel and Render first.", type = "warning", duration = 4)
       return()
     }
-    profs <- rv$division_by_sample
-    # Capture the on-screen sample's current boundaries even if it was never
-    # dragged since the last render (so a freshly-seeded sample still writes).
-    smp_cur <- rv$division_current_sample
-    if (!is.null(smp_cur) && length(rv$division_boundaries)) {
-      p <- profs[[smp_cur]] %||% list()
-      p$boundaries <- sort(as.numeric(rv$division_boundaries))
-      p$n <- as.integer(rv$division_n %||% length(p$boundaries))
-      profs[[smp_cur]] <- p
-    }
-    profs <- Filter(function(p) length(p$boundaries %||% numeric(0)) > 0, profs)
-    if (!length(profs)) {
-      showNotification("No division boundaries set yet — Render a sample first.",
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (!length(b)) {
+      showNotification("Set the division gates first (drag the lines / Space evenly).",
                        type = "warning", duration = 4)
       return()
     }
+    sel <- selected_division_samples()
+    if (!length(sel)) {
+      showNotification("Select at least one sample (left pane) to apply to.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    n <- as.integer(rv$division_n %||% length(b))
+    # Store the working boundaries as the applied profile for every selected sample.
+    for (s in sel) rv$division_by_sample[[s]] <- list(boundaries = b, n = n, channel = ch)
+    # Write colData$div for ALL applied samples (cumulative), each with its own
+    # boundaries + channel, so applying sample B never wipes sample A.
     ncell <- nrow(rv$assay_data)
     lev <- rep(NA_integer_, ncell)
     maxn <- 0L
-    for (smp in names(profs)) {
-      b <- sort(as.numeric(profs[[smp]]$boundaries))
-      if (!length(b)) next
+    for (smp in names(rv$division_by_sample)) {
+      prof <- rv$division_by_sample[[smp]]
+      bs <- sort(as.numeric(prof$boundaries %||% numeric(0)))
+      if (!length(bs)) next
+      chs <- prof$channel %||% ch
+      if (!chs %in% colnames(rv$assay_data)) chs <- ch
       idx <- division_cell_idx(smp)
       idx <- idx[is.finite(idx) & idx >= 1L & idx <= ncell]
       if (!length(idx)) next
-      lev[idx] <- assign_division_levels(rv$assay_data[idx, ch], b)
-      maxn <- max(maxn, length(b))
+      lev[idx] <- assign_division_levels(rv$assay_data[idx, chs], bs)
+      maxn <- max(maxn, length(bs))
     }
-    rv$division_by_sample <- profs
     rv$sce <- write_division_coldata(rv$sce, lev, n_levels = maxn, col_name = "div")
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
-    autosave()   # persists division_profiles into metadata alongside the write
+    autosave()   # persists every applied profile into metadata alongside the write
     n_assigned <- sum(!is.na(lev))
-    n_samp <- length(profs)
     showNotification(
-      sprintf("Wrote colData$div: %s of %s cells across %d sample%s (Div0..Div%d).",
-              format(n_assigned, big.mark = ","), format(ncell, big.mark = ","),
-              n_samp, if (n_samp == 1L) "" else "s", maxn),
+      sprintf("Applied to %d sample%s (%s). colData$div: %s of %s cells (Div0..Div%d).",
+              length(sel), if (length(sel) == 1L) "" else "s",
+              paste(utils::head(sel, 4), collapse = ", "),
+              format(n_assigned, big.mark = ","), format(ncell, big.mark = ","), maxn),
       type = "message", duration = 5)
   })
 
   output$division_status <- renderText({
-    if (is.null(rv$division_plot_data)) return("Pick a dye channel and click Render.")
-    smp <- rv$division_current_sample
-    samp_txt <- if (is.null(smp)) "⚠ select a single sample"
-                else if (identical(smp, "__all__")) "all cells"
-                else paste0("editing ", smp)
-    # which samples → colData$div on write (those with saved boundaries)
-    saved <- names(Filter(function(p) length(p$boundaries %||% numeric(0)) > 0,
-                          rv$division_by_sample))
-    saved_txt <- if (!length(saved)) "no profiles saved"
-                 else if (identical(saved, "__all__")) "→ writes all cells"
-                 else paste0("→ writes ", length(saved), " sample",
-                             if (length(saved) == 1L) "" else "s", ": ",
-                             paste(utils::head(saved, 6), collapse = ", "),
-                             if (length(saved) > 6L) " …" else "")
-    pd <- rv$division_plot_data
-    drawn <- pd$n_drawn %||% pd$n_events
-    paste0(samp_txt, "  |  ", format(drawn, big.mark = ","), "/",
-           format(pd$n_events, big.mark = ","), " events  |  ",
-           length(rv$division_boundaries), " gates (Div0..Div", rv$division_n, ")  |  ",
-           saved_txt)
+    sel <- rv$division_selected_samples %||% character(0)
+    sel_txt <- if (!length(sel)) "⚠ no samples selected"
+               else if (identical(sel, "__all__")) "all cells"
+               else paste0(length(sel), " selected: ",
+                           paste(utils::head(sel, 5), collapse = ", "),
+                           if (length(sel) > 5L) " …" else "")
+    applied <- names(Filter(function(p) length(p$boundaries %||% numeric(0)) > 0,
+                            rv$division_by_sample))
+    applied_txt <- if (!length(applied)) "none applied yet"
+                   else if (identical(applied, "__all__")) "applied: all cells"
+                   else paste0("applied: ", length(applied), " (",
+                               paste(utils::head(applied, 5), collapse = ", "),
+                               if (length(applied) > 5L) " …" else "", ")")
+    nb <- length(rv$division_boundaries)
+    ev <- if (!is.null(rv$division_plot_data)) {
+      pd <- rv$division_plot_data
+      paste0(format(pd$n_drawn %||% pd$n_events, big.mark = ","), "/",
+             format(pd$n_events, big.mark = ","), " events  |  ")
+    } else ""
+    paste0(sel_txt, "  |  ", ev, nb, " gates (Div0..Div", nb, ")  |  ", applied_txt)
   })
 
   observeEvent(input$gating_max_events, {
