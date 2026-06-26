@@ -1077,7 +1077,9 @@ ui <- fluidPage(
                 actionButton("division_add_btn", "+ Div", class = "btn-xs btn-default"),
                 actionButton("division_remove_btn", "− Div", class = "btn-xs btn-default")
               ),
-              tags$div(style = "font-size:11px; color:#888; max-width:260px;",
+              tags$div(numericInput("division_xmin", "X min:", value = NA, step = 0.2, width = "92px")),
+              tags$div(numericInput("division_xmax", "X max:", value = NA, step = 0.2, width = "92px")),
+              tags$div(style = "font-size:11px; color:#888; max-width:240px;",
                 "Drag any line to fit. Div0 = brightest (undivided).")
             ),
             tags$div(id = "division-plot-container",
@@ -1233,6 +1235,7 @@ server <- function(input, output, session) {
     division_boundaries = numeric(0),          # current sample's working boundaries
     division_by_sample = list(),               # sample_id -> list(boundaries, n) (PER SAMPLE)
     division_current_sample = NULL,            # the single sample_id being profiled
+    division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
     division_plot_data = NULL, .division_msg_seq = 0L,
     .last_division_drag_seq = 0L
   )
@@ -3611,7 +3614,51 @@ server <- function(input, output, session) {
   }, ignoreInit = FALSE)
 
   observeEvent(input$division_channel, {
+    if (identical(rv$division_channel, input$division_channel)) return()
     rv$division_channel <- input$division_channel
+    rv$division_xrange <- NULL    # new channel -> reseed the x-axis from its data
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Changing N (typed, or via +Div / -Div) reseeds the current sample's ladder.
+  observeEvent(input$division_n, {
+    n <- suppressWarnings(as.integer(input$division_n))
+    if (is.na(n) || n < 1L) return()
+    n <- min(11L, n)                                   # N+1 <= 12 Paired colours
+    if (identical(as.integer(rv$division_n), n)) return()
+    rv$division_n <- n
+    smp <- current_division_sample()
+    if (!is.null(smp)) rv$division_by_sample[[smp]] <- NULL   # force reseed to new N
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$division_add_btn, {
+    updateNumericInput(session, "division_n",
+                       value = min(11L, as.integer(rv$division_n %||% 6L) + 1L))
+  })
+  observeEvent(input$division_remove_btn, {
+    updateNumericInput(session, "division_n",
+                       value = max(1L, as.integer(rv$division_n %||% 6L) - 1L))
+  })
+
+  # Re-seed the current sample's boundaries (even spacing from the data).
+  observeEvent(input$division_space_evenly_btn, {
+    smp <- current_division_sample()
+    if (!is.null(smp)) rv$division_by_sample[[smp]] <- NULL
+    rv$division_boundaries <- numeric(0)
+    send_division_plot()
+  })
+
+  # User-fixed x-axis (min/max). Re-render when edited; echo-guarded so the
+  # seeding updateNumericInput() above doesn't loop.
+  observeEvent(list(input$division_xmin, input$division_xmax), {
+    lo <- suppressWarnings(as.numeric(input$division_xmin))
+    hi <- suppressWarnings(as.numeric(input$division_xmax))
+    if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return()
+    cur <- suppressWarnings(as.numeric(rv$division_xrange))
+    if (length(cur) == 2L && abs(cur[1] - lo) < 1e-9 && abs(cur[2] - hi) < 1e-9) return()
+    rv$division_xrange <- c(lo, hi)
+    if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
   # Division gates are PER SAMPLE. current_division_sample() returns the single
@@ -3659,7 +3706,17 @@ server <- function(input, output, session) {
       if (!is.null(smp)) rv$division_by_sample[[smp]] <- list(boundaries = bounds, n = n)
     }
     rv$division_boundaries <- sort(bounds)
-    x_range <- compute_axis_range(vals)
+    # User-fixed x-axis: use the stored range; seed it from the data only when
+    # unset (e.g. first render or after a channel change). Never autoscale on
+    # sample/N changes — the axis stays put so peaks are comparable.
+    xr <- suppressWarnings(as.numeric(rv$division_xrange))
+    if (length(xr) != 2L || !all(is.finite(xr)) || xr[2] <= xr[1]) {
+      xr <- compute_axis_range(vals)
+      rv$division_xrange <- xr
+      updateNumericInput(session, "division_xmin", value = round(xr[1], 3))
+      updateNumericInput(session, "division_xmax", value = round(xr[2], 3))
+    }
+    x_range <- xr
     ticks <- generate_channel_ticks(ch, x_range)
     vp <- vals
     if (length(vp) > rv$max_events && is.finite(rv$max_events)) {
