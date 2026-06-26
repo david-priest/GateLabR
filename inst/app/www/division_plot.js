@@ -108,20 +108,22 @@
       .attr("height", function (d) { return ih - ys(d); });
 
     // axes + labels
-    g.append("g").attr("transform", "translate(0," + ih + ")").call(d3.axisBottom(xs).ticks(6));
-    g.append("g").call(d3.axisLeft(ys).ticks(5));
-    svg.append("text").attr("x", M.left + iw / 2).attr("y", H - 10)
-      .attr("text-anchor", "middle").attr("font-size", 12)
+    g.append("g").attr("transform", "translate(0," + ih + ")")
+      .call(d3.axisBottom(xs).ticks(6)).attr("font-size", 12);
+    g.append("g").call(d3.axisLeft(ys).ticks(5)).attr("font-size", 12);
+    svg.append("text").attr("x", M.left + iw / 2).attr("y", H - 8)
+      .attr("text-anchor", "middle").attr("font-size", 14)
       .text((data.x_label || "channel") + " expression");
     svg.append("text").attr("transform", "rotate(-90)")
-      .attr("x", -(M.top + ih / 2)).attr("y", 15)
-      .attr("text-anchor", "middle").attr("font-size", 12).text("Count (sqrt)");
+      .attr("x", -(M.top + ih / 2)).attr("y", 14)
+      .attr("text-anchor", "middle").attr("font-size", 14).text("Count (sqrt)");
 
     // per-bin labels (Div0..DivN)
     var edges = [xr[0]].concat(bounds).concat([xr[1]]);
     S.labels = g.append("g").attr("class", "division-bin-labels")
       .selectAll("text").data(d3.range(edges.length - 1)).enter().append("text")
-      .attr("y", 12).attr("text-anchor", "middle").attr("font-size", 10).attr("fill", "#333");
+      .attr("y", 12).attr("text-anchor", "middle").attr("font-size", 12)
+      .attr("font-weight", "600").attr("fill", "#333");
 
     // draggable boundary lines
     var layer = g.append("g").attr("class", "division-gate-layer");

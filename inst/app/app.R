@@ -113,7 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
-    tags$script(src = "division_plot.js?v=20260626c"),
+    tags$script(src = "division_plot.js?v=20260626d"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -1075,10 +1075,17 @@ ui <- fluidPage(
               tags$div(selectInput("division_channel", "Dye channel:", choices = NULL, width = "170px")),
               tags$div(numericInput("division_n", "# divisions (N):", value = 6, min = 1, max = 11,
                                     step = 1, width = "120px")),
-              tags$div(style = "display:flex; gap:4px;",
-                actionButton("division_add_btn", "+ Div", class = "btn-xs btn-default"),
-                actionButton("division_remove_btn", "− Div", class = "btn-xs btn-default")
+              tags$div(style = "display:flex; flex-direction:column; gap:3px;",
+                tags$label("Adjust N", style = "font-size:11px; color:#555; margin:0; font-weight:normal;"),
+                tags$div(style = "display:flex; gap:4px;",
+                  actionButton("division_remove_btn", "−", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;"),
+                  actionButton("division_add_btn", "+", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;")
+                )
               ),
+              tags$div(numericInput("division_spacing", "Spacing (even):", value = NA, min = 0,
+                                    step = 0.05, width = "110px")),
               tags$div(numericInput("division_xmin", "X min:", value = NA, step = 0.2, width = "92px")),
               tags$div(numericInput("division_xmax", "X max:", value = NA, step = 0.2, width = "92px")),
               tags$div(numericInput("division_bins", "Bins:", value = 120, min = 10, max = 400,
@@ -1241,6 +1248,7 @@ server <- function(input, output, session) {
     division_boundaries = numeric(0),          # the single WORKING boundary set (stable across sample selection)
     division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
     division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
+    division_spacing = NA_real_,               # last even-spacing gap (display hint + override)
     division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
     division_bins = 120L,                       # histogram bin count
     division_subsample = 50000L,                # events drawn in the histogram (stride)
@@ -3720,6 +3728,22 @@ server <- function(input, output, session) {
     if (identical(input$main_tabs, "Division")) send_division_plot()
   }, ignoreInit = TRUE)
 
+  # Gate spacing override: typing a value (or using the arrows) re-lays ALL gates
+  # at that even spacing, anchored at the brightest cut (rightmost boundary), and
+  # snaps them to evenly-spaced. Echo-guarded against the value send_division_plot
+  # writes back (the current median gap).
+  observeEvent(input$division_spacing, {
+    sp <- suppressWarnings(as.numeric(input$division_spacing))
+    if (!is.finite(sp) || sp <= 0) return()
+    if (is.finite(rv$division_spacing) && abs(rv$division_spacing - sp) < 1e-6) return()
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (length(b) < 2L) { rv$division_spacing <- sp; return() }  # nothing to space
+    anchor <- max(b)                                  # keep Div0/Div1 cut fixed
+    rv$division_boundaries <- sort(anchor - sp * (seq_along(b) - 1L))
+    rv$division_spacing <- sp
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
   # The left-pane sample selector drives BOTH what the histogram shows and which
   # samples "Apply to selected" writes to. selected_division_samples() returns the
   # selected sample_id(s), or "__all__" when the SCE has no sample_id column.
@@ -3787,6 +3811,16 @@ server <- function(input, output, session) {
     if (length(vp) > sub) vp <- vp[round(seq(1, length(vp), length.out = sub))]
     bins <- suppressWarnings(as.integer(rv$division_bins %||% 120L))
     if (is.na(bins) || bins < 2L) bins <- 120L
+    # reflect the current (median) gap in the Spacing box as a live hint
+    bsrt <- sort(as.numeric(rv$division_boundaries))
+    if (length(bsrt) >= 2L) {
+      cur_sp <- stats::median(diff(bsrt))
+      if (is.finite(cur_sp) &&
+          (!is.finite(rv$division_spacing) || abs(rv$division_spacing - cur_sp) > 1e-6)) {
+        rv$division_spacing <- cur_sp
+        updateNumericInput(session, "division_spacing", value = round(cur_sp, 3))
+      }
+    }
     # palette / labels follow the ACTUAL working-boundary count (N divisions = N
     # boundaries -> Div0..DivN), independent of the N input which may lag a Load.
     nb <- length(rv$division_boundaries)
@@ -3905,6 +3939,12 @@ server <- function(input, output, session) {
     rv$sce <- write_division_coldata(rv$sce, lev, n_levels = maxn, col_name = "div")
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
     autosave()   # persists every applied profile into metadata alongside the write
+    # refresh the Gating tab's "Color by marker / metadata" dropdown so the new
+    # `div` column is immediately selectable (mirrors export_population_to_coldata).
+    cd_names <- get_coldata_names(rv$sce); rv$coldata_names <- cd_names
+    updateSelectInput(session, "overlay_coldata",
+                      choices = c("(none)" = "", cd_names),
+                      selected = input$overlay_coldata %||% "")
     n_assigned <- sum(!is.na(lev))
     showNotification(
       sprintf("Applied to %d sample%s (%s). colData$div: %s of %s cells (Div0..Div%d).",
