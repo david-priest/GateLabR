@@ -1,6 +1,6 @@
 Package: GateLabR
 Title: Interactive Manual Gating for SingleCellExperiment Objects
-Version: 1.1.0
+Version: 1.2.0
 Authors@R:
     person("David", "Priest", email = "david.priest898@gmail.com",
            role = c("aut", "cre"),
@@ -10,8 +10,10 @@ Description: A desktop-style Shiny application for interactive manual gating of
     SingleCellExperiment objects. Supports polygon, rectangle and quadrant
     gates, boolean population hierarchies, per-channel logicle / arcsinh
     transforms, embedded-spillover compensation, GatingML 2.0 import and export,
-    FCS export, and publication-style figure export. Gates, populations and
-    settings persist inside the object's metadata.
+    FCS export, publication-style figure export, and a cell-division (CFSE /
+    CellTrace dye-dilution) profiler that writes per-cell Div0..DivN calls back to
+    the object. Gates, populations and settings persist inside the object's
+    metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
 URL: https://david-priest.github.io/GateLabR, https://github.com/david-priest/GateLabR
