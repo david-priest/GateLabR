@@ -1075,6 +1075,7 @@ ui <- fluidPage(
             ),
             tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
               tags$div(selectInput("division_channel", "Dye channel:", choices = NULL, width = "170px")),
+              tags$div(textInput("division_col_name", "Output column:", value = "div", width = "130px")),
               tags$div(numericInput("division_n", "# divisions (N):", value = 6, min = 1, max = 11,
                                     step = 1, width = "120px")),
               tags$div(style = "display:flex; flex-direction:column; gap:3px;",
@@ -1267,6 +1268,7 @@ server <- function(input, output, session) {
     division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
     division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
     division_pop_label = NULL,                  # active population filter label (display only)
+    division_col_name = "div",                  # colData column Apply writes to
     division_spacing = NA_real_,               # last even-spacing gap (display hint + override)
     division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
     division_bins = 120L,                       # histogram bin count
@@ -1521,7 +1523,8 @@ server <- function(input, output, session) {
       division_bins = rv$division_bins,
       division_subsample = rv$division_subsample,
       division_ymarker = rv$division_ymarker,
-      division_point_alpha = rv$division_point_alpha
+      division_point_alpha = rv$division_point_alpha,
+      division_col_name = rv$division_col_name
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1559,6 +1562,7 @@ server <- function(input, output, session) {
       division_subsample   = rv$division_subsample,
       division_ymarker     = rv$division_ymarker,
       division_point_alpha = rv$division_point_alpha,
+      division_col_name    = rv$division_col_name,
       comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
@@ -1651,6 +1655,10 @@ server <- function(input, output, session) {
     if (!is.null(ws$division_point_alpha)) {
       rv$division_point_alpha <- ws$division_point_alpha
       updateNumericInput(session, "division_point_alpha", value = ws$division_point_alpha)
+    }
+    if (!is.null(ws$division_col_name)) {
+      rv$division_col_name <- ws$division_col_name
+      updateTextInput(session, "division_col_name", value = ws$division_col_name)
     }
     if (!is.null(ws$illust_settings)) {
       rv$.illust_settings_pending     <- ws$illust_settings
@@ -2522,9 +2530,11 @@ server <- function(input, output, session) {
       rv$division_subsample <- ws$division_subsample %||% 50000L
       rv$division_ymarker <- ws$division_ymarker %||% NULL
       rv$division_point_alpha <- ws$division_point_alpha %||% 0.4
+      rv$division_col_name <- ws$division_col_name %||% "div"
       updateNumericInput(session, "division_bins", value = rv$division_bins)
       updateNumericInput(session, "division_subsample", value = rv$division_subsample)
       updateNumericInput(session, "division_point_alpha", value = rv$division_point_alpha)
+      updateTextInput(session, "division_col_name", value = rv$division_col_name)
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
       }
@@ -2561,9 +2571,11 @@ server <- function(input, output, session) {
       rv$division_subsample <- 50000L
       rv$division_ymarker <- NULL
       rv$division_point_alpha <- 0.4
+      rv$division_col_name <- "div"
       updateNumericInput(session, "division_bins", value = 120L)
       updateNumericInput(session, "division_subsample", value = 50000L)
       updateNumericInput(session, "division_point_alpha", value = 0.4)
+      updateTextInput(session, "division_col_name", value = "div")
       rv$.illust_settings_pending <- NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
@@ -3701,6 +3713,15 @@ server <- function(input, output, session) {
     grDevices::colorRampPalette(paired)(k)
   }
 
+  # Sanitise the user-supplied colData column name for the division write
+  # (same rules as export_population_to_coldata); empty -> "div".
+  sanitize_division_col <- function(name) {
+    nm <- gsub("[^A-Za-z0-9_]", "_", trimws(name %||% ""))
+    nm <- gsub("_+", "_", nm)
+    nm <- sub("^_|_$", "", nm)
+    if (!nzchar(nm)) "div" else nm
+  }
+
   # keep the dye-channel + biplot Y-marker dropdowns populated; guess defaults
   observeEvent(rv$channels, {
     chs <- rv$channels
@@ -4123,20 +4144,25 @@ server <- function(input, output, session) {
       lev[idx] <- assign_division_levels(rv$assay_data[idx, chs], bs)
       maxn <- max(maxn, length(bs))
     }
-    rv$sce <- write_division_coldata(rv$sce, lev, n_levels = maxn, col_name = "div")
+    col <- sanitize_division_col(input$division_col_name)
+    rv$division_col_name <- col
+    if (!identical(col, trimws(input$division_col_name %||% ""))) {
+      updateTextInput(session, "division_col_name", value = col)
+    }
+    rv$sce <- write_division_coldata(rv$sce, lev, n_levels = maxn, col_name = col)
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
     autosave()   # persists every applied profile into metadata alongside the write
     # refresh the Gating tab's "Color by marker / metadata" dropdown so the new
-    # `div` column is immediately selectable (mirrors export_population_to_coldata).
+    # column is immediately selectable (mirrors export_population_to_coldata).
     cd_names <- get_coldata_names(rv$sce); rv$coldata_names <- cd_names
     updateSelectInput(session, "overlay_coldata",
                       choices = c("(none)" = "", cd_names),
                       selected = input$overlay_coldata %||% "")
     n_assigned <- sum(!is.na(lev))
     showNotification(
-      sprintf("Applied to %d sample%s (%s). colData$div: %s of %s cells (Div0..Div%d).",
+      sprintf("Applied to %d sample%s (%s). colData$%s: %s of %s cells (Div0..Div%d).",
               length(sel), if (length(sel) == 1L) "" else "s",
-              paste(utils::head(sel, 4), collapse = ", "),
+              paste(utils::head(sel, 4), collapse = ", "), col,
               format(n_assigned, big.mark = ","), format(ncell, big.mark = ","), maxn),
       type = "message", duration = 5)
   })
