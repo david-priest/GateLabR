@@ -1117,6 +1117,23 @@ ui <- fluidPage(
             tags$div(id = "division-plot-container",
                      style = "padding:8px 4px; min-height:430px; position:relative; width:75%; min-width:560px;")
           )
+        ),
+
+        # ── Tab 9: Proportions (colData composition preview) ──────────────────
+        tabPanel("Proportions",
+          tags$div(class = "proportions-controls", style = "padding:6px 4px;",
+            tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
+              tags$div(selectInput("prop_category", "Category (fill):", choices = NULL, width = "190px")),
+              tags$div(selectInput("prop_group", "Group (x-axis):", choices = NULL, width = "190px")),
+              tags$div(selectInput("prop_palette", "Palette:", choices = OVERLAY_PALETTES,
+                                   selected = "paired", width = "170px"))
+            ),
+            tags$div(style = "font-size:11px; color:#888; max-width:680px; margin-bottom:6px;",
+              tags$b("Preview only."), " Plots colData columns — export a gated population (or Apply ",
+              "divisions) to include it as a column. For publication figures, export colData and use ",
+              "seekit / ggplot2 / rstatix."),
+            plotOutput("proportions_plot", height = "470px", width = "78%")
+          )
         )
       )
     ),
@@ -4192,6 +4209,78 @@ server <- function(input, output, session) {
              " (Apply still writes whole sample)")
     } else ""
     paste0(sel_txt, "  |  ", ev, nb, " gates (Div0..Div", nb, ")  |  ", applied_txt, pop_txt)
+  })
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # PROPORTIONS TAB  (colData composition preview; reads colData only, ggplot2)
+  # ════════════════════════════════════════════════════════════════════════════
+  # Categorical colData columns suitable for composition / grouping: factors,
+  # character, logical, or low-cardinality numeric.
+  categorical_coldata_cols <- function() {
+    if (is.null(rv$sce)) return(character(0))
+    cd <- SummarizedExperiment::colData(rv$sce)
+    nm <- colnames(cd)
+    keep <- vapply(nm, function(c) {
+      v <- cd[[c]]
+      if (is.factor(v) || is.character(v) || is.logical(v)) return(TRUE)
+      if (is.numeric(v)) {
+        u <- unique(v[!is.na(v)]); return(length(u) >= 1L && length(u) <= 20L)
+      }
+      FALSE
+    }, logical(1))
+    nm[keep]
+  }
+
+  # populate the Category / Group dropdowns when colData changes
+  observeEvent(rv$coldata_names, {
+    cols <- categorical_coldata_cols()
+    cat_guess <- cols[grep("^div", cols, ignore.case = TRUE)][1]
+    if (is.na(cat_guess)) cat_guess <- if (length(cols)) cols[1] else ""
+    grp_guess <- cols[grep("condition|day|group|timepoint|stim|sample", cols, ignore.case = TRUE)][1]
+    if (is.na(grp_guess)) grp_guess <- if (length(cols) >= 2L) cols[2] else (if (length(cols)) cols[1] else "")
+    updateSelectInput(session, "prop_category", choices = cols,
+                      selected = isolate(input$prop_category) %||% cat_guess)
+    updateSelectInput(session, "prop_group", choices = cols,
+                      selected = isolate(input$prop_group) %||% grp_guess)
+  }, ignoreNULL = FALSE)
+
+  # ordered levels of a colData column actually present in a value vector
+  .prop_levels <- function(col, present) {
+    if (is.factor(col)) {
+      lv <- levels(col); lv[lv %in% as.character(present)]
+    } else sort(unique(as.character(present)))
+  }
+
+  output$proportions_plot <- renderPlot({
+    req(rv$sce)
+    catcol <- input$prop_category; grpcol <- input$prop_group
+    validate(need(isTRUE(nzchar(catcol)) && isTRUE(nzchar(grpcol)),
+                  "Pick a Category and a Group column."))
+    cd <- SummarizedExperiment::colData(rv$sce)
+    validate(need(catcol %in% colnames(cd) && grpcol %in% colnames(cd),
+                  "Selected column not found in colData."))
+    df <- data.frame(cat = as.character(cd[[catcol]]),
+                     grp = as.character(cd[[grpcol]]), stringsAsFactors = FALSE)
+    df <- df[!is.na(df$cat) & !is.na(df$grp), , drop = FALSE]
+    validate(need(nrow(df) > 0, "No non-missing cells for this combination."))
+    cat_lv <- .prop_levels(cd[[catcol]], df$cat)
+    grp_lv <- .prop_levels(cd[[grpcol]], df$grp)
+    df$cat <- factor(df$cat, levels = cat_lv)
+    df$grp <- factor(df$grp, levels = grp_lv)
+    # proportion of each Category level WITHIN each Group level (cols sum to 1)
+    tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
+    pal <- overlay_color_palette(input$prop_palette %||% "paired", length(cat_lv))
+    ggplot2::ggplot(tab, ggplot2::aes(x = grp, y = Freq, fill = cat)) +
+      ggplot2::geom_col(width = 0.82, color = "grey25", linewidth = 0.2) +
+      ggplot2::scale_fill_manual(values = stats::setNames(pal, cat_lv),
+                                 name = catcol, drop = FALSE) +
+      ggplot2::scale_y_continuous(labels = function(v) paste0(round(v * 100), "%"),
+                                  expand = ggplot2::expansion(mult = c(0, 0.02))) +
+      ggplot2::labs(x = grpcol, y = "Proportion of cells",
+                    title = paste0(catcol, " composition by ", grpcol)) +
+      ggplot2::theme_bw(base_size = 14) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+                     panel.grid.major.x = ggplot2::element_blank())
   })
 
   observeEvent(input$gating_max_events, {
