@@ -29,6 +29,21 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   kids[[1]]
 }
 
+# Detect who wrote this Gating-ML so the importer can match channels + advise
+# correctly: "gatelabr" (channels are display/marker names — a skip means a truly
+# missing channel), "cytobank" (channels are FCS $PnN / metal — need the metal
+# bridge), or "generic".
+.gml_detect_source <- function(root) {
+  ci <- .gml_first_child_local(root, "custom_info")
+  if (!is.null(ci) && !is.null(.gml_first_child_local(ci, "gatelabr_scales"))) {
+    return("gatelabr")
+  }
+  cb <- tryCatch(xml2::xml_find_first(root, ".//*[local-name()='cytobank']"),
+                 error = function(e) NULL)
+  if (!is.null(cb) && !inherits(cb, "xml_missing")) return("cytobank")
+  "generic"
+}
+
 .gml_num <- function(x) {
   suppressWarnings(as.numeric(x))
 }
@@ -247,12 +262,23 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 .gml_resolve_channel <- function(ch, session_channels, pnn_to_channel = NULL) {
   if (ch %in% session_channels) return(ch)
 
-  if (is.list(pnn_to_channel) || is.vector(pnn_to_channel)) {
-    mapped <- NULL
+  if ((is.list(pnn_to_channel) || is.vector(pnn_to_channel)) && length(pnn_to_channel)) {
+    # exact $PnN key match
     if (!is.null(names(pnn_to_channel)) && ch %in% names(pnn_to_channel)) {
       mapped <- unname(pnn_to_channel[[ch]])
+      if (!is.null(mapped) && mapped %in% session_channels) return(mapped)
     }
-    if (!is.null(mapped) && mapped %in% session_channels) return(mapped)
+    # normalized key match: tolerate metal-name format variants between the
+    # GatingML $PnN (e.g. "Pr141Di") and the map keys (e.g. "141Pr").
+    nn_ch <- .gml_normalize_channel(ch)
+    if (nzchar(nn_ch) && !is.null(names(pnn_to_channel))) {
+      knorm <- vapply(names(pnn_to_channel), .gml_normalize_channel, character(1))
+      hit <- which(knorm == nn_ch)
+      for (h in hit) {
+        mapped <- unname(pnn_to_channel[[h]])
+        if (!is.null(mapped) && mapped %in% session_channels) return(mapped)
+      }
+    }
   }
 
   low_map <- setNames(session_channels, tolower(session_channels))
@@ -503,6 +529,7 @@ import_gatingml_from_cytobank <- function(file_path,
   app_gates <- list()
   gate_order <- character(0)
   n_skipped <- 0L
+  unresolved_channels <- character(0)
 
   for (gml_id in names(raw_gates)) {
     g <- raw_gates[[gml_id]]
@@ -512,6 +539,8 @@ import_gatingml_from_cytobank <- function(file_path,
     resolved <- lapply(channels, function(ch) .gml_resolve_channel(ch, session_channels, pnn_to_channel))
     names(resolved) <- channels
     if (any(vapply(resolved, is.null, logical(1)))) {
+      unresolved_channels <- c(unresolved_channels,
+                               channels[vapply(resolved, is.null, logical(1))])
       n_skipped <- n_skipped + 1L
       next
     }
@@ -794,6 +823,8 @@ import_gatingml_from_cytobank <- function(file_path,
     root_population_id = root_pop_id,
     n_gates_imported = length(app_gates),
     n_gates_skipped = as.integer(n_skipped),
+    skipped_channels = sort(unique(unresolved_channels)),
+    source = .gml_detect_source(root),
     n_pops_imported = max(0L, length(populations) - 1L),
     scales = .gml_parse_gatelabr_scales(root)
   )
