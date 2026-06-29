@@ -1128,15 +1128,19 @@ ui <- fluidPage(
                                     selected = "stacked", inline = TRUE)),
               tags$div(selectInput("prop_category", "Category:", choices = NULL, width = "180px")),
               tags$div(selectInput("prop_group", "Group:", choices = NULL, width = "180px")),
-              tags$div(selectInput("prop_unit", "Unit (boxplot):", choices = NULL, width = "160px")),
+              tags$div(selectInput("prop_unit", "Unit (e.g. sample):", choices = NULL, width = "160px")),
               tags$div(selectInput("prop_palette", "Palette:", choices = OVERLAY_PALETTES,
-                                   selected = "paired", width = "160px"))
+                                   selected = "paired", width = "160px")),
+              tags$div(style = "padding-bottom:6px;",
+                checkboxInput("prop_average", "Average per unit (per-sample first)", value = TRUE))
             ),
-            tags$div(style = "font-size:11px; color:#888; max-width:760px; margin-bottom:6px;",
+            tags$div(style = "font-size:11px; color:#888; max-width:820px; margin-bottom:6px;",
               tags$b("Preview only."), " Stacked bar: Category composition within each Group. ",
-              "Boxplot: per-Unit (e.g. sample) proportion of each Category, boxed across units, by Group. ",
-              "Respects the left-panel sample filter. ",
-              "Export colData + use seekit / ggplot2 / rstatix for publication figures."),
+              "Boxplot: per-Unit proportion of each Category, boxed across units, by Group. ",
+              tags$b("Select which samples to include using the sample filter on the left"), " — the ",
+              "plot updates to just those cells. With ", tags$b("Average per unit"), " on, proportions are ",
+              "computed within each Unit (sample) first, then averaged across units in the Group (the ",
+              "standard composition method). Export colData + use seekit / ggplot2 / rstatix for figures."),
             plotOutput("proportions_plot", height = "470px", width = "78%")
           )
         )
@@ -4276,8 +4280,12 @@ server <- function(input, output, session) {
                                   "No cells selected — adjust the sample filter on the left."))
       cd <- cd[smask, , drop = FALSE]
     }
-    df <- data.frame(cat = as.character(cd[[catcol]]),
-                     grp = as.character(cd[[grpcol]]), stringsAsFactors = FALSE)
+    unitcol <- input$prop_unit
+    have_unit <- isTRUE(nzchar(unitcol)) && unitcol %in% colnames(cd)
+    df <- data.frame(cat  = as.character(cd[[catcol]]),
+                     grp  = as.character(cd[[grpcol]]),
+                     unit = if (have_unit) as.character(cd[[unitcol]]) else NA_character_,
+                     stringsAsFactors = FALSE)
     df <- df[!is.na(df$cat) & !is.na(df$grp), , drop = FALSE]
     shiny::validate(shiny::need(nrow(df) > 0, "No non-missing cells for this combination."))
     cat_lv <- .prop_levels(cd[[catcol]], df$cat)
@@ -4287,23 +4295,23 @@ server <- function(input, output, session) {
     ptype <- input$prop_type %||% "stacked"
     pct_lab <- function(v) paste0(round(v * 100), "%")
 
+    # Per-Unit proportion of each Category (sums to 1 per unit) + each unit's
+    # dominant Group level. Shared by the boxplot and the averaged stacked bar.
+    per_unit_props <- function() {
+      d <- df[!is.na(df$unit), , drop = FALSE]
+      shiny::validate(shiny::need(nrow(d) > 0, "Pick a Unit column with non-missing values."))
+      d$unit <- factor(d$unit)
+      pu <- as.data.frame(prop.table(table(unit = d$unit, cat = d$cat), margin = 1))
+      ug <- tapply(as.character(d$grp), as.character(d$unit),
+                   function(g) names(sort(table(g), decreasing = TRUE))[1])
+      pu$grp <- factor(ug[as.character(pu$unit)], levels = grp_lv)
+      pu[!is.na(pu$grp), , drop = FALSE]
+    }
+
     if (identical(ptype, "box")) {
       # ── Boxplot: per-Unit proportion of each Category, boxed across units, by Group
-      unitcol <- input$prop_unit
-      shiny::validate(shiny::need(isTRUE(nzchar(unitcol)) && unitcol %in% colnames(cd),
-                                  "Pick a Unit column (e.g. sample_id) for the boxplot."))
-      df$unit <- as.character(cd[[unitcol]])[!is.na(as.character(cd[[catcol]])) &
-                                             !is.na(as.character(cd[[grpcol]]))]
-      df <- df[!is.na(df$unit), , drop = FALSE]
-      shiny::validate(shiny::need(nrow(df) > 0, "No non-missing cells for this combination."))
-      df$unit <- factor(df$unit)
-      # proportion of each Category level WITHIN each unit (sums to 1 per unit)
-      tab <- as.data.frame(prop.table(table(unit = df$unit, cat = df$cat), margin = 1))
-      # each unit -> its (dominant) Group level
-      unit_grp <- tapply(as.character(df$grp), as.character(df$unit),
-                         function(g) names(sort(table(g), decreasing = TRUE))[1])
-      tab$grp <- factor(unit_grp[as.character(tab$unit)], levels = grp_lv)
-      tab <- tab[!is.na(tab$grp), , drop = FALSE]
+      shiny::validate(shiny::need(have_unit, "Pick a Unit column (e.g. sample_id) for the boxplot."))
+      tab <- per_unit_props()
       pal <- overlay_color_palette(input$prop_palette %||% "paired", length(grp_lv))
       ggplot2::ggplot(tab, ggplot2::aes(x = cat, y = Freq, fill = grp)) +
         ggplot2::geom_boxplot(outlier.shape = NA, position = ggplot2::position_dodge(width = 0.75),
@@ -4318,8 +4326,19 @@ server <- function(input, output, session) {
         ggplot2::theme_bw(base_size = 14) +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
     } else {
-      # ── Stacked bar: Category composition WITHIN each Group level (cols sum to 1)
-      tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
+      # ── Stacked bar: Category composition within each Group (bars sum to 1).
+      do_avg <- isTRUE(input$prop_average) && have_unit
+      if (do_avg) {
+        # per-Unit proportions first, then MEAN across units within each Group
+        # (the standard composition method; each sample weighted equally)
+        pu <- per_unit_props()
+        tab <- stats::aggregate(Freq ~ grp + cat, data = pu, FUN = mean)
+        ysub <- paste0("mean across ", unitcol, "s")
+      } else {
+        # pooled across all cells in the Group
+        tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
+        ysub <- "pooled cells"
+      }
       pal <- overlay_color_palette(input$prop_palette %||% "paired", length(cat_lv))
       ggplot2::ggplot(tab, ggplot2::aes(x = grp, y = Freq, fill = cat)) +
         ggplot2::geom_col(width = 0.82, color = "grey25", linewidth = 0.2) +
@@ -4327,7 +4346,7 @@ server <- function(input, output, session) {
                                    name = catcol, drop = FALSE) +
         ggplot2::scale_y_continuous(labels = pct_lab,
                                     expand = ggplot2::expansion(mult = c(0, 0.02))) +
-        ggplot2::labs(x = grpcol, y = "Proportion of cells",
+        ggplot2::labs(x = grpcol, y = paste0("Proportion of cells (", ysub, ")"),
                       title = paste0(catcol, " composition by ", grpcol)) +
         ggplot2::theme_bw(base_size = 14) +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
