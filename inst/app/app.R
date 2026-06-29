@@ -1135,6 +1135,7 @@ ui <- fluidPage(
             tags$div(style = "font-size:11px; color:#888; max-width:760px; margin-bottom:6px;",
               tags$b("Preview only."), " Stacked bar: Category composition within each Group. ",
               "Boxplot: per-Unit (e.g. sample) proportion of each Category, boxed across units, by Group. ",
+              "Respects the left-panel sample filter. ",
               "Export colData + use seekit / ggplot2 / rstatix for publication figures."),
             plotOutput("proportions_plot", height = "470px", width = "78%")
           )
@@ -4268,6 +4269,13 @@ server <- function(input, output, session) {
     cd <- SummarizedExperiment::colData(rv$sce)
     shiny::validate(shiny::need(catcol %in% colnames(cd) && grpcol %in% colnames(cd),
                                 "Selected column not found in colData."))
+    # Respect the left-panel sample filter (reads rv$sample_mask -> reactive).
+    smask <- get_effective_sample_mask(for_plot = FALSE)
+    if (!is.null(smask) && length(smask) == nrow(cd)) {
+      shiny::validate(shiny::need(any(smask),
+                                  "No cells selected — adjust the sample filter on the left."))
+      cd <- cd[smask, , drop = FALSE]
+    }
     df <- data.frame(cat = as.character(cd[[catcol]]),
                      grp = as.character(cd[[grpcol]]), stringsAsFactors = FALSE)
     df <- df[!is.na(df$cat) & !is.na(df$grp), , drop = FALSE]
