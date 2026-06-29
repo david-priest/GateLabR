@@ -1421,14 +1421,36 @@ server <- function(input, output, session) {
   }
 
   build_gatingml_channel_map <- function(sce, session_channels) {
-    md_map <- S4Vectors::metadata(sce)$pnn_to_channel
-    if (is.null(md_map)) md_map <- list()
-    md_map <- as.list(md_map)
+    md_map <- as.list(S4Vectors::metadata(sce)$pnn_to_channel %||% list())
+
+    # Invert metadata$channel_to_pnn (display -> $PnN) into $PnN -> display.
+    inv_map <- list()
+    ctp <- S4Vectors::metadata(sce)$channel_to_pnn
+    if (!is.null(ctp) && length(ctp)) {
+      for (disp in names(ctp)) {
+        pnn <- as.character(ctp[[disp]])
+        if (length(pnn) == 1L && nzchar(pnn) && disp %in% session_channels) inv_map[[pnn]] <- disp
+      }
+    }
+
+    # CATALYST / prepData(channel_names="desc") SCEs: rowData$channel_name holds the
+    # FCS $PnN (metal, e.g. "Pr141Di") while the rowname is the marker (e.g. "CD38").
+    # This is the key bridge for Cytobank GatingML, which references metal $PnN names.
+    rd_map <- list()
+    rd <- tryCatch(SummarizedExperiment::rowData(sce), error = function(e) NULL)
+    if (!is.null(rd) && "channel_name" %in% colnames(rd)) {
+      cn <- as.character(rd$channel_name); rn <- rownames(sce)
+      for (i in seq_along(cn)) {
+        if (!is.na(cn[i]) && nzchar(cn[i]) && i <= length(rn) &&
+            rn[i] %in% session_channels && !identical(cn[i], rn[i])) {
+          rd_map[[cn[i]]] <- rn[i]
+        }
+      }
+    }
 
     guessed <- .gml_guess_pnn_map_from_channels(session_channels)
-    if (length(guessed) == 0) return(md_map)
 
-    merged <- c(md_map, guessed)
+    merged <- c(md_map, inv_map, rd_map, guessed)  # explicit map wins, then rowData, then guess
     merged[!duplicated(names(merged))]
   }
 
@@ -9145,15 +9167,30 @@ server <- function(input, output, session) {
       rv$.pending_gatingml_import <- parsed
       showModal(modalDialog(
         title = "Import GatingML from Cytobank",
-        tags$p(sprintf("Parsed %d gates and %d populations.",
-                       parsed$n_gates_imported, parsed$n_pops_imported)),
+        tags$p(sprintf("Parsed %d gates and %d populations from %s.",
+                       parsed$n_gates_imported, parsed$n_pops_imported,
+                       switch(parsed$source %||% "generic",
+                              gatelabr = "a GateLabR export",
+                              cytobank = "a Cytobank Gating-ML file",
+                              "a Gating-ML file"))),
         if (isTRUE(parsed$n_gates_skipped > 0)) {
-          tags$p(sprintf("%d gate(s) were skipped because their channels are not present in this SCE.",
-                         parsed$n_gates_skipped), style = "color:#b26a00;")
-        },
-        if (isTRUE(parsed$n_gates_skipped > 0) && !has_native_pnn_map) {
+          chs <- parsed$skipped_channels %||% character(0)
           tags$p(
-            "This SCE does not contain a saved $PnN->display channel map. If many metal gates are skipped, re-importing FCS in this updated app will retain that map and improve Cytobank channel matching.",
+            sprintf("%d gate(s) skipped — channel(s) not found in this SCE%s",
+                    parsed$n_gates_skipped,
+                    if (length(chs)) paste0(": ", paste(utils::head(chs, 12), collapse = ", "),
+                                            if (length(chs) > 12L) " …" else "") else "."),
+            style = "color:#b26a00;")
+        },
+        if (isTRUE(parsed$n_gates_skipped > 0) && identical(parsed$source %||% "", "cytobank") && !has_native_pnn_map) {
+          tags$p(
+            "Cytobank references channels by metal ($PnN) name; GateLabR bridges these via rowData$channel_name (CATALYST / prepData) or a saved $PnN map. If metal gates are still skipped, re-importing the FCS in this updated app stores a $PnN map and improves matching.",
+            style = "color:#8a6d3b; font-size:12px;"
+          )
+        },
+        if (isTRUE(parsed$n_gates_skipped > 0) && identical(parsed$source %||% "", "gatelabr")) {
+          tags$p(
+            "This is a GateLabR export (channels are marker names), so a skipped gate means that channel genuinely isn't in this SCE.",
             style = "color:#8a6d3b; font-size:12px;"
           )
         },
