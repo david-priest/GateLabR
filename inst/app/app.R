@@ -113,6 +113,7 @@ ui <- fluidPage(
     tags$script(src = "d3.v7.min.js"),
     tags$script(src = "cytof_plot.js?v=20260623b"),
     tags$script(src = "mini_plot.js?v=20260623b"),
+    tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
   ),
@@ -197,6 +198,14 @@ ui <- fluidPage(
         tags$div(class = "sample-filter-panel",
           tags$div(class = "sample-filter-subheader",
                    "Use column filters or click rows to select samples"),
+          tags$div(style = "display:flex; gap:4px; margin-bottom:4px;",
+            actionButton("sample_filter_select_all_btn", "Select all displayed",
+                         class = "btn-xs btn-default", style = "flex:1;",
+                         title = "Select every sample currently shown by the column filters"),
+            actionButton("sample_filter_clear_btn", "Deselect all",
+                         class = "btn-xs btn-default", style = "flex:1;",
+                         title = "Clear the selection and column filters — show all samples")
+          ),
           DT::dataTableOutput("sample_filter_table")
         ),
 
@@ -364,6 +373,8 @@ ui <- fluidPage(
                   ),
                   selectInput("overlay_coldata", NULL,
                               choices = c("(none)" = ""), selected = "", width = "100%"),
+                  selectInput("overlay_palette", "Palette",
+                              choices = OVERLAY_PALETTES, selected = "paired", width = "100%"),
                   uiOutput("overlay_checkboxes_ui")
                 )
               )
@@ -1054,6 +1065,93 @@ ui <- fluidPage(
             ),
             uiOutput("scales_channels_ui")
           )
+        ),
+
+        # ── Tab 7: Division profiling ─────────────────────────────────────────
+        tabPanel("Division",
+          tags$div(class = "division-controls", style = "padding:6px 4px;",
+            tags$div(style = "display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;",
+              actionButton("division_render_btn", "Render", class = "btn-sm btn-primary"),
+              actionButton("division_space_evenly_btn", "Space evenly", class = "btn-sm btn-default",
+                           title = "Re-seed boundaries from the displayed data (even spacing)"),
+              actionButton("division_load_btn", "Load saved", class = "btn-sm btn-default",
+                           title = "Load the selected sample's previously-applied boundaries (one sample selected)"),
+              actionButton("division_write_btn", "Apply to selected", class = "btn-sm btn-info",
+                           title = "Apply the current boundaries to every selected sample: store per-sample, write Div0..DivN into colData$div for the WHOLE sample (ignores the population filter), and persist to metadata"),
+              tags$span(textOutput("division_status", inline = TRUE),
+                        style = "font-size:11px; color:#666;")
+            ),
+            tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
+              tags$div(selectInput("division_channel", "Dye channel:", choices = NULL, width = "170px")),
+              tags$div(textInput("division_col_name", "Output column:", value = "div", width = "130px")),
+              tags$div(numericInput("division_n", "# divisions (N):", value = 6, min = 1, max = 11,
+                                    step = 1, width = "120px")),
+              tags$div(style = "display:flex; flex-direction:column; gap:3px;",
+                tags$label("Adjust N", style = "font-size:11px; color:#555; margin:0; font-weight:normal;"),
+                tags$div(style = "display:flex; gap:4px;",
+                  actionButton("division_remove_btn", "−", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;"),
+                  actionButton("division_add_btn", "+", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;")
+                )
+              ),
+              tags$div(style = "display:flex; flex-direction:column; gap:3px;",
+                tags$label("Shift all", style = "font-size:11px; color:#555; margin:0; font-weight:normal;"),
+                tags$div(style = "display:flex; gap:4px;",
+                  actionButton("division_shift_down_btn", "←", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;",
+                               title = "Nudge all gates toward lower dye (left)"),
+                  actionButton("division_shift_up_btn", "→", class = "btn-sm btn-default",
+                               style = "width:42px; font-weight:bold; font-size:16px; line-height:1; padding:4px 0;",
+                               title = "Nudge all gates toward higher dye (right)")
+                )
+              ),
+              tags$div(numericInput("division_spacing", "Spacing (even):", value = NA, min = 0,
+                                    step = 0.05, width = "110px")),
+              tags$div(numericInput("division_xmin", "X min:", value = NA, step = 0.2, width = "92px")),
+              tags$div(numericInput("division_xmax", "X max:", value = NA, step = 0.2, width = "92px")),
+              tags$div(numericInput("division_bins", "Bins:", value = 120, min = 10, max = 400,
+                                    step = 10, width = "90px")),
+              tags$div(numericInput("division_subsample", "Subsample:", value = 50000, min = 1000,
+                                    step = 1000, width = "110px")),
+              tags$div(selectInput("division_ymarker", "Y marker (biplot):",
+                                   choices = c("(none)" = ""), width = "170px")),
+              tags$div(numericInput("division_point_alpha", "Biplot opacity:", value = 0.4,
+                                    min = 0.02, max = 1, step = 0.05, width = "120px")),
+              tags$div(style = "font-size:11px; color:#888; max-width:320px;",
+                "Drag any line to fit. Div0 = brightest. Display follows the sample + population filters; ",
+                tags$b("Apply writes the WHOLE sample"), " (ignores the population filter).")
+            ),
+            tags$div(id = "division-plot-container",
+                     style = "padding:8px 4px; min-height:430px; position:relative; width:75%; min-width:560px;")
+          )
+        ),
+
+        # ── Tab 9: Proportions (colData composition preview) ──────────────────
+        tabPanel("Proportions",
+          tags$div(class = "proportions-controls", style = "padding:6px 4px;",
+            tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
+              tags$div(radioButtons("prop_type", "Plot:",
+                                    choices = c("Stacked bar" = "stacked", "Boxplot" = "box"),
+                                    selected = "stacked", inline = TRUE)),
+              tags$div(selectInput("prop_category", "Category:", choices = NULL, width = "180px")),
+              tags$div(selectInput("prop_group", "Group:", choices = NULL, width = "180px")),
+              tags$div(selectInput("prop_unit", "Unit (e.g. sample):", choices = NULL, width = "160px")),
+              tags$div(selectInput("prop_facet", "Facet by:", choices = c("(none)" = ""), width = "150px")),
+              tags$div(selectInput("prop_palette", "Palette:", choices = OVERLAY_PALETTES,
+                                   selected = "paired", width = "160px")),
+              tags$div(style = "padding-bottom:6px;",
+                checkboxInput("prop_average", "Average per unit (per-sample first)", value = TRUE))
+            ),
+            tags$div(style = "font-size:11px; color:#888; max-width:820px; margin-bottom:6px;",
+              tags$b("Preview only."), " Stacked bar: Category composition within each Group. ",
+              "Boxplot: per-Unit proportion of each Category, boxed across units, by Group. ",
+              tags$b("Select which samples to include using the sample filter on the left"), " — the ",
+              "plot updates to just those cells. With ", tags$b("Average per unit"), " on, proportions are ",
+              "computed within each Unit (sample) first, then averaged across units in the Group (the ",
+              "standard composition method). Export colData + use seekit / ggplot2 / rstatix for figures."),
+            plotOutput("proportions_plot", height = "470px", width = "78%")
+          )
         )
       )
     ),
@@ -1157,8 +1255,9 @@ server <- function(input, output, session) {
     assay_version = 0L,
     current_plot_data = NULL, max_events = 50000L,
     undo_stack = list(), redo_stack = list(),
-    overlay_factor = NULL, overlay_selected = NULL,
+    overlay_factor = NULL, overlay_selected = NULL, overlay_palette = "paired",
     sample_info = NULL, sample_mask = NULL, sample_filter_key = "all",
+    .sample_filter_reset = 0L,                  # bump to force a fresh sample-table re-render
     .range_cache = list(),
     .gate_counts_cache_key = NULL, .gate_counts_cache = NULL,
     .population_tree_cache_key = NULL, .population_tree_cache = NULL,
@@ -1198,7 +1297,20 @@ server <- function(input, output, session) {
     .illust_palette_ui_version = 0L,
     .illust_settings_pending = NULL,   # saved settings waiting for channel UI to render
     .illust_ui_restore_version = 0L,   # bumped to trigger deferred restore observer
-    illust_presets = list()            # named illustration presets stored in workspace
+    illust_presets = list(),           # named illustration presets stored in workspace
+    # ── Division profiling tab (isolated from rv$gates) ──
+    division_channel = NULL, division_ymarker = NULL, division_point_alpha = 0.4, division_n = 6L,
+    division_boundaries = numeric(0),          # the single WORKING boundary set (stable across sample selection)
+    division_by_sample = list(),               # APPLIED profiles: sample_id -> list(boundaries, n, channel)
+    division_selected_samples = character(0),  # sample_id(s) currently selected in the left pane
+    division_pop_label = NULL,                  # active population filter label (display only)
+    division_col_name = "div",                  # colData column Apply writes to
+    division_spacing = NA_real_,               # last even-spacing gap (display hint + override)
+    division_xrange = NULL,                     # user-fixed x-axis [min, max] (no autoscale)
+    division_bins = 120L,                       # histogram bin count
+    division_subsample = 50000L,                # events drawn in the histogram (stride)
+    division_plot_data = NULL, .division_msg_seq = 0L,
+    .last_division_drag_seq = 0L
   )
     valid_global_scale_range <- function(channel) {
       gs <- rv$global_scale_ranges[[channel]]
@@ -1440,7 +1552,15 @@ server <- function(input, output, session) {
       illust_pop_palette = rv$illust_pop_palette %||% list(),
       illust_pop_selected = rv$illust_pop_selected,
       illust_settings = illust_settings,
-      illust_presets = rv$illust_presets %||% list()
+      illust_presets = rv$illust_presets %||% list(),
+      division_profiles = rv$division_by_sample %||% list(),
+      division_channel = rv$division_channel,
+      division_xrange = rv$division_xrange,
+      division_bins = rv$division_bins,
+      division_subsample = rv$division_subsample,
+      division_ymarker = rv$division_ymarker,
+      division_point_alpha = rv$division_point_alpha,
+      division_col_name = rv$division_col_name
     )
     assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
   }
@@ -1471,6 +1591,14 @@ server <- function(input, output, session) {
       illust_pop_selected  = rv$illust_pop_selected,
       illust_settings      = illust_settings,
       illust_presets       = rv$illust_presets %||% list(),
+      division_profiles    = rv$division_by_sample %||% list(),
+      division_channel     = rv$division_channel,
+      division_xrange      = rv$division_xrange,
+      division_bins        = rv$division_bins,
+      division_subsample   = rv$division_subsample,
+      division_ymarker     = rv$division_ymarker,
+      division_point_alpha = rv$division_point_alpha,
+      division_col_name    = rv$division_col_name,
       comp_on              = isTRUE(rv$comp_on),
       version              = 2L,
       saved_at             = as.character(Sys.time()),
@@ -1548,6 +1676,26 @@ server <- function(input, output, session) {
       as.character(ws$illust_pop_selected)
     } else NULL
     if (!is.null(ws$illust_presets)) rv$illust_presets <- ws$illust_presets
+    if (!is.null(ws$division_profiles)) rv$division_by_sample <- ws$division_profiles
+    if (!is.null(ws$division_channel))  rv$division_channel  <- ws$division_channel
+    if (!is.null(ws$division_xrange))   rv$division_xrange    <- ws$division_xrange
+    if (!is.null(ws$division_bins)) {
+      rv$division_bins <- ws$division_bins
+      updateNumericInput(session, "division_bins", value = ws$division_bins)
+    }
+    if (!is.null(ws$division_subsample)) {
+      rv$division_subsample <- ws$division_subsample
+      updateNumericInput(session, "division_subsample", value = ws$division_subsample)
+    }
+    if (!is.null(ws$division_ymarker)) rv$division_ymarker <- ws$division_ymarker
+    if (!is.null(ws$division_point_alpha)) {
+      rv$division_point_alpha <- ws$division_point_alpha
+      updateNumericInput(session, "division_point_alpha", value = ws$division_point_alpha)
+    }
+    if (!is.null(ws$division_col_name)) {
+      rv$division_col_name <- ws$division_col_name
+      updateTextInput(session, "division_col_name", value = ws$division_col_name)
+    }
     if (!is.null(ws$illust_settings)) {
       rv$.illust_settings_pending     <- ws$illust_settings
       rv$.illust_ui_restore_version   <- isolate(rv$.illust_ui_restore_version) + 1L
@@ -2411,6 +2559,18 @@ server <- function(input, output, session) {
       rv$illust_pop_palette <- ws$illust_pop_palette %||% list()
       rv$illust_pop_selected <- if (!is.null(ws$illust_pop_selected)) as.character(ws$illust_pop_selected) else NULL
       rv$illust_presets <- ws$illust_presets %||% list()
+      rv$division_by_sample <- ws$division_profiles %||% list()
+      rv$division_channel <- ws$division_channel %||% NULL
+      rv$division_xrange <- ws$division_xrange %||% NULL
+      rv$division_bins <- ws$division_bins %||% 120L
+      rv$division_subsample <- ws$division_subsample %||% 50000L
+      rv$division_ymarker <- ws$division_ymarker %||% NULL
+      rv$division_point_alpha <- ws$division_point_alpha %||% 0.4
+      rv$division_col_name <- ws$division_col_name %||% "div"
+      updateNumericInput(session, "division_bins", value = rv$division_bins)
+      updateNumericInput(session, "division_subsample", value = rv$division_subsample)
+      updateNumericInput(session, "division_point_alpha", value = rv$division_point_alpha)
+      updateTextInput(session, "division_col_name", value = rv$division_col_name)
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
       }
@@ -2440,6 +2600,18 @@ server <- function(input, output, session) {
       rv$illust_pop_palette <- list()
       rv$illust_pop_selected <- NULL
       rv$illust_presets <- list()
+      rv$division_by_sample <- list()
+      rv$division_channel <- NULL
+      rv$division_xrange <- NULL
+      rv$division_bins <- 120L
+      rv$division_subsample <- 50000L
+      rv$division_ymarker <- NULL
+      rv$division_point_alpha <- 0.4
+      rv$division_col_name <- "div"
+      updateNumericInput(session, "division_bins", value = 120L)
+      updateNumericInput(session, "division_subsample", value = 50000L)
+      updateNumericInput(session, "division_point_alpha", value = 0.4)
+      updateTextInput(session, "division_col_name", value = "div")
       rv$.illust_settings_pending <- NULL
       if (isTRUE(sync_illust_palette_state())) {
         rv$.illust_palette_ui_version <- isolate(rv$.illust_palette_ui_version) + 1L
@@ -2665,6 +2837,7 @@ server <- function(input, output, session) {
 
   output$sample_filter_table <- DT::renderDataTable({
     req(rv$sample_info)
+    rv$.sample_filter_reset    # dependency: "Deselect all" bumps this to re-render fresh
     DT::datatable(
       rv$sample_info$table, filter = "top", selection = "multiple",
       options = list(pageLength = 20, lengthMenu = c(20, 40, 80, 200),
@@ -2675,6 +2848,25 @@ server <- function(input, output, session) {
                      columnDefs = list(list(className = "dt-center", targets = "_all"))),
       style = "bootstrap", class = "compact stripe hover cell-border", rownames = FALSE
     )
+  })
+
+  # "Select all displayed": row-select every sample currently shown by the column
+  # filters (makes the filtered set an explicit selection that persists if filters
+  # are later cleared).
+  observeEvent(input$sample_filter_select_all_btn, {
+    req(rv$sample_info)
+    total <- nrow(rv$sample_info$table)
+    rows <- normalize_dt_rows(input$sample_filter_table_rows_all, total)
+    if (is.null(rows)) rows <- seq_len(total)
+    DT::selectRows(DT::dataTableProxy("sample_filter_table"), rows)
+  })
+
+  # "Deselect all": clear the row selection AND column filters -> back to base
+  # "all" state (re-render the table fresh; the mask observer then resolves to all).
+  observeEvent(input$sample_filter_clear_btn, {
+    req(rv$sample_info)
+    DT::selectRows(DT::dataTableProxy("sample_filter_table"), NULL)
+    rv$.sample_filter_reset <- as.integer(rv$.sample_filter_reset %||% 0L) + 1L
   })
 
   output$sample_filter_summary <- renderText({
@@ -2792,9 +2984,12 @@ server <- function(input, output, session) {
     }
     req(rv$sce)
     cd <- SummarizedExperiment::colData(rv$sce)
-    vals <- as.character(cd[[cd_col]])
+    raw <- cd[[cd_col]]
+    vals <- as.character(raw)
     rv$overlay_factor <- vals
-    all_levels <- sort(unique(vals))
+    # respect the factor's own level order (so e.g. div = Div0..DivN lines up with
+    # the Division tab's palette); otherwise fall back to a sorted unique set.
+    all_levels <- if (is.factor(raw)) levels(raw)[levels(raw) %in% vals] else sort(unique(vals))
 
     level_defaults <- all_levels
     if (!is.null(rv$sample_mask) && length(rv$sample_mask) == length(vals)) {
@@ -2815,6 +3010,16 @@ server <- function(input, output, session) {
     rv$overlay_selected <- input$overlay_levels
     if (!is.null(rv$assay_data)) send_full_plot()
   }, ignoreNULL = FALSE, ignoreInit = TRUE)
+
+  # Overlay palette change — re-render with the new colours.
+  observeEvent(input$overlay_palette, {
+    if (identical(rv$overlay_palette, input$overlay_palette)) return()
+    rv$overlay_palette <- input$overlay_palette
+    if (!is.null(rv$assay_data) &&
+        !is.null(rv$overlay_factor) && length(rv$overlay_selected %||% character(0))) {
+      send_full_plot()
+    }
+  }, ignoreInit = TRUE)
 
   observeEvent(input$clear_overlay_btn, {
     updateSelectInput(session, "overlay_coldata", selected = "")
@@ -3479,7 +3684,7 @@ server <- function(input, output, session) {
       color_map <- setNames(seq_along(selected) - 1L, selected)
       all_color_indices <- rep(0L, length(factor_vals))
       for (lvl in selected) all_color_indices[factor_vals == lvl] <- color_map[[lvl]]
-      palette <- SAMPLE_COLORS[seq_along(selected)]
+      palette <- overlay_color_palette(rv$overlay_palette %||% "paired", length(selected))
       plot_data <- build_plot_data_overlay(
         assay_data = rv$assay_data[include_mask, , drop = FALSE],
         x_channel = x_ch, y_channel = y_ch, assay_name = rv$assay_name,
@@ -3551,6 +3756,667 @@ server <- function(input, output, session) {
     rv$current_plot_data <- plot_data
     session$sendCustomMessage("updatePlot", plot_data)
   }
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # DIVISION PROFILING TAB  (fully isolated: own message "updateDivisionPlot",
+  # own input "division_gates", own rv$division_* state; never touches rv$gates)
+  # ════════════════════════════════════════════════════════════════════════════
+  division_palette <- function(k) {
+    paired <- c("#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c",
+                "#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928")
+    k <- max(1L, as.integer(k))
+    if (k <= length(paired)) return(paired[seq_len(k)])
+    grDevices::colorRampPalette(paired)(k)
+  }
+
+  # Sanitise the user-supplied colData column name for the division write
+  # (same rules as export_population_to_coldata); empty -> "div".
+  sanitize_division_col <- function(name) {
+    nm <- gsub("[^A-Za-z0-9_]", "_", trimws(name %||% ""))
+    nm <- gsub("_+", "_", nm)
+    nm <- sub("^_|_$", "", nm)
+    if (!nzchar(nm)) "div" else nm
+  }
+
+  # keep the dye-channel + biplot Y-marker dropdowns populated; guess defaults
+  observeEvent(rv$channels, {
+    chs <- rv$channels
+    if (!length(chs)) return()
+    guess <- chs[grep("CFSE|CTV|CellTrace|Violet|Tag", chs, ignore.case = TRUE)][1]
+    if (is.na(guess)) guess <- chs[1]
+    updateSelectInput(session, "division_channel", choices = chs,
+                      selected = rv$division_channel %||% guess)
+    yguess <- chs[grep("Ki.?67|MKI67|PCNA", chs, ignore.case = TRUE)][1]
+    if (is.na(yguess)) yguess <- ""
+    updateSelectInput(session, "division_ymarker", choices = c("(none)" = "", chs),
+                      selected = rv$division_ymarker %||% yguess)
+  }, ignoreInit = FALSE)
+
+  observeEvent(input$division_channel, {
+    if (identical(rv$division_channel, input$division_channel)) return()
+    rv$division_channel <- input$division_channel
+    rv$division_xrange <- NULL          # new channel -> reseed the x-axis from its data
+    rv$division_boundaries <- numeric(0) # ...and reseed the working ladder for its scale
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Biplot Y marker — pure display; "(none)" hides the biplot.
+  observeEvent(input$division_ymarker, {
+    ym <- input$division_ymarker %||% ""
+    if (identical(rv$division_ymarker %||% "", ym)) return()
+    rv$division_ymarker <- if (nzchar(ym)) ym else NULL
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Biplot point opacity — pure display, re-render only.
+  observeEvent(input$division_point_alpha, {
+    a <- suppressWarnings(as.numeric(input$division_point_alpha))
+    if (!is.finite(a)) return()
+    a <- max(0.02, min(1, a))
+    if (is.finite(rv$division_point_alpha) && abs(rv$division_point_alpha - a) < 1e-6) return()
+    rv$division_point_alpha <- a
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # A typical inter-gate gap for the current working ladder (falls back to a
+  # fraction of the x-range when there are <2 gates).
+  division_typical_gap <- function(b) {
+    b <- sort(as.numeric(b))
+    g <- if (length(b) >= 2L) stats::median(diff(b)) else NA_real_
+    if (!is.finite(g) || g <= 0) {
+      xr <- suppressWarnings(as.numeric(rv$division_xrange))
+      span <- if (length(xr) == 2L) diff(xr) else if (length(b)) max(abs(b)) else 8
+      g <- span / (as.integer(rv$division_n %||% 6L) + 2L)
+    }
+    g
+  }
+
+  # Changing N (typed, or via +Div / -Div) adjusts the WORKING ladder to N gates
+  # WITHOUT disturbing the existing ones: add/remove gates at the dim end, keeping
+  # the brighter gates exactly in place. Only a full reseed when there are none.
+  observeEvent(input$division_n, {
+    n <- suppressWarnings(as.integer(input$division_n))
+    if (is.na(n) || n < 1L) return()
+    n <- min(11L, n)                                   # N+1 <= 12 Paired colours
+    if (identical(as.integer(rv$division_n), n)) return()
+    rv$division_n <- n
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (length(b)) {
+      gap <- division_typical_gap(b)
+      while (length(b) < n) b <- c(min(b) - gap, b)    # extend at the dim end
+      while (length(b) > n) b <- b[-1]                 # drop the dimmest
+      rv$division_boundaries <- sort(b)
+    } else {
+      rv$division_boundaries <- numeric(0)             # nothing yet -> seed on render
+    }
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$division_add_btn, {
+    updateNumericInput(session, "division_n",
+                       value = min(11L, as.integer(rv$division_n %||% 6L) + 1L))
+  })
+  observeEvent(input$division_remove_btn, {
+    updateNumericInput(session, "division_n",
+                       value = max(1L, as.integer(rv$division_n %||% 6L) - 1L))
+  })
+
+  # "Space evenly" tidies the CURRENT gates to a uniform gap WITHOUT throwing them
+  # away: anchor the brightest cut (Div0/Div1, rightmost) and re-lay the rest at
+  # the current median gap. Only reseed from the data when there are no gates yet.
+  observeEvent(input$division_space_evenly_btn, {
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (length(b) >= 2L) {
+      anchor <- max(b)
+      sp <- stats::median(diff(b))
+      if (!is.finite(sp) || sp <= 0) sp <- (max(b) - min(b)) / (length(b) - 1L)
+      rv$division_boundaries <- sort(anchor - sp * (seq_along(b) - 1L))
+    } else {
+      rv$division_boundaries <- numeric(0)
+    }
+    send_division_plot()
+  })
+
+  # Nudge ALL gates along the dye axis together (preserves relative spacing).
+  shift_division_gates <- function(dir) {
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (!length(b)) return()
+    xr <- suppressWarnings(as.numeric(rv$division_xrange))
+    span <- if (length(xr) == 2L) diff(xr) else diff(range(b))
+    if (!is.finite(span) || span <= 0) span <- 8
+    rv$division_boundaries <- sort(b + dir * 0.01 * span)
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }
+  observeEvent(input$division_shift_down_btn, { shift_division_gates(-1) })
+  observeEvent(input$division_shift_up_btn,   { shift_division_gates(+1) })
+
+  # User-fixed x-axis (min/max). Re-render when edited; echo-guarded so the
+  # seeding updateNumericInput() above doesn't loop.
+  observeEvent(list(input$division_xmin, input$division_xmax), {
+    lo <- suppressWarnings(as.numeric(input$division_xmin))
+    hi <- suppressWarnings(as.numeric(input$division_xmax))
+    if (!is.finite(lo) || !is.finite(hi) || hi <= lo) return()
+    cur <- suppressWarnings(as.numeric(rv$division_xrange))
+    if (length(cur) == 2L && abs(cur[1] - lo) < 1e-9 && abs(cur[2] - hi) < 1e-9) return()
+    rv$division_xrange <- c(lo, hi)
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Histogram bin count — pure display, re-render only (boundaries untouched).
+  observeEvent(input$division_bins, {
+    b <- suppressWarnings(as.integer(input$division_bins))
+    if (is.na(b) || b < 2L) return()
+    if (identical(as.integer(rv$division_bins), b)) return()
+    rv$division_bins <- b
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Subsampling depth for the drawn histogram — pure display, re-render only.
+  observeEvent(input$division_subsample, {
+    s <- suppressWarnings(as.integer(input$division_subsample))
+    if (is.na(s) || s < 1L) return()
+    if (identical(as.integer(rv$division_subsample), s)) return()
+    rv$division_subsample <- s
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # Gate spacing override: typing a value (or using the arrows) re-lays ALL gates
+  # at that even spacing, anchored at the brightest cut (rightmost boundary), and
+  # snaps them to evenly-spaced. Echo-guarded against the value send_division_plot
+  # writes back (the current median gap).
+  observeEvent(input$division_spacing, {
+    sp <- suppressWarnings(as.numeric(input$division_spacing))
+    if (!is.finite(sp) || sp <= 0) return()
+    if (is.finite(rv$division_spacing) && abs(rv$division_spacing - sp) < 1e-6) return()
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (length(b) < 2L) { rv$division_spacing <- sp; return() }  # nothing to space
+    anchor <- max(b)                                  # keep Div0/Div1 cut fixed
+    rv$division_boundaries <- sort(anchor - sp * (seq_along(b) - 1L))
+    rv$division_spacing <- sp
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # The left-pane sample selector drives BOTH what the histogram shows and which
+  # samples "Apply to selected" writes to. selected_division_samples() returns the
+  # selected sample_id(s), or "__all__" when the SCE has no sample_id column.
+  # Crucially, the WORKING boundaries (rv$division_boundaries) are independent of
+  # this selection — toggling samples re-renders the histogram data but never
+  # moves the gates (that was the old "gates jump around" bug).
+  selected_division_samples <- function() {
+    if (is.null(rv$sce)) return(character(0))
+    cd <- SummarizedExperiment::colData(rv$sce)
+    if (!"sample_id" %in% colnames(cd)) return("__all__")
+    sid <- as.character(cd$sample_id)
+    mask <- get_effective_sample_mask(for_plot = FALSE)
+    sort(if (is.null(mask)) unique(sid) else unique(sid[which(mask)]))
+  }
+
+  # Union mask of the displayed populations (checked tree boxes, else the active
+  # population), WITHOUT touching the gating tab's display-mask cache. NULL = all.
+  division_pop_mask <- function() {
+    ids <- get_display_pop_ids()
+    if (!length(ids)) return(NULL)
+    masks <- lapply(ids, get_pop_mask)
+    masks <- masks[!vapply(masks, is.null, logical(1))]
+    if (!length(masks)) return(NULL)
+    Reduce(`|`, masks)
+  }
+
+  # Cell indices DISPLAYED in the histogram/biplot: the selected samples AND the
+  # population filter from the tree (so gating the right-hand population narrows
+  # what you see). NOTE: this is display only — "Apply to selected" deliberately
+  # writes the WHOLE sample (see division_cell_idx), not this filtered subset.
+  division_display_idx <- function() {
+    n <- nrow(rv$assay_data)
+    smp <- get_effective_sample_mask(for_plot = FALSE)
+    pop <- division_pop_mask()
+    if (is.null(smp) && is.null(pop)) return(seq_len(n))
+    m <- if (is.null(smp)) rep(TRUE, n) else smp
+    if (!is.null(pop) && length(pop) == n) m <- m & pop
+    which(m)
+  }
+
+  # Cell indices belonging to one APPLIED sample profile (used by Apply's write).
+  # WHOLE sample — independent of the population filter on the display.
+  division_cell_idx <- function(smp) {
+    if (is.null(smp) || identical(smp, "__all__")) return(seq_len(nrow(rv$assay_data)))
+    which(as.character(SummarizedExperiment::colData(rv$sce)$sample_id) == smp)
+  }
+
+  send_division_plot <- function() {
+    if (is.null(rv$assay_data)) return()
+    # rv$division_channel is authoritative (set before every call in the normal
+    # path); fall back to the dropdown only for the very first render.
+    ch <- rv$division_channel %||% input$division_channel
+    if (is.null(ch) || !ch %in% colnames(rv$assay_data)) return()
+    rv$division_channel <- ch
+    rv$division_selected_samples <- selected_division_samples()
+    # population filter label (display only) for the status line
+    pids <- get_display_pop_ids()
+    rv$division_pop_label <- if (!length(pids) ||
+        (length(pids) == 1L && identical(pids[1], rv$root_population_id))) {
+      NULL
+    } else {
+      paste(vapply(pids, function(i) rv$populations[[i]]$name %||% i, character(1)),
+            collapse = ", ")
+    }
+    idx <- division_display_idx()
+    vals <- as.numeric(rv$assay_data[idx, ch]); vals <- vals[is.finite(vals)]
+    if (!length(vals)) {
+      # nothing selected (or empty) — clear the plot but keep the working gates
+      session$sendCustomMessage("updateDivisionPlot", list(boundaries = numeric(0)))
+      rv$division_plot_data <- NULL
+      return()
+    }
+    n <- as.integer(rv$division_n %||% 6L)
+    # WORKING boundaries: seed once from the displayed data if empty, otherwise
+    # keep them exactly as-is so selection changes never move the gates.
+    if (!length(rv$division_boundaries)) {
+      rv$division_boundaries <- sort(seed_division_boundaries(vals, n = n))
+    }
+    # User-fixed x-axis: use the stored range; seed it from the data only when
+    # unset (e.g. first render or after a channel change). Never autoscale on
+    # sample/N changes — the axis stays put so peaks are comparable.
+    xr <- suppressWarnings(as.numeric(rv$division_xrange))
+    if (length(xr) != 2L || !all(is.finite(xr)) || xr[2] <= xr[1]) {
+      xr <- compute_axis_range(vals)
+      rv$division_xrange <- xr
+      updateNumericInput(session, "division_xmin", value = round(xr[1], 3))
+      updateNumericInput(session, "division_xmax", value = round(xr[2], 3))
+    }
+    x_range <- xr
+    ticks <- generate_channel_ticks(ch, x_range)
+    sub <- suppressWarnings(as.integer(rv$division_subsample %||% 50000L))
+    if (is.na(sub) || sub < 1L) sub <- length(vals)
+    vp <- vals
+    if (length(vp) > sub) vp <- vp[round(seq(1, length(vp), length.out = sub))]
+    bins <- suppressWarnings(as.integer(rv$division_bins %||% 120L))
+    if (is.na(bins) || bins < 2L) bins <- 120L
+    # reflect the current (median) gap in the Spacing box as a live hint
+    bsrt <- sort(as.numeric(rv$division_boundaries))
+    if (length(bsrt) >= 2L) {
+      cur_sp <- stats::median(diff(bsrt))
+      if (is.finite(cur_sp) &&
+          (!is.finite(rv$division_spacing) || abs(rv$division_spacing - cur_sp) > 1e-6)) {
+        rv$division_spacing <- cur_sp
+        updateNumericInput(session, "division_spacing", value = round(cur_sp, 3))
+      }
+    }
+    # The actual working-boundary count is the single source of truth: keep
+    # rv$division_n AND the "# divisions" field synced to it (echo-guarded so the
+    # N observer no-ops), so the control can never get stuck showing a stale count.
+    nb <- length(rv$division_boundaries)
+    if (!identical(as.integer(rv$division_n), as.integer(nb))) {
+      rv$division_n <- as.integer(nb)
+      updateNumericInput(session, "division_n", value = nb)
+    }
+    payload <- list(
+      x_b64 = encode_float32_base64(vp), n_events = length(vals),
+      n_drawn = length(vp),
+      x_range = x_range, x_label = ch, bins = bins,
+      x_is_logicle = !is.null(ticks), x_logicle_ticks = ticks,
+      boundaries = sort(as.numeric(rv$division_boundaries)),
+      palette = division_palette(nb + 1L),
+      bin_labels = paste0("Div", seq_len(nb + 1L) - 1L),
+      point_alpha = max(0.02, min(1, as.numeric(rv$division_point_alpha %||% 0.4)))
+    )
+    # Biplot data: dye (x, shared scale + division lines) vs a picked Y marker,
+    # paired on the SAME displayed cells (both finite), capped for canvas perf.
+    ym <- rv$division_ymarker %||% input$division_ymarker
+    if (!is.null(ym) && nzchar(ym) && ym %in% colnames(rv$assay_data)) {
+      xraw <- as.numeric(rv$assay_data[idx, ch])
+      yraw <- as.numeric(rv$assay_data[idx, ym])
+      ok <- is.finite(xraw) & is.finite(yraw)
+      bx <- xraw[ok]; by <- yraw[ok]
+      bsub <- min(sub, 30000L)
+      if (length(bx) > bsub) {
+        keep <- round(seq(1, length(bx), length.out = bsub))
+        bx <- bx[keep]; by <- by[keep]
+      }
+      if (length(bx)) {
+        yrng <- compute_axis_range(by)
+        payload$bx_b64 <- encode_float32_base64(bx)
+        payload$y_b64 <- encode_float32_base64(by)
+        payload$y_label <- ym
+        payload$y_range <- yrng
+        # 2D KDE contour overlay (mirrors DivisionProfiler's stat_density_2d):
+        # black contour lines over the division-coloured scatter.
+        if (requireNamespace("MASS", quietly = TRUE) && length(bx) >= 20L) {
+          kd <- tryCatch(
+            MASS::kde2d(bx, by, n = 60, lims = c(x_range, yrng)),
+            error = function(e) NULL)
+          if (!is.null(kd)) {
+            lev <- pretty(range(kd$z, finite = TRUE), 8)
+            lev <- lev[lev > max(kd$z) * 0.02]
+            cl <- tryCatch(grDevices::contourLines(kd$x, kd$y, kd$z, levels = lev),
+                           error = function(e) list())
+            if (length(cl)) {
+              payload$contours <- lapply(cl, function(p)
+                list(x = round(p$x, 3), y = round(p$y, 3)))
+            }
+          }
+        }
+      }
+    }
+    rv$.division_msg_seq <- as.integer(rv$.division_msg_seq %||% 0L) + 1L
+    payload$`_div_seq` <- rv$.division_msg_seq
+    rv$division_plot_data <- payload
+    session$sendCustomMessage("updateDivisionPlot", payload)
+  }
+
+  observeEvent(input$division_render_btn, { send_division_plot() })
+
+  # auto-render when entering the Division tab or switching the selected sample
+  observeEvent(input$main_tabs, {
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+  observeEvent(rv$sample_filter_key, {
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+  # also re-render when the population selection / gates change, so the display
+  # follows the right-hand population filter (write target is unaffected).
+  observeEvent(list(rv$active_population_id, rv$.selected_pop_ids, rv$gate_version), {
+    if (identical(input$main_tabs, "Division")) send_division_plot()
+  }, ignoreInit = TRUE)
+
+  # drag round-trip: update the WORKING boundaries only. Applying to samples is a
+  # deliberate step ("Apply to selected"), so a drag never silently rewrites a
+  # sample's stored profile. Do NOT re-render here (it would fight the drag); the
+  # seq guard drops stale echoes.
+  observeEvent(input$division_gates, {
+    edit <- input$division_gates
+    req(edit, edit$boundaries)
+    seq <- as.integer(edit$seq %||% 0L)
+    if (seq <= as.integer(rv$.last_division_drag_seq %||% 0L)) return()
+    rv$.last_division_drag_seq <- seq
+    b <- sort(as.numeric(unlist(edit$boundaries)))
+    rv$division_boundaries <- b
+    # keep N in sync with the actual count (single source of truth)
+    if (!identical(as.integer(rv$division_n), length(b))) {
+      rv$division_n <- length(b)
+      updateNumericInput(session, "division_n", value = length(b))
+    }
+  })
+
+  # ── Load a selected sample's previously-applied boundaries into the working set
+  observeEvent(input$division_load_btn, {
+    sel <- selected_division_samples()
+    if (length(sel) != 1L) {
+      showNotification("Select exactly one sample to load its saved gates.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    prof <- rv$division_by_sample[[sel[1]]]
+    if (is.null(prof) || !length(prof$boundaries %||% numeric(0))) {
+      showNotification(sprintf("No applied gates saved for sample '%s'.", sel[1]),
+                       type = "warning", duration = 4)
+      return()
+    }
+    rv$division_boundaries <- sort(as.numeric(prof$boundaries))
+    nb <- length(rv$division_boundaries)
+    rv$division_n <- nb
+    updateNumericInput(session, "division_n", value = nb)
+    if (!is.null(prof$channel) && !identical(prof$channel, rv$division_channel) &&
+        prof$channel %in% (rv$channels %||% character(0))) {
+      rv$division_channel <- prof$channel
+      updateSelectInput(session, "division_channel", selected = prof$channel)
+    }
+    send_division_plot()
+    showNotification(sprintf("Loaded %d gate(s) from sample '%s'.", nb, sel[1]),
+                     type = "message", duration = 3)
+  })
+
+  # ── Apply: write the WORKING boundaries to every SELECTED sample ─────────────
+  # Stores each selected sample's profile (boundaries + channel), then writes
+  # colData$div for ALL applied samples cumulatively — each sample's own cells get
+  # its own boundaries, computed in rv$assay_data DISPLAY space (NOT by
+  # re-transforming the assay) so flow + logicle stays correct. autosave() then
+  # persists every applied profile into the SCE metadata so it reloads cleanly.
+  observeEvent(input$division_write_btn, {
+    if (is.null(rv$sce) || is.null(rv$assay_data)) return()
+    ch <- rv$division_channel %||% input$division_channel
+    if (is.null(ch) || !ch %in% colnames(rv$assay_data)) {
+      showNotification("Pick a dye channel and Render first.", type = "warning", duration = 4)
+      return()
+    }
+    b <- sort(as.numeric(rv$division_boundaries))
+    if (!length(b)) {
+      showNotification("Set the division gates first (drag the lines / Space evenly).",
+                       type = "warning", duration = 4)
+      return()
+    }
+    sel <- selected_division_samples()
+    if (!length(sel)) {
+      showNotification("Select at least one sample (left pane) to apply to.",
+                       type = "warning", duration = 4)
+      return()
+    }
+    n <- as.integer(rv$division_n %||% length(b))
+    # Store the working boundaries as the applied profile for every selected sample.
+    for (s in sel) rv$division_by_sample[[s]] <- list(boundaries = b, n = n, channel = ch)
+    # Write colData$div for ALL applied samples (cumulative), each with its own
+    # boundaries + channel, so applying sample B never wipes sample A.
+    ncell <- nrow(rv$assay_data)
+    lev <- rep(NA_integer_, ncell)
+    maxn <- 0L
+    for (smp in names(rv$division_by_sample)) {
+      prof <- rv$division_by_sample[[smp]]
+      bs <- sort(as.numeric(prof$boundaries %||% numeric(0)))
+      if (!length(bs)) next
+      chs <- prof$channel %||% ch
+      if (!chs %in% colnames(rv$assay_data)) chs <- ch
+      idx <- division_cell_idx(smp)
+      idx <- idx[is.finite(idx) & idx >= 1L & idx <= ncell]
+      if (!length(idx)) next
+      lev[idx] <- assign_division_levels(rv$assay_data[idx, chs], bs)
+      maxn <- max(maxn, length(bs))
+    }
+    col <- sanitize_division_col(input$division_col_name)
+    rv$division_col_name <- col
+    if (!identical(col, trimws(input$division_col_name %||% ""))) {
+      updateTextInput(session, "division_col_name", value = col)
+    }
+    rv$sce <- write_division_coldata(rv$sce, lev, n_levels = maxn, col_name = col)
+    assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
+    autosave()   # persists every applied profile into metadata alongside the write
+    # refresh the Gating tab's "Color by marker / metadata" dropdown so the new
+    # column is immediately selectable (mirrors export_population_to_coldata).
+    cd_names <- get_coldata_names(rv$sce); rv$coldata_names <- cd_names
+    updateSelectInput(session, "overlay_coldata",
+                      choices = c("(none)" = "", cd_names),
+                      selected = input$overlay_coldata %||% "")
+    n_assigned <- sum(!is.na(lev))
+    showNotification(
+      sprintf("Applied to %d sample%s (%s). colData$%s: %s of %s cells (Div0..Div%d).",
+              length(sel), if (length(sel) == 1L) "" else "s",
+              paste(utils::head(sel, 4), collapse = ", "), col,
+              format(n_assigned, big.mark = ","), format(ncell, big.mark = ","), maxn),
+      type = "message", duration = 5)
+  })
+
+  output$division_status <- renderText({
+    sel <- rv$division_selected_samples %||% character(0)
+    sel_txt <- if (!length(sel)) "⚠ no samples selected"
+               else if (identical(sel, "__all__")) "all cells"
+               else paste0(length(sel), " selected: ",
+                           paste(utils::head(sel, 5), collapse = ", "),
+                           if (length(sel) > 5L) " …" else "")
+    applied <- names(Filter(function(p) length(p$boundaries %||% numeric(0)) > 0,
+                            rv$division_by_sample))
+    applied_txt <- if (!length(applied)) "none applied yet"
+                   else if (identical(applied, "__all__")) "applied: all cells"
+                   else paste0("applied: ", length(applied), " (",
+                               paste(utils::head(applied, 5), collapse = ", "),
+                               if (length(applied) > 5L) " …" else "", ")")
+    nb <- length(rv$division_boundaries)
+    ev <- if (!is.null(rv$division_plot_data)) {
+      pd <- rv$division_plot_data
+      paste0(format(pd$n_drawn %||% pd$n_events, big.mark = ","), "/",
+             format(pd$n_events, big.mark = ","), " events  |  ")
+    } else ""
+    pop_txt <- if (!is.null(rv$division_pop_label)) {
+      paste0("  |  display filtered to pop: ", rv$division_pop_label,
+             " (Apply still writes whole sample)")
+    } else ""
+    paste0(sel_txt, "  |  ", ev, nb, " gates (Div0..Div", nb, ")  |  ", applied_txt, pop_txt)
+  })
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # PROPORTIONS TAB  (colData composition preview; reads colData only, ggplot2)
+  # ════════════════════════════════════════════════════════════════════════════
+  # Categorical colData columns suitable for composition / grouping: factors,
+  # character, logical, or low-cardinality numeric.
+  categorical_coldata_cols <- function() {
+    if (is.null(rv$sce)) return(character(0))
+    cd <- SummarizedExperiment::colData(rv$sce)
+    nm <- colnames(cd)
+    keep <- vapply(nm, function(c) {
+      v <- cd[[c]]
+      if (is.factor(v) || is.character(v) || is.logical(v)) return(TRUE)
+      if (is.numeric(v)) {
+        u <- unique(v[!is.na(v)]); return(length(u) >= 1L && length(u) <= 20L)
+      }
+      FALSE
+    }, logical(1))
+    nm[keep]
+  }
+
+  # populate the Category / Group dropdowns when colData changes
+  observeEvent(rv$coldata_names, {
+    cols <- categorical_coldata_cols()
+    cat_guess <- cols[grep("^div", cols, ignore.case = TRUE)][1]
+    if (is.na(cat_guess)) cat_guess <- if (length(cols)) cols[1] else ""
+    grp_guess <- cols[grep("condition|day|group|timepoint|stim", cols, ignore.case = TRUE)][1]
+    if (is.na(grp_guess)) grp_guess <- if (length(cols) >= 2L) cols[2] else (if (length(cols)) cols[1] else "")
+    unit_guess <- cols[grep("sample_id|^sample$|patient|donor|replicate", cols, ignore.case = TRUE)][1]
+    if (is.na(unit_guess)) unit_guess <- if (length(cols)) cols[1] else ""
+    updateSelectInput(session, "prop_category", choices = cols,
+                      selected = isolate(input$prop_category) %||% cat_guess)
+    updateSelectInput(session, "prop_group", choices = cols,
+                      selected = isolate(input$prop_group) %||% grp_guess)
+    updateSelectInput(session, "prop_unit", choices = cols,
+                      selected = isolate(input$prop_unit) %||% unit_guess)
+    updateSelectInput(session, "prop_facet", choices = c("(none)" = "", cols),
+                      selected = isolate(input$prop_facet) %||% "")
+  }, ignoreNULL = FALSE)
+
+  # ordered levels of a colData column actually present in a value vector
+  .prop_levels <- function(col, present) {
+    if (is.factor(col)) {
+      lv <- levels(col); lv[lv %in% as.character(present)]
+    } else sort(unique(as.character(present)))
+  }
+
+  output$proportions_plot <- renderPlot({
+    req(rv$sce)
+    catcol <- input$prop_category; grpcol <- input$prop_group
+    # NB: qualify shiny::validate/need — jsonlite (attached later) masks `validate`.
+    shiny::validate(shiny::need(isTRUE(nzchar(catcol)) && isTRUE(nzchar(grpcol)),
+                                "Pick a Category and a Group column."))
+    cd <- SummarizedExperiment::colData(rv$sce)
+    shiny::validate(shiny::need(catcol %in% colnames(cd) && grpcol %in% colnames(cd),
+                                "Selected column not found in colData."))
+    # Respect the left-panel sample filter (reads rv$sample_mask -> reactive).
+    smask <- get_effective_sample_mask(for_plot = FALSE)
+    if (!is.null(smask) && length(smask) == nrow(cd)) {
+      shiny::validate(shiny::need(any(smask),
+                                  "No cells selected — adjust the sample filter on the left."))
+      cd <- cd[smask, , drop = FALSE]
+    }
+    unitcol <- input$prop_unit
+    have_unit <- isTRUE(nzchar(unitcol)) && unitcol %in% colnames(cd)
+    facetcol <- input$prop_facet
+    have_facet <- isTRUE(nzchar(facetcol)) && facetcol %in% colnames(cd)
+    df <- data.frame(cat   = as.character(cd[[catcol]]),
+                     grp   = as.character(cd[[grpcol]]),
+                     unit  = if (have_unit)  as.character(cd[[unitcol]])  else NA_character_,
+                     facet = if (have_facet) as.character(cd[[facetcol]]) else NA_character_,
+                     stringsAsFactors = FALSE)
+    keep <- !is.na(df$cat) & !is.na(df$grp)
+    if (have_facet) keep <- keep & !is.na(df$facet)
+    df <- df[keep, , drop = FALSE]
+    shiny::validate(shiny::need(nrow(df) > 0, "No non-missing cells for this combination."))
+    cat_lv <- .prop_levels(cd[[catcol]], df$cat)
+    grp_lv <- .prop_levels(cd[[grpcol]], df$grp)
+    df$cat <- factor(df$cat, levels = cat_lv)
+    df$grp <- factor(df$grp, levels = grp_lv)
+    facet_lv <- if (have_facet) .prop_levels(cd[[facetcol]], df$facet) else NULL
+    if (have_facet) df$facet <- factor(df$facet, levels = facet_lv)
+    ptype <- input$prop_type %||% "stacked"
+    pct_lab <- function(v) paste0(round(v * 100), "%")
+    # facet layer (NULL when no facet column chosen; `+ NULL` is a ggplot no-op)
+    facet_layer <- if (have_facet) ggplot2::facet_wrap(ggplot2::vars(facet)) else NULL
+
+    # Per-Unit proportion of each Category (sums to 1 per unit) + each unit's
+    # dominant Group (and Facet) level. Shared by the boxplot and averaged bar.
+    per_unit_props <- function() {
+      d <- df[!is.na(df$unit), , drop = FALSE]
+      shiny::validate(shiny::need(nrow(d) > 0, "Pick a Unit column with non-missing values."))
+      d$unit <- factor(d$unit)
+      pu <- as.data.frame(prop.table(table(unit = d$unit, cat = d$cat), margin = 1))
+      dom <- function(v) tapply(as.character(v), as.character(d$unit),
+                                function(g) names(sort(table(g), decreasing = TRUE))[1])
+      ug <- dom(d$grp); pu$grp <- factor(ug[as.character(pu$unit)], levels = grp_lv)
+      if (have_facet) {
+        uf <- dom(d$facet); pu$facet <- factor(uf[as.character(pu$unit)], levels = facet_lv)
+      }
+      pu[!is.na(pu$grp), , drop = FALSE]
+    }
+
+    if (identical(ptype, "box")) {
+      # ── Boxplot: per-Unit proportion of each Category, boxed across units, by Group
+      shiny::validate(shiny::need(have_unit, "Pick a Unit column (e.g. sample_id) for the boxplot."))
+      tab <- per_unit_props()
+      pal <- overlay_color_palette(input$prop_palette %||% "paired", length(grp_lv))
+      ggplot2::ggplot(tab, ggplot2::aes(x = cat, y = Freq, fill = grp)) +
+        ggplot2::geom_boxplot(outlier.shape = NA, position = ggplot2::position_dodge(width = 0.75),
+                              width = 0.6, alpha = 0.85) +
+        ggplot2::geom_point(position = ggplot2::position_jitterdodge(jitter.width = 0.12,
+                              dodge.width = 0.75), size = 1.6, alpha = 0.75,
+                            ggplot2::aes(group = grp)) +
+        ggplot2::scale_fill_manual(values = stats::setNames(pal, grp_lv), name = grpcol, drop = FALSE) +
+        ggplot2::scale_y_continuous(labels = pct_lab) +
+        ggplot2::labs(x = catcol, y = paste0("Proportion per ", unitcol),
+                      title = paste0(catcol, " proportion by ", grpcol, " (per ", unitcol, ")")) +
+        facet_layer +
+        ggplot2::theme_bw(base_size = 14) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+    } else {
+      # ── Stacked bar: Category composition within each Group (bars sum to 1).
+      do_avg <- isTRUE(input$prop_average) && have_unit
+      if (do_avg) {
+        # per-Unit proportions first, then MEAN across units within each Group
+        # [x Facet] (the standard composition method; each sample weighted equally)
+        pu <- per_unit_props()
+        form <- if (have_facet) Freq ~ grp + cat + facet else Freq ~ grp + cat
+        tab <- stats::aggregate(form, data = pu, FUN = mean)
+        ysub <- paste0("mean across ", unitcol, "s")
+      } else if (have_facet) {
+        # pooled across cells within each Group x Facet cell
+        cnt <- as.data.frame(table(grp = df$grp, facet = df$facet, cat = df$cat))
+        denom <- stats::ave(cnt$Freq, cnt$grp, cnt$facet, FUN = sum)
+        cnt$Freq <- ifelse(denom > 0, cnt$Freq / denom, 0)
+        tab <- cnt; ysub <- "pooled cells"
+      } else {
+        # pooled across all cells in the Group
+        tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
+        ysub <- "pooled cells"
+      }
+      pal <- overlay_color_palette(input$prop_palette %||% "paired", length(cat_lv))
+      ggplot2::ggplot(tab, ggplot2::aes(x = grp, y = Freq, fill = cat)) +
+        ggplot2::geom_col(width = 0.82, color = "grey25", linewidth = 0.2) +
+        ggplot2::scale_fill_manual(values = stats::setNames(pal, cat_lv),
+                                   name = catcol, drop = FALSE) +
+        ggplot2::scale_y_continuous(labels = pct_lab,
+                                    expand = ggplot2::expansion(mult = c(0, 0.02))) +
+        ggplot2::labs(x = grpcol, y = paste0("Proportion of cells (", ysub, ")"),
+                      title = paste0(catcol, " composition by ", grpcol)) +
+        facet_layer +
+        ggplot2::theme_bw(base_size = 14) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+                       panel.grid.major.x = ggplot2::element_blank())
+    }
+  })
 
   observeEvent(input$gating_max_events, {
     val <- suppressWarnings(as.numeric(input$gating_max_events))

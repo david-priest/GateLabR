@@ -1,5 +1,6 @@
 ^launch\.R$
 ^install_dependencies\.R$
+^DIVISION_TAB_HANDOFF\.md$
 ^.*\.xml$
 ^session\.log$
 ^\.gitignore$
