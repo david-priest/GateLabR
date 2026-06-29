@@ -4042,9 +4042,14 @@ server <- function(input, output, session) {
         updateNumericInput(session, "division_spacing", value = round(cur_sp, 3))
       }
     }
-    # palette / labels follow the ACTUAL working-boundary count (N divisions = N
-    # boundaries -> Div0..DivN), independent of the N input which may lag a Load.
+    # The actual working-boundary count is the single source of truth: keep
+    # rv$division_n AND the "# divisions" field synced to it (echo-guarded so the
+    # N observer no-ops), so the control can never get stuck showing a stale count.
     nb <- length(rv$division_boundaries)
+    if (!identical(as.integer(rv$division_n), as.integer(nb))) {
+      rv$division_n <- as.integer(nb)
+      updateNumericInput(session, "division_n", value = nb)
+    }
     payload <- list(
       x_b64 = encode_float32_base64(vp), n_events = length(vals),
       n_drawn = length(vp),
@@ -4124,7 +4129,13 @@ server <- function(input, output, session) {
     seq <- as.integer(edit$seq %||% 0L)
     if (seq <= as.integer(rv$.last_division_drag_seq %||% 0L)) return()
     rv$.last_division_drag_seq <- seq
-    rv$division_boundaries <- sort(as.numeric(unlist(edit$boundaries)))
+    b <- sort(as.numeric(unlist(edit$boundaries)))
+    rv$division_boundaries <- b
+    # keep N in sync with the actual count (single source of truth)
+    if (!identical(as.integer(rv$division_n), length(b))) {
+      rv$division_n <- length(b)
+      updateNumericInput(session, "division_n", value = length(b))
+    }
   })
 
   # ── Load a selected sample's previously-applied boundaries into the working set
