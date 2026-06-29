@@ -1137,6 +1137,7 @@ ui <- fluidPage(
               tags$div(selectInput("prop_category", "Category:", choices = NULL, width = "180px")),
               tags$div(selectInput("prop_group", "Group:", choices = NULL, width = "180px")),
               tags$div(selectInput("prop_unit", "Unit (e.g. sample):", choices = NULL, width = "160px")),
+              tags$div(selectInput("prop_facet", "Facet by:", choices = c("(none)" = ""), width = "150px")),
               tags$div(selectInput("prop_palette", "Palette:", choices = OVERLAY_PALETTES,
                                    selected = "paired", width = "160px")),
               tags$div(style = "padding-bottom:6px;",
@@ -4284,6 +4285,8 @@ server <- function(input, output, session) {
                       selected = isolate(input$prop_group) %||% grp_guess)
     updateSelectInput(session, "prop_unit", choices = cols,
                       selected = isolate(input$prop_unit) %||% unit_guess)
+    updateSelectInput(session, "prop_facet", choices = c("(none)" = "", cols),
+                      selected = isolate(input$prop_facet) %||% "")
   }, ignoreNULL = FALSE)
 
   # ordered levels of a colData column actually present in a value vector
@@ -4311,29 +4314,41 @@ server <- function(input, output, session) {
     }
     unitcol <- input$prop_unit
     have_unit <- isTRUE(nzchar(unitcol)) && unitcol %in% colnames(cd)
-    df <- data.frame(cat  = as.character(cd[[catcol]]),
-                     grp  = as.character(cd[[grpcol]]),
-                     unit = if (have_unit) as.character(cd[[unitcol]]) else NA_character_,
+    facetcol <- input$prop_facet
+    have_facet <- isTRUE(nzchar(facetcol)) && facetcol %in% colnames(cd)
+    df <- data.frame(cat   = as.character(cd[[catcol]]),
+                     grp   = as.character(cd[[grpcol]]),
+                     unit  = if (have_unit)  as.character(cd[[unitcol]])  else NA_character_,
+                     facet = if (have_facet) as.character(cd[[facetcol]]) else NA_character_,
                      stringsAsFactors = FALSE)
-    df <- df[!is.na(df$cat) & !is.na(df$grp), , drop = FALSE]
+    keep <- !is.na(df$cat) & !is.na(df$grp)
+    if (have_facet) keep <- keep & !is.na(df$facet)
+    df <- df[keep, , drop = FALSE]
     shiny::validate(shiny::need(nrow(df) > 0, "No non-missing cells for this combination."))
     cat_lv <- .prop_levels(cd[[catcol]], df$cat)
     grp_lv <- .prop_levels(cd[[grpcol]], df$grp)
     df$cat <- factor(df$cat, levels = cat_lv)
     df$grp <- factor(df$grp, levels = grp_lv)
+    facet_lv <- if (have_facet) .prop_levels(cd[[facetcol]], df$facet) else NULL
+    if (have_facet) df$facet <- factor(df$facet, levels = facet_lv)
     ptype <- input$prop_type %||% "stacked"
     pct_lab <- function(v) paste0(round(v * 100), "%")
+    # facet layer (NULL when no facet column chosen; `+ NULL` is a ggplot no-op)
+    facet_layer <- if (have_facet) ggplot2::facet_wrap(ggplot2::vars(facet)) else NULL
 
     # Per-Unit proportion of each Category (sums to 1 per unit) + each unit's
-    # dominant Group level. Shared by the boxplot and the averaged stacked bar.
+    # dominant Group (and Facet) level. Shared by the boxplot and averaged bar.
     per_unit_props <- function() {
       d <- df[!is.na(df$unit), , drop = FALSE]
       shiny::validate(shiny::need(nrow(d) > 0, "Pick a Unit column with non-missing values."))
       d$unit <- factor(d$unit)
       pu <- as.data.frame(prop.table(table(unit = d$unit, cat = d$cat), margin = 1))
-      ug <- tapply(as.character(d$grp), as.character(d$unit),
-                   function(g) names(sort(table(g), decreasing = TRUE))[1])
-      pu$grp <- factor(ug[as.character(pu$unit)], levels = grp_lv)
+      dom <- function(v) tapply(as.character(v), as.character(d$unit),
+                                function(g) names(sort(table(g), decreasing = TRUE))[1])
+      ug <- dom(d$grp); pu$grp <- factor(ug[as.character(pu$unit)], levels = grp_lv)
+      if (have_facet) {
+        uf <- dom(d$facet); pu$facet <- factor(uf[as.character(pu$unit)], levels = facet_lv)
+      }
       pu[!is.na(pu$grp), , drop = FALSE]
     }
 
@@ -4352,6 +4367,7 @@ server <- function(input, output, session) {
         ggplot2::scale_y_continuous(labels = pct_lab) +
         ggplot2::labs(x = catcol, y = paste0("Proportion per ", unitcol),
                       title = paste0(catcol, " proportion by ", grpcol, " (per ", unitcol, ")")) +
+        facet_layer +
         ggplot2::theme_bw(base_size = 14) +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
     } else {
@@ -4359,10 +4375,17 @@ server <- function(input, output, session) {
       do_avg <- isTRUE(input$prop_average) && have_unit
       if (do_avg) {
         # per-Unit proportions first, then MEAN across units within each Group
-        # (the standard composition method; each sample weighted equally)
+        # [x Facet] (the standard composition method; each sample weighted equally)
         pu <- per_unit_props()
-        tab <- stats::aggregate(Freq ~ grp + cat, data = pu, FUN = mean)
+        form <- if (have_facet) Freq ~ grp + cat + facet else Freq ~ grp + cat
+        tab <- stats::aggregate(form, data = pu, FUN = mean)
         ysub <- paste0("mean across ", unitcol, "s")
+      } else if (have_facet) {
+        # pooled across cells within each Group x Facet cell
+        cnt <- as.data.frame(table(grp = df$grp, facet = df$facet, cat = df$cat))
+        denom <- stats::ave(cnt$Freq, cnt$grp, cnt$facet, FUN = sum)
+        cnt$Freq <- ifelse(denom > 0, cnt$Freq / denom, 0)
+        tab <- cnt; ysub <- "pooled cells"
       } else {
         # pooled across all cells in the Group
         tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
@@ -4377,6 +4400,7 @@ server <- function(input, output, session) {
                                     expand = ggplot2::expansion(mult = c(0, 0.02))) +
         ggplot2::labs(x = grpcol, y = paste0("Proportion of cells (", ysub, ")"),
                       title = paste0(catcol, " composition by ", grpcol)) +
+        facet_layer +
         ggplot2::theme_bw(base_size = 14) +
         ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
                        panel.grid.major.x = ggplot2::element_blank())
