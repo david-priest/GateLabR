@@ -1123,15 +1123,19 @@ ui <- fluidPage(
         tabPanel("Proportions",
           tags$div(class = "proportions-controls", style = "padding:6px 4px;",
             tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
-              tags$div(selectInput("prop_category", "Category (fill):", choices = NULL, width = "190px")),
-              tags$div(selectInput("prop_group", "Group (x-axis):", choices = NULL, width = "190px")),
+              tags$div(radioButtons("prop_type", "Plot:",
+                                    choices = c("Stacked bar" = "stacked", "Boxplot" = "box"),
+                                    selected = "stacked", inline = TRUE)),
+              tags$div(selectInput("prop_category", "Category:", choices = NULL, width = "180px")),
+              tags$div(selectInput("prop_group", "Group:", choices = NULL, width = "180px")),
+              tags$div(selectInput("prop_unit", "Unit (boxplot):", choices = NULL, width = "160px")),
               tags$div(selectInput("prop_palette", "Palette:", choices = OVERLAY_PALETTES,
-                                   selected = "paired", width = "170px"))
+                                   selected = "paired", width = "160px"))
             ),
-            tags$div(style = "font-size:11px; color:#888; max-width:680px; margin-bottom:6px;",
-              tags$b("Preview only."), " Plots colData columns — export a gated population (or Apply ",
-              "divisions) to include it as a column. For publication figures, export colData and use ",
-              "seekit / ggplot2 / rstatix."),
+            tags$div(style = "font-size:11px; color:#888; max-width:760px; margin-bottom:6px;",
+              tags$b("Preview only."), " Stacked bar: Category composition within each Group. ",
+              "Boxplot: per-Unit (e.g. sample) proportion of each Category, boxed across units, by Group. ",
+              "Export colData + use seekit / ggplot2 / rstatix for publication figures."),
             plotOutput("proportions_plot", height = "470px", width = "78%")
           )
         )
@@ -4236,12 +4240,16 @@ server <- function(input, output, session) {
     cols <- categorical_coldata_cols()
     cat_guess <- cols[grep("^div", cols, ignore.case = TRUE)][1]
     if (is.na(cat_guess)) cat_guess <- if (length(cols)) cols[1] else ""
-    grp_guess <- cols[grep("condition|day|group|timepoint|stim|sample", cols, ignore.case = TRUE)][1]
+    grp_guess <- cols[grep("condition|day|group|timepoint|stim", cols, ignore.case = TRUE)][1]
     if (is.na(grp_guess)) grp_guess <- if (length(cols) >= 2L) cols[2] else (if (length(cols)) cols[1] else "")
+    unit_guess <- cols[grep("sample_id|^sample$|patient|donor|replicate", cols, ignore.case = TRUE)][1]
+    if (is.na(unit_guess)) unit_guess <- if (length(cols)) cols[1] else ""
     updateSelectInput(session, "prop_category", choices = cols,
                       selected = isolate(input$prop_category) %||% cat_guess)
     updateSelectInput(session, "prop_group", choices = cols,
                       selected = isolate(input$prop_group) %||% grp_guess)
+    updateSelectInput(session, "prop_unit", choices = cols,
+                      selected = isolate(input$prop_unit) %||% unit_guess)
   }, ignoreNULL = FALSE)
 
   # ordered levels of a colData column actually present in a value vector
@@ -4268,20 +4276,55 @@ server <- function(input, output, session) {
     grp_lv <- .prop_levels(cd[[grpcol]], df$grp)
     df$cat <- factor(df$cat, levels = cat_lv)
     df$grp <- factor(df$grp, levels = grp_lv)
-    # proportion of each Category level WITHIN each Group level (cols sum to 1)
-    tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
-    pal <- overlay_color_palette(input$prop_palette %||% "paired", length(cat_lv))
-    ggplot2::ggplot(tab, ggplot2::aes(x = grp, y = Freq, fill = cat)) +
-      ggplot2::geom_col(width = 0.82, color = "grey25", linewidth = 0.2) +
-      ggplot2::scale_fill_manual(values = stats::setNames(pal, cat_lv),
-                                 name = catcol, drop = FALSE) +
-      ggplot2::scale_y_continuous(labels = function(v) paste0(round(v * 100), "%"),
-                                  expand = ggplot2::expansion(mult = c(0, 0.02))) +
-      ggplot2::labs(x = grpcol, y = "Proportion of cells",
-                    title = paste0(catcol, " composition by ", grpcol)) +
-      ggplot2::theme_bw(base_size = 14) +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
-                     panel.grid.major.x = ggplot2::element_blank())
+    ptype <- input$prop_type %||% "stacked"
+    pct_lab <- function(v) paste0(round(v * 100), "%")
+
+    if (identical(ptype, "box")) {
+      # ── Boxplot: per-Unit proportion of each Category, boxed across units, by Group
+      unitcol <- input$prop_unit
+      shiny::validate(shiny::need(isTRUE(nzchar(unitcol)) && unitcol %in% colnames(cd),
+                                  "Pick a Unit column (e.g. sample_id) for the boxplot."))
+      df$unit <- as.character(cd[[unitcol]])[!is.na(as.character(cd[[catcol]])) &
+                                             !is.na(as.character(cd[[grpcol]]))]
+      df <- df[!is.na(df$unit), , drop = FALSE]
+      shiny::validate(shiny::need(nrow(df) > 0, "No non-missing cells for this combination."))
+      df$unit <- factor(df$unit)
+      # proportion of each Category level WITHIN each unit (sums to 1 per unit)
+      tab <- as.data.frame(prop.table(table(unit = df$unit, cat = df$cat), margin = 1))
+      # each unit -> its (dominant) Group level
+      unit_grp <- tapply(as.character(df$grp), as.character(df$unit),
+                         function(g) names(sort(table(g), decreasing = TRUE))[1])
+      tab$grp <- factor(unit_grp[as.character(tab$unit)], levels = grp_lv)
+      tab <- tab[!is.na(tab$grp), , drop = FALSE]
+      pal <- overlay_color_palette(input$prop_palette %||% "paired", length(grp_lv))
+      ggplot2::ggplot(tab, ggplot2::aes(x = cat, y = Freq, fill = grp)) +
+        ggplot2::geom_boxplot(outlier.shape = NA, position = ggplot2::position_dodge(width = 0.75),
+                              width = 0.6, alpha = 0.85) +
+        ggplot2::geom_point(position = ggplot2::position_jitterdodge(jitter.width = 0.12,
+                              dodge.width = 0.75), size = 1.6, alpha = 0.75,
+                            ggplot2::aes(group = grp)) +
+        ggplot2::scale_fill_manual(values = stats::setNames(pal, grp_lv), name = grpcol, drop = FALSE) +
+        ggplot2::scale_y_continuous(labels = pct_lab) +
+        ggplot2::labs(x = catcol, y = paste0("Proportion per ", unitcol),
+                      title = paste0(catcol, " proportion by ", grpcol, " (per ", unitcol, ")")) +
+        ggplot2::theme_bw(base_size = 14) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+    } else {
+      # ── Stacked bar: Category composition WITHIN each Group level (cols sum to 1)
+      tab <- as.data.frame(prop.table(table(grp = df$grp, cat = df$cat), margin = 1))
+      pal <- overlay_color_palette(input$prop_palette %||% "paired", length(cat_lv))
+      ggplot2::ggplot(tab, ggplot2::aes(x = grp, y = Freq, fill = cat)) +
+        ggplot2::geom_col(width = 0.82, color = "grey25", linewidth = 0.2) +
+        ggplot2::scale_fill_manual(values = stats::setNames(pal, cat_lv),
+                                   name = catcol, drop = FALSE) +
+        ggplot2::scale_y_continuous(labels = pct_lab,
+                                    expand = ggplot2::expansion(mult = c(0, 0.02))) +
+        ggplot2::labs(x = grpcol, y = "Proportion of cells",
+                      title = paste0(catcol, " composition by ", grpcol)) +
+        ggplot2::theme_bw(base_size = 14) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+                       panel.grid.major.x = ggplot2::element_blank())
+    }
   })
 
   observeEvent(input$gating_max_events, {
