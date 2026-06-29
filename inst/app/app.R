@@ -198,6 +198,14 @@ ui <- fluidPage(
         tags$div(class = "sample-filter-panel",
           tags$div(class = "sample-filter-subheader",
                    "Use column filters or click rows to select samples"),
+          tags$div(style = "display:flex; gap:4px; margin-bottom:4px;",
+            actionButton("sample_filter_select_all_btn", "Select all displayed",
+                         class = "btn-xs btn-default", style = "flex:1;",
+                         title = "Select every sample currently shown by the column filters"),
+            actionButton("sample_filter_clear_btn", "Deselect all",
+                         class = "btn-xs btn-default", style = "flex:1;",
+                         title = "Clear the selection and column filters — show all samples")
+          ),
           DT::dataTableOutput("sample_filter_table")
         ),
 
@@ -1248,6 +1256,7 @@ server <- function(input, output, session) {
     undo_stack = list(), redo_stack = list(),
     overlay_factor = NULL, overlay_selected = NULL, overlay_palette = "paired",
     sample_info = NULL, sample_mask = NULL, sample_filter_key = "all",
+    .sample_filter_reset = 0L,                  # bump to force a fresh sample-table re-render
     .range_cache = list(),
     .gate_counts_cache_key = NULL, .gate_counts_cache = NULL,
     .population_tree_cache_key = NULL, .population_tree_cache = NULL,
@@ -2827,6 +2836,7 @@ server <- function(input, output, session) {
 
   output$sample_filter_table <- DT::renderDataTable({
     req(rv$sample_info)
+    rv$.sample_filter_reset    # dependency: "Deselect all" bumps this to re-render fresh
     DT::datatable(
       rv$sample_info$table, filter = "top", selection = "multiple",
       options = list(pageLength = 20, lengthMenu = c(20, 40, 80, 200),
@@ -2837,6 +2847,25 @@ server <- function(input, output, session) {
                      columnDefs = list(list(className = "dt-center", targets = "_all"))),
       style = "bootstrap", class = "compact stripe hover cell-border", rownames = FALSE
     )
+  })
+
+  # "Select all displayed": row-select every sample currently shown by the column
+  # filters (makes the filtered set an explicit selection that persists if filters
+  # are later cleared).
+  observeEvent(input$sample_filter_select_all_btn, {
+    req(rv$sample_info)
+    total <- nrow(rv$sample_info$table)
+    rows <- normalize_dt_rows(input$sample_filter_table_rows_all, total)
+    if (is.null(rows)) rows <- seq_len(total)
+    DT::selectRows(DT::dataTableProxy("sample_filter_table"), rows)
+  })
+
+  # "Deselect all": clear the row selection AND column filters -> back to base
+  # "all" state (re-render the table fresh; the mask observer then resolves to all).
+  observeEvent(input$sample_filter_clear_btn, {
+    req(rv$sample_info)
+    DT::selectRows(DT::dataTableProxy("sample_filter_table"), NULL)
+    rv$.sample_filter_reset <- as.integer(rv$.sample_filter_reset %||% 0L) + 1L
   })
 
   output$sample_filter_summary <- renderText({
