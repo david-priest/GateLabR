@@ -4254,15 +4254,16 @@ server <- function(input, output, session) {
   output$proportions_plot <- renderPlot({
     req(rv$sce)
     catcol <- input$prop_category; grpcol <- input$prop_group
-    validate(need(isTRUE(nzchar(catcol)) && isTRUE(nzchar(grpcol)),
-                  "Pick a Category and a Group column."))
+    # NB: qualify shiny::validate/need — jsonlite (attached later) masks `validate`.
+    shiny::validate(shiny::need(isTRUE(nzchar(catcol)) && isTRUE(nzchar(grpcol)),
+                                "Pick a Category and a Group column."))
     cd <- SummarizedExperiment::colData(rv$sce)
-    validate(need(catcol %in% colnames(cd) && grpcol %in% colnames(cd),
-                  "Selected column not found in colData."))
+    shiny::validate(shiny::need(catcol %in% colnames(cd) && grpcol %in% colnames(cd),
+                                "Selected column not found in colData."))
     df <- data.frame(cat = as.character(cd[[catcol]]),
                      grp = as.character(cd[[grpcol]]), stringsAsFactors = FALSE)
     df <- df[!is.na(df$cat) & !is.na(df$grp), , drop = FALSE]
-    validate(need(nrow(df) > 0, "No non-missing cells for this combination."))
+    shiny::validate(shiny::need(nrow(df) > 0, "No non-missing cells for this combination."))
     cat_lv <- .prop_levels(cd[[catcol]], df$cat)
     grp_lv <- .prop_levels(cd[[grpcol]], df$grp)
     df$cat <- factor(df$cat, levels = cat_lv)
