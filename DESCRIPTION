@@ -10,9 +10,10 @@ Description: A desktop-style Shiny application for interactive manual gating of
     SingleCellExperiment objects. Supports polygon, rectangle and quadrant
     gates, boolean population hierarchies, per-channel logicle / arcsinh
     transforms, embedded-spillover compensation, GatingML 2.0 import and export,
-    FCS export, publication-style figure export, and a cell-division (CFSE /
+    FCS export, publication-style figure export, a cell-division (CFSE /
     CellTrace dye-dilution) profiler that writes per-cell Div0..DivN calls back to
-    the object. Gates, populations and settings persist inside the object's
+    the object, and a colData composition-preview tab (stacked-bar and boxplot
+    proportions). Gates, populations and settings persist inside the object's
     metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
