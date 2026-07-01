@@ -56,8 +56,10 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="gatelabr">GateLabR<a class="anchor" aria-label="anchor" href="#gatelabr"></a>
 </h1></div>
-<p><a href="https://doi.org/10.5281/zenodo.20404387" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
+<p><a href="https://doi.org/10.5281/zenodo.20404387" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a> <a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/docs-pkgdown-4b9fd5.svg" alt="Docs"></a></p>
 <p><strong>Interactive manual gating for <code>SingleCellExperiment</code> objects in R / Shiny.</strong></p>
+<p><em>Open-source flow cytometry and CyTOF (mass cytometry) gating app for R / Shiny — with FCS import, fluorescence compensation, Boolean population trees, and Gating-ML round-trip, all persisted inside the object.</em></p>
+<p>📖 <strong><a href="https://david-priest.github.io/GateLabR">Documentation &amp; Getting Started</a></strong></p>
 <p>GateLabR is a desktop-style Shiny application for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on <a href="https://bioconductor.org/packages/SingleCellExperiment/" class="external-link"><code>SingleCellExperiment</code></a> objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST, diffcyt) where the events already live in R as an SCE and you want a fast, reproducible alternative to round-tripping through FlowJo or Cytobank just to draw a few gates.</p>
 <p>Gates are drawn on an interactive D3.js canvas, and gates, populations, scales and illustration settings are persisted inside the SCE itself via <code>metadata()</code>, so loading the SCE again restores the entire workspace.</p>
 <div class="section level2">
@@ -85,8 +87,80 @@
 <li>
 <strong>UMAP tab.</strong> Overlay any populations on a precomputed UMAP and export as SVG / PDF.</li>
 <li>
+<strong>Cell-division profiler.</strong> A CFSE / CellTrace dye-dilution tab: draggable per-sample division gates on a 1-D histogram (Div0…DivN), a marker-vs-dye biplot with density contours, and per-cell division calls written back to <code>colData</code>.</li>
+<li>
+<strong>Composition preview.</strong> A Proportions tab for quick stacked-bar and boxplot previews of any <code>colData</code> composition (e.g. cluster or division proportions by condition), with per-sample averaging and faceting.</li>
+<li>
 <strong>Figure export.</strong> Strategy and Illustration tabs render publication-style multi-panel grids; SVG export uses <code>gridSVG</code> to produce Adobe Illustrator- friendly grouped vector files (rasterised data, vector axes / gates / labels).</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="how-gatelabr-compares">How GateLabR compares<a class="anchor" aria-label="anchor" href="#how-gatelabr-compares"></a>
+</h2>
+<p>GateLabR fills a specific gap: an <strong>interactive GUI for gating that lives natively on a <code>SingleCellExperiment</code></strong>, so it slots into a Bioconductor pipeline instead of replacing it — while keeping full R access to the same object.</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr>
+<th></th>
+<th>GateLabR</th>
+<th>FlowJo / Cytobank</th>
+<th>CytoExploreR / flowGate</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Interface</td>
+<td>GUI (Shiny) <strong>+</strong> full R access</td>
+<td>GUI (proprietary)</td>
+<td>R, with interactive gating helpers</td>
+</tr>
+<tr>
+<td>Data object</td>
+<td>
+<code>SingleCellExperiment</code> (Bioconductor-native)</td>
+<td>proprietary workspace</td>
+<td>
+<code>GatingSet</code> (flowWorkspace)</td>
+</tr>
+<tr>
+<td>Cost / licence</td>
+<td>Free, MIT, open source</td>
+<td>Commercial</td>
+<td>Free, open source</td>
+</tr>
+<tr>
+<td>Flow <strong>and</strong> CyTOF</td>
+<td>Yes (auto-detected)</td>
+<td>Flow-focused</td>
+<td>Flow-focused</td>
+</tr>
+<tr>
+<td>Gates persist in the object</td>
+<td>Yes — in <code>metadata()</code>; reload restores everything</td>
+<td>Workspace files</td>
+<td>
+<code>GatingSet</code> on disk</td>
+</tr>
+<tr>
+<td>Gating-ML round-trip</td>
+<td>Yes (Cytobank-compatible)</td>
+<td>Yes</td>
+<td>Partial</td>
+</tr>
+<tr>
+<td>Downstream hand-off</td>
+<td>Populations → <code>colData</code> for <code>diffcyt</code> / <code>CATALYST</code> / any SCE tool</td>
+<td>Export gated FCS</td>
+<td>
+<code>GatingSet</code> → downstream</td>
+</tr>
+</tbody>
+</table>
+<p>If your data already lives in R as an SCE and you want to <em>draw a few gates</em> without round-tripping through FlowJo or Cytobank — but would rather point and click than write gate coordinates by hand — that’s what GateLabR is for.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
