@@ -72,19 +72,24 @@ GateLabR fills a specific gap: an **interactive GUI for gating that lives
 natively on a `SingleCellExperiment`**, so it slots into a Bioconductor pipeline
 instead of replacing it — while keeping full R access to the same object.
 
-| | GateLabR | FlowJo / Cytobank | CytoExploreR / flowGate |
-|---|---|---|---|
-| Interface | GUI (Shiny) **+** full R access | GUI (proprietary) | R, with interactive gating helpers |
-| Data object | `SingleCellExperiment` (Bioconductor-native) | proprietary workspace | `GatingSet` (flowWorkspace) |
-| Cost / licence | Free, MIT, open source | Commercial | Free, open source |
-| Flow **and** CyTOF | Yes (auto-detected) | Flow-focused | Flow-focused |
-| Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | `GatingSet` on disk |
-| Gating-ML round-trip | Yes (Cytobank-compatible) | Yes | Partial |
-| Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | `GatingSet` → downstream |
+| | GateLabR | FlowJo | Cytobank | CytoExploreR / flowGate |
+|---|---|---|---|---|
+| Interface | GUI (Shiny) **+** full R access | GUI (desktop, proprietary) | GUI (cloud, proprietary) | R, with interactive gating helpers |
+| Data object | `SingleCellExperiment` (Bioconductor-native) | `.wsp` workspace | cloud workspace | `GatingSet` (flowWorkspace) |
+| Cost / licence | Free, MIT, open source | Commercial | Commercial | Free, open source |
+| Flow / CyTOF | Both (auto-detected) | Flow-focused | Both | Flow-focused |
+| Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
+| **Gating-ML 2.0 round-trip** | **Yes** | **No** | **Yes** | Partial |
+| Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
 
-If your data already lives in R as an SCE and you want to *draw a few gates*
-without round-tripping through FlowJo or Cytobank — but would rather point and
-click than write gate coordinates by hand — that's what GateLabR is for.
+Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** round-trips ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR speaks Cytobank-compatible Gating-ML, so gates move losslessly between GateLabR and Cytobank.
+
+GateLabR suits two workflows. If your data already lives in R as a
+`SingleCellExperiment`, it lets you gate without round-tripping to FlowJo or
+Cytobank and hand populations straight to `diffcyt` / `CATALYST`. But it's equally
+at home as a plain **FCS-in → gate → FCS / stats / Gating-ML out** tool: import
+`.fcs` files, gate interactively in the GUI, and export — no R fluency needed
+beyond the one line to launch it.
 
 ## Installation
 
