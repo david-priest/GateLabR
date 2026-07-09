@@ -67,15 +67,15 @@
 </h2>
 <ul>
 <li>
-<strong>Draw and edit gates interactively.</strong> Polygon and rectangle gates on any pair of channels, with click-and-drag vertex editing, snap-to-grid, undo / redo, and per-gate colour and label.</li>
+<strong>Draw and edit gates interactively.</strong> Polygon, rectangle and quadrant gates on any pair of channels, with click-and-drag vertex editing, undo / redo, and per-gate colour and label.</li>
 <li>
-<strong>Boolean population trees.</strong> Build hierarchies of populations from gate references with AND / OR logic; counts and percentages update live.</li>
+<strong>Boolean population trees.</strong> Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent; counts and percentages update live.</li>
 <li>
 <strong>Flow and CyTOF modes.</strong> Auto-detects the instrument type from channel names. Flow uses per-channel logicle for fluorescence and arcsinh for FSC / SSC scatter, with editable W and cofactor; CyTOF channels use arcsinh (cofactor 5).</li>
 <li>
 <strong>Compensation.</strong> When an <code>.fcs</code> carries an embedded spillover matrix (<code>$SPILLOVER</code>), it can be applied to the raw fluorescence data before gating — toggled on/off from the Scales tab, with a read-only matrix viewer. Scatter and time channels are left untouched. Defaults off; apply it before drawing gates, since it changes the linear space the gates live in. Already-compensated / spectral-unmixed and CyTOF files (no usable matrix) hide the option.</li>
 <li>
-<strong>Cytobank-compatible Gating-ML 2.0 import / export.</strong> Round-trip gates through Cytobank, FlowJo and other ISAC-compliant tools.</li>
+<strong>Cytobank-compatible Gating-ML 2.0 import / export.</strong> Round-trip gates through Cytobank and other ISAC Gating-ML 2.0-compliant tools. (FlowJo uses its own <code>.wsp</code> format and does not round-trip Gating-ML.)</li>
 <li>
 <strong>Workspace persistence.</strong> Gates, populations, scales and illustration settings are saved inside the SCE (<code>metadata(sce)$gating_workspace</code>) and re-loaded automatically.</li>
 <li>

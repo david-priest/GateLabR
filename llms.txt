@@ -29,12 +29,12 @@ scales and illustration settings are persisted inside the SCE itself via
 
 ## Features
 
-- **Draw and edit gates interactively.** Polygon and rectangle gates on
-  any pair of channels, with click-and-drag vertex editing,
-  snap-to-grid, undo / redo, and per-gate colour and label.
+- **Draw and edit gates interactively.** Polygon, rectangle and quadrant
+  gates on any pair of channels, with click-and-drag vertex editing,
+  undo / redo, and per-gate colour and label.
 - **Boolean population trees.** Build hierarchies of populations from
-  gate references with AND / OR logic; counts and percentages update
-  live.
+  gate references — each population is the intersection (AND) of its
+  gates within its parent; counts and percentages update live.
 - **Flow and CyTOF modes.** Auto-detects the instrument type from
   channel names. Flow uses per-channel logicle for fluorescence and
   arcsinh for FSC / SSC scatter, with editable W and cofactor; CyTOF
@@ -47,7 +47,8 @@ scales and illustration settings are persisted inside the SCE itself via
   gates live in. Already-compensated / spectral-unmixed and CyTOF files
   (no usable matrix) hide the option.
 - **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip
-  gates through Cytobank, FlowJo and other ISAC-compliant tools.
+  gates through Cytobank and other ISAC Gating-ML 2.0-compliant tools.
+  (FlowJo uses its own `.wsp` format and does not round-trip Gating-ML.)
 - **Workspace persistence.** Gates, populations, scales and illustration
   settings are saved inside the SCE (`metadata(sce)$gating_workspace`)
   and re-loaded automatically.
