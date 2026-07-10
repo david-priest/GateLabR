@@ -215,6 +215,16 @@ are matched by name, missing ones are skipped with a warning.
   workspace), per-population colData columns, CSV statistics, SVG / PDF
   figures.
 
+## Related
+
+**[figtracer](https://github.com/david-priest/figtracer)** — a
+plain-text, git-tracked electronic lab notebook (ELN) for reproducible
+bioinformatics: it threads the figures your R / Python analysis produces
+into living, provenance-tracked lab notes. GateLabR gates your cells;
+figtracer keeps the resulting figures and analysis as a reproducible
+written record. Together they cover the single-cell / cytometry workflow
+from gating to lab notebook.
+
 ## Citation
 
 If you use GateLabR in published work, please cite the Zenodo archive:
