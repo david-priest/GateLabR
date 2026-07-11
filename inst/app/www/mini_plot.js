@@ -511,7 +511,10 @@
 
         var outerDensity = Math.max(peakDensity * (threshold / 100), peakDensity * 0.005);
 
-        var nLevels = 18;
+        // Scale contour level count with the panel's inner dimension so shrinking a panel (e.g. more
+        // Strategy/Illustration columns) doesn't cram a fixed 18 lines into a tiny plot. Baseline
+        // ~270px = the original 18 levels. (Ported from GateLab.)
+        var nLevels = Math.max(6, Math.min(18, Math.round(18 * Math.min(W, H) / 270)));
         var logThresholds = d3.range(nLevels).map(function (i) {
             return Math.exp(Math.log(outerDensity) + (Math.log(peakDensity) - Math.log(outerDensity)) * i / (nLevels - 1));
         });
@@ -572,7 +575,8 @@
         // Dark contour outlines (same style direction as gating plot).
         var lineColor = ((cfg || {}).line_color) || '#111111';
         ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 1.0;
+        // Scale line weight with the panel too (baseline ~270px = 1.0px). (Ported from GateLab.)
+        ctx.lineWidth = Math.max(0.5, Math.min(1.0, Math.min(W, H) / 270));
         ctx.globalAlpha = Math.min(1.0, alpha + 0.15);
         contours.forEach(function (contour) {
             contour.coordinates.forEach(function (polygon) {

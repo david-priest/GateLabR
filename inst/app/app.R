@@ -2091,6 +2091,22 @@ server <- function(input, output, session) {
   .cytof_y_lo_d <- shiny::debounce(reactive(input$cytof_y_lo), 250)
   .cytof_y_hi_d <- shiny::debounce(reactive(input$cytof_y_hi), 250)
 
+  # A pan / anchored-stretch gesture on the main plot (cytof_plot.js emits "plot_range" on mouse-up)
+  # is persisted by writing the range into the Min/Max inputs, which drive the existing plot-range
+  # override machinery above — no duplicate flow/CyTOF branching. (GateLab port-back.)
+  observeEvent(input$plot_range, {
+    pr <- input$plot_range
+    xr <- suppressWarnings(as.numeric(pr$x_range))
+    yr <- suppressWarnings(as.numeric(pr$y_range))
+    if (length(xr) == 2L && length(yr) == 2L && all(is.finite(c(xr, yr))) &&
+        (xr[2] - xr[1]) > 1e-6 && (yr[2] - yr[1]) > 1e-6) {
+      updateNumericInput(session, "cytof_x_lo", value = round(xr[1], 3))
+      updateNumericInput(session, "cytof_x_hi", value = round(xr[2], 3))
+      updateNumericInput(session, "cytof_y_lo", value = round(yr[1], 3))
+      updateNumericInput(session, "cytof_y_hi", value = round(yr[2], 3))
+    }
+  }, ignoreInit = TRUE)
+
   observeEvent(list(.cytof_x_lo_d(), .cytof_x_hi_d(),
                     .cytof_y_lo_d(), .cytof_y_hi_d()), {
     req(rv$sce, input$x_channel, input$y_channel)
