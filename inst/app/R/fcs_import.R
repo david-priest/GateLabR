@@ -520,7 +520,10 @@ generate_logicle_ticks <- function(channel_name,
     if (!is.finite(raw_hi)) raw_hi <-  t_val
 
     # ---- generate decade candidates spanning the full visible raw range ---
-    max_pos_exp <- ceiling(log10(max(raw_hi, 100)))
+    # Clamp the top decade to ~T*10^2 (defensive port-back from GateLab): if an out-of-domain axis
+    # top is committed, inv_lg(hi) can extrapolate far past the data top and 10^seq(2, max_pos_exp)
+    # would generate absurd decades (GateLab saw ~1e19). Cap at 2 decades above the logicle T.
+    max_pos_exp <- min(ceiling(log10(max(raw_hi, 100))), ceiling(log10(max(t_val, 100))) + 2L)
     min_neg_exp <- if (raw_lo < -1) ceiling(log10(abs(raw_lo))) else 2L
     min_neg_exp <- min(min_neg_exp, 5L)    # up to -100K on negative side
 

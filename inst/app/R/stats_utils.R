@@ -119,7 +119,9 @@ compute_population_stats <- function(assay_data,
     stringsAsFactors = FALSE
   )
   colnames(df) <- all_cols
-  # Drop the internal pop_id column
+  # Keep pop_id as an attribute (the Statistics tab uses it to prepend tree connectors), then drop
+  # the visible column so it isn't shown in the table or the CSV export.
+  attr(df, "pop_id") <- if ("pop_id" %in% colnames(df)) as.character(df$pop_id) else NULL
   df$pop_id <- NULL
   df
 }

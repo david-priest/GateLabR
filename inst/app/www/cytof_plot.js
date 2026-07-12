@@ -245,8 +245,9 @@
 
     // ── Pointer events — rect gate ───────────────────────────────────────────
     function _onMousedown(event) {
-        // Navigate mode: drag → pan; option(alt)-drag → anchored stretch (bottom-left pinned,
-        // grabbed data point tracks the cursor). Presses on a gate fall through to the gate's own
+        // Navigate mode: drag → pan; shift- or option(alt)-drag → anchored stretch (bottom-left
+        // pinned, grabbed data point tracks the cursor). Shift is offered because the window manager
+        // grabs Alt/Option on Windows/Linux. Presses on a gate fall through to the gate's own
         // select/drag handlers.
         if (_mode === 'navigate') {
             var _t = event.target;
@@ -258,7 +259,7 @@
             var _mxr = (_plotData.x_range || _xBase.domain()).slice();
             var _myr = (_plotData.y_range || _yBase.domain()).slice();
             _pan = {
-                px0: _md[0], py0: _md[1], xr: _mxr, yr: _myr, alt: !!event.altKey,
+                px0: _md[0], py0: _md[1], xr: _mxr, yr: _myr, alt: !!(event.altKey || event.shiftKey),
                 gx: _mxr[0] + _clampF(_md[0] / W) * (_mxr[1] - _mxr[0]),
                 gy: _myr[1] - _clampF(_md[1] / H) * (_myr[1] - _myr[0]),
             };
@@ -717,9 +718,12 @@
             }
         }
 
-        // Draw legend in top-right corner
+        // Draw legend in top-right corner. Port-back from GateLab: the main gating plot renders its
+        // colour-by-population legend as an HTML block beside the plot instead (suppress_canvas_legend),
+        // so the key doesn't overlap the data. The Illustration/Strategy grids leave it in-canvas so it
+        // stays in the exported figure.
         var labels = _plotData.color_labels || [];
-        if (labels.length > 0) {
+        if (labels.length > 0 && !_plotData.suppress_canvas_legend) {
             _ctx.globalAlpha = 1.0;
             var lx = M.left + W - 8;
             var ly = M.top + 12;

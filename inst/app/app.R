@@ -250,12 +250,12 @@ ui <- fluidPage(
             fileInput("import_gatingml_upload",NULL,
                       accept=c(".xml",".gatingml",".Gating-ML"),
                       buttonLabel="Import GatingML...",placeholder="No file selected",multiple=FALSE),
-            tags$div(style="display:grid;grid-template-columns:1fr 1fr;gap:4px;",
-              downloadButton("export_gatingml_dl","Export (Cytobank)",
-                             class="btn-xs btn-default",style="width:100%;text-align:left;"),
-              downloadButton("export_gatingml_standard_dl","Export (Standard)",
-                             class="btn-xs btn-default",style="width:100%;text-align:left;")
-            )
+            # Single Cytobank-compatible export (port-back from GateLab): Gating-ML 2.0 with $PnN
+            # channel names + flat boolean gates + custom_info (incl. gatelabr_scales). Re-imports
+            # losslessly into GateLabR / GateLab (tree rebuilt from the booleans) AND uploads to
+            # Cytobank, so the separate "Standard" export was redundant.
+            downloadButton("export_gatingml_dl","Export GatingML...",
+                           class="btn-xs btn-default btn-block",style="text-align:left;")
           ),
 
           tags$div(class="status-bar", textOutput("status_text",inline=TRUE)),
@@ -300,6 +300,9 @@ ui <- fluidPage(
           uiOutput("gating_display_pops_ui"),
           tags$div(id = "cytof-plot-container",
                    style = "width: 100%;"),
+          # Colour-by-population legend rendered BELOW the plot (port-back from GateLab) instead of
+          # inside the canvas, so the key never overlaps the data. Populated only in overlay mode.
+          uiOutput("overlay_legend_ui"),
 
           # Current-channel scale controls (min/max + logicle)
           uiOutput("flow_transform_controls_ui"),
@@ -1061,7 +1064,10 @@ ui <- fluidPage(
             tags$div(class = "section-header", "Global Channel Scales"),
             tags$div(style = "font-size:11px; color:#666; margin-bottom:8px;",
               "Define per-channel axis ranges used across Gating, Strategy, and Illustration.",
-              " These global scales keep axes uniform across all panels for figure export."
+              " These global scales keep axes uniform across all panels for figure export.",
+              tags$br(),
+              tags$em("Min / Max are in display (transformed: logicle / arcsinh) units, not raw ",
+                      "instrument values, so they won't match the decade labels on the axis.")
             ),
             uiOutput("scales_channels_ui")
           )
@@ -1237,6 +1243,47 @@ ui <- fluidPage(
   )
 )
 
+
+# Population-tree connector SVGs keyed by population id — the same ├/└/│ glyphs the population tree
+# draws (make_tree_connectors), so the Statistics tab can show the hierarchy too (port-back from
+# GateLab). Pure: (populations, root) -> named list pop_id -> HTML SVG string ("" at the root).
+# Walks the FULL tree (name-sorted children, is_last_path), matching the pop tree exactly. NOTE: if
+# the Stats tab shows only a partial selection of populations, connectors reflect the full-tree
+# position, so a deselected intermediate parent can leave a dangling vertical — acceptable for the
+# common all-/subtree-selected case.
+.stats_tree_svg_map <- function(populations, root_id) {
+  out <- list()
+  connector <- function(depth, is_last_path) {
+    if (depth == 0L) return("")
+    seg <- 16L; total <- depth * seg; h <- 20L; mid <- h %/% 2L
+    ls <- 'stroke="#bfc5cf" stroke-width="1.5" stroke-linecap="square"'
+    ln <- function(x1, y1, x2, y2) sprintf('<line x1="%d" y1="%d" x2="%d" y2="%d" %s/>', x1, y1, x2, y2, ls)
+    paths <- character(0)
+    for (i in seq_len(depth)) {
+      cx <- (i - 1L) * seg + seg %/% 2L; is_last <- isTRUE(is_last_path[[i]]); is_leaf <- (i == depth)
+      if (is_leaf) {
+        paths <- c(paths, if (is_last) ln(cx, 0L, cx, mid) else ln(cx, 0L, cx, h), ln(cx, mid, total, mid))
+      } else if (!is_last) {
+        paths <- c(paths, ln(cx, 0L, cx, h))
+      }
+    }
+    sprintf('<svg width="%d" height="%d" viewBox="0 0 %d %d" style="flex-shrink:0;overflow:visible;vertical-align:middle;">%s</svg>',
+            total, h, total, h, paste(paths, collapse = ""))
+  }
+  walk <- function(pid, depth, is_last_path) {
+    if (is.null(populations[[pid]])) return(invisible())
+    out[[pid]] <<- connector(depth, is_last_path)
+    ch <- unique(populations[[pid]]$children)
+    ch <- ch[ch %in% names(populations)]
+    if (length(ch) > 1) {
+      nm <- vapply(ch, function(cid) populations[[cid]]$name %||% cid, character(1))
+      ch <- ch[order(tolower(nm), ch)]
+    }
+    for (i in seq_along(ch)) walk(ch[[i]], depth + 1L, c(is_last_path, i == length(ch)))
+  }
+  if (!is.null(root_id) && !is.null(populations[[root_id]])) walk(root_id, 0L, logical(0))
+  out
+}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SERVER
@@ -3346,6 +3393,25 @@ server <- function(input, output, session) {
     m
   }
 
+  # Colour-by-population legend, rendered as an HTML block below the plot (port-back from GateLab)
+  # so the swatch key never overlaps the data. Populated from rv$overlay_legend by the plot builder.
+  output$overlay_legend_ui <- renderUI({
+    leg <- rv$overlay_legend
+    if (is.null(leg) || length(leg$labels) == 0) return(NULL)
+    n <- min(length(leg$labels), length(leg$palette))
+    items <- lapply(seq_len(n), function(i) {
+      tags$span(
+        style = "display:inline-flex; align-items:center; gap:4px; margin-right:12px; font-size:11px; white-space:nowrap;",
+        tags$span(style = sprintf("display:inline-block; width:11px; height:11px; border-radius:2px; background:%s;", leg$palette[i])),
+        tags$span(leg$labels[i])
+      )
+    })
+    tags$div(class = "overlay-legend",
+      style = "display:flex; flex-wrap:wrap; padding:6px 2px 2px; margin-top:4px; border-top:1px solid #eee;",
+      items
+    )
+  })
+
   # Text indicator above the biplot: which populations' data is being shown.
   output$gating_display_pops_ui <- renderUI({
     rv$populations; rv$active_population_id; rv$.selected_pop_ids
@@ -3738,6 +3804,8 @@ server <- function(input, output, session) {
         x_is_scatter_log = x_is_sc, y_is_scatter_log = y_is_sc,
         x_scatter_cofactor = x_sc_cf, y_scatter_cofactor = y_sc_cf
       )
+      plot_data$suppress_canvas_legend <- TRUE  # legend rendered as HTML below the plot instead
+      rv$overlay_legend <- list(labels = as.character(selected), palette = palette)
     } else {
       plot_data <- build_plot_data(
         assay_data = rv$assay_data, x_channel = x_ch, y_channel = y_ch,
@@ -3752,6 +3820,7 @@ server <- function(input, output, session) {
         x_is_scatter_log = x_is_sc, y_is_scatter_log = y_is_sc,
         x_scatter_cofactor = x_sc_cf, y_scatter_cofactor = y_sc_cf
       )
+      rv$overlay_legend <- NULL  # no colour-by overlay → no HTML legend
     }
 
     # Attach channel list, contour threshold, and logicle/custom ticks.
@@ -8868,8 +8937,22 @@ server <- function(input, output, session) {
     df <- rv_stats_df()
     if (is.null(df) || nrow(df) == 0) return(NULL)
 
+    # Prepend population-tree connectors (├/└/│) to the Population column so the Statistics table
+    # shows the same branching as the population list (port-back from GateLab). pop_id rides along
+    # as a df attribute; names are HTML-escaped since the table now renders with escape = FALSE.
+    pids <- attr(df, "pop_id")
+    if (!is.null(pids) && "Population" %in% colnames(df) && length(pids) == nrow(df)) {
+      svg_map <- .stats_tree_svg_map(rv$populations, rv$root_population_id)
+      pref <- vapply(pids, function(p) svg_map[[p]] %||% "", character(1))
+      df$Population <- paste0(
+        '<span style="display:inline-flex;align-items:center;gap:2px;">',
+        pref, '<span>', htmltools::htmlEscape(df$Population), '</span></span>'
+      )
+    }
+
     # Format numeric columns with commas for counts
     DT::datatable(df,
+      escape = FALSE,  # Population cells carry tree-connector SVG (names escaped above)
       options = list(
         pageLength = 50,
         scrollX = TRUE,
@@ -9324,15 +9407,9 @@ server <- function(input, output, session) {
     },
     content = function(file) .gatingml_export_content(file, "cytobank")
   )
-
-  output$export_gatingml_standard_dl <- downloadHandler(
-    filename = function() {
-      sce_nm <- isolate(rv$sce_name) %||% "workspace"
-      paste0(gsub("[^A-Za-z0-9_.-]", "_", sce_nm), "_gates_standard_",
-             format(Sys.time(), "%Y%m%d_%H%M%S"), ".xml")
-    },
-    content = function(file) .gatingml_export_content(file, "standard")
-  )
+  # The separate "Standard" GatingML export was merged into the single Cytobank export above
+  # (port-back from GateLab) — the Cytobank format re-imports losslessly, so it was redundant.
+  # .gatingml_export_content(..., "standard") remains available in R if ever needed programmatically.
 
   # ── Export FCS — modal then download ────────────────────────────────────────
   observeEvent(input$export_fcs_btn, {
@@ -10268,8 +10345,7 @@ ui_with_runjs <- tagList(
         'save_rds_dl':        'Download the SCE (with embedded workspace) as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
         'import_gatingml_upload': 'Import Cytobank Gating-ML XML and replace current gates/populations',
-        'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML (uses FCS $PnN channel names, BooleanGate definitions)',
-        'export_gatingml_standard_dl': 'Export gates as standard Gating-ML 2.0 XML with GatingHierarchy (re-importable into GateLabR)',
+        'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML ($PnN channel names, flat BooleanGates + custom_info) — re-imports into GateLabR / GateLab and uploads to Cytobank',
         // Mode toolbar
         'mode_rect':     'Draw a rectangle gate',
         'mode_poly':     'Draw a freehand polygon gate',
