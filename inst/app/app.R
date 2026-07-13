@@ -293,7 +293,8 @@ ui <- fluidPage(
             ),
             tags$div(style = "display:flex; gap:4px; margin-left: auto;",
               actionButton("flip_axes", "", icon = icon("arrows-h"),
-                           class = "btn-xs btn-default"),
+                           class = "btn-xs btn-default", title = "Flip axes",
+                           `aria-label` = "Flip axes"),
               actionButton("refresh_plot_btn", "Refresh", class = "btn-xs btn-default")
             )
           ),
@@ -729,6 +730,8 @@ ui <- fluidPage(
                   actionButton(
                     "illust_toggle_pops_btn", "", icon = icon("chevron-down"),
                     class = "btn-xs btn-default", style = "padding:1px 6px;",
+                    title = "Collapse or expand populations",
+                    `aria-label` = "Collapse or expand populations",
                     onclick = "(function(btn){var body=$('#illust_pops_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
                   )
                 )
@@ -1129,28 +1132,43 @@ ui <- fluidPage(
 
         # ── Tab 9: Proportions (colData composition preview) ──────────────────
         tabPanel("Proportions",
-          tags$div(class = "proportions-controls", style = "padding:6px 4px;",
-            tags$div(style = "display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:6px;",
-              tags$div(radioButtons("prop_type", "Plot:",
-                                    choices = c("Stacked bar" = "stacked", "Boxplot" = "box"),
-                                    selected = "stacked", inline = TRUE)),
-              tags$div(selectInput("prop_category", "Category:", choices = NULL, width = "180px")),
-              tags$div(selectInput("prop_group", "Group:", choices = NULL, width = "180px")),
-              tags$div(selectInput("prop_unit", "Unit (e.g. sample):", choices = NULL, width = "160px")),
-              tags$div(selectInput("prop_facet", "Facet by:", choices = c("(none)" = ""), width = "150px")),
-              tags$div(selectInput("prop_palette", "Palette:", choices = OVERLAY_PALETTES,
-                                   selected = "paired", width = "160px")),
-              tags$div(style = "padding-bottom:6px;",
-                checkboxInput("prop_average", "Average per unit (per-sample first)", value = TRUE))
+          tags$div(class = "proportions-controls",
+            tags$div(class = "prop-control-sections",
+              tags$div(class = "prop-control-section", role = "group", `aria-label` = "Plot",
+                tags$div(class = "prop-control-section-label", "Plot"),
+                tags$div(class = "prop-control-section-body",
+                  radioButtons("prop_type", NULL,
+                               choices = c("Stacked bar" = "stacked", "Boxplot" = "box"),
+                               selected = "stacked", inline = TRUE)
+                )
+              ),
+              tags$div(class = "prop-control-section prop-control-section-data",
+                       role = "group", `aria-label` = "Data",
+                tags$div(class = "prop-control-section-label", "Data"),
+                tags$div(class = "prop-control-section-body",
+                  selectInput("prop_category", "Category", choices = NULL, width = "180px"),
+                  selectInput("prop_group", "Group", choices = NULL, width = "180px"),
+                  selectInput("prop_unit", "Unit (e.g. sample)", choices = NULL, width = "160px"),
+                  selectInput("prop_facet", "Facet by", choices = c("(none)" = ""), width = "150px"),
+                  checkboxInput("prop_average", "Average per unit", value = TRUE)
+                )
+              ),
+              tags$div(class = "prop-control-section", role = "group", `aria-label` = "Appearance",
+                tags$div(class = "prop-control-section-label", "Appearance"),
+                tags$div(class = "prop-control-section-body",
+                  selectInput("prop_palette", "Palette", choices = OVERLAY_PALETTES,
+                              selected = "paired", width = "160px")
+                )
+              )
             ),
-            tags$div(style = "font-size:11px; color:#888; max-width:820px; margin-bottom:6px;",
+            tags$div(class = "proportions-help",
               tags$b("Preview only."), " Stacked bar: Category composition within each Group. ",
               "Boxplot: per-Unit proportion of each Category, boxed across units, by Group. ",
               tags$b("Select which samples to include using the sample filter on the left"), " — the ",
               "plot updates to just those cells. With ", tags$b("Average per unit"), " on, proportions are ",
               "computed within each Unit (sample) first, then averaged across units in the Group (the ",
               "standard composition method). Export colData + use seekit / ggplot2 / rstatix for figures."),
-            plotOutput("proportions_plot", height = "470px", width = "78%")
+            plotOutput("proportions_plot", height = "520px", width = "100%")
           )
         )
       )
@@ -1168,21 +1186,28 @@ ui <- fluidPage(
           tags$span(
             actionButton("toggle_gate_list_btn", "", icon = icon("chevron-up"),
                          title = "Collapse gates list",
+                         `aria-label` = "Collapse or expand gates list",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("sort_gates_alpha_btn", "", icon = icon("sort-alpha-asc"),
                          title = "Sort gates alphabetically",
+                         `aria-label` = "Sort gates alphabetically",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("rename_gate_btn", "", icon = icon("pencil"),
+                         title = "Rename selected gate", `aria-label` = "Rename selected gate",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("undo_btn", "", icon = icon("undo"),
+                         title = "Undo", `aria-label` = "Undo",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("redo_btn", "", icon = icon("repeat"),
+                         title = "Redo", `aria-label` = "Redo",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("clear_selected_gates_btn", "", icon = icon("times"),
                          title = "Clear gate selection",
+                         `aria-label` = "Clear gate selection",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("delete_gate_btn", "", icon = icon("trash"),
                          title = "Delete checked gates (or selected gate if none checked)",
+                         `aria-label` = "Delete checked gates",
                          class = "btn-xs btn-danger", style = "padding: 1px 5px;")
           )
         ),
@@ -1193,20 +1218,26 @@ ui <- fluidPage(
           "Populations",
           tags$span(class = "population-header-actions",
             actionButton("add_pop_btn", "", icon = icon("plus"),
+                         title = "Add population", `aria-label` = "Add population",
                          class = "btn-xs btn-success", style = "padding: 1px 5px;"),
             actionButton("edit_pop_btn", "", icon = icon("pencil"),
+                         title = "Edit selected population", `aria-label` = "Edit selected population",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("duplicate_selected_pops_btn", "", icon = icon("clone"),
                          title = "Duplicate selected populations",
+                         `aria-label` = "Duplicate selected populations",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("move_selected_pops_btn", "", icon = icon("share"),
                          title = "Move selected populations to a different parent",
+                         `aria-label` = "Move selected populations",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("clear_selected_pops_btn", "", icon = icon("times"),
                          title = "Clear selection",
+                         `aria-label` = "Clear population selection",
                          class = "btn-xs btn-default", style = "padding: 1px 5px;"),
             actionButton("delete_selected_pops_btn", "", icon = icon("trash"),
                          title = "Delete selected populations",
+                         `aria-label` = "Delete selected populations",
                          class = "btn-xs btn-danger", style = "padding: 1px 5px;")
           )
         ),
@@ -4366,6 +4397,29 @@ server <- function(input, output, session) {
     if (have_facet) df$facet <- factor(df$facet, levels = facet_lv)
     ptype <- input$prop_type %||% "stacked"
     pct_lab <- function(v) paste0(round(v * 100), "%")
+    axis_text_for <- function(values) {
+      labels <- as.character(values)
+      use_horizontal <- length(labels) <= 4L &&
+        (length(labels) == 0L || max(nchar(labels), na.rm = TRUE) <= 24L)
+      if (use_horizontal) {
+        ggplot2::element_text(angle = 0, hjust = 0.5, vjust = 1)
+      } else {
+        ggplot2::element_text(angle = 45, hjust = 1, vjust = 1)
+      }
+    }
+    compact_legend <- function(n_items) {
+      ggplot2::guide_legend(nrow = max(1L, ceiling(n_items / 6L)), byrow = TRUE)
+    }
+    proportion_theme <- ggplot2::theme(
+      legend.position = "bottom",
+      legend.justification = "left",
+      legend.box.just = "left",
+      legend.title.position = "top",
+      legend.key.height = grid::unit(0.35, "cm"),
+      legend.key.width = grid::unit(0.45, "cm"),
+      legend.text = ggplot2::element_text(size = 10),
+      plot.margin = ggplot2::margin(8, 12, 12, 8)
+    )
     # facet layer (NULL when no facet column chosen; `+ NULL` is a ggplot no-op)
     facet_layer <- if (have_facet) ggplot2::facet_wrap(ggplot2::vars(facet)) else NULL
 
@@ -4396,13 +4450,15 @@ server <- function(input, output, session) {
         ggplot2::geom_point(position = ggplot2::position_jitterdodge(jitter.width = 0.12,
                               dodge.width = 0.75), size = 1.6, alpha = 0.75,
                             ggplot2::aes(group = grp)) +
-        ggplot2::scale_fill_manual(values = stats::setNames(pal, grp_lv), name = grpcol, drop = FALSE) +
+        ggplot2::scale_fill_manual(values = stats::setNames(pal, grp_lv), name = grpcol,
+                                   drop = FALSE, guide = compact_legend(length(grp_lv))) +
         ggplot2::scale_y_continuous(labels = pct_lab) +
         ggplot2::labs(x = catcol, y = paste0("Proportion per ", unitcol),
                       title = paste0(catcol, " proportion by ", grpcol, " (per ", unitcol, ")")) +
         facet_layer +
         ggplot2::theme_bw(base_size = 14) +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+        proportion_theme +
+        ggplot2::theme(axis.text.x = axis_text_for(cat_lv))
     } else {
       # ── Stacked bar: Category composition within each Group (bars sum to 1).
       do_avg <- isTRUE(input$prop_average) && have_unit
@@ -4428,14 +4484,16 @@ server <- function(input, output, session) {
       ggplot2::ggplot(tab, ggplot2::aes(x = grp, y = Freq, fill = cat)) +
         ggplot2::geom_col(width = 0.82, color = "grey25", linewidth = 0.2) +
         ggplot2::scale_fill_manual(values = stats::setNames(pal, cat_lv),
-                                   name = catcol, drop = FALSE) +
+                                   name = catcol, drop = FALSE,
+                                   guide = compact_legend(length(cat_lv))) +
         ggplot2::scale_y_continuous(labels = pct_lab,
                                     expand = ggplot2::expansion(mult = c(0, 0.02))) +
         ggplot2::labs(x = grpcol, y = paste0("Proportion of cells (", ysub, ")"),
                       title = paste0(catcol, " composition by ", grpcol)) +
         facet_layer +
         ggplot2::theme_bw(base_size = 14) +
-        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+        proportion_theme +
+        ggplot2::theme(axis.text.x = axis_text_for(grp_lv),
                        panel.grid.major.x = ggplot2::element_blank())
     }
   })
@@ -7252,6 +7310,8 @@ server <- function(input, output, session) {
               actionButton(
                 "illust_toggle_simple_btn", "", icon = icon("chevron-right"),
                 class = "btn-xs btn-default", style = "padding:1px 6px;",
+                title = "Collapse or expand simple channels",
+                `aria-label` = "Collapse or expand simple channels",
                 onclick = "(function(btn){var body=$('#illust_simple_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
               )
             )
@@ -7276,6 +7336,8 @@ server <- function(input, output, session) {
               actionButton(
                 "illust_toggle_marker_btn", "", icon = icon("chevron-right"),
                 class = "btn-xs btn-default", style = "padding:1px 6px;",
+                title = "Collapse or expand marker channels",
+                `aria-label` = "Collapse or expand marker channels",
                 onclick = "(function(btn){var body=$('#illust_marker_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
               )
             )

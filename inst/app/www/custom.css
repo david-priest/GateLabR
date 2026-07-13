@@ -1,7 +1,25 @@
 /* GateLabR Styling */
 
 /* ── Global tweaks ─────────────────────────────────────────────── */
+:root {
+  --gatelabr-focus-ring: rgba(47, 128, 237, 0.42);
+}
+
 body { font-size: 13px; }
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--gatelabr-focus-ring);
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
 
 /* Reduce default Shiny form-group bottom margin */
 .panel-section .form-group { margin-bottom: 6px; }
@@ -13,6 +31,71 @@ body { font-size: 13px; }
 /* Tighten selectInput dropdowns in panel sections */
 .panel-section .selectize-input { font-size: 12px; min-height: 30px; padding: 4px 8px; }
 .panel-section label.control-label { font-size: 12px; margin-bottom: 2px; }
+
+/* ── Proportions controls and plot ────────────────────────────── */
+.proportions-controls {
+  padding: 8px 4px;
+  width: 100%;
+}
+
+.prop-control-sections {
+  display: grid;
+  grid-template-columns: auto minmax(420px, 1fr) auto;
+  gap: 8px 18px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.prop-control-section {
+  min-width: 0;
+}
+
+.prop-control-section-label {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.prop-control-section-body {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-height: 34px;
+}
+
+.prop-control-section-body .form-group {
+  margin-bottom: 0;
+}
+
+.prop-control-section-body .checkbox {
+  margin: 0 0 6px 0;
+}
+
+.prop-control-section-body .radio-inline {
+  padding-left: 18px;
+}
+
+.proportions-help {
+  color: #6f7786;
+  font-size: 11px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  max-width: 920px;
+}
+
+#proportions_plot {
+  max-width: 100%;
+}
+
+@media (max-width: 1050px) {
+  .prop-control-sections {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ── Plot container ────────────────────────────────────────────── */
 #cytof-plot-container {
@@ -1591,4 +1674,3 @@ body { font-size: 13px; }
   font-size: 11px !important;
   line-height: 1.2 !important;
 }
-
