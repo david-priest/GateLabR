@@ -1265,10 +1265,28 @@
         container.style.overflowX = 'auto';
         container.style.overflowY = 'visible';
 
-        var plots = data.plots;          // keyed by "pop_id|x_channel"
-        var popIds = data.pop_ids;       // ordered list
-        var popNames = data.pop_names;   // {pop_id: name}
-        var popCounts = data.pop_counts; // {pop_id: n_events}
+        var plots = data.plots || {};          // keyed by "pop_id|x_channel"
+        var popIds = data.pop_ids || [];       // ordered list
+        var popNames = data.pop_names || {};   // {pop_id: name}
+        var popCounts = data.pop_counts || {}; // {pop_id: n_events}
+        // Newer payloads keep each row's identity, name and count together. This
+        // avoids a transient Shiny/jsonlite shape mismatch where pop_ids arrived
+        // but the separately named maps did not, producing repeated Unknown/0 rows.
+        var populationRows = Array.isArray(data.population_rows) ? data.population_rows : [];
+        if (populationRows.length) {
+            popIds = [];
+            popNames = {};
+            popCounts = {};
+            populationRows.forEach(function (row) {
+                if (!row || row.id === undefined || row.id === null) return;
+                var id = String(row.id);
+                popIds.push(id);
+                popNames[id] = (row.name === undefined || row.name === null || String(row.name) === '')
+                    ? id : String(row.name);
+                var count = Number(row.count);
+                popCounts[id] = isFinite(count) ? count : 0;
+            });
+        }
         var xChannels = data.x_channels; // ordered list
         var yChannel = data.y_channel;
         var plotSize = _normalizePlotSize(data.plot_size);
@@ -1493,7 +1511,8 @@
             for (var pi = 0; pi < popIds.length; pi++) {
                 var popId = popIds[pi];
                 var popName = popNames[popId] || 'Unknown';
-                var n = popCounts[popId] || 0;
+                var nRaw = Number(popCounts[popId]);
+                var n = isFinite(nRaw) ? nRaw : 0;
                 var popColor = popColorMap[popId];
 
                 // Row header

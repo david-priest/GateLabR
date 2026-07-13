@@ -7,6 +7,60 @@
 
 body { font-size: 13px; }
 
+/* ── Resizable three-pane application shell ─────────────────────────────── */
+.gatelabr-shell {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 900px;
+}
+
+.gatelabr-pane {
+  box-sizing: border-box;
+  float: none;
+  min-width: 0;
+  position: relative;
+}
+
+.gatelabr-left-pane,
+.gatelabr-right-pane {
+  padding: 0 10px;
+}
+
+.gatelabr-center-pane {
+  container-type: inline-size;
+  padding: 0 12px;
+}
+
+.gatelabr-shell > .gutter {
+  align-self: stretch;
+  background: transparent;
+  cursor: col-resize;
+  flex-shrink: 0;
+  position: relative;
+  touch-action: none;
+}
+
+.gatelabr-shell > .gutter::before {
+  background: #d8dee8;
+  border-radius: 2px;
+  content: "";
+  inset: 0 3px;
+  position: absolute;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.gatelabr-shell > .gutter:hover::before,
+.gatelabr-shell > .gutter:focus-visible::before {
+  background: #7daeea;
+  box-shadow: 0 0 0 1px rgba(47, 128, 237, 0.14);
+}
+
+.gatelabr-shell > .gutter:focus-visible {
+  outline: 2px solid var(--gatelabr-focus-ring);
+  outline-offset: -1px;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -632,8 +686,12 @@ select:focus-visible,
 .pop-row-name-col {
   display: flex;
   align-items: center;
-  flex: 0 0 36%;
-  min-width: 140px;
+  flex: 0 1 auto;
+  /* Keep a modest shared name lane so short labels align their gate pills.
+     Longer names consume this padding before moving the pills right; the
+     clamp relaxes on a narrow draggable pane rather than forcing overflow. */
+  min-width: clamp(128px, 34%, 150px);
+  max-width: 55%;
 }
 
 /* Tree-line SVG — same width as the old indent spacer, sits flush before the name */
@@ -645,7 +703,6 @@ select:focus-visible,
 }
 
 .pop-row-name {
-  flex: 1;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -654,17 +711,19 @@ select:focus-visible,
 
 .pop-row-gates-col {
   display: flex;
-  align-items: flex-start;
-  flex: 1;
-  min-width: 140px;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pop-row-gates {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 3px;
   min-height: 16px;
+  overflow: hidden;
 }
 
 .pop-row-count {
@@ -673,6 +732,7 @@ select:focus-visible,
   margin-left: 2px;
   white-space: nowrap;
   padding-top: 1px;
+  flex-shrink: 0;
 }
 
 .pop-row-pct {
@@ -681,6 +741,7 @@ select:focus-visible,
   margin-left: 2px;
   white-space: nowrap;
   padding-top: 2px;
+  flex-shrink: 0;
 }
 
 .pop-row-delete {
@@ -704,6 +765,7 @@ select:focus-visible,
   font-size: 10px;
   color: white;
   line-height: 16px;
+  white-space: nowrap;
 }
 
 .gate-ref-badge.exclude {
@@ -712,7 +774,8 @@ select:focus-visible,
 }
 
 .gate-ref-badge.selected-gate {
-  box-shadow: 0 0 0 2px #2f80ed, inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 0 2px #2f80ed,
+              inset 0 0 0 3px rgba(255, 255, 255, 0.9);
   font-weight: 700;
 }
 
@@ -735,10 +798,38 @@ select:focus-visible,
    otherwise erase it) and adds a brighter halo + slight lift, so the hovered
    instance stands out from the other still-outlined instances of the gate. */
 .pop-tree-gate-badge.selected-gate:hover {
-  box-shadow: 0 0 0 2px #2f80ed,
-              0 0 0 4px rgba(47, 128, 237, 0.38),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.95);
-  filter: brightness(1.08);
+  box-shadow: inset 0 0 0 2px #2f80ed,
+              inset 0 0 0 3px rgba(255, 255, 255, 0.9);
+  filter: brightness(1.1);
+}
+
+/* ── App title / version metadata ─────────────────────────────────────── */
+.gatelabr-app-header {
+  align-items: baseline;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 10px 15px 6px;
+}
+
+.gatelabr-app-header h2 {
+  font-size: 25px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.gatelabr-app-meta {
+  align-items: center;
+  color: #77808d;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 11px;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.gatelabr-app-meta a {
+  color: #5272a6;
 }
 
 /* ── Mode toolbar ─────────────────────────────────────────────── */
@@ -1418,6 +1509,331 @@ select:focus-visible,
   #illust_simple_body .shiny-options-group,
   #illust_marker_body .shiny-options-group {
     column-count: 1;
+  }
+}
+
+/* ── GateLab-style Illustration row system ──────────────────────────────── */
+.illustration-controls {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  padding: 2px 0 8px;
+}
+
+.strategy-controls,
+.umap-controls {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  margin-bottom: 8px;
+  padding: 2px 0 8px !important;
+}
+
+.illust-toolbar,
+.strategy-toolbar,
+.umap-toolbar {
+  align-items: center;
+  border-bottom: 1px solid #dfe5ed;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  padding: 2px 2px 7px;
+}
+
+.illust-toolbar-primary,
+.illust-top-export-actions,
+.strategy-toolbar-primary,
+.strategy-top-export-actions,
+.umap-toolbar-primary,
+.umap-top-export-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.glr-control-row {
+  align-items: center;
+  border-bottom: 1px solid #e8edf3;
+  display: grid;
+  gap: 6px 10px;
+  grid-template-columns: 78px minmax(0, 1fr);
+  min-height: 36px;
+  padding: 4px 2px;
+}
+
+.glr-control-row-label {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.glr-control-row-body {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.glr-control-row-body .shiny-panel-conditional {
+  display: contents;
+}
+
+.glr-inline-field {
+  align-items: center;
+  color: #5c6675;
+  display: inline-flex;
+  font-size: 11px;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.glr-inline-field-label {
+  flex: 0 0 auto;
+}
+
+.glr-inline-field .form-group,
+.glr-inline-choice .form-group,
+.glr-inline-check .form-group,
+.glr-inline-check .checkbox,
+.glr-control-row-body > .shiny-html-output .form-group {
+  margin: 0;
+}
+
+.glr-inline-field input.form-control {
+  font-size: 11px;
+  height: 26px;
+  padding: 2px 6px;
+}
+
+.glr-inline-field .selectize-control {
+  margin: 0;
+}
+
+.glr-inline-field .selectize-input {
+  font-size: 11px;
+  line-height: 16px;
+  min-height: 26px;
+  padding: 3px 6px;
+}
+
+.glr-inline-choice .radio-inline,
+.glr-inline-check .checkbox label {
+  color: #303846;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.glr-inline-choice,
+.glr-inline-check {
+  align-items: center;
+  display: inline-flex;
+}
+
+.glr-inline-choice .shiny-input-container,
+.glr-inline-check .shiny-input-container {
+  width: auto !important;
+}
+
+.glr-inline-choice .radio-inline {
+  margin-right: 5px;
+  padding-left: 17px;
+}
+
+.glr-inline-check .checkbox {
+  min-height: 0;
+}
+
+.glr-inline-check .checkbox label {
+  padding-left: 18px;
+  white-space: nowrap;
+}
+
+.glr-control-separator {
+  align-self: center;
+  background: #d9e0e8;
+  height: 18px;
+  width: 1px;
+}
+
+.glr-control-hint {
+  color: #7a8492;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.glr-control-row-body > .shiny-html-output {
+  align-items: center;
+  display: inline-flex;
+  min-height: 26px;
+}
+
+.glr-slider-field .form-group {
+  width: 150px;
+}
+
+.glr-slider-field .irs {
+  height: 28px;
+  margin: 0;
+}
+
+.glr-slider-field .irs-line,
+.glr-slider-field .irs-bar,
+.glr-slider-field .irs-bar-edge {
+  top: 14px;
+}
+
+.glr-slider-field .irs-slider,
+.glr-slider-field .irs-handle {
+  top: 9px;
+}
+
+.glr-slider-field .irs-min,
+.glr-slider-field .irs-max {
+  display: none;
+}
+
+.glr-slider-field .irs-single {
+  font-size: 9px;
+  top: -1px;
+}
+
+.strategy-multi-count {
+  color: #3182ce;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.umap-inline-colour {
+  background: #fff;
+  border: 1px solid #bcc6d3;
+  border-radius: 3px;
+  cursor: pointer;
+  height: 25px;
+  padding: 1px;
+  width: 34px;
+}
+
+.umap-population-list {
+  background: #fcfdff;
+  border: 1px solid #dfe5ed;
+  border-radius: 4px;
+  flex: 1 1 360px;
+  max-height: 92px;
+  min-width: 220px;
+  overflow: auto;
+  padding: 2px 6px;
+}
+
+.umap-population-list .form-group {
+  margin: 0;
+}
+
+.umap-population-list .shiny-options-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+
+.umap-population-list .checkbox {
+  margin: 1px 0;
+}
+
+.umap-population-list .checkbox label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.umap-features-used-inline {
+  flex: 1 1 220px;
+  margin: 0;
+  max-height: 32px;
+  min-width: 160px;
+}
+
+.illust-selector-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(185px, 0.8fr) minmax(270px, 1.2fr);
+  margin-top: 8px;
+}
+
+.illust-selector-panel {
+  background: #fcfdff;
+  border: 1px solid #dfe5ed;
+  border-radius: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.illust-selector-panel-title {
+  align-items: center;
+  background: #f4f7fb;
+  border-bottom: 1px solid #e2e7ee;
+  color: #5f6978;
+  display: flex;
+  font-size: 10px;
+  font-weight: 700;
+  justify-content: space-between;
+  letter-spacing: 0.05em;
+  min-height: 28px;
+  padding: 4px 6px;
+  text-transform: uppercase;
+}
+
+.illust-selector-panel-body {
+  max-height: 260px;
+  overflow: auto;
+  padding: 3px 5px;
+}
+
+.illust-selector-panel .illust-channel-group {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+}
+
+.illust-selector-panel .illust-channel-group + .illust-channel-group {
+  border-top: 1px solid #e7ebf1;
+  margin-top: 3px;
+  padding-top: 3px;
+}
+
+.illust-selector-panel .illust-channel-group-header {
+  border-bottom: 0;
+  padding: 2px 1px;
+}
+
+.illust-selector-panel .illust-channel-group-body {
+  padding: 2px 1px;
+}
+
+.illust-selector-panel #illust_simple_body .shiny-options-group,
+.illust-selector-panel #illust_marker_body .shiny-options-group {
+  column-count: 1;
+}
+
+.illust-pop-palette-header,
+.illust-pop-palette-row {
+  grid-template-columns: 26px minmax(70px, 1fr) 108px;
+  gap: 4px;
+}
+
+.illust-pop-hex {
+  width: 72px;
+}
+
+@container (max-width: 620px) {
+  .glr-control-row {
+    grid-template-columns: 72px minmax(0, 1fr);
   }
 }
 

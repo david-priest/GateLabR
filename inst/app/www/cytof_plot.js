@@ -64,6 +64,7 @@
     // requestAnimationFrame handles for throttling
     let _zoomRafId = null;   // retained for compatibility; zoom is disabled
     let _drawRafId = null;   // rubber-band + poly-preview redraws
+    let _resizeTimer = null;  // debounce pane dragging before rebuilding the canvas
 
     // Drag guard: true while a gate vertex/move drag is active.
     // Prevents gates_only updates from calling _drawGates mid-drag
@@ -1760,6 +1761,19 @@
         _deferredPlot = null;
     }
 
+    function resize() {
+        if (!_plotData || _dragging) return;
+        if (_resizeTimer !== null) window.clearTimeout(_resizeTimer);
+        _resizeTimer = window.setTimeout(function () {
+            _resizeTimer = null;
+            if (!_plotData || _dragging) return;
+            // render() re-measures the enclosing pane and rebuilds only when its
+            // target size changed materially. force_full prevents the sequence and
+            // gates-only fast paths from preserving a canvas at the former width.
+            render(Object.assign({}, _plotData, { force_full: true }), _mode);
+        }, 120);
+    }
+
     function render(plotData, mode) {
         if (!plotData) return;
 
@@ -1931,7 +1945,13 @@
         _flushDeferredPlot();
     }
 
-    window.CytofD3 = { render: render, setMode: setMode, clear: clear, clearPendingEdit: clearPendingEdit };
+    window.CytofD3 = {
+        render: render,
+        setMode: setMode,
+        clear: clear,
+        resize: resize,
+        clearPendingEdit: clearPendingEdit
+    };
 
     // ── Shiny message handlers (R → JS) ──────────────────────────────────────
     // These replace the Dash clientside callbacks.
