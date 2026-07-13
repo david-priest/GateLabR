@@ -687,7 +687,10 @@ select:focus-visible,
   display: flex;
   align-items: center;
   flex: 0 1 auto;
-  min-width: 0;
+  /* Keep a modest shared name lane so short labels align their gate pills.
+     Longer names consume this padding before moving the pills right; the
+     clamp relaxes on a narrow draggable pane rather than forcing overflow. */
+  min-width: clamp(128px, 34%, 150px);
   max-width: 55%;
 }
 

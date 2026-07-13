@@ -128,7 +128,7 @@ ui <- fluidPage(
     tags$script(src = "mini_plot.js?v=20260713c"),
     tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
-    tags$link(rel = "stylesheet", href = "custom.css?v=20260713c")
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260713d")
   ),
 
   tags$header(class = "gatelabr-app-header",
