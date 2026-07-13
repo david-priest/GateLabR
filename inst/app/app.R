@@ -30,6 +30,7 @@ source("R/fcs_export.R")
 source("R/strategy_utils.R")
 source("R/stats_utils.R")
 source("R/pdf_export.R")
+source("R/ui_components.R")
 
 # ── Discover SCE objects in global environment ──────────────────────────────
 find_sce_objects <- function() {
@@ -111,20 +112,23 @@ build_sample_table <- function(sce) {
 ui <- fluidPage(
   tags$head(
     tags$script(src = "d3.v7.min.js"),
-    tags$script(src = "cytof_plot.js?v=20260623b"),
+    tags$script(src = "vendor/split.min.js"),
+    tags$script(src = "layout_split.js?v=20260713a"),
+    tags$script(src = "cytof_plot.js?v=20260713a"),
     tags$script(src = "mini_plot.js?v=20260623b"),
     tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
-    tags$link(rel = "stylesheet", href = "custom.css?v=20260623b")
+    tags$link(rel = "stylesheet", href = "custom.css?v=20260713b")
   ),
 
   titlePanel("GateLabR"),
 
-  fluidRow(
+  tags$div(id = "gatelabr-shell", class = "gatelabr-shell",
     # ═══════════════════════════════════════════════════════════════════════════
     # LEFT COLUMN: SCE/FCS + sample filter
     # ═══════════════════════════════════════════════════════════════════════════
-    column(3,
+    tags$div(id = "gatelabr-left-pane",
+             class = "gatelabr-pane gatelabr-left-pane",
       tags$div(class = "panel-section",
 
         # ── Data selection card ──────────────────────────────────────────────
@@ -268,7 +272,8 @@ ui <- fluidPage(
     # ═══════════════════════════════════════════════════════════════════════════
     # CENTER COLUMN: tabbed (Gating | Strategy | Illustration)
     # ═══════════════════════════════════════════════════════════════════════════
-    column(5,
+    tags$main(id = "gatelabr-center-pane",
+              class = "gatelabr-pane gatelabr-center-pane",
       tabsetPanel(id = "main_tabs", type = "tabs",
 
         # ── Tab 1: Gating (biplot) ────────────────────────────────────────────
@@ -549,9 +554,12 @@ ui <- fluidPage(
         # ── Tab 3: Illustration ───────────────────────────────────────────────
         tabPanel("Illustration",
           tags$div(class = "illustration-controls",
-            tags$div(class = "illust-top-actions",
-              actionButton("illust_render_btn", "Render Illustration",
-                           class = "btn-sm btn-primary"),
+            tags$div(class = "illust-toolbar",
+              tags$div(class = "illust-toolbar-primary",
+                actionButton("illust_render_btn", "Render Illustration",
+                             class = "btn-sm btn-primary"),
+                control_hint("Parameters are applied only when you render.")
+              ),
               tags$div(class = "illust-top-export-actions",
                 actionButton("illust_export_png", "PNG",
                              class = "btn-sm btn-default", icon = icon("download")),
@@ -560,187 +568,191 @@ ui <- fluidPage(
               )
             ),
 
-            # ── Illustration Presets ────────────────────────────────────────────
-            tags$details(id = "illust_presets_section", style = "margin-bottom:6px;",
-              tags$summary(
-                tags$span(class = "umap-run-toggle",
-                  icon("bookmark"),
-                  tags$span(class = "umap-run-chev-closed", HTML("&nbsp;▸&nbsp;Illustration Presets")),
-                  tags$span(class = "umap-run-chev-open",   HTML("&nbsp;▾&nbsp;Illustration Presets"))
-                )
-              ),
-              tags$div(class = "illust-presets-body",
-                       style = "padding:8px; border:1px solid #7892c7; border-radius:4px; margin-top:2px; background:#fbfcff;",
-                tags$div(style = "display:flex; align-items:center; gap:6px; margin-bottom:6px;",
-                  tags$span("Name:", style = "font-size:11px; white-space:nowrap; color:#555;"),
-                  textInput("illust_preset_name", NULL, value = "",
-                            placeholder = "Preset name…", width = "160px"),
-                  actionButton("illust_preset_save_btn", "Save",
-                               class = "btn-xs btn-primary",
-                               title = "Save current illustration settings as a named preset")
-                ),
-                tags$div(style = "display:flex; align-items:center; gap:6px;",
-                  uiOutput("illust_preset_select_ui"),
-                  actionButton("illust_preset_load_btn", "Load",
-                               class = "btn-xs btn-default",
-                               title = "Restore this preset"),
-                  actionButton("illust_preset_delete_btn", "Delete",
-                               class = "btn-xs btn-danger",
-                               title = "Delete this preset")
-                )
-              )
+            control_row("Presets",
+              inline_field("Name",
+                textInput("illust_preset_name", NULL, value = "",
+                          placeholder = "Preset name…", width = "150px")),
+              actionButton("illust_preset_save_btn", "Save",
+                           class = "btn-xs btn-default",
+                           title = "Save current illustration settings as a named preset"),
+              control_separator(),
+              uiOutput("illust_preset_select_ui"),
+              actionButton("illust_preset_load_btn", "Load",
+                           class = "btn-xs btn-default", title = "Restore this preset"),
+              actionButton("illust_preset_delete_btn", "Delete",
+                           class = "btn-xs btn-danger", title = "Delete this preset")
             ),
 
-            tags$div(class = "illust-control-grid",
-              tags$div(class = "illust-block",
-                tags$div(class = "gating-control-box-title", "Plot Type"),
+            control_row("Plot",
+              tags$div(class = "glr-inline-choice",
                 radioButtons("illust_plot_type", NULL,
                              choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
-                             selected = "biplot", inline = TRUE),
-                conditionalPanel(
-                  "input.illust_plot_type == 'biplot'",
-                  selectInput("illust_y_channel", "Y channel:", choices = NULL)
-                )
+                             selected = "biplot", inline = TRUE)
               ),
-              tags$div(class = "illust-block",
-                tags$div(class = "gating-control-box-title", "Display"),
-                conditionalPanel(
-                  "input.illust_plot_type == 'biplot'",
+              conditionalPanel(
+                "input.illust_plot_type == 'biplot'",
+                control_separator(),
+                inline_field("Y channel",
+                  selectInput("illust_y_channel", NULL, choices = NULL, width = "170px")),
+                control_separator(),
+                tags$div(class = "glr-inline-choice",
                   radioButtons("illust_display", NULL,
                                choices = c("Scatter" = "scatter",
                                            "Pseudo" = "pseudocolor",
                                            "Contour" = "contour"),
                                selected = "pseudocolor", inline = TRUE)
-                ),
-                checkboxInput("illust_color_by_pop", "Color each population differently",
-                              value = FALSE),
-                checkboxInput("illust_overlay_pops",
-                              "Overlay all populations per channel (one panel per channel)",
-                              value = FALSE)
-              ),
-              tags$div(class = "illust-block",
-                tags$div(class = "gating-control-box-title", "Notes"),
-                tags$div(style = "font-size:11px; color:#555; margin-top:2px;",
-                  "Global channel scales from the Scales tab are always used."
-                )
-              )
-            ),
-
-            tags$div(class = "illust-params-grid",
-              tags$div(class = "illust-param-card",
-                tags$div(class = "gating-control-box-title", "Sampling"),
-                numericInput("illust_max_events", "Max events / panel (0 = all):",
-                             value = 10000, min = 0, max = 50000, step = 1000),
-                checkboxInput("illust_all_events", "Plot all events", value = FALSE)
-              ),
-              tags$div(class = "illust-param-card",
-                tags$div(class = "gating-control-box-title", "Layout"),
-                numericInput("illust_plot_size", "Plot size (px):",
-                             value = 200, min = 150, max = 400, step = 25),
-                numericInput("illust_n_columns", "Columns:",
-                             value = 4, min = 1, max = 12, step = 1),
-                checkboxInput("illust_fit_to_columns", "Fit panels to columns", value = TRUE)
-              ),
-              tags$div(class = "illust-param-card illust-font-card",
-                tags$div(class = "gating-control-box-title", "Font Sizes (px)"),
-                tags$div(class = "illust-font-grid",
-                  numericInput("illust_tick_font_size", "Tick labels:",
-                               value = 8, min = 6, max = 24, step = 1),
-                  numericInput("illust_axis_label_font_size", "Axis labels:",
-                               value = 10, min = 6, max = 28, step = 1),
-                  numericInput("illust_title_font_size", "Titles:",
-                               value = 10, min = 6, max = 28, step = 1),
-                  numericInput("illust_gate_label_font_size", "Gate labels:",
-                               value = 8, min = 6, max = 24, step = 1)
-                )
-              ),
-              tags$div(class = "illust-param-card",
-                tags$div(class = "gating-control-box-title", "Points & Export"),
-                numericInput("illust_pdf_dpi", "SVG raster DPI:",
-                             value = 300, min = 72, max = 1200, step = 50),
-                conditionalPanel(
-                  "input.illust_plot_type == 'biplot'",
-                  numericInput("illust_point_size", "Point size (px):",
-                               value = 1.2, min = 0.1, max = 5, step = 0.1),
-                  sliderInput("illust_point_alpha", "Point opacity:",
-                              min = 0.05, max = 1.0, value = 0.35, step = 0.05, width = "100%", ticks = FALSE)
-                ),
-                conditionalPanel(
-                  "input.illust_plot_type == 'histogram'",
-                  numericInput("illust_hist_line_width", "Histogram line width:",
-                               value = 1.8, min = 0.5, max = 6, step = 0.1),
-                  checkboxInput("illust_hist_fill", "Fill histogram area", value = FALSE),
-                  sliderInput("illust_hist_fill_alpha", "Histogram fill opacity:",
-                              min = 0, max = 1.0, value = 0.22, step = 0.05, width = "100%", ticks = FALSE),
-                  selectInput("illust_hist_overlay_mode", "Overlay fill behavior:",
-                              choices = c("Blend fills" = "blend",
-                                          "Front histogram opaque" = "front_opaque"),
-                              selected = "front_opaque"),
-                  selectInput("illust_hist_layout", "Layout:",
-                              choices = c("Grid (one panel per population)" = "grid",
-                                          "Ridgeline (stacked populations)" = "ridgeline"),
-                              selected = "grid"),
-                  conditionalPanel(
-                    "input.illust_hist_layout == 'ridgeline'",
-                    sliderInput("illust_ridge_overlap", "Ridge overlap (compactness):",
-                                min = 0, max = 0.95, value = 0.7, step = 0.05,
-                                width = "100%", ticks = FALSE),
-                    sliderInput("illust_ridge_col_gap", "Column spacing (px):",
-                                min = 0, max = 60, value = 8, step = 2,
-                                width = "100%", ticks = FALSE),
-                    checkboxInput("illust_ridge_gradient",
-                                  "Heat gradient fill (black→yellow by signal)",
-                                  value = TRUE)
-                  )
                 )
               ),
               conditionalPanel(
-                "input.illust_plot_type == 'biplot'",
-                tags$div(class = "illust-param-card",
-                  tags$div(class = "gating-control-box-title", "Style"),
-                  checkboxInput("illust_pub_style",
-                                "Publication style (black gates, no label background)",
-                                value = FALSE),
-                  numericInput("illust_gate_line_width", "Gate line width:",
-                               value = 1.5, min = 0.5, max = 5, step = 0.25)
-                )
+                "input.illust_plot_type == 'biplot' && input.illust_display == 'contour'",
+                inline_field("KDE smoothing",
+                  sliderInput("illust_kde_bandwidth", NULL,
+                              min = 0, max = 14, value = 0, step = 0.2,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field", title = "0 = automatic smoothing"),
+                control_hint("0 = auto")
+              )
+            ),
+
+            control_row("Layout",
+              inline_field("Plot size",
+                numericInput("illust_plot_size", NULL,
+                             value = 200, min = 150, max = 400, step = 25,
+                             width = "82px")),
+              inline_field("Columns",
+                numericInput("illust_n_columns", NULL,
+                             value = 4, min = 1, max = 12, step = 1,
+                             width = "68px")),
+              inline_check(checkboxInput("illust_fit_to_columns",
+                                         "Fit to columns", value = TRUE)),
+              control_separator(),
+              inline_field("Max events / panel",
+                numericInput("illust_max_events", NULL,
+                             value = 10000, min = 0, max = 50000, step = 1000,
+                             width = "100px")),
+              inline_check(checkboxInput("illust_all_events", "All events", value = FALSE))
+            ),
+
+            control_row("Populations",
+              inline_check(checkboxInput("illust_color_by_pop",
+                                         "Colour each population", value = FALSE)),
+              inline_check(checkboxInput("illust_overlay_pops",
+                                         "Overlay populations per channel", value = FALSE)),
+              control_hint("Global ranges from Scales are always used.")
+            ),
+
+            conditionalPanel(
+              "input.illust_plot_type == 'biplot'",
+              control_row("Appearance",
+                inline_field("Point size",
+                  numericInput("illust_point_size", NULL,
+                               value = 1.2, min = 0.1, max = 5, step = 0.1,
+                               width = "76px")),
+                inline_field("Opacity",
+                  sliderInput("illust_point_alpha", NULL,
+                              min = 0.05, max = 1.0, value = 0.35, step = 0.05,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field"),
+                control_separator(),
+                inline_check(checkboxInput("illust_pub_style",
+                                           "Publication style", value = FALSE)),
+                inline_field("Gate line",
+                  numericInput("illust_gate_line_width", NULL,
+                               value = 1.5, min = 0.5, max = 5, step = 0.25,
+                               width = "76px"))
               )
             ),
 
             conditionalPanel(
-              "input.illust_plot_type == 'biplot' && input.illust_display == 'contour'",
-              tags$div(class = "illust-contour-controls",
-                tags$span("Contour smoothing:", style = "font-size:11px; color:#555; white-space:nowrap;"),
-                tags$div(style = "width:220px;",
-                  sliderInput("illust_kde_bandwidth", NULL,
-                              min = 0, max = 14, value = 0, step = 0.2, width = "100%", ticks = FALSE)
-                ),
-                tags$span("0 = auto", style = "font-size:10px; color:#888; white-space:nowrap;")
+              "input.illust_plot_type == 'histogram'",
+              control_row("Histogram",
+                inline_field("Line width",
+                  numericInput("illust_hist_line_width", NULL,
+                               value = 1.8, min = 0.5, max = 6, step = 0.1,
+                               width = "76px")),
+                inline_check(checkboxInput("illust_hist_fill", "Fill area", value = FALSE)),
+                inline_field("Fill opacity",
+                  sliderInput("illust_hist_fill_alpha", NULL,
+                              min = 0, max = 1.0, value = 0.22, step = 0.05,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field"),
+                inline_field("Overlay fill",
+                  selectInput("illust_hist_overlay_mode", NULL,
+                              choices = c("Blend" = "blend",
+                                          "Front opaque" = "front_opaque"),
+                              selected = "front_opaque", width = "120px")),
+                inline_field("Layout",
+                  selectInput("illust_hist_layout", NULL,
+                              choices = c("Grid" = "grid", "Ridgeline" = "ridgeline"),
+                              selected = "grid", width = "110px"))
               )
             ),
-            tags$div(style = "font-size:11px; color:#666; margin:4px 0 0 2px;",
-                     "Max events applies to each population x channel panel."),
-            tags$div(class = "section-header", "X Channels"),
-            uiOutput("illust_x_channels_ui"),
-            tags$div(class = "illust-channel-group",
-              tags$div(class = "illust-channel-group-header",
-                tags$span("Populations"),
-                tags$span(class = "illust-channel-group-actions",
-                  actionButton("illust_pops_select_all_btn", "All",
-                               class = "btn-xs btn-default", style = "padding:1px 6px;"),
-                  actionButton("illust_pops_clear_btn", "Clear",
-                               class = "btn-xs btn-default", style = "padding:1px 6px;"),
-                  actionButton(
-                    "illust_toggle_pops_btn", "", icon = icon("chevron-down"),
-                    class = "btn-xs btn-default", style = "padding:1px 6px;",
-                    title = "Collapse or expand populations",
-                    `aria-label` = "Collapse or expand populations",
-                    onclick = "(function(btn){var body=$('#illust_pops_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
-                  )
+
+            conditionalPanel(
+              "input.illust_plot_type == 'histogram' && input.illust_hist_layout == 'ridgeline'",
+              control_row("Ridgeline",
+                inline_field("Overlap",
+                  sliderInput("illust_ridge_overlap", NULL,
+                              min = 0, max = 0.95, value = 0.7, step = 0.05,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field"),
+                inline_field("Column gap",
+                  sliderInput("illust_ridge_col_gap", NULL,
+                              min = 0, max = 60, value = 8, step = 2,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field"),
+                inline_check(checkboxInput("illust_ridge_gradient",
+                                           "Heat-gradient fill", value = TRUE))
+              )
+            ),
+
+            control_row("Fonts",
+              inline_field("Tick",
+                numericInput("illust_tick_font_size", NULL,
+                             value = 8, min = 6, max = 24, step = 1, width = "64px")),
+              inline_field("Axis",
+                numericInput("illust_axis_label_font_size", NULL,
+                             value = 10, min = 6, max = 28, step = 1, width = "64px")),
+              inline_field("Title",
+                numericInput("illust_title_font_size", NULL,
+                             value = 10, min = 6, max = 28, step = 1, width = "64px")),
+              inline_field("Gate",
+                numericInput("illust_gate_label_font_size", NULL,
+                             value = 8, min = 6, max = 24, step = 1, width = "64px")),
+              control_separator(),
+              inline_field("SVG raster DPI",
+                numericInput("illust_pdf_dpi", NULL,
+                             value = 300, min = 72, max = 1200, step = 50,
+                             width = "80px"))
+            ),
+
+            tags$div(class = "illust-selector-grid",
+              tags$section(class = "illust-selector-panel",
+                tags$div(class = "illust-selector-panel-title", "X Channels"),
+                tags$div(class = "illust-selector-panel-body",
+                  uiOutput("illust_x_channels_ui")
                 )
               ),
-              tags$div(id = "illust_pops_body", class = "illust-channel-group-body",
-                uiOutput("illust_populations_ui")
+              tags$section(class = "illust-selector-panel",
+                tags$div(class = "illust-selector-panel-title",
+                  tags$span("Populations"),
+                  tags$span(class = "illust-channel-group-actions",
+                    actionButton("illust_pops_select_all_btn", "All",
+                                 class = "btn-xs btn-default", style = "padding:1px 6px;"),
+                    actionButton("illust_pops_clear_btn", "Clear",
+                                 class = "btn-xs btn-default", style = "padding:1px 6px;"),
+                    actionButton(
+                      "illust_toggle_pops_btn", "", icon = icon("chevron-down"),
+                      class = "btn-xs btn-default", style = "padding:1px 6px;",
+                      title = "Collapse or expand populations",
+                      `aria-label` = "Collapse or expand populations",
+                      onclick = "(function(btn){var body=$('#illust_pops_body');if(!body.length)return;body.stop(true,true).slideToggle(120,function(){var open=body.is(':visible');var ic=$(btn).find('i.fa');ic.toggleClass('fa-chevron-down',open);ic.toggleClass('fa-chevron-right',!open);});})(this);"
+                    )
+                  )
+                ),
+                tags$div(id = "illust_pops_body", class = "illust-selector-panel-body",
+                  uiOutput("illust_populations_ui")
+                )
               )
             )
           ),
@@ -1183,7 +1195,8 @@ ui <- fluidPage(
     # ═══════════════════════════════════════════════════════════════════════════
     # RIGHT COLUMN: gates + populations + color overlay
     # ═══════════════════════════════════════════════════════════════════════════
-    column(4,
+    tags$aside(id = "gatelabr-right-pane",
+               class = "gatelabr-pane gatelabr-right-pane",
       tags$div(class = "panel-section",
 
         # ── Gate list ──
