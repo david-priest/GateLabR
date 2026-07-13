@@ -71,6 +71,14 @@
     let _dragging = false;
     let _polyJustClosed = false;  // guard: suppress _onClick after mousedown closes polygon
 
+    // Navigate-mode pan / anchored-stretch (ported from GateLab). Both gestures rewrite the display
+    // x_range/y_range (the same ranges the axes + Min/Max boxes read) and repaint client-side; the
+    // final range is emitted to R on mouseup so the server persists it like a gate edit.
+    let _panActive = false;
+    let _pan = null;       // { px0, py0, xr, yr, alt, gx, gy } captured at mousedown
+    let _panPending = null;
+    let _panRaf = null;
+
     // Pending-edit map: gate_id → {vertices, seq}
     // Populated when _notifyGateEdit fires; cleared when server acks via clearPendingEdit().
     // Prevents a stale server response (from an earlier PUT) from overwriting local
@@ -237,6 +245,28 @@
 
     // ── Pointer events — rect gate ───────────────────────────────────────────
     function _onMousedown(event) {
+        // Navigate mode: drag → pan; shift- or option(alt)-drag → anchored stretch (bottom-left
+        // pinned, grabbed data point tracks the cursor). Shift is offered because the window manager
+        // grabs Alt/Option on Windows/Linux. Presses on a gate fall through to the gate's own
+        // select/drag handlers.
+        if (_mode === 'navigate') {
+            var _t = event.target;
+            if (_t && ((_t.classList && (_t.classList.contains('gate-fill') || _t.classList.contains('gate-hit') ||
+                _t.classList.contains('gate-outline'))) || (_t.closest && _t.closest('.saved-gate, .gate-label')))) return;
+            if (!_xBase || !_plotData) return;
+            event.preventDefault();
+            var _md = _ptr(event);
+            var _mxr = (_plotData.x_range || _xBase.domain()).slice();
+            var _myr = (_plotData.y_range || _yBase.domain()).slice();
+            _pan = {
+                px0: _md[0], py0: _md[1], xr: _mxr, yr: _myr, alt: !!(event.altKey || event.shiftKey),
+                gx: _mxr[0] + _clampF(_md[0] / W) * (_mxr[1] - _mxr[0]),
+                gy: _myr[1] - _clampF(_md[1] / H) * (_myr[1] - _myr[0]),
+            };
+            _panActive = true;
+            d3.select(window).on('mousemove.pan', _onPanMove).on('mouseup.pan', _onPanEnd);
+            return;
+        }
         // Poly-close: fire on mousedown so one press is sufficient.
         // Clicking the first-vertex green circle or within CLOSEPX of it closes the polygon.
         if (_mode === 'draw-poly' && _polyVerts.length >= 3) {
@@ -300,6 +330,57 @@
 
         if (Math.abs(zx(x1) - zx(x0)) < 5 || Math.abs(zy(y1) - zy(y0)) < 5) return;
         _notifyNewGate('rectangle', [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]);
+    }
+
+    // ── Navigate-mode pan / anchored stretch ─────────────────────────────────
+    function _clampF(f) { return Math.max(0.02, Math.min(0.98, f)); }
+    function _validRange(r) { return r && isFinite(r[0]) && isFinite(r[1]) && (r[1] - r[0]) > 1e-6; }
+
+    function _onPanMove(event) {
+        if (!_panActive || !_pan) return;
+        var p = _pan, m = _ptr(event), nx, ny;
+        if (p.alt) {
+            // Anchored stretch: x_min / y_min pinned; the grabbed data point tracks the cursor.
+            var fx = _clampF(m[0] / W), fy = _clampF(m[1] / H);
+            nx = [p.xr[0], p.xr[0] + (p.gx - p.xr[0]) / fx];
+            ny = [p.yr[0], (p.gy - p.yr[0] * fy) / (1 - fy)];
+        } else {
+            // Pan: the data moves 1:1 with the cursor (y inverted — screen-down = data-up).
+            var ddx = ((m[0] - p.px0) / W) * (p.xr[1] - p.xr[0]);
+            var ddy = ((m[1] - p.py0) / H) * (p.yr[1] - p.yr[0]);
+            nx = [p.xr[0] - ddx, p.xr[1] - ddx];
+            ny = [p.yr[0] + ddy, p.yr[1] + ddy];
+        }
+        if (!_validRange(nx) || !_validRange(ny)) return; // degenerate-range guard
+        _panPending = { x: nx, y: ny };
+        if (_panRaf == null) _panRaf = requestAnimationFrame(_flushPan);
+    }
+
+    function _flushPan() {
+        _panRaf = null;
+        if (!_panPending || !_plotData) return;
+        _plotData.x_range = _panPending.x;
+        _plotData.y_range = _panPending.y;
+        _panPending = null;
+        _xBase.domain(_plotData.x_range);
+        _yBase.domain(_plotData.y_range);
+        _redraw();
+    }
+
+    function _onPanEnd() {
+        d3.select(window).on('mousemove.pan', null).on('mouseup.pan', null);
+        if (_panRaf != null) { cancelAnimationFrame(_panRaf); _panRaf = null; }
+        var pend = _panPending; _panPending = null;
+        _panActive = false; _pan = null;
+        if (_plotData && pend) {
+            _plotData.x_range = pend.x; _plotData.y_range = pend.y;
+            _xBase.domain(pend.x); _yBase.domain(pend.y);
+        }
+        if (_plotData) _redraw(); // _panActive now false → contour rebuilds at the final range
+        if (_plotData && window.Shiny && Shiny.setInputValue) {
+            Shiny.setInputValue('plot_range',
+                { x_range: _plotData.x_range, y_range: _plotData.y_range }, { priority: 'event' });
+        }
     }
 
     // ── Pointer events — polygon gate ────────────────────────────────────────
@@ -438,8 +519,12 @@
         if (!pd || !pd.x || !pd.x.length) return null;
         var x = pd.x, y = pd.y, n = x.length;
         var step = Math.max(1, Math.floor(n / 200));
+        // Include the axis range so a range-only re-render (Min/Max edit, or a pan/stretch that
+        // rewrites x_range/y_range without changing the point data) invalidates the cached contour.
+        // Without this the KDE stays frozen at the old view while gates move. (Ported from GateLab.)
         var parts = [n, pd.x_label, pd.y_label, pd.kde_bandwidth || 0,
-                     pd.contour_threshold || 5];
+                     pd.contour_threshold || 5,
+                     (pd.x_range || []).join(','), (pd.y_range || []).join(',')];
         for (var i = 0; i < n; i += step) {
             parts.push(x[i], y[i]);
         }
@@ -572,7 +657,9 @@
         } else if (_plotData.display_mode === 'pseudocolor') {
             _drawPseudocolor(zx, zy);
         } else if (_plotData.display_mode === 'contour') {
-            _drawContour(zx, zy);
+            // Rebuilding the KDE (~0.5s) every pan frame is janky — show the point cloud while
+            // panning and rebuild the contour once on mouse-up (ported from GateLab).
+            if (_panActive) _drawScatter(zx, zy); else _drawContour(zx, zy);
         } else {
             _drawScatter(zx, zy);
         }
@@ -631,9 +718,12 @@
             }
         }
 
-        // Draw legend in top-right corner
+        // Draw legend in top-right corner. Port-back from GateLab: the main gating plot renders its
+        // colour-by-population legend as an HTML block beside the plot instead (suppress_canvas_legend),
+        // so the key doesn't overlap the data. The Illustration/Strategy grids leave it in-canvas so it
+        // stays in the exported figure.
         var labels = _plotData.color_labels || [];
-        if (labels.length > 0) {
+        if (labels.length > 0 && !_plotData.suppress_canvas_legend) {
             _ctx.globalAlpha = 1.0;
             var lx = M.left + W - 8;
             var ly = M.top + 12;
