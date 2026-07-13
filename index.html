@@ -62,52 +62,7 @@
 <p>📖 <strong><a href="https://david-priest.github.io/GateLabR">Documentation &amp; Getting Started</a></strong></p>
 <p>GateLabR is a desktop-style Shiny application for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on <a href="https://bioconductor.org/packages/SingleCellExperiment/" class="external-link"><code>SingleCellExperiment</code></a> objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST, diffcyt) where the events already live in R as an SCE and you want a fast, reproducible alternative to round-tripping through FlowJo or Cytobank just to draw a few gates.</p>
 <p>Gates are drawn on an interactive D3.js canvas, and gates, populations, scales and illustration settings are persisted inside the SCE itself via <code>metadata()</code>, so loading the SCE again restores the entire workspace.</p>
-<div class="section level2">
-<h2 id="gatelab-or-gatelabr">GateLab or GateLabR?<a class="anchor" aria-label="anchor" href="#gatelab-or-gatelabr"></a>
-</h2>
-<p>GateLabR and <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab</a> share the same gating model and interactive plotting approach. Choose the version that best matches where your data already lives:</p>
-<table class="table">
-<colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
-</colgroup>
-<thead><tr>
-<th></th>
-<th>GateLab</th>
-<th>GateLabR</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>Runs in</td>
-<td>A local web browser</td>
-<td>R / Shiny</td>
-</tr>
-<tr>
-<td>Best starting point</td>
-<td>FCS files</td>
-<td>A <code>SingleCellExperiment</code> (or FCS files)</td>
-</tr>
-<tr>
-<td>Workspace</td>
-<td>Self-contained <code>.gatelab</code> bundle</td>
-<td>Gating metadata stored inside the SCE</td>
-</tr>
-<tr>
-<td>Downstream hand-off</td>
-<td>FCS, Gating-ML, statistics and figures</td>
-<td>Populations in <code>colData</code>, plus FCS, Gating-ML, statistics and figures</td>
-</tr>
-<tr>
-<td>Install</td>
-<td>Node.js + <code>npm</code>
-</td>
-<td>R + Bioconductor dependencies</td>
-</tr>
-</tbody>
-</table>
-<p>Use <strong>GateLab</strong> for a browser-based workflow with no R installation. Use <strong>GateLabR</strong> when you want populations written directly back to a <code>SingleCellExperiment</code> for a Bioconductor analysis pipeline.</p>
-</div>
+<p>For the same style of manual gating directly from FCS files without an R installation, see <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab</a>, the companion browser app. GateLabR is the better fit when data already live in a <code>SingleCellExperiment</code> or when gated populations need to return directly to <code>colData</code> for a Bioconductor pipeline.</p>
 <div class="section level2">
 <h2 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
 </h2>
