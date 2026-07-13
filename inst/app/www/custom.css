@@ -686,8 +686,9 @@ select:focus-visible,
 .pop-row-name-col {
   display: flex;
   align-items: center;
-  flex: 0 0 36%;
-  min-width: 140px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 55%;
 }
 
 /* Tree-line SVG — same width as the old indent spacer, sits flush before the name */
@@ -699,7 +700,6 @@ select:focus-visible,
 }
 
 .pop-row-name {
-  flex: 1;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -708,17 +708,19 @@ select:focus-visible,
 
 .pop-row-gates-col {
   display: flex;
-  align-items: flex-start;
-  flex: 1;
-  min-width: 140px;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pop-row-gates {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 3px;
   min-height: 16px;
+  overflow: hidden;
 }
 
 .pop-row-count {
@@ -727,6 +729,7 @@ select:focus-visible,
   margin-left: 2px;
   white-space: nowrap;
   padding-top: 1px;
+  flex-shrink: 0;
 }
 
 .pop-row-pct {
@@ -735,6 +738,7 @@ select:focus-visible,
   margin-left: 2px;
   white-space: nowrap;
   padding-top: 2px;
+  flex-shrink: 0;
 }
 
 .pop-row-delete {
@@ -758,6 +762,7 @@ select:focus-visible,
   font-size: 10px;
   color: white;
   line-height: 16px;
+  white-space: nowrap;
 }
 
 .gate-ref-badge.exclude {
@@ -766,7 +771,8 @@ select:focus-visible,
 }
 
 .gate-ref-badge.selected-gate {
-  box-shadow: 0 0 0 2px #2f80ed, inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 0 2px #2f80ed,
+              inset 0 0 0 3px rgba(255, 255, 255, 0.9);
   font-weight: 700;
 }
 
@@ -789,10 +795,38 @@ select:focus-visible,
    otherwise erase it) and adds a brighter halo + slight lift, so the hovered
    instance stands out from the other still-outlined instances of the gate. */
 .pop-tree-gate-badge.selected-gate:hover {
-  box-shadow: 0 0 0 2px #2f80ed,
-              0 0 0 4px rgba(47, 128, 237, 0.38),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.95);
-  filter: brightness(1.08);
+  box-shadow: inset 0 0 0 2px #2f80ed,
+              inset 0 0 0 3px rgba(255, 255, 255, 0.9);
+  filter: brightness(1.1);
+}
+
+/* ── App title / version metadata ─────────────────────────────────────── */
+.gatelabr-app-header {
+  align-items: baseline;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 10px 15px 6px;
+}
+
+.gatelabr-app-header h2 {
+  font-size: 25px;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.gatelabr-app-meta {
+  align-items: center;
+  color: #77808d;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 11px;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.gatelabr-app-meta a {
+  color: #5272a6;
 }
 
 /* ── Mode toolbar ─────────────────────────────────────────────── */
@@ -1483,7 +1517,18 @@ select:focus-visible,
   padding: 2px 0 8px;
 }
 
-.illust-toolbar {
+.strategy-controls,
+.umap-controls {
+  background: #fff;
+  border: 0;
+  border-radius: 0;
+  margin-bottom: 8px;
+  padding: 2px 0 8px !important;
+}
+
+.illust-toolbar,
+.strategy-toolbar,
+.umap-toolbar {
   align-items: center;
   border-bottom: 1px solid #dfe5ed;
   display: flex;
@@ -1494,7 +1539,11 @@ select:focus-visible,
 }
 
 .illust-toolbar-primary,
-.illust-top-export-actions {
+.illust-top-export-actions,
+.strategy-toolbar-primary,
+.strategy-top-export-actions,
+.umap-toolbar-primary,
+.umap-top-export-actions {
   align-items: center;
   display: inline-flex;
   flex-wrap: wrap;
@@ -1528,7 +1577,7 @@ select:focus-visible,
   min-width: 0;
 }
 
-.glr-control-row-body > .shiny-panel-conditional {
+.glr-control-row-body .shiny-panel-conditional {
   display: contents;
 }
 
@@ -1650,6 +1699,60 @@ select:focus-visible,
 .glr-slider-field .irs-single {
   font-size: 9px;
   top: -1px;
+}
+
+.strategy-multi-count {
+  color: #3182ce;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.umap-inline-colour {
+  background: #fff;
+  border: 1px solid #bcc6d3;
+  border-radius: 3px;
+  cursor: pointer;
+  height: 25px;
+  padding: 1px;
+  width: 34px;
+}
+
+.umap-population-list {
+  background: #fcfdff;
+  border: 1px solid #dfe5ed;
+  border-radius: 4px;
+  flex: 1 1 360px;
+  max-height: 92px;
+  min-width: 220px;
+  overflow: auto;
+  padding: 2px 6px;
+}
+
+.umap-population-list .form-group {
+  margin: 0;
+}
+
+.umap-population-list .shiny-options-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+
+.umap-population-list .checkbox {
+  margin: 1px 0;
+}
+
+.umap-population-list .checkbox label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.umap-features-used-inline {
+  flex: 1 1 220px;
+  margin: 0;
+  max-height: 32px;
+  min-width: 160px;
 }
 
 .illust-selector-grid {
