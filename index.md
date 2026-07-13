@@ -27,6 +27,24 @@ Gates are drawn on an interactive D3.js canvas, and gates, populations,
 scales and illustration settings are persisted inside the SCE itself via
 `metadata()`, so loading the SCE again restores the entire workspace.
 
+## GateLab or GateLabR?
+
+GateLabR and [GateLab](https://github.com/david-priest/GateLab) share
+the same gating model and interactive plotting approach. Choose the
+version that best matches where your data already lives:
+
+|  | GateLab | GateLabR |
+|----|----|----|
+| Runs in | A local web browser | R / Shiny |
+| Best starting point | FCS files | A `SingleCellExperiment` (or FCS files) |
+| Workspace | Self-contained `.gatelab` bundle | Gating metadata stored inside the SCE |
+| Downstream hand-off | FCS, Gating-ML, statistics and figures | Populations in `colData`, plus FCS, Gating-ML, statistics and figures |
+| Install | Node.js + `npm` | R + Bioconductor dependencies |
+
+Use **GateLab** for a browser-based workflow with no R installation. Use
+**GateLabR** when you want populations written directly back to a
+`SingleCellExperiment` for a Bioconductor analysis pipeline.
+
 ## Features
 
 - **Draw and edit gates interactively.** Polygon, rectangle and quadrant
@@ -74,7 +92,7 @@ scales and illustration settings are persisted inside the SCE itself via
   produce Adobe Illustrator- friendly grouped vector files (rasterised
   data, vector axes / gates / labels).
 
-## How GateLabR compares
+## How GateLabR compares with other tools
 
 GateLabR fills a specific gap: an **interactive GUI for gating that
 lives natively on a `SingleCellExperiment`**, so it slots into a
