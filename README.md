@@ -91,6 +91,9 @@ instead of replacing it — while keeping full R access to the same object.
 
 Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** round-trips ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR speaks Cytobank-compatible Gating-ML, so gates move losslessly between GateLabR and Cytobank.
 
+FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent
+project and is not affiliated with or endorsed by BD or FlowJo.
+
 GateLabR suits two workflows. If your data already lives in R as a
 `SingleCellExperiment`, it lets you gate without round-tripping to FlowJo or
 Cytobank and hand populations straight to `diffcyt` / `CATALYST`. But it's equally
