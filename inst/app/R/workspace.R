@@ -90,14 +90,15 @@ export_population_to_coldata <- function(sce, population_id, pop_name,
                                          assay_name = "exprs",
                                          col_name   = NULL,
                                          in_label   = "TRUE",
-                                         out_label  = "FALSE") {
-  # Extract full assay data
-  assay_data <- t(SummarizedExperiment::assay(sce, assay_name))
-
-  # Apply transform if needed
-  if (assay_name == "counts") {
-    assay_data <- asinh(assay_data / 5)
-  }
+                                         out_label  = "FALSE",
+                                         gating_data = NULL,
+                                         gate_value_space = NULL) {
+  assay_data <- gating_matrix_for_sce(
+    sce,
+    assay_name = assay_name,
+    gate_value_space = gate_value_space,
+    gating_data = gating_data
+  )
 
   # Run full gating strategy
   result <- apply_gating_strategy(gates, populations, root_population_id,

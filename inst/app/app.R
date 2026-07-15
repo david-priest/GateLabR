@@ -9250,7 +9250,8 @@ server <- function(input, output, session) {
         rv$assay_name,
         col_name  = col_name,
         in_label  = in_label,
-        out_label = out_label
+        out_label = out_label,
+        gating_data = get_gating_data()
       )
       assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
       cd_names <- get_coldata_names(rv$sce); rv$coldata_names <- cd_names
@@ -9542,7 +9543,7 @@ server <- function(input, output, session) {
                                "Smaller file (slower)" = "small"),
                    selected = "fast"),
       textInput("fcs_filename_suffix", "Filename suffix (optional):", value = ""),
-      tags$p(tags$em("Gates are always evaluated in transformed (exprs) space.",
+      tags$p(tags$em("Gates are evaluated in the coordinate space in which they were created.",
                      style = "color:#888; font-size:11px;")),
       footer = tagList(
         modalButton("Cancel"),
@@ -9612,9 +9613,11 @@ server <- function(input, output, session) {
           if (cache_valid) {
             precomputed_masks <- rv$pop_events_map
           } else {
-            available_assays <- SummarizedExperiment::assayNames(rv$sce)
-            gate_assay <- if ("exprs" %in% available_assays) "exprs" else available_assays[1]
-            gate_mat <- t(SummarizedExperiment::assay(rv$sce, gate_assay))
+            gate_mat <- gating_matrix_for_sce(
+              rv$sce,
+              assay_name = rv$assay_name,
+              gating_data = get_gating_data()
+            )
             gate_result <- apply_gating_strategy(
               gates = rv$gates,
               populations = rv$populations,
@@ -9648,7 +9651,8 @@ server <- function(input, output, session) {
               output_dir         = zip_staging_dir,
               filename_prefix    = file_prefix,
               filename_suffix    = file_suffix,
-              precomputed_masks  = precomputed_masks
+              precomputed_masks  = precomputed_masks,
+              gating_data        = get_gating_data()
             )
             if (length(pop_written) > 0) written <- c(written, pop_written)
           }

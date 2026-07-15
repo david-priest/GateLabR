@@ -41,7 +41,9 @@ Imports:
 Suggests:
     BiocManager,
     knitr,
+    testthat (>= 3.0.0),
     rmarkdown,
     pkgdown
+Config/testthat/edition: 3
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3

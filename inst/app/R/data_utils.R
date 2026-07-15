@@ -10,6 +10,78 @@ extract_assay_data <- function(sce, assay_name = "exprs") {
   as.matrix(t(SummarizedExperiment::assay(sce, assay_name)))
 }
 
+#' Resolve the event-by-channel matrix used to evaluate stored gates
+#'
+#' Flow gates drawn on the logicle display are stored in linear coordinates,
+#' whereas CyTOF gates and gates drawn on other assays remain in display
+#' coordinates. This helper is the single boundary between those storage
+#' conventions and callers that evaluate a gating strategy.
+#'
+#' @param sce SingleCellExperiment containing the gated data.
+#' @param assay_name Currently selected/displayed assay.
+#' @param gate_value_space Optional explicit workspace value space ("raw" or
+#'   "display"). When omitted, the saved workspace metadata is consulted.
+#' @param gating_data Optional authoritative event-by-channel matrix from the
+#'   live app session. This is used for flow sessions because it already reflects
+#'   the current compensation state.
+#' @return Dense numeric matrix with events in rows and channels in columns.
+gating_matrix_for_sce <- function(sce, assay_name = "exprs",
+                                  gate_value_space = NULL,
+                                  gating_data = NULL) {
+  n_events <- ncol(sce)
+  channel_names <- rownames(sce)
+
+  validate_matrix <- function(mat, source) {
+    mat <- as.matrix(mat)
+    if (nrow(mat) != n_events) {
+      stop(source, " has ", nrow(mat), " events; expected ", n_events, ".")
+    }
+    if (is.null(colnames(mat)) && ncol(mat) == length(channel_names)) {
+      colnames(mat) <- channel_names
+    }
+    if (is.null(colnames(mat)) || !setequal(colnames(mat), channel_names)) {
+      stop(source, " channels do not match the SingleCellExperiment.")
+    }
+    mat[, channel_names, drop = FALSE]
+  }
+
+  if (!is.null(gating_data)) {
+    return(validate_matrix(gating_data, "Live gating data"))
+  }
+
+  md <- S4Vectors::metadata(sce)
+  if (is.null(gate_value_space)) {
+    gate_value_space <- md$gating_workspace$gate_value_space
+  }
+  if (is.null(gate_value_space) || !gate_value_space %in% c("raw", "display")) {
+    # Current flow/exprs workspaces store gates in the linear domain. Legacy or
+    # non-flow workspaces without an explicit marker use their display assay.
+    is_flow_exprs <- identical(md$instrument_type, "flow") &&
+      identical(assay_name, "exprs") &&
+      "counts" %in% SummarizedExperiment::assayNames(sce)
+    gate_value_space <- if (is_flow_exprs) "raw" else "display"
+  }
+
+  if (identical(gate_value_space, "raw")) {
+    if (!"counts" %in% SummarizedExperiment::assayNames(sce)) {
+      stop("This workspace stores gates in raw coordinates, but the SCE has no 'counts' assay.")
+    }
+    mat <- extract_assay_data(sce, "counts")
+    if (identical(md$instrument_type, "flow") && isTRUE(md$comp_on) &&
+        !is.null(md$spillover_matrix)) {
+      if (!exists("compensate_matrix", mode = "function")) {
+        stop("Compensated flow gating requires compensate_matrix().")
+      }
+      mat <- compensate_matrix(mat, md$spillover_matrix)
+    }
+    return(validate_matrix(mat, "Raw gating assay"))
+  }
+
+  mat <- extract_assay_data(sce, assay_name)
+  if (identical(assay_name, "counts")) mat <- asinh(mat / 5)
+  validate_matrix(mat, "Display gating assay")
+}
+
 #' Get channel names from SCE
 get_channel_names <- function(sce) {
   rownames(sce)

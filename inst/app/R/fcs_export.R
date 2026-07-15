@@ -2,8 +2,9 @@
 
 #' Export a gated population as FCS file(s)
 #'
-#' Gates are always evaluated in the transformed ("exprs") space — the same
-#' space in which they were drawn. The exported data matrix can be either the
+#' Gates are evaluated in their stored workspace coordinate space. Current flow
+#' workspaces store gates in linear coordinates; CyTOF and other workspaces use
+#' display coordinates. The exported data matrix can independently be either the
 #' transformed (exprs) or raw (counts) assay.
 #'
 #' @param sce        SingleCellExperiment object
@@ -18,6 +19,9 @@
 #' @param filename_suffix Optional suffix appended before ".fcs".
 #' @param precomputed_masks Optional named list of population masks returned by
 #'   apply_gating_strategy(... )$masks to reuse across multiple exports.
+#' @param gating_data Optional authoritative event-by-channel gating matrix from
+#'   the live app session.
+#' @param gate_value_space Optional explicit workspace gate value space.
 #' @return Character vector of written file paths
 export_population_as_fcs <- function(sce,
                                       population_id,
@@ -29,7 +33,9 @@ export_population_as_fcs <- function(sce,
                                       output_dir    = tempdir(),
                                       filename_prefix = "",
                                       filename_suffix = "",
-                                      precomputed_masks = NULL) {
+                                      precomputed_masks = NULL,
+                                      gating_data = NULL,
+                                      gate_value_space = NULL) {
 
   if (!requireNamespace("flowCore", quietly = TRUE)) {
     stop("Package 'flowCore' is required.\n",
@@ -38,9 +44,14 @@ export_population_as_fcs <- function(sce,
 
   available_assays <- SummarizedExperiment::assayNames(sce)
 
-  # ── Gating is always done in transformed (exprs) space ───────────────────
+  # ── Resolve the coordinate space in which gates are stored ───────────────
   gate_assay <- if ("exprs" %in% available_assays) "exprs" else available_assays[1]
-  gate_mat   <- t(SummarizedExperiment::assay(sce, gate_assay))   # events × channels
+  gate_mat <- gating_matrix_for_sce(
+    sce,
+    assay_name = gate_assay,
+    gate_value_space = gate_value_space,
+    gating_data = gating_data
+  )
 
   # ── Compute population mask ───────────────────────────────────────────────
   if (!is.null(precomputed_masks) && !is.null(precomputed_masks[[population_id]])) {
