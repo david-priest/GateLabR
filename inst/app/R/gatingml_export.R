@@ -185,13 +185,14 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # fcs_name: the FCS $PnN parameter name to use in data-type:name.
 # Falls back to channel (the display name) when not supplied.
 .gml_ex_dim <- function(channel, tr_id, min_val = NULL, max_val = NULL,
-                         fcs_name = NULL) {
+                         fcs_name = NULL, compensation_ref = "uncompensated") {
   dim_name <- if (!is.null(fcs_name)) fcs_name else channel
   tr_attr  <- if (!is.null(tr_id))   paste0(' gating:transformation-ref="', tr_id, '"') else ""
   min_attr <- if (!is.null(min_val)) paste0(' gating:min="', .gml_ex_num(min_val), '"') else ""
   max_attr <- if (!is.null(max_val)) paste0(' gating:max="', .gml_ex_num(max_val), '"') else ""
   c(
-    paste0('    <gating:dimension gating:compensation-ref="FCS"', min_attr, max_attr, tr_attr, '>'),
+    paste0('    <gating:dimension gating:compensation-ref="', compensation_ref, '"',
+           min_attr, max_attr, tr_attr, '>'),
     paste0('      <data-type:fcs-dimension data-type:name="', .gml_ex_esc(dim_name), '" />'),
     '    </gating:dimension>'
   )
@@ -202,7 +203,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # name instead of the internal display name (Cytobank requires $PnN names).
 .gml_ex_rectangle <- function(gate, gml_id, num_id, seq_idx,
                                x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-                               pnn_fn = NULL) {
+                               pnn_fn = NULL, comp_ref_fn = NULL) {
   verts  <- gate$vertices
   x_vals <- vapply(verts, function(v) as.numeric(v[[1]]), numeric(1))
   y_vals <- vapply(verts, function(v) as.numeric(v[[2]]), numeric(1))
@@ -211,16 +212,18 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     paste0('  <gating:RectangleGate gating:id="', gml_id, '">'),
     .gml_ex_custom_info(gate$name, num_id, seq_idx, "RectangleGate", def),
     .gml_ex_dim(gate$x_channel, x_tr, min(x_vals), max(x_vals),
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$x_channel) else "uncompensated"),
     .gml_ex_dim(gate$y_channel, y_tr, min(y_vals), max(y_vals),
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$y_channel) else "uncompensated"),
     '  </gating:RectangleGate>'
   )
 }
 
 .gml_ex_polygon <- function(gate, gml_id, num_id, seq_idx,
                              x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-                             pnn_fn = NULL) {
+                             pnn_fn = NULL, comp_ref_fn = NULL) {
   def <- .gml_ex_definition_json(gate, x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params)
   vert_lines <- unlist(lapply(gate$vertices, function(v) c(
     '    <gating:vertex>',
@@ -232,9 +235,11 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     paste0('  <gating:PolygonGate gating:id="', gml_id, '">'),
     .gml_ex_custom_info(gate$name, num_id, seq_idx, "PolygonGate", def),
     .gml_ex_dim(gate$x_channel, x_tr,
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$x_channel) else "uncompensated"),
     .gml_ex_dim(gate$y_channel, y_tr,
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$y_channel) else "uncompensated"),
     vert_lines,
     '  </gating:PolygonGate>'
   )
@@ -257,10 +262,9 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # custom_info block. GatingML's transforms section already carries W/cofactor for
 # gated channels, but the display range (the Scales-tab view window) has no
 # native home, so we persist the full set here. Keys are display channel names.
-# Returns NULL when there is nothing to save.
 .gml_ex_build_scales_json <- function(channel_names, global_scale_ranges,
-                                      logicle_w_params, scatter_cofactor_params) {
-  if (!requireNamespace("jsonlite", quietly = TRUE)) return(NULL)
+                                      logicle_w_params, scatter_cofactor_params,
+                                      is_flow, compensation_on, spillover_matrix) {
   gsr <- as.list(global_scale_ranges %||% list())
   wl  <- as.list(logicle_w_params %||% list())
   cf  <- as.list(scatter_cofactor_params %||% list())
@@ -278,9 +282,36 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     if (is.finite(cofac)) entry$cofactor <- cofac
     if (length(entry) > 0) channels[[ch]] <- entry
   }
-  if (length(channels) == 0) return(NULL)
-  as.character(jsonlite::toJSON(list(version = 1L, channels = channels),
-                                auto_unbox = TRUE, null = "null"))
+  comp_enabled <- isTRUE(is_flow) && isTRUE(compensation_on)
+  comp <- list(
+    enabled = comp_enabled,
+    reference = if (comp_enabled) "FCS" else "uncompensated",
+    channels = character(0)
+  )
+  if (comp_enabled) {
+    if (!is.matrix(spillover_matrix) || nrow(spillover_matrix) < 2L ||
+        ncol(spillover_matrix) != nrow(spillover_matrix)) {
+      stop("Compensation is enabled, but no valid spillover matrix is available for Gating-ML export.")
+    }
+    spill_channels <- colnames(spillover_matrix)
+    row_channels <- rownames(spillover_matrix)
+    if (is.null(spill_channels) || anyNA(spill_channels) || any(!nzchar(spill_channels)) ||
+        anyDuplicated(spill_channels) || is.null(row_channels) ||
+        !setequal(row_channels, spill_channels)) {
+      stop("The active spillover matrix needs matching, unique row and column channel names for Gating-ML export.")
+    }
+    spillover_matrix <- spillover_matrix[spill_channels, spill_channels, drop = FALSE]
+    if (any(!is.finite(spillover_matrix))) {
+      stop("The active spillover matrix contains non-finite values and cannot be exported safely.")
+    }
+    comp$channels <- as.character(spill_channels)
+    comp$matrix <- lapply(seq_len(nrow(spillover_matrix)), function(i) {
+      unname(as.numeric(spillover_matrix[i, ]))
+    })
+  }
+  as.character(jsonlite::toJSON(list(version = 2L, channels = channels,
+                                     compensation = comp),
+                                auto_unbox = TRUE, null = "null", digits = NA))
 }
 
 # ── Main export function ──────────────────────────────────────────────────────
@@ -318,11 +349,15 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
                                         logicle_w_params = NULL,
                                         scatter_cofactor_params = NULL,
                                         counts_mat = NULL,
-                                        global_scale_ranges = NULL) {
+                                        global_scale_ranges = NULL,
+                                        compensation_on = FALSE,
+                                        spillover_matrix = NULL) {
   format <- match.arg(format)
   cytobank_mode <- identical(format, "cytobank")
   if (!requireNamespace("base64enc", quietly = TRUE))
     stop("Package 'base64enc' is required. Install with: install.packages('base64enc')")
+  if (!requireNamespace("jsonlite", quietly = TRUE))
+    stop("Package 'jsonlite' is required. Install with: install.packages('jsonlite')")
   if (is.null(gates) || length(gates) == 0)
     stop("No gates to export.")
 
@@ -357,7 +392,13 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
   # Per-channel scale settings (display Min/Max range + logicle W + cofactor),
   # saved into the root custom_info block so GateLabR can restore them on import.
   scales_json <- .gml_ex_build_scales_json(ch_names, global_scale_ranges,
-                                           logicle_w_params, scatter_cofactor_params)
+                                           logicle_w_params, scatter_cofactor_params,
+                                           is_flow, compensation_on, spillover_matrix)
+  spill_channels <- if (isTRUE(is_flow) && isTRUE(compensation_on) &&
+                        is.matrix(spillover_matrix)) colnames(spillover_matrix) else character(0)
+  comp_ref_fn <- function(ch) {
+    if (ch %in% spill_channels) "FCS" else "uncompensated"
+  }
 
   # ── Gate vertices in display (export) space ─────────────────────────────────
   # Flow: gates stored in raw space → forward-transform to logicle/arcsinh space.
@@ -419,11 +460,11 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     if (identical(g$gate_type, "rectangle")) {
       gate_lines <- c(gate_lines, .gml_ex_rectangle(
         g, gml_id, num_id, i, x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-        pnn_fn = pnn_fn))
+        pnn_fn = pnn_fn, comp_ref_fn = comp_ref_fn))
     } else if (identical(g$gate_type, "polygon")) {
       gate_lines <- c(gate_lines, .gml_ex_polygon(
         g, gml_id, num_id, i, x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-        pnn_fn = pnn_fn))
+        pnn_fn = pnn_fn, comp_ref_fn = comp_ref_fn))
     }
   }
 
@@ -639,11 +680,9 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     paste0('      <about>', .gml_ex_esc(about_str), '</about>'),
     paste0('      <export_timestamp>', format(Sys.time(), "%Y-%m-%dT%H:%M:%S"), '</export_timestamp>'),
     '    </cytobank>',
-    if (!is.null(scales_json)) c(
-      '    <gatelabr_scales>',
-      paste0('      <definition>', .gml_ex_esc_text(scales_json), '</definition>'),
-      '    </gatelabr_scales>'
-    ) else character(0),
+    '    <gatelabr_scales>',
+    paste0('      <definition>', .gml_ex_esc_text(scales_json), '</definition>'),
+    '    </gatelabr_scales>',
     '  </data-type:custom_info>',
     # Transform definitions
     unlist(lapply(names(tr_defs), function(id) .gml_ex_transform(id, tr_defs[[id]]))),

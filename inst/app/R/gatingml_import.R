@@ -75,22 +75,72 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   tryCatch(jsonlite::fromJSON(txt), error = function(e) NULL)
 }
 
-#' Parse the GateLabR per-channel scales block written into the root-level
-#' custom_info by the exporter. Returns a named list (channel -> list with any of
-#' lo/hi/w/cofactor) or NULL when absent. Other tools' custom_info is ignored.
-.gml_parse_gatelabr_scales <- function(root_node) {
+#' Parse GateLab/GateLabR scale and compensation state from custom_info.
+.gml_parse_gatelabr_state <- function(root_node) {
+  empty <- list(scales = NULL, compensation = NULL)
   ci <- .gml_first_child_local(root_node, "custom_info")
-  if (is.null(ci)) return(NULL)
+  if (is.null(ci)) return(empty)
   gs <- .gml_first_child_local(ci, "gatelabr_scales")
-  if (is.null(gs)) return(NULL)
+  if (is.null(gs)) return(empty)
   def <- .gml_first_child_local(gs, "definition")
-  if (is.null(def)) return(NULL)
+  if (is.null(def)) return(empty)
   txt <- trimws(xml2::xml_text(def))
-  if (nchar(txt) == 0) return(NULL)
-  parsed <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = FALSE),
-                     error = function(e) NULL)
-  if (is.null(parsed) || is.null(parsed$channels)) return(NULL)
-  parsed$channels
+  if (nchar(txt) == 0) return(empty)
+  parsed <- tryCatch(
+    jsonlite::fromJSON(txt, simplifyVector = FALSE),
+    error = function(e) stop("Invalid embedded GateLab scale or compensation metadata.")
+  )
+  if (!is.list(parsed)) stop("Invalid embedded GateLab scale or compensation metadata.")
+  scales <- parsed$channels %||% NULL
+  raw <- parsed$compensation
+  if (is.null(raw)) return(list(scales = scales, compensation = NULL))
+  if (!is.list(raw) || length(raw$enabled) != 1L || !is.logical(raw$enabled) ||
+      is.na(raw$enabled)) {
+    stop("Invalid embedded GateLab compensation state: enabled must be true or false.")
+  }
+  reference <- as.character(raw$reference %||% "")
+  if (length(reference) != 1L || !reference %in% c("FCS", "uncompensated")) {
+    stop("Invalid embedded GateLab compensation state: unsupported matrix reference.")
+  }
+  raw_channels <- raw$channels %||% list()
+  channels <- if (length(raw_channels) == 0L) character(0) else
+    unlist(raw_channels, use.names = FALSE)
+  if (!is.character(channels) || anyNA(channels) || any(!nzchar(channels)) ||
+      anyDuplicated(channels)) {
+    stop("Invalid embedded GateLab compensation state: channel list is malformed.")
+  }
+  matrix <- NULL
+  if (!is.null(raw$matrix)) {
+    if (!is.list(raw$matrix) || length(raw$matrix) != length(channels)) {
+      stop("Invalid embedded GateLab compensation state: spillover matrix is malformed.")
+    }
+    rows <- lapply(raw$matrix, function(row) suppressWarnings(as.numeric(unlist(row, use.names = FALSE))))
+    if (any(vapply(rows, length, integer(1)) != length(channels))) {
+      stop("Invalid embedded GateLab compensation state: spillover matrix is malformed.")
+    }
+    matrix <- do.call(rbind, rows)
+    if (!is.matrix(matrix) || any(!is.finite(matrix))) {
+      stop("Invalid embedded GateLab compensation state: spillover matrix is malformed.")
+    }
+    dimnames(matrix) <- list(channels, channels)
+  }
+  enabled <- isTRUE(raw$enabled)
+  if (enabled && (!identical(reference, "FCS") || length(channels) < 2L || is.null(matrix))) {
+    stop("Invalid embedded GateLab compensation state: enabled compensation requires an FCS spillover matrix.")
+  }
+  list(
+    scales = scales,
+    compensation = list(
+      enabled = enabled,
+      reference = reference,
+      channels = channels,
+      matrix = matrix
+    )
+  )
+}
+
+.gml_parse_gatelabr_scales <- function(root_node) {
+  .gml_parse_gatelabr_state(root_node)$scales
 }
 
 #' Extract Cytobank gate_id (primitive gates) or gate_set_id (boolean gates)
@@ -185,6 +235,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
     tr_ref <- .gml_attr_local(dim, "transformation-ref")
     if (!is.null(tr_ref) && nzchar(tr_ref)) d$transformation_ref <- tr_ref
+    comp_ref <- .gml_attr_local(dim, "compensation-ref")
+    if (!is.null(comp_ref) && nzchar(comp_ref)) d$compensation_ref <- comp_ref
 
     mn <- .gml_num(.gml_attr_local(dim, "min"))
     mx <- .gml_num(.gml_attr_local(dim, "max"))
@@ -204,6 +256,79 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     dims[[length(dims) + 1L]] <- d
   }
   dims
+}
+
+.gml_parse_compensation_refs <- function(raw_gates) {
+  refs <- character(0)
+  unsupported <- character(0)
+  for (g in raw_gates) {
+    if (identical(g$gate_type, "boolean")) next
+    for (d in g$dims %||% list()) {
+      value <- trimws(as.character(d$compensation_ref %||% ""))
+      if (!nzchar(value)) next
+      lower <- tolower(value)
+      if (identical(lower, "fcs")) refs <- c(refs, "FCS")
+      else if (identical(lower, "uncompensated")) refs <- c(refs, "uncompensated")
+      else unsupported <- c(unsupported, value)
+    }
+  }
+  unsupported <- unique(unsupported)
+  if (length(unsupported) > 0L) {
+    stop(
+      "This Gating-ML file references unsupported compensation matrix ",
+      paste(sprintf('"%s"', unsupported), collapse = ", "),
+      ". GateLabR can safely import FCS or uncompensated dimensions only."
+    )
+  }
+  unique(refs)
+}
+
+.gml_compensation_matrices_match <- function(expected, actual, tolerance = 1e-8) {
+  if (is.null(expected$matrix) || !is.matrix(expected$matrix) || !is.matrix(actual)) return(FALSE)
+  channels <- as.character(expected$channels %||% character(0))
+  actual_channels <- colnames(actual)
+  actual_rows <- rownames(actual)
+  if (length(channels) != ncol(actual) || is.null(actual_channels) || is.null(actual_rows) ||
+      !setequal(channels, actual_channels) || !setequal(channels, actual_rows)) return(FALSE)
+  aligned <- actual[channels, channels, drop = FALSE]
+  if (!identical(dim(aligned), dim(expected$matrix)) || any(!is.finite(aligned))) return(FALSE)
+  delta <- abs(expected$matrix - aligned)
+  scale <- pmax(1, abs(expected$matrix), abs(aligned))
+  all(delta <= tolerance * scale)
+}
+
+#' Resolve the compensation state required to preserve imported gate membership.
+resolve_gatingml_compensation <- function(compensation, dimension_refs,
+                                          is_flow, spillover_matrix = NULL) {
+  none <- list(target = NULL, source = "none", requires_confirmation = FALSE)
+  if (!isTRUE(is_flow)) return(none)
+
+  if (!is.null(compensation)) {
+    if (!isTRUE(compensation$enabled)) {
+      if ("FCS" %in% dimension_refs) {
+        stop("The embedded GateLab compensation state contradicts the Gating-ML dimension references.")
+      }
+      return(list(target = FALSE, source = "embedded", requires_confirmation = FALSE))
+    }
+    if (is.null(spillover_matrix)) {
+      stop("This gating strategy was created with FCS spillover compensation enabled, but the loaded FCS has no usable spillover matrix.")
+    }
+    if (!.gml_compensation_matrices_match(compensation, spillover_matrix)) {
+      stop("This gating strategy was created with a different FCS spillover matrix. Import was stopped to prevent changed population membership.")
+    }
+    return(list(target = TRUE, source = "embedded", requires_confirmation = FALSE))
+  }
+
+  if ("FCS" %in% dimension_refs) {
+    if (is.null(spillover_matrix)) {
+      stop("This Gating-ML file requires FCS spillover compensation, but the loaded FCS has no usable spillover matrix.")
+    }
+    return(list(target = TRUE, source = "dimensions", requires_confirmation = TRUE))
+  }
+  if ("uncompensated" %in% dimension_refs) {
+    return(list(target = FALSE, source = "dimensions", requires_confirmation = FALSE))
+  }
+  none
 }
 
 .gml_normalize_channel <- function(ch) {
@@ -614,6 +739,8 @@ import_gatingml_from_cytobank <- function(file_path,
     raw_gates[[g$gml_id]] <- g
     if (identical(g$gate_type, "boolean")) bool_order <- c(bool_order, g$gml_id)
   }
+  gatelabr_state <- .gml_parse_gatelabr_state(root)
+  compensation_refs <- .gml_parse_compensation_refs(raw_gates)
 
   for (g in raw_gates) {
     for (dim in g$dims %||% list()) {
@@ -990,6 +1117,8 @@ import_gatingml_from_cytobank <- function(file_path,
     skipped_channels = sort(unique(unresolved_channels)),
     source = .gml_detect_source(root),
     n_pops_imported = max(0L, length(populations) - 1L),
-    scales = .gml_parse_gatelabr_scales(root)
+    scales = gatelabr_state$scales,
+    compensation = gatelabr_state$compensation,
+    compensation_refs = compensation_refs
   )
 }

@@ -2137,6 +2137,39 @@ server <- function(input, output, session) {
     rv$.range_cache <- list()
   }
 
+  # Change the linear compensation space and invalidate every derived display / gating cache.
+  # `refresh = FALSE` lets Gating-ML import restore its saved W values before one final transform.
+  apply_compensation_state <- function(new_on, warn_existing = FALSE, refresh = TRUE) {
+    new_on <- isTRUE(new_on)
+    if (new_on && !has_compensation()) {
+      stop("The loaded FCS has no usable spillover matrix.")
+    }
+    if (identical(new_on, isTRUE(rv$comp_on))) return(FALSE)
+
+    if (isTRUE(warn_existing) && length(rv$gates) > 0) {
+      showNotification(
+        "Compensation changes the linear data beneath existing gates — re-check gate positions after toggling.",
+        type = "warning", duration = 7)
+    }
+
+    rv$comp_on <- new_on
+    counts_mat <- extract_assay_data(rv$sce, "counts")
+    if (new_on) counts_mat <- compensate_matrix(counts_mat, rv$spillover_matrix)
+    auto_w <- as.list(estimate_logicle_w_params(counts_mat, colnames(counts_mat)))
+    rv$flow_logicle_w_auto <- auto_w
+    rv$flow_logicle_w      <- auto_w
+    rv$global_scale_ranges <- list()
+    initialize_missing_global_scales(rv$channels)
+    rv$cytof_axis_range    <- list()
+    rv$.range_cache        <- list()
+    rv$.scales_ui_version  <- isolate(rv$.scales_ui_version) + 1L
+    rv$flow_raw_data       <- NULL
+
+    if (isTRUE(refresh)) refresh_assay_data(reset_cache = TRUE)
+    persist_compensation_state()
+    TRUE
+  }
+
   # ── Instrument type badge ──────────────────────────────────────────────────
   output$instrument_badge_ui <- renderUI({
     req(rv$sce)
@@ -8717,34 +8750,9 @@ server <- function(input, output, session) {
   observeEvent(input$comp_apply, {
     req(rv$sce, has_compensation())
     new_on <- isTRUE(input$comp_apply)
-    if (identical(new_on, isTRUE(rv$comp_on))) return()
-
-    if (length(rv$gates) > 0) {
-      showNotification(
-        "Compensation changes the linear data beneath existing gates — re-check gate positions after toggling.",
-        type = "warning", duration = 7)
+    if (apply_compensation_state(new_on, warn_existing = TRUE, refresh = TRUE)) {
+      send_full_plot(reset_view = TRUE)
     }
-
-    rv$comp_on <- new_on
-
-    # Re-estimate auto logicle-W from the new linear space; the cached W/ranges
-    # were derived from the other space and are now stale.
-    counts_mat <- extract_assay_data(rv$sce, "counts")
-    if (new_on && !is.null(rv$spillover_matrix)) {
-      counts_mat <- compensate_matrix(counts_mat, rv$spillover_matrix)
-    }
-    auto_w <- as.list(estimate_logicle_w_params(counts_mat, colnames(counts_mat)))
-    rv$flow_logicle_w_auto <- auto_w
-    rv$flow_logicle_w      <- auto_w
-    rv$global_scale_ranges <- list()
-    initialize_missing_global_scales(rv$channels)
-    rv$cytof_axis_range    <- list()
-    rv$.range_cache        <- list()
-    rv$.scales_ui_version  <- isolate(rv$.scales_ui_version) + 1L
-
-    refresh_assay_data(reset_cache = TRUE)   # bumps assay_version, clears caches
-    persist_compensation_state()
-    send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   output$scales_channels_ui <- renderUI({
@@ -9343,6 +9351,12 @@ server <- function(input, output, session) {
       )
 
       parsed <- clamp_imported_time_rectangles(parsed, get_gating_data())
+      parsed$compensation_resolution <- resolve_gatingml_compensation(
+        compensation = parsed$compensation,
+        dimension_refs = parsed$compensation_refs %||% character(0),
+        is_flow = is_flow_session(rv$sce),
+        spillover_matrix = rv$spillover_matrix
+      )
 
       if (length(parsed$gates) == 0) {
         showNotification("No compatible gates found in Gating-ML for current channels.",
@@ -9351,6 +9365,33 @@ server <- function(input, output, session) {
       }
 
       rv$.pending_gatingml_import <- parsed
+      comp_res <- parsed$compensation_resolution
+      comp_note <- NULL
+      if (!is.null(comp_res$target)) {
+        target_on <- isTRUE(comp_res$target)
+        already_set <- identical(target_on, isTRUE(rv$comp_on))
+        if (identical(comp_res$source, "embedded")) {
+          comp_note <- if (target_on) {
+            if (already_set) {
+              "The embedded spillover matrix exactly matches the loaded FCS; compensation is already enabled."
+            } else {
+              "This strategy was gated with FCS compensation enabled. Its exact spillover matrix matches the loaded FCS, so importing will enable compensation."
+            }
+          } else if (already_set) {
+            "This strategy was gated without compensation; the current data are already uncompensated."
+          } else {
+            "This strategy was gated without compensation, so importing will disable the current compensation setting."
+          }
+        } else if (target_on) {
+          comp_note <- paste(
+            "This file declares FCS compensation but does not contain GateLab's exact matrix record.",
+            "Import will enable the spillover matrix embedded in the loaded FCS.",
+            "For an older GateLab or GateLabR export, continue only if compensation was enabled when its gates were drawn."
+          )
+        } else if (!already_set) {
+          comp_note <- "This file declares uncompensated dimensions, so importing will disable the current compensation setting."
+        }
+      }
       showModal(modalDialog(
         title = "Import GatingML from Cytobank",
         tags$p(sprintf("Parsed %d gates and %d populations from %s.",
@@ -9359,6 +9400,12 @@ server <- function(input, output, session) {
                               gatelabr = "a GateLabR export",
                               cytobank = "a Cytobank Gating-ML file",
                               "a Gating-ML file"))),
+        if (!is.null(comp_note)) {
+          tags$p(comp_note,
+                 style = if (isTRUE(comp_res$requires_confirmation))
+                   "color:#8a6d3b; font-size:12px; font-weight:600;" else
+                   "color:#555; font-size:12px;")
+        },
         if (isTRUE(parsed$n_gates_skipped > 0)) {
           chs <- parsed$skipped_channels %||% character(0)
           tags$p(
@@ -9400,7 +9447,21 @@ server <- function(input, output, session) {
     rv$.pending_gatingml_import <- NULL
     req(parsed)
 
-    save_undo_snapshot()
+    comp_res <- parsed$compensation_resolution %||%
+      list(target = NULL, source = "none", requires_confirmation = FALSE)
+    comp_target <- comp_res$target
+    comp_changed <- !is.null(comp_target) &&
+      !identical(isTRUE(comp_target), isTRUE(rv$comp_on))
+
+    # Gate/population undo snapshots do not carry display-transform state. Do not
+    # retain an unsafe route back to gates drawn in the previous linear space.
+    if (comp_changed) {
+      rv$undo_stack <- list()
+      rv$redo_stack <- list()
+      apply_compensation_state(comp_target, warn_existing = FALSE, refresh = FALSE)
+    } else {
+      save_undo_snapshot()
+    }
     rv$gates <- parsed$gates
     rv$gate_order <- parsed$gate_order %||% names(parsed$gates)
     rv$populations <- parsed$populations
@@ -9414,10 +9475,11 @@ server <- function(input, output, session) {
     # Restore per-channel scales saved in the GatingML custom_info (if present).
     # Only channels in the current SCE are touched; W/cofactor apply to flow.
     n_scales <- 0L
+    changed_transform <- FALSE
     sc <- parsed$scales
     if (is.list(sc) && length(sc) > 0) {
       sess_ch <- rv$channels %||% character(0)
-      changed_range <- FALSE; changed_transform <- FALSE
+      changed_range <- FALSE
       for (ch in intersect(names(sc), sess_ch)) {
         e  <- sc[[ch]]
         lo <- suppressWarnings(as.numeric(e$lo %||% NA))
@@ -9440,10 +9502,12 @@ server <- function(input, output, session) {
         rv$.scales_ui_version      <- isolate(rv$.scales_ui_version) + 1L
         rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
       }
-      # W / cofactor feed the display transform, so re-transform for flow sessions.
-      if (changed_transform && is_flow_session(rv$sce) && rv$assay_name == "exprs") {
-        refresh_assay_data(reset_cache = TRUE)
-      }
+    }
+    # Apply a changed linear space once, after imported W/cofactor values are restored.
+    # Transform-only changes need the same refresh for the flow exprs display.
+    if (comp_changed ||
+        (changed_transform && is_flow_session(rv$sce) && rv$assay_name == "exprs")) {
+      refresh_assay_data(reset_cache = TRUE)
     }
 
     autosave()
@@ -9451,6 +9515,8 @@ server <- function(input, output, session) {
 
     msg <- paste0("Imported ", parsed$n_gates_imported, " gates and ",
                   parsed$n_pops_imported, " populations from GatingML")
+    if (identical(comp_target, TRUE)) msg <- paste0(msg, "; FCS compensation enabled")
+    if (identical(comp_target, FALSE)) msg <- paste0(msg, "; compensation disabled")
     if (n_scales > 0) msg <- paste0(msg, "; restored scales for ", n_scales, " channel(s)")
     if (isTRUE(parsed$n_gates_skipped > 0)) {
       msg <- paste0(msg, " (", parsed$n_gates_skipped, " skipped)")
@@ -9478,7 +9544,9 @@ server <- function(input, output, session) {
         logicle_w_params        = isolate(rv$flow_logicle_w),
         scatter_cofactor_params = isolate(rv$flow_scatter_cofactor),
         counts_mat              = isolate(rv$flow_raw_data),
-        global_scale_ranges     = isolate(rv$global_scale_ranges)
+        global_scale_ranges     = isolate(rv$global_scale_ranges),
+        compensation_on         = isolate(rv$comp_on),
+        spillover_matrix        = isolate(rv$spillover_matrix)
       )
     }, error = function(e) {
       showNotification(paste("GatingML export error:", e$message),
