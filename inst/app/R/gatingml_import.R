@@ -614,10 +614,85 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   stop(
     paste0(
       "Gating-ML import cancelled because unsupported or invalid features were found:\n- ",
-      paste(problems, collapse = "\n- ")
+      paste(problems, collapse = "\n- "),
+      "\nNo gates or populations were imported; the current workspace was not changed."
     ),
     call. = FALSE
   )
+}
+
+.gml_pair_population_name <- function(pair, raw_gates) {
+  name_node <- .gml_first_child_local(pair, "name")
+  explicit_name <- if (!is.null(name_node)) trimws(xml2::xml_text(name_node)) else ""
+  if (nzchar(explicit_name)) return(explicit_name)
+
+  gate_ref <- .gml_attr_local(pair, "gate-ref")
+  if (!is.null(gate_ref) && nzchar(gate_ref) && !is.null(raw_gates[[gate_ref]]$name)) {
+    return(raw_gates[[gate_ref]]$name)
+  }
+  if (!is.null(gate_ref) && nzchar(gate_ref)) gate_ref else "Unnamed population"
+}
+
+.gml_quote_name <- function(name) {
+  encodeString(as.character(name), quote = '"')
+}
+
+# GateLabR deliberately authors and imports positive intersections only. Detect
+# unsupported Boolean semantics before any parsed state can replace the active
+# workspace, and name the affected populations instead of silently dropping an
+# operator and changing membership.
+.gml_positive_and_logic_problems <- function(raw_gates, hierarchy_node) {
+  problems <- character(0)
+  names_by_gate <- list()
+  pairs <- if (!is.null(hierarchy_node)) {
+    as.list(xml2::xml_find_all(hierarchy_node, ".//*[local-name()='PopulationGatePair']"))
+  } else {
+    list()
+  }
+
+  for (pair in pairs) {
+    gate_ref <- .gml_attr_local(pair, "gate-ref")
+    if (is.null(gate_ref) || !nzchar(gate_ref)) next
+    names_by_gate[[gate_ref]] <- unique(c(
+      names_by_gate[[gate_ref]] %||% character(0),
+      .gml_pair_population_name(pair, raw_gates)
+    ))
+  }
+
+  add_problem <- function(name, operation) {
+    problems <<- c(
+      problems,
+      paste0(
+        "Population ", .gml_quote_name(name), " uses ", operation, " logic; ",
+        "GateLabR currently imports positive AND populations only."
+      )
+    )
+  }
+
+  for (gate in raw_gates) {
+    if (!identical(gate$gate_type, "boolean")) next
+    pop_names <- names_by_gate[[gate$gml_id]] %||% gate$name
+    if (identical(gate$operation, "or")) {
+      for (name in pop_names) add_problem(name, "OR")
+    }
+    refs <- gate$refs %||% list()
+    has_complement <- length(refs) > 0L && any(vapply(
+      refs, function(ref) isTRUE(ref$complement), logical(1)
+    ))
+    if (identical(gate$operation, "not") || has_complement) {
+      for (name in pop_names) add_problem(name, "NOT")
+    }
+  }
+
+  for (pair in pairs) {
+    complement <- identical(
+      tolower(.gml_attr_local(pair, "complement") %||% "false"),
+      "true"
+    )
+    if (complement) add_problem(.gml_pair_population_name(pair, raw_gates), "NOT")
+  }
+
+  unique(problems)
 }
 
 .gml_default_label_offset <- function(vertices) {
@@ -739,6 +814,10 @@ import_gatingml_from_cytobank <- function(file_path,
     raw_gates[[g$gml_id]] <- g
     if (identical(g$gate_type, "boolean")) bool_order <- c(bool_order, g$gml_id)
   }
+  import_problems <- c(
+    import_problems,
+    .gml_positive_and_logic_problems(raw_gates, hierarchy_node)
+  )
   gatelabr_state <- .gml_parse_gatelabr_state(root)
   compensation_refs <- .gml_parse_compensation_refs(raw_gates)
 

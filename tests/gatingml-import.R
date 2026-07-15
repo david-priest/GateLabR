@@ -25,23 +25,45 @@ not_xml <- '<?xml version="1.0"?>
   </gating:BooleanGate>
 </gating:Gating-ML>'
 
-parsed <- import_gatingml_from_cytobank(write_gml(not_xml), "X")
-stopifnot(length(parsed$gates) == 1L)
-range_gate <- parsed$gates[[1]]
-stopifnot(identical(range_gate$gate_type, "rectangle"))
-stopifnot(identical(range_gate$x_channel, "X"))
-stopifnot(identical(range_gate$y_channel, "X"))
+not_problem <- tryCatch(
+  {
+    import_gatingml_from_cytobank(write_gml(not_xml), "X")
+    ""
+  },
+  error = function(e) conditionMessage(e)
+)
+stopifnot(grepl(
+  'Population "Outside" uses NOT logic; GateLabR currently imports positive AND populations only',
+  not_problem,
+  fixed = TRUE
+))
+stopifnot(grepl(
+  "No gates or populations were imported; the current workspace was not changed",
+  not_problem,
+  fixed = TRUE
+))
 
-outside_id <- names(Filter(function(pop) identical(pop$name, "Outside"), parsed$populations))[[1]]
-outside <- parsed$populations[[outside_id]]
-stopifnot(length(outside$gate_refs) == 1L)
-stopifnot(identical(outside$gate_refs[[1]]$include, FALSE))
+and_complement_xml <- '<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <gating:RectangleGate gating:id="range-1" gating:name="Inside">
+    <gating:dimension gating:min="0" gating:max="1"><data-type:fcs-dimension data-type:name="X"/></gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="and-not-1" gating:name="Outside">
+    <gating:and>
+      <gating:gateReference gating:ref="range-1" gating:complement="true"/>
+    </gating:and>
+  </gating:BooleanGate>
+</gating:Gating-ML>'
 
-mat <- matrix(c(-1, 0.5, 2), ncol = 1, dimnames = list(NULL, "X"))
-masks <- apply_gating_strategy(
-  parsed$gates, parsed$populations, parsed$root_population_id, mat
-)$masks
-stopifnot(identical(unname(masks[[outside_id]]), c(TRUE, FALSE, TRUE)))
+and_complement_problem <- tryCatch(
+  {
+    import_gatingml_from_cytobank(write_gml(and_complement_xml), "X")
+    ""
+  },
+  error = function(e) conditionMessage(e)
+)
+stopifnot(grepl('Population "Outside" uses NOT logic', and_complement_problem, fixed = TRUE))
 
 hierarchy_not_xml <- '<?xml version="1.0"?>
 <gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
@@ -49,23 +71,47 @@ hierarchy_not_xml <- '<?xml version="1.0"?>
   <gating:RectangleGate gating:id="range-1" gating:name="Inside">
     <gating:dimension gating:min="0" gating:max="1"><data-type:fcs-dimension data-type:name="X"/></gating:dimension>
   </gating:RectangleGate>
-  <gating:BooleanGate gating:id="not-1" gating:name="Outside">
-    <gating:not><gating:gateReference gating:ref="range-1"/></gating:not>
-  </gating:BooleanGate>
   <gating:GatingHierarchy>
-    <gating:PopulationGatePair gating:gate-ref="not-1" gating:complement="true">
-      <gating:name>Inside again</gating:name>
+    <gating:PopulationGatePair gating:gate-ref="range-1" gating:complement="true">
+      <gating:name>Outside</gating:name>
     </gating:PopulationGatePair>
   </gating:GatingHierarchy>
 </gating:Gating-ML>'
 
-hierarchy_parsed <- import_gatingml_from_cytobank(write_gml(hierarchy_not_xml), "X")
-inside_id <- names(Filter(
-  function(pop) identical(pop$name, "Inside again"),
-  hierarchy_parsed$populations
-))[[1]]
-inside_ref <- hierarchy_parsed$populations[[inside_id]]$gate_refs[[1]]
-stopifnot(identical(inside_ref$include, TRUE))
+hierarchy_problem <- tryCatch(
+  {
+    import_gatingml_from_cytobank(write_gml(hierarchy_not_xml), "X")
+    ""
+  },
+  error = function(e) conditionMessage(e)
+)
+stopifnot(grepl('Population "Outside" uses NOT logic', hierarchy_problem, fixed = TRUE))
+
+or_xml <- '<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <gating:RectangleGate gating:id="range-1" gating:name="Low">
+    <gating:dimension gating:min="0" gating:max="1"><data-type:fcs-dimension data-type:name="X"/></gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="range-2" gating:name="High">
+    <gating:dimension gating:min="2" gating:max="3"><data-type:fcs-dimension data-type:name="X"/></gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="or-1" gating:name="Low or high">
+    <gating:or>
+      <gating:gateReference gating:ref="range-1"/>
+      <gating:gateReference gating:ref="range-2"/>
+    </gating:or>
+  </gating:BooleanGate>
+</gating:Gating-ML>'
+
+or_problem <- tryCatch(
+  {
+    import_gatingml_from_cytobank(write_gml(or_xml), "X")
+    ""
+  },
+  error = function(e) conditionMessage(e)
+)
+stopifnot(grepl('Population "Low or high" uses OR logic', or_problem, fixed = TRUE))
 
 unsupported_xml <- '<?xml version="1.0"?>
 <gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
