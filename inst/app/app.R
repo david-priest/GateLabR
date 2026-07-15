@@ -1685,7 +1685,7 @@ server <- function(input, output, session) {
     }
     illust_settings <- capture_illust_settings(input, rv)
     inst <- if (!is.null(rv$sce)) S4Vectors::metadata(rv$sce)$instrument_type else NA_character_
-    list(
+    workspace <- list(
       gates                = rv$gates,
       gate_order           = rv$gate_order,
       populations          = rv$populations,
@@ -1715,41 +1715,34 @@ server <- function(input, output, session) {
       source_channels        = as.character(rv$channels %||% character(0)),
       source_sce_name        = if (is.null(rv$sce_name)) NA_character_ else as.character(rv$sce_name)
     )
+    validate_workspace_graph(workspace)
+    workspace
   }
 
   # Apply a workspace list (from another SCE or a .rds file) to the current
-  # session.  Skips gates whose channels are absent in the current SCE and
-  # prunes any population that ends up with zero gate references as a result.
+  # session. If a gate's channels are absent, removes every population branch
+  # that depends on that gate so surviving AND/OR definitions remain unchanged.
   apply_workspace <- function(ws, source_label = "workspace") {
     if (is.null(ws)) {
       showNotification("No workspace to load.", type = "error", duration = 4)
       return(invisible(FALSE))
     }
-    ws <- normalize_workspace_gate_space(ws)
-
-    # Channel-mismatch handling: drop gates whose x/y channels are missing.
-    invalid <- validate_workspace_channels(ws, rv$channels)
-    n_skipped <- length(invalid)
-    if (n_skipped > 0) {
-      for (gid in invalid) ws$gates[[gid]] <- NULL
-      ws$gate_order <- setdiff(ws$gate_order %||% names(ws$gates), invalid)
-      # Prune gate_refs in populations to drop refs to missing gates, then
-      # drop populations that no longer reference any gate (except root).
-      valid_ids <- names(ws$gates)
-      root_id   <- ws$root_population_id
-      if (!is.null(ws$populations)) {
-        ws$populations <- lapply(ws$populations, function(pop) {
-          if (is.null(pop) || is.null(pop$gate_refs)) return(pop)
-          pop$gate_refs <- Filter(function(r) r$gate_id %in% valid_ids, pop$gate_refs)
-          pop
-        })
-        ws$populations <- Filter(function(pop) {
-          if (is.null(pop)) return(FALSE)
-          identical(pop$population_id, root_id) ||
-            (length(pop$gate_refs %||% list()) > 0)
-        }, ws$populations)
-      }
-    }
+    prepared <- tryCatch({
+      pruned <- prune_workspace_for_channels(ws, rv$channels)
+      pruned$workspace <- normalize_workspace_gate_space(pruned$workspace)
+      validate_workspace_graph(pruned$workspace)
+      pruned
+    }, error = function(e) {
+      showNotification(
+        paste0("Could not load ", source_label, ": ", conditionMessage(e)),
+        type = "error", duration = 8
+      )
+      NULL
+    })
+    if (is.null(prepared)) return(invisible(FALSE))
+    ws <- prepared$workspace
+    n_skipped <- length(prepared$invalid_gate_ids)
+    n_pruned <- length(prepared$removed_population_ids)
 
     # Cross-instrument warning (non-blocking).
     src_inst <- ws$source_instrument_type %||% NA_character_
@@ -1826,8 +1819,8 @@ server <- function(input, output, session) {
     autosave(); send_full_plot()
 
     msg <- if (n_skipped > 0) {
-      sprintf("Loaded %s (%d gate(s) skipped due to missing channels)",
-              source_label, n_skipped)
+      sprintf("Loaded %s (%d channel-incompatible gate(s) and %d dependent population(s) skipped)",
+              source_label, n_skipped, n_pruned)
     } else {
       paste("Loaded", source_label)
     }
@@ -2692,14 +2685,37 @@ server <- function(input, output, session) {
     # are created for this SCE's instrument type (CyTOF vs flow).
     session$userData$scales_obs_created <- character(0)
 
+    had_saved_workspace <- has_workspace(sce)
     ws <- load_workspace(sce)
+    if (is.null(ws) && had_saved_workspace) {
+      showNotification("The saved workspace is invalid; GateLabR started with a fresh gating tree.",
+                       type = "error", duration = 8)
+    }
     if (!is.null(ws)) {
-      invalid <- validate_workspace_channels(ws, channels)
-      if (length(invalid) > 0) {
-        showNotification(paste("Warning:", length(invalid), "gate(s) reference missing channels"),
-                         type = "warning", duration = 5)
+      prepared <- tryCatch({
+        pruned <- prune_workspace_for_channels(ws, channels)
+        pruned$workspace <- normalize_workspace_gate_space(pruned$workspace)
+        validate_workspace_graph(pruned$workspace)
+        pruned
+      }, error = function(e) {
+        showNotification(paste("Could not restore saved workspace:", conditionMessage(e)),
+                         type = "error", duration = 8)
+        NULL
+      })
+      if (is.null(prepared)) {
+        ws <- NULL
+      } else {
+        ws <- prepared$workspace
+        if (length(prepared$invalid_gate_ids)) {
+          showNotification(
+            sprintf("Skipped %d channel-incompatible gate(s) and %d dependent population(s).",
+                    length(prepared$invalid_gate_ids), length(prepared$removed_population_ids)),
+            type = "warning", duration = 7
+          )
+        }
       }
-      ws <- normalize_workspace_gate_space(ws)
+    }
+    if (!is.null(ws)) {
       rv$gates <- ws$gates
       rv$gate_order <- ws$gate_order %||% names(ws$gates)
       rv$populations <- ws$populations
@@ -5323,9 +5339,17 @@ server <- function(input, output, session) {
 
   observeEvent(input$add_pop_btn, {
     req(length(rv$gates) > 0)
+    ordinary_gate_ids <- names(rv$gates)[vapply(rv$gates, function(gate) {
+      !identical(gate$gate_type, "quadrant")
+    }, logical(1))]
+    if (!length(ordinary_gate_ids)) {
+      showNotification("Quadrant gates already have four linked populations; draw a polygon or rectangle gate to define another population.",
+                       type = "message", duration = 5)
+      return()
+    }
     parent_choices <- setNames(names(rv$populations),
                                 vapply(rv$populations, function(p) p$name, character(1)))
-    gate_ref_ui <- lapply(names(rv$gates), function(gid) {
+    gate_ref_ui <- lapply(ordinary_gate_ids, function(gid) {
       gate <- rv$gates[[gid]]
       tags$div(style = "display:flex; align-items:center; gap:6px; margin:2px 0;",
         tags$span(class = "gate-color-swatch",
@@ -5357,7 +5381,10 @@ server <- function(input, output, session) {
     if (is.null(pop_name) || nchar(trimws(pop_name)) == 0) pop_name <- paste0("Pop_", length(rv$populations))
     parent_id <- input$new_pop_parent %||% rv$root_population_id
     gate_refs <- list()
-    for (gid in names(rv$gates)) {
+    ordinary_gate_ids <- names(rv$gates)[vapply(rv$gates, function(gate) {
+      !identical(gate$gate_type, "quadrant")
+    }, logical(1))]
+    for (gid in ordinary_gate_ids) {
       if (isTRUE(input[[paste0("gate_ref_", gid)]])) {
         gate_refs[[length(gate_refs) + 1L]] <- new_gate_ref(gid, include = TRUE)
       }
@@ -5531,7 +5558,7 @@ server <- function(input, output, session) {
       base_name <- as.character(pop$name %||% pid)
       new_name <- make_copy_name(base_name, existing_names)
       gate_refs_copy <- lapply(pop$gate_refs %||% list(), function(ref) {
-        new_gate_ref(ref$gate_id, include = isTRUE(ref$include))
+        new_gate_ref(ref$gate_id, include = isTRUE(ref$include), quadrant = ref$quadrant)
       })
 
       dup_pop <- new_population(
@@ -6033,18 +6060,24 @@ server <- function(input, output, session) {
       )
     } else NULL
 
-    # ── Own gate refs (editable) — all gates available in gate_order ─────────
+    # ── Own gate refs — ordinary gates editable; quadrant refs locked ─────────
     gate_refs_ui <- NULL
     if (!is_root && length(rv$gates) > 0) {
-      # All gates are editable; applying a gate already filtered by a parent is
-      # a logical no-op (the parent mask already excludes those events).
+      # Applying an ordinary gate already filtered by a parent is a logical
+      # no-op (the parent mask already excludes those events).
       all_gids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
+      editable_gids <- all_gids[vapply(all_gids, function(gid) {
+        !identical(rv$gates[[gid]]$gate_type, "quadrant")
+      }, logical(1))]
+      locked_quadrant_refs <- Filter(function(ref) {
+        identical(rv$gates[[ref$gate_id]]$gate_type, "quadrant")
+      }, pop$gate_refs)
       # Any existing gate_ref (include or legacy exclude) shows up as checked.
       # Applying the editor normalises checked refs to include = TRUE.
       current_refs <- list()
       for (ref in pop$gate_refs) current_refs[[ref$gate_id]] <- TRUE
 
-      ref_rows <- lapply(all_gids, function(gid) {
+      ref_rows <- lapply(editable_gids, function(gid) {
         gate <- rv$gates[[gid]]; is_checked <- isTRUE(current_refs[[gid]])
         tags$div(class = "gate-ref-edit-row",
           tags$span(class = "gate-color-swatch",
@@ -6053,12 +6086,24 @@ server <- function(input, output, session) {
           tags$span(class = "gate-ref-name", gate$name),
           checkboxInput(paste0("edit_ref_", gid), "Include", value = is_checked))
       })
+      locked_rows <- lapply(locked_quadrant_refs, function(ref) {
+        gate <- rv$gates[[ref$gate_id]]
+        tags$div(class = "gate-ref-edit-row",
+          tags$span(class = "gate-color-swatch",
+                    style = paste0("background:", gate$color,
+                                   "; width:10px; height:10px; border-radius:2px;")),
+          tags$span(class = "gate-ref-name",
+                    paste0(gate$name, " · quadrant ", ref$quadrant)),
+          tags$span("Locked", style = "margin-left:auto; color:#777; font-size:11px;")
+        )
+      })
       gate_refs_ui <- tagList(
         tags$div(class = "pop-editor-row",
           tags$div(style = paste0("font-size:10px; color:#555; font-weight:700;",
                                   " text-transform:uppercase; letter-spacing:0.4px;",
                                   " margin-bottom:3px;"),
                    "\u270F\uFE0F Gates for this population"),
+          locked_rows,
           ref_rows,
           actionButton("apply_gate_refs_btn", "Apply",
                        class = "btn-xs btn-primary", style = "margin-top: 5px;"))
@@ -6109,11 +6154,17 @@ server <- function(input, output, session) {
     save_undo_snapshot()
     pop_id_edit <- rv$active_population_id
 
-    # All gates are editable; use gate_order for consistent ordering
+    # Quadrant references identify one of four regions and must remain exact;
+    # ordinary gate checkboxes are the only editable references here.
     all_gate_ids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
+    editable_gate_ids <- all_gate_ids[vapply(all_gate_ids, function(gid) {
+      !identical(rv$gates[[gid]]$gate_type, "quadrant")
+    }, logical(1))]
 
-    new_refs <- list()
-    for (gid in all_gate_ids) {
+    new_refs <- Filter(function(ref) {
+      identical(rv$gates[[ref$gate_id]]$gate_type, "quadrant")
+    }, rv$populations[[pop_id_edit]]$gate_refs)
+    for (gid in editable_gate_ids) {
       if (isTRUE(input[[paste0("edit_ref_", gid)]])) {
         new_refs[[length(new_refs) + 1L]] <- new_gate_ref(gid, include = TRUE)
       }
@@ -9117,6 +9168,8 @@ server <- function(input, output, session) {
       selectInput("load_ws_source", "Source SCE:", choices = sce_with_ws),
       tags$p("Gates whose channels are not present in this SCE will be skipped.",
              style = "color: #555; font-size: 12px;"),
+      tags$p("Any dependent population branch is skipped with them so its gating logic cannot change.",
+             style = "color: #555; font-size: 12px;"),
       tags$p("This will replace the current gates and populations.",
              style = "color: #c00; font-size: 12px;"),
       footer = tagList(modalButton("Cancel"),
@@ -10493,10 +10546,10 @@ ui_with_runjs <- tagList(
     $(document).ready(function() {
       var tips = {
         // Left column
-        'load_workspace_btn':   'Load gates & populations from another SCE object currently in memory (channels are matched by name; missing ones are skipped)',
+        'load_workspace_btn':   'Load gates & populations from another SCE object currently in memory (channel-incompatible gates and their dependent population branches are skipped)',
         'reset_workspace_btn':  'Delete all gates and populations from this SCE (undoable)',
         'save_workspace_rds_dl': 'Download the current gates, populations, scales and illustration settings as a portable workspace .rds file',
-        'load_workspace_rds_upload': 'Load a workspace .rds file (channels are matched by name; missing ones are skipped)',
+        'load_workspace_rds_upload': 'Load a workspace .rds file (channel-incompatible gates and their dependent population branches are skipped)',
         'apply_instrument_mode_btn': 'Apply selected instrument mode to the loaded SCE (recomputes exprs from counts when available)',
         'export_pop_btn':     'Export the active population as a colData column on the SCE',
         'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
