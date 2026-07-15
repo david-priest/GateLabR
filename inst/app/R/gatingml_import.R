@@ -77,7 +77,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 #' Parse GateLab/GateLabR scale and compensation state from custom_info.
 .gml_parse_gatelabr_state <- function(root_node) {
-  empty <- list(scales = NULL, compensation = NULL)
+  empty <- list(scales = NULL, cytof_cofactor = NULL, compensation = NULL)
   ci <- .gml_first_child_local(root_node, "custom_info")
   if (is.null(ci)) return(empty)
   gs <- .gml_first_child_local(ci, "gatelabr_scales")
@@ -92,8 +92,45 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   )
   if (!is.list(parsed)) stop("Invalid embedded GateLab scale or compensation metadata.")
   scales <- parsed$channels %||% NULL
+  if (!is.null(scales)) {
+    if (!is.list(scales)) stop("Invalid embedded GateLab scale state: channel settings are malformed.")
+    if (length(scales) > 0L && (is.null(names(scales)) || any(!nzchar(names(scales))))) {
+      stop("Invalid embedded GateLab scale state: channel names are malformed.")
+    }
+    numeric_fields <- c("w", "cofactor", "lo", "hi", "raw_lo", "raw_hi")
+    for (ch in names(scales)) {
+      entry <- scales[[ch]]
+      if (!nzchar(ch) || !is.list(entry)) {
+        stop("Invalid embedded GateLab scale state: a channel entry is malformed.")
+      }
+      for (field in intersect(names(entry), numeric_fields)) {
+        value <- suppressWarnings(as.numeric(entry[[field]]))
+        if (length(value) != 1L || !is.finite(value)) {
+          stop("Invalid embedded GateLab scale state for ", ch, ": ", field, " is not finite.")
+        }
+        entry[[field]] <- value
+      }
+      if (!is.null(entry$cofactor) && entry$cofactor <= 0) {
+        stop("Invalid embedded GateLab scale state for ", ch, ": cofactor must be positive.")
+      }
+      if (xor(is.null(entry$raw_lo), is.null(entry$raw_hi)) ||
+          (!is.null(entry$raw_lo) && entry$raw_hi <= entry$raw_lo)) {
+        stop("Invalid embedded GateLab scale state for ", ch, ": raw range is malformed.")
+      }
+      scales[[ch]] <- entry
+    }
+  }
+  cytof_cofactor <- parsed$cytof_cofactor %||% NULL
+  if (!is.null(cytof_cofactor)) {
+    cytof_cofactor <- suppressWarnings(as.numeric(cytof_cofactor))
+    if (length(cytof_cofactor) != 1L || !is.finite(cytof_cofactor) || cytof_cofactor <= 0) {
+      stop("Invalid embedded GateLab scale state: CyTOF cofactor must be positive.")
+    }
+  }
   raw <- parsed$compensation
-  if (is.null(raw)) return(list(scales = scales, compensation = NULL))
+  if (is.null(raw)) {
+    return(list(scales = scales, cytof_cofactor = cytof_cofactor, compensation = NULL))
+  }
   if (!is.list(raw) || length(raw$enabled) != 1L || !is.logical(raw$enabled) ||
       is.na(raw$enabled)) {
     stop("Invalid embedded GateLab compensation state: enabled must be true or false.")
@@ -130,6 +167,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   }
   list(
     scales = scales,
+    cytof_cofactor = cytof_cofactor,
     compensation = list(
       enabled = enabled,
       reference = reference,
@@ -137,6 +175,43 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       matrix = matrix
     )
   )
+}
+
+# Convert a stored scale entry to the current app's display coordinates. Version
+# 3 raw endpoints are authoritative; legacy files without them retain the prior
+# direct lo/hi behaviour for backwards compatibility within GateLabR.
+.gml_scale_range_to_display <- function(entry, channel, is_flow,
+                                        raw_channel_vals = NULL,
+                                        logicle_w_params = NULL,
+                                        scatter_cofactor_params = NULL,
+                                        cytof_cofactor = 5) {
+  raw_lo <- suppressWarnings(as.numeric(entry$raw_lo %||% NA))
+  raw_hi <- suppressWarnings(as.numeric(entry$raw_hi %||% NA))
+  if (is.finite(raw_lo) && is.finite(raw_hi) && raw_hi > raw_lo) {
+    display <- tryCatch({
+      if (isTRUE(is_flow)) {
+        flow_transform_channel_values(
+          raw_vals = c(raw_lo, raw_hi),
+          channel_name = channel,
+          raw_channel_vals = raw_channel_vals,
+          logicle_w_params = logicle_w_params,
+          scatter_cofactor_params = scatter_cofactor_params
+        )
+      } else if (.is_cytof_raw_channel(channel)) {
+        c(raw_lo, raw_hi)
+      } else {
+        asinh(c(raw_lo, raw_hi) / cytof_cofactor)
+      }
+    }, error = function(e) c(NA_real_, NA_real_))
+    if (length(display) == 2L && all(is.finite(display)) && display[2] > display[1]) {
+      return(as.numeric(display))
+    }
+    return(NULL)
+  }
+
+  lo <- suppressWarnings(as.numeric(entry$lo %||% NA))
+  hi <- suppressWarnings(as.numeric(entry$hi %||% NA))
+  if (is.finite(lo) && is.finite(hi) && hi > lo) c(lo, hi) else NULL
 }
 
 .gml_parse_gatelabr_scales <- function(root_node) {
@@ -1229,6 +1304,7 @@ import_gatingml_from_cytobank <- function(file_path,
     source = .gml_detect_source(root),
     n_pops_imported = max(0L, length(populations) - 1L),
     scales = gatelabr_state$scales,
+    cytof_cofactor = gatelabr_state$cytof_cofactor,
     compensation = gatelabr_state$compensation,
     compensation_refs = compensation_refs
   )

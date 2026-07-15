@@ -9506,14 +9506,41 @@ server <- function(input, output, session) {
     comp_changed <- !is.null(comp_target) &&
       !identical(isTRUE(comp_target), isTRUE(rv$comp_on))
 
+    source_cytof_cofactor <- suppressWarnings(as.numeric(parsed$cytof_cofactor %||% NA))
+    current_cytof_cofactor <- suppressWarnings(as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5))
+    cytof_cofactor_changed <- !is_flow_session(rv$sce) &&
+      is.finite(source_cytof_cofactor) && source_cytof_cofactor > 0 &&
+      !isTRUE(all.equal(source_cytof_cofactor, current_cytof_cofactor, tolerance = 1e-12))
+    if (cytof_cofactor_changed && !"counts" %in% SummarizedExperiment::assayNames(rv$sce)) {
+      showNotification(
+        "This Gating-ML file uses a different CyTOF cofactor, but the loaded object has no raw counts assay to re-transform. The workspace was not changed.",
+        type = "error", duration = 8)
+      return()
+    }
+
     # Gate/population undo snapshots do not carry display-transform state. Do not
     # retain an unsafe route back to gates drawn in the previous linear space.
-    if (comp_changed) {
+    if (comp_changed || cytof_cofactor_changed) {
       rv$undo_stack <- list()
       rv$redo_stack <- list()
-      apply_compensation_state(comp_target, warn_existing = FALSE, refresh = FALSE)
+      if (comp_changed) {
+        apply_compensation_state(comp_target, warn_existing = FALSE, refresh = FALSE)
+      }
     } else {
       save_undo_snapshot()
+    }
+    if (cytof_cofactor_changed) {
+      counts_mat <- extract_assay_data(rv$sce, "counts")
+      exprs_mat <- transform_matrix_by_instrument(
+        raw_mat = counts_mat,
+        channel_names = colnames(counts_mat),
+        instrument_type = "cytof",
+        cofactor = source_cytof_cofactor,
+        verbose = FALSE
+      )
+      SummarizedExperiment::assay(rv$sce, "exprs") <- t(exprs_mat)
+      S4Vectors::metadata(rv$sce)$cofactor <- source_cytof_cofactor
+      rv$cytof_axis_range <- list()
     }
     rv$gates <- parsed$gates
     rv$gate_order <- parsed$gate_order %||% names(parsed$gates)
@@ -9526,7 +9553,8 @@ server <- function(input, output, session) {
     rv$gate_version <- rv$gate_version + 1L
 
     # Restore per-channel scales saved in the GatingML custom_info (if present).
-    # Only channels in the current SCE are touched; W/cofactor apply to flow.
+    # Apply transforms first, then convert v3 raw endpoints into this app's
+    # flowCore display coordinates. Legacy files retain their direct lo/hi values.
     n_scales <- 0L
     changed_transform <- FALSE
     sc <- parsed$scales
@@ -9535,19 +9563,42 @@ server <- function(input, output, session) {
       changed_range <- FALSE
       for (ch in intersect(names(sc), sess_ch)) {
         e  <- sc[[ch]]
-        lo <- suppressWarnings(as.numeric(e$lo %||% NA))
-        hi <- suppressWarnings(as.numeric(e$hi %||% NA))
-        if (is.finite(lo) && is.finite(hi) && hi > lo) {
-          rv$global_scale_ranges[[ch]] <- list(lo = lo, hi = hi)
-          changed_range <- TRUE; n_scales <- n_scales + 1L
-        }
         w <- suppressWarnings(as.numeric(e$w %||% NA))
-        if (is.finite(w)) {
+        if (is_flow_session(rv$sce) && !.is_qc_channel(ch) &&
+            !.is_scatter_channel(ch) && is.finite(w)) {
           rv$flow_logicle_w[[ch]] <- max(0.1, min(w, 2.0)); changed_transform <- TRUE
         }
         cofac <- suppressWarnings(as.numeric(e$cofactor %||% NA))
-        if (is.finite(cofac) && cofac > 0) {
+        if (is_flow_session(rv$sce) && .is_scatter_channel(ch) &&
+            is.finite(cofac) && cofac > 0) {
           rv$flow_scatter_cofactor[[ch]] <- cofac; changed_transform <- TRUE
+        }
+      }
+      flow_range_raw <- NULL
+      if (is_flow_session(rv$sce)) {
+        flow_range_raw <- extract_assay_data(rv$sce, "counts")
+        if (isTRUE(rv$comp_on) && !is.null(rv$spillover_matrix)) {
+          flow_range_raw <- compensate_matrix(flow_range_raw, rv$spillover_matrix)
+        }
+      }
+      active_cytof_cofactor <- suppressWarnings(as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5))
+      if (!is.finite(active_cytof_cofactor) || active_cytof_cofactor <= 0) active_cytof_cofactor <- 5
+      for (ch in intersect(names(sc), sess_ch)) {
+        raw_vals <- if (!is.null(flow_range_raw) && ch %in% colnames(flow_range_raw)) {
+          flow_range_raw[, ch]
+        } else NULL
+        display_range <- .gml_scale_range_to_display(
+          entry = sc[[ch]],
+          channel = ch,
+          is_flow = is_flow_session(rv$sce),
+          raw_channel_vals = raw_vals,
+          logicle_w_params = rv$flow_logicle_w,
+          scatter_cofactor_params = rv$flow_scatter_cofactor,
+          cytof_cofactor = active_cytof_cofactor
+        )
+        if (!is.null(display_range)) {
+          rv$global_scale_ranges[[ch]] <- list(lo = display_range[1], hi = display_range[2])
+          changed_range <- TRUE; n_scales <- n_scales + 1L
         }
       }
       if (changed_range || changed_transform) {
@@ -9558,7 +9609,7 @@ server <- function(input, output, session) {
     }
     # Apply a changed linear space once, after imported W/cofactor values are restored.
     # Transform-only changes need the same refresh for the flow exprs display.
-    if (comp_changed ||
+    if (comp_changed || cytof_cofactor_changed ||
         (changed_transform && is_flow_session(rv$sce) && rv$assay_name == "exprs")) {
       refresh_assay_data(reset_cache = TRUE)
     }
@@ -9585,6 +9636,20 @@ server <- function(input, output, session) {
       showNotification("No gates to export.", type = "warning", duration = 4)
       return()
     }
+    quadrant_omissions <- .gml_ex_quadrant_omissions(
+      isolate(rv$gates), isolate(rv$populations)
+    )
+    if (length(quadrant_omissions$gate_ids) > 0L) {
+      showNotification(
+        paste0(
+          "GatingML does not yet include quadrant gates: omitting ",
+          length(quadrant_omissions$gate_ids), " quadrant gate(s) and ",
+          length(quadrant_omissions$population_ids),
+          " dependent population(s), including descendants. Save the .rds workspace to preserve them."
+        ),
+        type = "warning", duration = 10
+      )
+    }
     tryCatch({
       export_gatingml_to_cytobank(
         gates                   = isolate(rv$gates),
@@ -9599,7 +9664,8 @@ server <- function(input, output, session) {
         counts_mat              = isolate(rv$flow_raw_data),
         global_scale_ranges     = isolate(rv$global_scale_ranges),
         compensation_on         = isolate(rv$comp_on),
-        spillover_matrix        = isolate(rv$spillover_matrix)
+        spillover_matrix        = isolate(rv$spillover_matrix),
+        allow_quadrant_omission = TRUE
       )
     }, error = function(e) {
       showNotification(paste("GatingML export error:", e$message),
