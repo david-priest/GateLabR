@@ -384,9 +384,12 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
   if (identical(loc, "RectangleGate")) {
     dims <- .gml_parse_dimensions(node)
-    if (length(dims) < 2) return(NULL)
+    if (length(dims) < 1 || length(dims) > 2) return(NULL)
     x <- dims[[1]]
-    y <- dims[[2]]
+    # A one-dimensional Gating-ML RectangleGate is a range gate. Repeating
+    # the same channel on both axes preserves its interval membership exactly
+    # in GateLabR's two-dimensional rectangle mask.
+    y <- if (length(dims) >= 2) dims[[2]] else dims[[1]]
 
     xlo <- if (!is.null(x$min) && is.finite(x$min)) x$min else -1e9
     xhi <- if (!is.null(x$max) && is.finite(x$max)) x$max else 1e9
@@ -401,7 +404,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       y_channel = y$channel,
       vertices = list(c(xlo, ylo), c(xhi, ylo), c(xhi, yhi), c(xlo, yhi)),
       channels = c(x$channel, y$channel),
-      dims = dims
+      dims = list(x, y)
     ))
   }
 
@@ -470,6 +473,28 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   NULL
 }
 
+.gml_gate_label <- function(node) {
+  gate_id <- .gml_attr_local(node, "id")
+  gate_name <- .gml_attr_local(node, "name") %||% .gml_parse_cytobank_name(node)
+  suffix <- if (!is.null(gate_name) && nzchar(gate_name) && !identical(gate_name, gate_id)) {
+    paste0(" (", gate_name, ")")
+  } else {
+    ""
+  }
+  paste0(.gml_local_name(node), if (!is.null(gate_id) && nzchar(gate_id)) paste0(" ", gate_id) else "", suffix)
+}
+
+.gml_stop_import_problems <- function(problems) {
+  problems <- unique(problems)
+  stop(
+    paste0(
+      "Gating-ML import cancelled because unsupported or invalid features were found:\n- ",
+      paste(problems, collapse = "\n- ")
+    ),
+    call. = FALSE
+  )
+}
+
 .gml_default_label_offset <- function(vertices) {
   if (is.null(vertices) || length(vertices) == 0) return(c(0, 0))
   ys <- suppressWarnings(vapply(vertices, function(v) as.numeric(v[[2]]), numeric(1)))
@@ -512,6 +537,8 @@ import_gatingml_from_cytobank <- function(file_path,
   raw_gates <- list()
   bool_order <- character(0)
   hierarchy_node <- NULL
+  import_problems <- character(0)
+  supported_gate_types <- c("RectangleGate", "PolygonGate", "BooleanGate")
 
   for (el in top_nodes) {
     loc <- .gml_local_name(el)
@@ -519,11 +546,133 @@ import_gatingml_from_cytobank <- function(file_path,
       hierarchy_node <- el
       next
     }
+
+    if (endsWith(loc, "Gate") && !loc %in% supported_gate_types) {
+      import_problems <- c(import_problems, paste0(.gml_gate_label(el), " is not supported."))
+      next
+    }
+    if (!loc %in% supported_gate_types) next
+
+    gate_id <- .gml_attr_local(el, "id")
+    if (is.null(gate_id) || !nzchar(gate_id)) {
+      import_problems <- c(import_problems, paste0(loc, " is missing its required id."))
+      next
+    }
+    if (!is.null(raw_gates[[gate_id]])) {
+      import_problems <- c(import_problems, paste0(loc, " has duplicate id ", gate_id, "."))
+      next
+    }
+
+    if (identical(loc, "RectangleGate")) {
+      n_dims <- length(.gml_parse_dimensions(el))
+      if (n_dims < 1 || n_dims > 2) {
+        import_problems <- c(
+          import_problems,
+          sprintf("%s has %d dimensions; only 1D ranges and 2D rectangles are supported.",
+                  .gml_gate_label(el), n_dims)
+        )
+        next
+      }
+    } else if (identical(loc, "PolygonGate")) {
+      n_dims <- length(.gml_parse_dimensions(el))
+      n_vertices <- length(.gml_children_local(el, "vertex"))
+      if (n_dims != 2 || n_vertices < 3) {
+        import_problems <- c(
+          import_problems,
+          paste0(.gml_gate_label(el), " must contain exactly 2 dimensions and at least 3 vertices.")
+        )
+        next
+      }
+    } else if (identical(loc, "BooleanGate")) {
+      operations <- Filter(
+        function(child) .gml_local_name(child) %in% c("and", "or", "not"),
+        as.list(xml2::xml_children(el))
+      )
+      refs <- if (length(operations) == 1) .gml_children_local(operations[[1]], "gateReference") else list()
+      if (length(operations) != 1 || length(refs) == 0) {
+        import_problems <- c(
+          import_problems,
+          paste0(.gml_gate_label(el), " must contain one non-empty Boolean operation.")
+        )
+        next
+      }
+      if (identical(.gml_local_name(operations[[1]]), "not") && length(refs) != 1) {
+        import_problems <- c(
+          import_problems,
+          sprintf("%s uses NOT with %d references; unary NOT requires exactly one.",
+                  .gml_gate_label(el), length(refs))
+        )
+        next
+      }
+    }
+
     g <- .gml_parse_gate_node(el)
-    if (is.null(g) || is.null(g$gml_id) || !nzchar(g$gml_id)) next
+    if (is.null(g) || is.null(g$gml_id) || !nzchar(g$gml_id)) {
+      import_problems <- c(import_problems, paste0(.gml_gate_label(el), " could not be parsed."))
+      next
+    }
     raw_gates[[g$gml_id]] <- g
     if (identical(g$gate_type, "boolean")) bool_order <- c(bool_order, g$gml_id)
   }
+
+  for (g in raw_gates) {
+    for (dim in g$dims %||% list()) {
+      ref <- dim$transformation_ref %||% NULL
+      if (!is.null(ref) && nzchar(ref) && is.null(transforms_map[[ref]])) {
+        import_problems <- c(
+          import_problems,
+          paste0(g$gml_id, " references unsupported or missing transformation ", ref, ".")
+        )
+      }
+    }
+    if (identical(g$gate_type, "boolean")) {
+      for (ref in g$refs %||% list()) {
+        target <- raw_gates[[ref$gate_id]]
+        if (is.null(target)) {
+          import_problems <- c(
+            import_problems,
+            paste0(g$gml_id, " references missing gate ", ref$gate_id, ".")
+          )
+        } else if (identical(target$gate_type, "boolean")) {
+          # Cytobank/GateLab flat exports encode ancestry as a Boolean reference
+          # plus a matching pop_X parent in custom_info. That pattern maps safely
+          # to a parent population followed by incremental primitive gates.
+          parent_indices <- g$pop_parent_indices %||% integer(0)
+          target_position <- match(ref$gate_id, bool_order)
+          target_gate_set_id <- target$gate_set_id %||% NA_integer_
+          is_flat_parent_reference <- is.null(hierarchy_node) && any(
+            parent_indices == target_position |
+              (!is.na(target_gate_set_id) & parent_indices == target_gate_set_id),
+            na.rm = TRUE
+          )
+          if (!isTRUE(is_flat_parent_reference)) {
+            import_problems <- c(
+              import_problems,
+              paste0(g$gml_id, " contains a nested Boolean reference to ", ref$gate_id,
+                     " that cannot be represented safely.")
+            )
+          }
+        }
+      }
+    }
+  }
+
+  if (!is.null(hierarchy_node)) {
+    pairs <- xml2::xml_find_all(hierarchy_node, ".//*[local-name()='PopulationGatePair']")
+    for (pair in pairs) {
+      ref <- .gml_attr_local(pair, "gate-ref")
+      if (is.null(ref) || !nzchar(ref)) {
+        import_problems <- c(import_problems, "A PopulationGatePair is missing gate-ref.")
+      } else if (is.null(raw_gates[[ref]])) {
+        import_problems <- c(
+          import_problems,
+          paste0("A PopulationGatePair references missing gate ", ref, ".")
+        )
+      }
+    }
+  }
+
+  if (length(import_problems) > 0) .gml_stop_import_problems(import_problems)
 
   gml_to_app <- list()
   app_gates <- list()
@@ -630,9 +779,20 @@ import_gatingml_from_cytobank <- function(file_path,
             aid <- gml_to_app[[rid]]
             if (is.null(aid) || identical(aid, rid) || aid %in% seen) next
             seen <- c(seen, aid)
-            include <- !isTRUE(r$complement)
-            if (identical(ref_gate$operation, "not")) include <- FALSE
+            include <- if (identical(ref_gate$operation, "not")) {
+              isTRUE(r$complement)
+            } else {
+              !isTRUE(r$complement)
+            }
             gate_refs[[length(gate_refs) + 1L]] <- new_gate_ref(aid, include = include)
+          }
+          if (isTRUE(complement)) {
+            gate_refs <- lapply(gate_refs, function(ref) {
+              new_gate_ref(ref$gate_id, include = !isTRUE(ref$include), quadrant = ref$quadrant)
+            })
+            if (!identical(ref_gate$operation, "not")) {
+              gate_logic <- if (identical(gate_logic, "and")) "or" else "and"
+            }
           }
         } else {
           aid <- gml_to_app[[gate_ref_gml]]
@@ -691,7 +851,11 @@ import_gatingml_from_cytobank <- function(file_path,
         if (!is.null(rg) && identical(rg$gate_type, "boolean")) next
         if (is.null(gml_to_app[[rid]])) next
         prim <- c(prim, rid)
-        inc[[rid]] <- !isTRUE(r$complement)
+        inc[[rid]] <- if (identical(g$operation, "not")) {
+          isTRUE(r$complement)
+        } else {
+          !isTRUE(r$complement)
+        }
       }
 
       bool_names[[bid]] <- g$name
