@@ -10555,7 +10555,7 @@ ui_with_runjs <- tagList(
         'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
         'save_rds_dl':        'Download the SCE (with embedded workspace) as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
-        'import_gatingml_upload': 'Import Cytobank Gating-ML gates and positive AND populations; files containing NOT or OR logic are rejected without changing the workspace',
+        'import_gatingml_upload': 'Import Cytobank Gating-ML gates and positive AND populations; files containing NOT/OR logic or unmatched channels are rejected without changing the workspace',
         'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML ($PnN channel names, flat BooleanGates + custom_info) — re-imports into GateLabR / GateLab and uploads to Cytobank',
         // Mode toolbar
         'mode_rect':     'Draw a rectangle gate',

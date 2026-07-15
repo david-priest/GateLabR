@@ -113,6 +113,41 @@ or_problem <- tryCatch(
 )
 stopifnot(grepl('Population "Low or high" uses OR logic', or_problem, fixed = TRUE))
 
+missing_channel_xml <- '<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <gating:RectangleGate gating:id="present-1" gating:name="Present gate">
+    <gating:dimension gating:min="0" gating:max="1"><data-type:fcs-dimension data-type:name="X"/></gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="missing-1" gating:name="Missing gate">
+    <gating:dimension gating:min="0" gating:max="1"><data-type:fcs-dimension data-type:name="Absent"/></gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="both-1" gating:name="Both gates">
+    <gating:and>
+      <gating:gateReference gating:ref="present-1"/>
+      <gating:gateReference gating:ref="missing-1"/>
+    </gating:and>
+  </gating:BooleanGate>
+</gating:Gating-ML>'
+
+missing_channel_problem <- tryCatch(
+  {
+    import_gatingml_from_cytobank(write_gml(missing_channel_xml), "X")
+    ""
+  },
+  error = function(e) conditionMessage(e)
+)
+stopifnot(grepl(
+  'Gate "Missing gate" (missing-1) references channel(s) not present in the loaded data: "Absent"',
+  missing_channel_problem,
+  fixed = TRUE
+))
+stopifnot(grepl(
+  "Partial Gating-ML imports are not allowed because dropping a gate can change population membership",
+  missing_channel_problem,
+  fixed = TRUE
+))
+
 unsupported_xml <- '<?xml version="1.0"?>
 <gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
   xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"

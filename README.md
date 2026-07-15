@@ -49,9 +49,10 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   / spectral-unmixed and CyTOF files (no usable matrix) hide the option.
 - **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip supported gates
   and positive AND population trees through Cytobank and other ISAC Gating-ML
-  2.0-compliant tools. Files containing NOT or OR populations are rejected before
-  import rather than being silently altered. (FlowJo uses its own `.wsp` format
-  and does not round-trip Gating-ML.)
+  2.0-compliant tools. Files containing NOT or OR populations, or gates whose
+  channels cannot be matched to the loaded data, are rejected before import rather
+  than being partially or silently altered. (FlowJo uses its own `.wsp` format and
+  does not round-trip Gating-ML.)
 - **Workspace persistence.** Gates, populations, scales and illustration
   settings are saved inside the SCE (`metadata(sce)$gating_workspace`) and
   re-loaded automatically.

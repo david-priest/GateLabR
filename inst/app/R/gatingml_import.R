@@ -695,6 +695,37 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   unique(problems)
 }
 
+.gml_missing_channel_problems <- function(raw_gates, session_channels, pnn_to_channel) {
+  problems <- character(0)
+  for (gate in raw_gates) {
+    if (identical(gate$gate_type, "boolean")) next
+    channels <- unique(gate$channels %||% character(0))
+    missing <- channels[vapply(
+      channels,
+      function(channel) is.null(.gml_resolve_channel(channel, session_channels, pnn_to_channel)),
+      logical(1)
+    )]
+    if (length(missing) > 0L) {
+      problems <- c(
+        problems,
+        paste0(
+          "Gate ", .gml_quote_name(gate$name), " (", gate$gml_id,
+          ") references channel(s) not present in the loaded data: ",
+          paste(vapply(missing, .gml_quote_name, character(1)), collapse = ", "),
+          "."
+        )
+      )
+    }
+  }
+  if (length(problems) > 0L) {
+    problems <- c(
+      problems,
+      "Partial Gating-ML imports are not allowed because dropping a gate can change population membership."
+    )
+  }
+  problems
+}
+
 .gml_default_label_offset <- function(vertices) {
   if (is.null(vertices) || length(vertices) == 0) return(c(0, 0))
   ys <- suppressWarnings(vapply(vertices, function(v) as.numeric(v[[2]]), numeric(1)))
@@ -816,7 +847,8 @@ import_gatingml_from_cytobank <- function(file_path,
   }
   import_problems <- c(
     import_problems,
-    .gml_positive_and_logic_problems(raw_gates, hierarchy_node)
+    .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
+    .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
   )
   gatelabr_state <- .gml_parse_gatelabr_state(root)
   compensation_refs <- .gml_parse_compensation_refs(raw_gates)
