@@ -58,7 +58,7 @@
 </h1></div>
 <p><a href="https://doi.org/10.5281/zenodo.20404387" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a> <a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/docs-pkgdown-4b9fd5.svg" alt="Docs"></a></p>
 <p><strong>Interactive manual gating for <code>SingleCellExperiment</code> objects in R / Shiny.</strong></p>
-<p><em>Open-source flow cytometry and CyTOF (mass cytometry) gating app for R / Shiny — with FCS import, fluorescence compensation, Boolean population trees, and Gating-ML round-trip, all persisted inside the object.</em></p>
+<p><em>Open-source flow cytometry and CyTOF (mass cytometry) gating app for R / Shiny — with FCS import, fluorescence compensation, hierarchical population trees, and Gating-ML exchange, all persisted inside the object.</em></p>
 <p>📖 <strong><a href="https://david-priest.github.io/GateLabR">Documentation &amp; Getting Started</a></strong></p>
 <p>GateLabR is a desktop-style Shiny application for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on <a href="https://bioconductor.org/packages/SingleCellExperiment/" class="external-link"><code>SingleCellExperiment</code></a> objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST, diffcyt) where the events already live in R as an SCE and you want a fast, reproducible alternative to round-tripping through FlowJo or Cytobank just to draw a few gates.</p>
 <p>Gates are drawn on an interactive D3.js canvas, and gates, populations, scales and illustration settings are persisted inside the SCE itself via <code>metadata()</code>, so loading the SCE again restores the entire workspace.</p>
@@ -70,13 +70,13 @@
 <li>
 <strong>Draw and edit gates interactively.</strong> Polygon, rectangle and quadrant gates on any pair of channels, with click-and-drag vertex editing, undo / redo, and per-gate colour and label.</li>
 <li>
-<strong>Boolean population trees.</strong> Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent; counts and percentages update live.</li>
+<strong>Positive AND population trees.</strong> Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent; counts and percentages update live.</li>
 <li>
 <strong>Flow and CyTOF modes.</strong> Auto-detects the instrument type from channel names. Flow uses per-channel logicle for fluorescence and arcsinh for FSC / SSC scatter, with editable W and cofactor; CyTOF channels use arcsinh (cofactor 5).</li>
 <li>
 <strong>Compensation.</strong> When an <code>.fcs</code> carries an embedded spillover matrix (<code>$SPILLOVER</code>), it can be applied to the raw fluorescence data before gating — toggled on/off from the Scales tab, with a read-only matrix viewer. Scatter and time channels are left untouched. Defaults off; apply it before drawing gates, since it changes the linear space the gates live in. Already-compensated / spectral-unmixed and CyTOF files (no usable matrix) hide the option.</li>
 <li>
-<strong>Cytobank-compatible Gating-ML 2.0 import / export.</strong> Round-trip gates through Cytobank and other ISAC Gating-ML 2.0-compliant tools. (FlowJo uses its own <code>.wsp</code> format and does not round-trip Gating-ML.)</li>
+<strong>Cytobank-compatible Gating-ML 2.0 import / export.</strong> Round-trip supported gates and positive AND population trees through Cytobank and other ISAC Gating-ML 2.0-compliant tools. Files containing NOT or OR populations, or gates whose channels cannot be matched to the loaded data, are rejected before import rather than being partially or silently altered. (FlowJo uses its own <code>.wsp</code> format and does not round-trip Gating-ML.)</li>
 <li>
 <strong>Workspace persistence.</strong> Gates, populations, scales and illustration settings are saved inside the SCE (<code>metadata(sce)$gating_workspace</code>) and re-loaded automatically.</li>
 <li>
@@ -155,8 +155,8 @@
 <code>GatingSet</code> on disk</td>
 </tr>
 <tr>
-<td><strong>Gating-ML 2.0 round-trip</strong></td>
-<td><strong>Yes</strong></td>
+<td><strong>Gating-ML 2.0 exchange</strong></td>
+<td><strong>Yes (positive AND populations)</strong></td>
 <td><strong>No</strong></td>
 <td><strong>Yes</strong></td>
 <td>Partial</td>
@@ -171,7 +171,7 @@
 </tr>
 </tbody>
 </table>
-<p>Note the <strong>Gating-ML row</strong>: of the two dominant GUIs, <strong>only Cytobank</strong> round-trips ISAC Gating-ML 2.0 — <strong>FlowJo does not</strong> (it uses its own <code>.wsp</code> format). GateLabR speaks Cytobank-compatible Gating-ML, so gates move losslessly between GateLabR and Cytobank.</p>
+<p>Note the <strong>Gating-ML row</strong>: of the two dominant GUIs, <strong>only Cytobank</strong> exchanges ISAC Gating-ML 2.0 — <strong>FlowJo does not</strong> (it uses its own <code>.wsp</code> format). GateLabR speaks Cytobank-compatible Gating-ML, so supported gate geometry and positive AND population trees move losslessly between GateLabR and Cytobank. Broader Boolean logic may be considered in a future update if there is user demand.</p>
 <p>FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent project and is not affiliated with or endorsed by BD or FlowJo.</p>
 <p>GateLabR suits two workflows. If your data already lives in R as a <code>SingleCellExperiment</code>, it lets you gate without round-tripping to FlowJo or Cytobank and hand populations straight to <code>diffcyt</code> / <code>CATALYST</code>. But it’s equally at home as a plain <strong>FCS-in → gate → FCS / stats / Gating-ML out</strong> tool: import <code>.fcs</code> files, gate interactively in the GUI, and export — no R fluency needed beyond the one line to launch it.</p>
 </div>
@@ -265,7 +265,7 @@
 <li>
 <code><a href="reference/launchGatingApp.html">launchGatingApp()</a></code> (then pick a loaded SCE or Import FCS), or <code>launchGatingApp(sce)</code> to start from an object already in your session.</li>
 <li>Draw gates on the central plot; the gate list and population tree update live.</li>
-<li>Build populations by referencing gates with AND / OR logic.</li>
+<li>Build populations by referencing one or more gates; multiple references use AND logic.</li>
 <li>Export results for downstream work — populations as new <code>colData</code> columns on the SCE (<code>Export Population</code>, e.g. for <code>diffcyt</code>, <code>CATALYST</code>, or any SCE-aware analysis), or gated events back out as <code>.fcs</code>.</li>
 <li>Save the SCE (e.g. <code>saveRDS(sce, "gated.rds")</code>) — the workspace is embedded in <code>metadata()</code> and reloaded next time.</li>
 </ol>
