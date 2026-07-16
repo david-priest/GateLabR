@@ -243,6 +243,38 @@ filter_flow_channels <- function(ff) {
 # Robust FCS reading
 # ---------------------------------------------------------------------------
 
+# FCS $PnS is a descriptive marker label, not a unique parameter identity.
+# Preserve the familiar marker-only name when it is unique; when labels repeat,
+# append the stable $PnN parameter name. A final suffix protects against malformed
+# files that repeat $PnN too. This policy intentionally matches GateLab.
+.make_unique_channel_names <- function(display_names, pnn_names) {
+  if (length(display_names) != length(pnn_names)) {
+    stop("display_names and pnn_names must have the same length")
+  }
+  out <- trimws(as.character(display_names))
+  pnn <- as.character(pnn_names)
+  duplicate_values <- unique(out[duplicated(out) | duplicated(out, fromLast = TRUE)])
+  for (value in duplicate_values) {
+    idx <- which(out == value)
+    use_pnn <- !is.na(pnn[idx]) & nzchar(trimws(pnn[idx])) & pnn[idx] != value
+    out[idx[use_pnn]] <- paste0(value, " (", pnn[idx[use_pnn]], ")")
+  }
+
+  used <- character(0)
+  for (i in seq_along(out)) {
+    base <- out[[i]]
+    candidate <- base
+    suffix <- 2L
+    while (candidate %in% used) {
+      candidate <- paste0(base, " [", suffix, "]")
+      suffix <- suffix + 1L
+    }
+    out[[i]] <- candidate
+    used <- c(used, candidate)
+  }
+  out
+}
+
 #' Byte offsets (1-based) of every occurrence of `pat` within raw vector `raw`
 .find_raw_matches <- function(raw, pat) {
   n <- length(raw); m <- length(pat)
@@ -995,6 +1027,7 @@ import_fcs_files <- function(file_paths, sample_names = NULL, cofactor = 5,
 
     raw_mat <- flowCore::exprs(ff)
     pnn_names <- colnames(raw_mat)
+    display_names <- .make_unique_channel_names(display_names, pnn_names)
     colnames(raw_mat) <- display_names
 
     if (!is.null(pnn_names) && length(pnn_names) == length(display_names)) {

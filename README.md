@@ -7,8 +7,8 @@
 **Interactive manual gating for `SingleCellExperiment` objects in R / Shiny.**
 
 *Open-source flow cytometry and CyTOF (mass cytometry) gating app for R / Shiny —
-with FCS import, fluorescence compensation, Boolean population trees, and
-Gating-ML round-trip, all persisted inside the object.*
+with FCS import, fluorescence compensation, hierarchical population trees, and
+Gating-ML exchange, all persisted inside the object.*
 
 📖 **[Documentation & Getting Started](https://david-priest.github.io/GateLabR)**
 
@@ -34,7 +34,7 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
 - **Draw and edit gates interactively.** Polygon, rectangle and quadrant gates
   on any pair of channels, with click-and-drag vertex editing, undo / redo, and
   per-gate colour and label.
-- **Boolean population trees.** Build hierarchies of populations from gate
+- **Positive AND population trees.** Build hierarchies of populations from gate
   references — each population is the intersection (AND) of its gates within its
   parent; counts and percentages update live.
 - **Flow and CyTOF modes.** Auto-detects the instrument type from channel
@@ -47,9 +47,12 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   and time channels are left untouched. Defaults off; apply it before drawing
   gates, since it changes the linear space the gates live in. Already-compensated
   / spectral-unmixed and CyTOF files (no usable matrix) hide the option.
-- **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip gates
-  through Cytobank and other ISAC Gating-ML 2.0-compliant tools. (FlowJo uses its
-  own `.wsp` format and does not round-trip Gating-ML.)
+- **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip supported gates
+  and positive AND population trees through Cytobank and other ISAC Gating-ML
+  2.0-compliant tools. Files containing NOT or OR populations, or gates whose
+  channels cannot be matched to the loaded data, are rejected before import rather
+  than being partially or silently altered. (FlowJo uses its own `.wsp` format and
+  does not round-trip Gating-ML.)
 - **Workspace persistence.** Gates, populations, scales and illustration
   settings are saved inside the SCE (`metadata(sce)$gating_workspace`) and
   re-loaded automatically.
@@ -86,10 +89,10 @@ instead of replacing it — while keeping full R access to the same object.
 | Cost / licence | Free, MIT, open source | Commercial | Commercial | Free, open source |
 | Flow / CyTOF | Both (auto-detected) | Flow-focused | Both | Flow-focused |
 | Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
-| **Gating-ML 2.0 round-trip** | **Yes** | **No** | **Yes** | Partial |
+| **Gating-ML 2.0 exchange** | **Yes (positive AND populations)** | **No** | **Yes** | Partial |
 | Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
 
-Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** round-trips ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR speaks Cytobank-compatible Gating-ML, so gates move losslessly between GateLabR and Cytobank.
+Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR speaks Cytobank-compatible Gating-ML, so supported gate geometry and positive AND population trees move losslessly between GateLabR and Cytobank. Broader Boolean logic may be considered in a future update if there is user demand.
 
 FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent
 project and is not affiliated with or endorsed by BD or FlowJo.
@@ -172,7 +175,7 @@ The app opens in your default browser. The three-column layout is:
    `launchGatingApp(sce)` to start from an object already in your session.
 3. Draw gates on the central plot; the gate list and population tree update
    live.
-4. Build populations by referencing gates with AND / OR logic.
+4. Build populations by referencing one or more gates; multiple references use AND logic.
 5. Export results for downstream work — populations as new `colData` columns
    on the SCE (`Export Population`, e.g. for `diffcyt`, `CATALYST`, or any
    SCE-aware analysis), or gated events back out as `.fcs`.

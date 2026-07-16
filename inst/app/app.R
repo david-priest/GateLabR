@@ -1685,7 +1685,7 @@ server <- function(input, output, session) {
     }
     illust_settings <- capture_illust_settings(input, rv)
     inst <- if (!is.null(rv$sce)) S4Vectors::metadata(rv$sce)$instrument_type else NA_character_
-    list(
+    workspace <- list(
       gates                = rv$gates,
       gate_order           = rv$gate_order,
       populations          = rv$populations,
@@ -1715,41 +1715,34 @@ server <- function(input, output, session) {
       source_channels        = as.character(rv$channels %||% character(0)),
       source_sce_name        = if (is.null(rv$sce_name)) NA_character_ else as.character(rv$sce_name)
     )
+    validate_workspace_graph(workspace)
+    workspace
   }
 
   # Apply a workspace list (from another SCE or a .rds file) to the current
-  # session.  Skips gates whose channels are absent in the current SCE and
-  # prunes any population that ends up with zero gate references as a result.
+  # session. If a gate's channels are absent, removes every population branch
+  # that depends on that gate so surviving AND/OR definitions remain unchanged.
   apply_workspace <- function(ws, source_label = "workspace") {
     if (is.null(ws)) {
       showNotification("No workspace to load.", type = "error", duration = 4)
       return(invisible(FALSE))
     }
-    ws <- normalize_workspace_gate_space(ws)
-
-    # Channel-mismatch handling: drop gates whose x/y channels are missing.
-    invalid <- validate_workspace_channels(ws, rv$channels)
-    n_skipped <- length(invalid)
-    if (n_skipped > 0) {
-      for (gid in invalid) ws$gates[[gid]] <- NULL
-      ws$gate_order <- setdiff(ws$gate_order %||% names(ws$gates), invalid)
-      # Prune gate_refs in populations to drop refs to missing gates, then
-      # drop populations that no longer reference any gate (except root).
-      valid_ids <- names(ws$gates)
-      root_id   <- ws$root_population_id
-      if (!is.null(ws$populations)) {
-        ws$populations <- lapply(ws$populations, function(pop) {
-          if (is.null(pop) || is.null(pop$gate_refs)) return(pop)
-          pop$gate_refs <- Filter(function(r) r$gate_id %in% valid_ids, pop$gate_refs)
-          pop
-        })
-        ws$populations <- Filter(function(pop) {
-          if (is.null(pop)) return(FALSE)
-          identical(pop$population_id, root_id) ||
-            (length(pop$gate_refs %||% list()) > 0)
-        }, ws$populations)
-      }
-    }
+    prepared <- tryCatch({
+      pruned <- prune_workspace_for_channels(ws, rv$channels)
+      pruned$workspace <- normalize_workspace_gate_space(pruned$workspace)
+      validate_workspace_graph(pruned$workspace)
+      pruned
+    }, error = function(e) {
+      showNotification(
+        paste0("Could not load ", source_label, ": ", conditionMessage(e)),
+        type = "error", duration = 8
+      )
+      NULL
+    })
+    if (is.null(prepared)) return(invisible(FALSE))
+    ws <- prepared$workspace
+    n_skipped <- length(prepared$invalid_gate_ids)
+    n_pruned <- length(prepared$removed_population_ids)
 
     # Cross-instrument warning (non-blocking).
     src_inst <- ws$source_instrument_type %||% NA_character_
@@ -1826,8 +1819,8 @@ server <- function(input, output, session) {
     autosave(); send_full_plot()
 
     msg <- if (n_skipped > 0) {
-      sprintf("Loaded %s (%d gate(s) skipped due to missing channels)",
-              source_label, n_skipped)
+      sprintf("Loaded %s (%d channel-incompatible gate(s) and %d dependent population(s) skipped)",
+              source_label, n_skipped, n_pruned)
     } else {
       paste("Loaded", source_label)
     }
@@ -2135,6 +2128,39 @@ server <- function(input, output, session) {
 
     rv$assay_version <- rv$assay_version + 1L
     rv$.range_cache <- list()
+  }
+
+  # Change the linear compensation space and invalidate every derived display / gating cache.
+  # `refresh = FALSE` lets Gating-ML import restore its saved W values before one final transform.
+  apply_compensation_state <- function(new_on, warn_existing = FALSE, refresh = TRUE) {
+    new_on <- isTRUE(new_on)
+    if (new_on && !has_compensation()) {
+      stop("The loaded FCS has no usable spillover matrix.")
+    }
+    if (identical(new_on, isTRUE(rv$comp_on))) return(FALSE)
+
+    if (isTRUE(warn_existing) && length(rv$gates) > 0) {
+      showNotification(
+        "Compensation changes the linear data beneath existing gates — re-check gate positions after toggling.",
+        type = "warning", duration = 7)
+    }
+
+    rv$comp_on <- new_on
+    counts_mat <- extract_assay_data(rv$sce, "counts")
+    if (new_on) counts_mat <- compensate_matrix(counts_mat, rv$spillover_matrix)
+    auto_w <- as.list(estimate_logicle_w_params(counts_mat, colnames(counts_mat)))
+    rv$flow_logicle_w_auto <- auto_w
+    rv$flow_logicle_w      <- auto_w
+    rv$global_scale_ranges <- list()
+    initialize_missing_global_scales(rv$channels)
+    rv$cytof_axis_range    <- list()
+    rv$.range_cache        <- list()
+    rv$.scales_ui_version  <- isolate(rv$.scales_ui_version) + 1L
+    rv$flow_raw_data       <- NULL
+
+    if (isTRUE(refresh)) refresh_assay_data(reset_cache = TRUE)
+    persist_compensation_state()
+    TRUE
   }
 
   # ── Instrument type badge ──────────────────────────────────────────────────
@@ -2659,14 +2685,37 @@ server <- function(input, output, session) {
     # are created for this SCE's instrument type (CyTOF vs flow).
     session$userData$scales_obs_created <- character(0)
 
+    had_saved_workspace <- has_workspace(sce)
     ws <- load_workspace(sce)
+    if (is.null(ws) && had_saved_workspace) {
+      showNotification("The saved workspace is invalid; GateLabR started with a fresh gating tree.",
+                       type = "error", duration = 8)
+    }
     if (!is.null(ws)) {
-      invalid <- validate_workspace_channels(ws, channels)
-      if (length(invalid) > 0) {
-        showNotification(paste("Warning:", length(invalid), "gate(s) reference missing channels"),
-                         type = "warning", duration = 5)
+      prepared <- tryCatch({
+        pruned <- prune_workspace_for_channels(ws, channels)
+        pruned$workspace <- normalize_workspace_gate_space(pruned$workspace)
+        validate_workspace_graph(pruned$workspace)
+        pruned
+      }, error = function(e) {
+        showNotification(paste("Could not restore saved workspace:", conditionMessage(e)),
+                         type = "error", duration = 8)
+        NULL
+      })
+      if (is.null(prepared)) {
+        ws <- NULL
+      } else {
+        ws <- prepared$workspace
+        if (length(prepared$invalid_gate_ids)) {
+          showNotification(
+            sprintf("Skipped %d channel-incompatible gate(s) and %d dependent population(s).",
+                    length(prepared$invalid_gate_ids), length(prepared$removed_population_ids)),
+            type = "warning", duration = 7
+          )
+        }
       }
-      ws <- normalize_workspace_gate_space(ws)
+    }
+    if (!is.null(ws)) {
       rv$gates <- ws$gates
       rv$gate_order <- ws$gate_order %||% names(ws$gates)
       rv$populations <- ws$populations
@@ -5290,9 +5339,17 @@ server <- function(input, output, session) {
 
   observeEvent(input$add_pop_btn, {
     req(length(rv$gates) > 0)
+    ordinary_gate_ids <- names(rv$gates)[vapply(rv$gates, function(gate) {
+      !identical(gate$gate_type, "quadrant")
+    }, logical(1))]
+    if (!length(ordinary_gate_ids)) {
+      showNotification("Quadrant gates already have four linked populations; draw a polygon or rectangle gate to define another population.",
+                       type = "message", duration = 5)
+      return()
+    }
     parent_choices <- setNames(names(rv$populations),
                                 vapply(rv$populations, function(p) p$name, character(1)))
-    gate_ref_ui <- lapply(names(rv$gates), function(gid) {
+    gate_ref_ui <- lapply(ordinary_gate_ids, function(gid) {
       gate <- rv$gates[[gid]]
       tags$div(style = "display:flex; align-items:center; gap:6px; margin:2px 0;",
         tags$span(class = "gate-color-swatch",
@@ -5324,7 +5381,10 @@ server <- function(input, output, session) {
     if (is.null(pop_name) || nchar(trimws(pop_name)) == 0) pop_name <- paste0("Pop_", length(rv$populations))
     parent_id <- input$new_pop_parent %||% rv$root_population_id
     gate_refs <- list()
-    for (gid in names(rv$gates)) {
+    ordinary_gate_ids <- names(rv$gates)[vapply(rv$gates, function(gate) {
+      !identical(gate$gate_type, "quadrant")
+    }, logical(1))]
+    for (gid in ordinary_gate_ids) {
       if (isTRUE(input[[paste0("gate_ref_", gid)]])) {
         gate_refs[[length(gate_refs) + 1L]] <- new_gate_ref(gid, include = TRUE)
       }
@@ -5498,7 +5558,7 @@ server <- function(input, output, session) {
       base_name <- as.character(pop$name %||% pid)
       new_name <- make_copy_name(base_name, existing_names)
       gate_refs_copy <- lapply(pop$gate_refs %||% list(), function(ref) {
-        new_gate_ref(ref$gate_id, include = isTRUE(ref$include))
+        new_gate_ref(ref$gate_id, include = isTRUE(ref$include), quadrant = ref$quadrant)
       })
 
       dup_pop <- new_population(
@@ -6000,18 +6060,24 @@ server <- function(input, output, session) {
       )
     } else NULL
 
-    # ── Own gate refs (editable) — all gates available in gate_order ─────────
+    # ── Own gate refs — ordinary gates editable; quadrant refs locked ─────────
     gate_refs_ui <- NULL
     if (!is_root && length(rv$gates) > 0) {
-      # All gates are editable; applying a gate already filtered by a parent is
-      # a logical no-op (the parent mask already excludes those events).
+      # Applying an ordinary gate already filtered by a parent is a logical
+      # no-op (the parent mask already excludes those events).
       all_gids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
+      editable_gids <- all_gids[vapply(all_gids, function(gid) {
+        !identical(rv$gates[[gid]]$gate_type, "quadrant")
+      }, logical(1))]
+      locked_quadrant_refs <- Filter(function(ref) {
+        identical(rv$gates[[ref$gate_id]]$gate_type, "quadrant")
+      }, pop$gate_refs)
       # Any existing gate_ref (include or legacy exclude) shows up as checked.
       # Applying the editor normalises checked refs to include = TRUE.
       current_refs <- list()
       for (ref in pop$gate_refs) current_refs[[ref$gate_id]] <- TRUE
 
-      ref_rows <- lapply(all_gids, function(gid) {
+      ref_rows <- lapply(editable_gids, function(gid) {
         gate <- rv$gates[[gid]]; is_checked <- isTRUE(current_refs[[gid]])
         tags$div(class = "gate-ref-edit-row",
           tags$span(class = "gate-color-swatch",
@@ -6020,12 +6086,24 @@ server <- function(input, output, session) {
           tags$span(class = "gate-ref-name", gate$name),
           checkboxInput(paste0("edit_ref_", gid), "Include", value = is_checked))
       })
+      locked_rows <- lapply(locked_quadrant_refs, function(ref) {
+        gate <- rv$gates[[ref$gate_id]]
+        tags$div(class = "gate-ref-edit-row",
+          tags$span(class = "gate-color-swatch",
+                    style = paste0("background:", gate$color,
+                                   "; width:10px; height:10px; border-radius:2px;")),
+          tags$span(class = "gate-ref-name",
+                    paste0(gate$name, " · quadrant ", ref$quadrant)),
+          tags$span("Locked", style = "margin-left:auto; color:#777; font-size:11px;")
+        )
+      })
       gate_refs_ui <- tagList(
         tags$div(class = "pop-editor-row",
           tags$div(style = paste0("font-size:10px; color:#555; font-weight:700;",
                                   " text-transform:uppercase; letter-spacing:0.4px;",
                                   " margin-bottom:3px;"),
                    "\u270F\uFE0F Gates for this population"),
+          locked_rows,
           ref_rows,
           actionButton("apply_gate_refs_btn", "Apply",
                        class = "btn-xs btn-primary", style = "margin-top: 5px;"))
@@ -6076,11 +6154,17 @@ server <- function(input, output, session) {
     save_undo_snapshot()
     pop_id_edit <- rv$active_population_id
 
-    # All gates are editable; use gate_order for consistent ordering
+    # Quadrant references identify one of four regions and must remain exact;
+    # ordinary gate checkboxes are the only editable references here.
     all_gate_ids <- if (length(rv$gate_order) > 0) rv$gate_order else names(rv$gates)
+    editable_gate_ids <- all_gate_ids[vapply(all_gate_ids, function(gid) {
+      !identical(rv$gates[[gid]]$gate_type, "quadrant")
+    }, logical(1))]
 
-    new_refs <- list()
-    for (gid in all_gate_ids) {
+    new_refs <- Filter(function(ref) {
+      identical(rv$gates[[ref$gate_id]]$gate_type, "quadrant")
+    }, rv$populations[[pop_id_edit]]$gate_refs)
+    for (gid in editable_gate_ids) {
       if (isTRUE(input[[paste0("edit_ref_", gid)]])) {
         new_refs[[length(new_refs) + 1L]] <- new_gate_ref(gid, include = TRUE)
       }
@@ -8717,34 +8801,9 @@ server <- function(input, output, session) {
   observeEvent(input$comp_apply, {
     req(rv$sce, has_compensation())
     new_on <- isTRUE(input$comp_apply)
-    if (identical(new_on, isTRUE(rv$comp_on))) return()
-
-    if (length(rv$gates) > 0) {
-      showNotification(
-        "Compensation changes the linear data beneath existing gates — re-check gate positions after toggling.",
-        type = "warning", duration = 7)
+    if (apply_compensation_state(new_on, warn_existing = TRUE, refresh = TRUE)) {
+      send_full_plot(reset_view = TRUE)
     }
-
-    rv$comp_on <- new_on
-
-    # Re-estimate auto logicle-W from the new linear space; the cached W/ranges
-    # were derived from the other space and are now stale.
-    counts_mat <- extract_assay_data(rv$sce, "counts")
-    if (new_on && !is.null(rv$spillover_matrix)) {
-      counts_mat <- compensate_matrix(counts_mat, rv$spillover_matrix)
-    }
-    auto_w <- as.list(estimate_logicle_w_params(counts_mat, colnames(counts_mat)))
-    rv$flow_logicle_w_auto <- auto_w
-    rv$flow_logicle_w      <- auto_w
-    rv$global_scale_ranges <- list()
-    initialize_missing_global_scales(rv$channels)
-    rv$cytof_axis_range    <- list()
-    rv$.range_cache        <- list()
-    rv$.scales_ui_version  <- isolate(rv$.scales_ui_version) + 1L
-
-    refresh_assay_data(reset_cache = TRUE)   # bumps assay_version, clears caches
-    persist_compensation_state()
-    send_full_plot(reset_view = TRUE)
   }, ignoreInit = TRUE)
 
   output$scales_channels_ui <- renderUI({
@@ -9109,6 +9168,8 @@ server <- function(input, output, session) {
       selectInput("load_ws_source", "Source SCE:", choices = sce_with_ws),
       tags$p("Gates whose channels are not present in this SCE will be skipped.",
              style = "color: #555; font-size: 12px;"),
+      tags$p("Any dependent population branch is skipped with them so its gating logic cannot change.",
+             style = "color: #555; font-size: 12px;"),
       tags$p("This will replace the current gates and populations.",
              style = "color: #c00; font-size: 12px;"),
       footer = tagList(modalButton("Cancel"),
@@ -9250,7 +9311,8 @@ server <- function(input, output, session) {
         rv$assay_name,
         col_name  = col_name,
         in_label  = in_label,
-        out_label = out_label
+        out_label = out_label,
+        gating_data = get_gating_data()
       )
       assign(rv$sce_name, rv$sce, envir = .GlobalEnv)
       cd_names <- get_coldata_names(rv$sce); rv$coldata_names <- cd_names
@@ -9342,6 +9404,12 @@ server <- function(input, output, session) {
       )
 
       parsed <- clamp_imported_time_rectangles(parsed, get_gating_data())
+      parsed$compensation_resolution <- resolve_gatingml_compensation(
+        compensation = parsed$compensation,
+        dimension_refs = parsed$compensation_refs %||% character(0),
+        is_flow = is_flow_session(rv$sce),
+        spillover_matrix = rv$spillover_matrix
+      )
 
       if (length(parsed$gates) == 0) {
         showNotification("No compatible gates found in Gating-ML for current channels.",
@@ -9350,6 +9418,33 @@ server <- function(input, output, session) {
       }
 
       rv$.pending_gatingml_import <- parsed
+      comp_res <- parsed$compensation_resolution
+      comp_note <- NULL
+      if (!is.null(comp_res$target)) {
+        target_on <- isTRUE(comp_res$target)
+        already_set <- identical(target_on, isTRUE(rv$comp_on))
+        if (identical(comp_res$source, "embedded")) {
+          comp_note <- if (target_on) {
+            if (already_set) {
+              "The embedded spillover matrix exactly matches the loaded FCS; compensation is already enabled."
+            } else {
+              "This strategy was gated with FCS compensation enabled. Its exact spillover matrix matches the loaded FCS, so importing will enable compensation."
+            }
+          } else if (already_set) {
+            "This strategy was gated without compensation; the current data are already uncompensated."
+          } else {
+            "This strategy was gated without compensation, so importing will disable the current compensation setting."
+          }
+        } else if (target_on) {
+          comp_note <- paste(
+            "This file declares FCS compensation but does not contain GateLab's exact matrix record.",
+            "Import will enable the spillover matrix embedded in the loaded FCS.",
+            "For an older GateLab or GateLabR export, continue only if compensation was enabled when its gates were drawn."
+          )
+        } else if (!already_set) {
+          comp_note <- "This file declares uncompensated dimensions, so importing will disable the current compensation setting."
+        }
+      }
       showModal(modalDialog(
         title = "Import GatingML from Cytobank",
         tags$p(sprintf("Parsed %d gates and %d populations from %s.",
@@ -9358,6 +9453,12 @@ server <- function(input, output, session) {
                               gatelabr = "a GateLabR export",
                               cytobank = "a Cytobank Gating-ML file",
                               "a Gating-ML file"))),
+        if (!is.null(comp_note)) {
+          tags$p(comp_note,
+                 style = if (isTRUE(comp_res$requires_confirmation))
+                   "color:#8a6d3b; font-size:12px; font-weight:600;" else
+                   "color:#555; font-size:12px;")
+        },
         if (isTRUE(parsed$n_gates_skipped > 0)) {
           chs <- parsed$skipped_channels %||% character(0)
           tags$p(
@@ -9399,7 +9500,48 @@ server <- function(input, output, session) {
     rv$.pending_gatingml_import <- NULL
     req(parsed)
 
-    save_undo_snapshot()
+    comp_res <- parsed$compensation_resolution %||%
+      list(target = NULL, source = "none", requires_confirmation = FALSE)
+    comp_target <- comp_res$target
+    comp_changed <- !is.null(comp_target) &&
+      !identical(isTRUE(comp_target), isTRUE(rv$comp_on))
+
+    source_cytof_cofactor <- suppressWarnings(as.numeric(parsed$cytof_cofactor %||% NA))
+    current_cytof_cofactor <- suppressWarnings(as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5))
+    cytof_cofactor_changed <- !is_flow_session(rv$sce) &&
+      is.finite(source_cytof_cofactor) && source_cytof_cofactor > 0 &&
+      !isTRUE(all.equal(source_cytof_cofactor, current_cytof_cofactor, tolerance = 1e-12))
+    if (cytof_cofactor_changed && !"counts" %in% SummarizedExperiment::assayNames(rv$sce)) {
+      showNotification(
+        "This Gating-ML file uses a different CyTOF cofactor, but the loaded object has no raw counts assay to re-transform. The workspace was not changed.",
+        type = "error", duration = 8)
+      return()
+    }
+
+    # Gate/population undo snapshots do not carry display-transform state. Do not
+    # retain an unsafe route back to gates drawn in the previous linear space.
+    if (comp_changed || cytof_cofactor_changed) {
+      rv$undo_stack <- list()
+      rv$redo_stack <- list()
+      if (comp_changed) {
+        apply_compensation_state(comp_target, warn_existing = FALSE, refresh = FALSE)
+      }
+    } else {
+      save_undo_snapshot()
+    }
+    if (cytof_cofactor_changed) {
+      counts_mat <- extract_assay_data(rv$sce, "counts")
+      exprs_mat <- transform_matrix_by_instrument(
+        raw_mat = counts_mat,
+        channel_names = colnames(counts_mat),
+        instrument_type = "cytof",
+        cofactor = source_cytof_cofactor,
+        verbose = FALSE
+      )
+      SummarizedExperiment::assay(rv$sce, "exprs") <- t(exprs_mat)
+      S4Vectors::metadata(rv$sce)$cofactor <- source_cytof_cofactor
+      rv$cytof_axis_range <- list()
+    }
     rv$gates <- parsed$gates
     rv$gate_order <- parsed$gate_order %||% names(parsed$gates)
     rv$populations <- parsed$populations
@@ -9411,27 +9553,52 @@ server <- function(input, output, session) {
     rv$gate_version <- rv$gate_version + 1L
 
     # Restore per-channel scales saved in the GatingML custom_info (if present).
-    # Only channels in the current SCE are touched; W/cofactor apply to flow.
+    # Apply transforms first, then convert v3 raw endpoints into this app's
+    # flowCore display coordinates. Legacy files retain their direct lo/hi values.
     n_scales <- 0L
+    changed_transform <- FALSE
     sc <- parsed$scales
     if (is.list(sc) && length(sc) > 0) {
       sess_ch <- rv$channels %||% character(0)
-      changed_range <- FALSE; changed_transform <- FALSE
+      changed_range <- FALSE
       for (ch in intersect(names(sc), sess_ch)) {
         e  <- sc[[ch]]
-        lo <- suppressWarnings(as.numeric(e$lo %||% NA))
-        hi <- suppressWarnings(as.numeric(e$hi %||% NA))
-        if (is.finite(lo) && is.finite(hi) && hi > lo) {
-          rv$global_scale_ranges[[ch]] <- list(lo = lo, hi = hi)
-          changed_range <- TRUE; n_scales <- n_scales + 1L
-        }
         w <- suppressWarnings(as.numeric(e$w %||% NA))
-        if (is.finite(w)) {
+        if (is_flow_session(rv$sce) && !.is_qc_channel(ch) &&
+            !.is_scatter_channel(ch) && is.finite(w)) {
           rv$flow_logicle_w[[ch]] <- max(0.1, min(w, 2.0)); changed_transform <- TRUE
         }
         cofac <- suppressWarnings(as.numeric(e$cofactor %||% NA))
-        if (is.finite(cofac) && cofac > 0) {
+        if (is_flow_session(rv$sce) && .is_scatter_channel(ch) &&
+            is.finite(cofac) && cofac > 0) {
           rv$flow_scatter_cofactor[[ch]] <- cofac; changed_transform <- TRUE
+        }
+      }
+      flow_range_raw <- NULL
+      if (is_flow_session(rv$sce)) {
+        flow_range_raw <- extract_assay_data(rv$sce, "counts")
+        if (isTRUE(rv$comp_on) && !is.null(rv$spillover_matrix)) {
+          flow_range_raw <- compensate_matrix(flow_range_raw, rv$spillover_matrix)
+        }
+      }
+      active_cytof_cofactor <- suppressWarnings(as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5))
+      if (!is.finite(active_cytof_cofactor) || active_cytof_cofactor <= 0) active_cytof_cofactor <- 5
+      for (ch in intersect(names(sc), sess_ch)) {
+        raw_vals <- if (!is.null(flow_range_raw) && ch %in% colnames(flow_range_raw)) {
+          flow_range_raw[, ch]
+        } else NULL
+        display_range <- .gml_scale_range_to_display(
+          entry = sc[[ch]],
+          channel = ch,
+          is_flow = is_flow_session(rv$sce),
+          raw_channel_vals = raw_vals,
+          logicle_w_params = rv$flow_logicle_w,
+          scatter_cofactor_params = rv$flow_scatter_cofactor,
+          cytof_cofactor = active_cytof_cofactor
+        )
+        if (!is.null(display_range)) {
+          rv$global_scale_ranges[[ch]] <- list(lo = display_range[1], hi = display_range[2])
+          changed_range <- TRUE; n_scales <- n_scales + 1L
         }
       }
       if (changed_range || changed_transform) {
@@ -9439,10 +9606,12 @@ server <- function(input, output, session) {
         rv$.scales_ui_version      <- isolate(rv$.scales_ui_version) + 1L
         rv$.flow_transform_version <- isolate(rv$.flow_transform_version) + 1L
       }
-      # W / cofactor feed the display transform, so re-transform for flow sessions.
-      if (changed_transform && is_flow_session(rv$sce) && rv$assay_name == "exprs") {
-        refresh_assay_data(reset_cache = TRUE)
-      }
+    }
+    # Apply a changed linear space once, after imported W/cofactor values are restored.
+    # Transform-only changes need the same refresh for the flow exprs display.
+    if (comp_changed || cytof_cofactor_changed ||
+        (changed_transform && is_flow_session(rv$sce) && rv$assay_name == "exprs")) {
+      refresh_assay_data(reset_cache = TRUE)
     }
 
     autosave()
@@ -9450,6 +9619,8 @@ server <- function(input, output, session) {
 
     msg <- paste0("Imported ", parsed$n_gates_imported, " gates and ",
                   parsed$n_pops_imported, " populations from GatingML")
+    if (identical(comp_target, TRUE)) msg <- paste0(msg, "; FCS compensation enabled")
+    if (identical(comp_target, FALSE)) msg <- paste0(msg, "; compensation disabled")
     if (n_scales > 0) msg <- paste0(msg, "; restored scales for ", n_scales, " channel(s)")
     if (isTRUE(parsed$n_gates_skipped > 0)) {
       msg <- paste0(msg, " (", parsed$n_gates_skipped, " skipped)")
@@ -9465,6 +9636,20 @@ server <- function(input, output, session) {
       showNotification("No gates to export.", type = "warning", duration = 4)
       return()
     }
+    quadrant_omissions <- .gml_ex_quadrant_omissions(
+      isolate(rv$gates), isolate(rv$populations)
+    )
+    if (length(quadrant_omissions$gate_ids) > 0L) {
+      showNotification(
+        paste0(
+          "GatingML does not yet include quadrant gates: omitting ",
+          length(quadrant_omissions$gate_ids), " quadrant gate(s) and ",
+          length(quadrant_omissions$population_ids),
+          " dependent population(s), including descendants. Save the .rds workspace to preserve them."
+        ),
+        type = "warning", duration = 10
+      )
+    }
     tryCatch({
       export_gatingml_to_cytobank(
         gates                   = isolate(rv$gates),
@@ -9477,7 +9662,10 @@ server <- function(input, output, session) {
         logicle_w_params        = isolate(rv$flow_logicle_w),
         scatter_cofactor_params = isolate(rv$flow_scatter_cofactor),
         counts_mat              = isolate(rv$flow_raw_data),
-        global_scale_ranges     = isolate(rv$global_scale_ranges)
+        global_scale_ranges     = isolate(rv$global_scale_ranges),
+        compensation_on         = isolate(rv$comp_on),
+        spillover_matrix        = isolate(rv$spillover_matrix),
+        allow_quadrant_omission = TRUE
       )
     }, error = function(e) {
       showNotification(paste("GatingML export error:", e$message),
@@ -9542,7 +9730,7 @@ server <- function(input, output, session) {
                                "Smaller file (slower)" = "small"),
                    selected = "fast"),
       textInput("fcs_filename_suffix", "Filename suffix (optional):", value = ""),
-      tags$p(tags$em("Gates are always evaluated in transformed (exprs) space.",
+      tags$p(tags$em("Gates are evaluated in the coordinate space in which they were created.",
                      style = "color:#888; font-size:11px;")),
       footer = tagList(
         modalButton("Cancel"),
@@ -9612,9 +9800,11 @@ server <- function(input, output, session) {
           if (cache_valid) {
             precomputed_masks <- rv$pop_events_map
           } else {
-            available_assays <- SummarizedExperiment::assayNames(rv$sce)
-            gate_assay <- if ("exprs" %in% available_assays) "exprs" else available_assays[1]
-            gate_mat <- t(SummarizedExperiment::assay(rv$sce, gate_assay))
+            gate_mat <- gating_matrix_for_sce(
+              rv$sce,
+              assay_name = rv$assay_name,
+              gating_data = get_gating_data()
+            )
             gate_result <- apply_gating_strategy(
               gates = rv$gates,
               populations = rv$populations,
@@ -9648,7 +9838,8 @@ server <- function(input, output, session) {
               output_dir         = zip_staging_dir,
               filename_prefix    = file_prefix,
               filename_suffix    = file_suffix,
-              precomputed_masks  = precomputed_masks
+              precomputed_masks  = precomputed_masks,
+              gating_data        = get_gating_data()
             )
             if (length(pop_written) > 0) written <- c(written, pop_written)
           }
@@ -10421,16 +10612,16 @@ ui_with_runjs <- tagList(
     $(document).ready(function() {
       var tips = {
         // Left column
-        'load_workspace_btn':   'Load gates & populations from another SCE object currently in memory (channels are matched by name; missing ones are skipped)',
+        'load_workspace_btn':   'Load gates & populations from another SCE object currently in memory (channel-incompatible gates and their dependent population branches are skipped)',
         'reset_workspace_btn':  'Delete all gates and populations from this SCE (undoable)',
         'save_workspace_rds_dl': 'Download the current gates, populations, scales and illustration settings as a portable workspace .rds file',
-        'load_workspace_rds_upload': 'Load a workspace .rds file (channels are matched by name; missing ones are skipped)',
+        'load_workspace_rds_upload': 'Load a workspace .rds file (channel-incompatible gates and their dependent population branches are skipped)',
         'apply_instrument_mode_btn': 'Apply selected instrument mode to the loaded SCE (recomputes exprs from counts when available)',
         'export_pop_btn':     'Export the active population as a colData column on the SCE',
         'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
         'save_rds_dl':        'Download the SCE (with embedded workspace) as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
-        'import_gatingml_upload': 'Import Cytobank Gating-ML XML and replace current gates/populations',
+        'import_gatingml_upload': 'Import Cytobank Gating-ML gates and positive AND populations; files containing NOT/OR logic or unmatched channels are rejected without changing the workspace',
         'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML ($PnN channel names, flat BooleanGates + custom_info) — re-imports into GateLabR / GateLab and uploads to Cytobank',
         // Mode toolbar
         'mode_rect':     'Draw a rectangle gate',

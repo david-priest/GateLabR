@@ -185,13 +185,14 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # fcs_name: the FCS $PnN parameter name to use in data-type:name.
 # Falls back to channel (the display name) when not supplied.
 .gml_ex_dim <- function(channel, tr_id, min_val = NULL, max_val = NULL,
-                         fcs_name = NULL) {
+                         fcs_name = NULL, compensation_ref = "uncompensated") {
   dim_name <- if (!is.null(fcs_name)) fcs_name else channel
   tr_attr  <- if (!is.null(tr_id))   paste0(' gating:transformation-ref="', tr_id, '"') else ""
   min_attr <- if (!is.null(min_val)) paste0(' gating:min="', .gml_ex_num(min_val), '"') else ""
   max_attr <- if (!is.null(max_val)) paste0(' gating:max="', .gml_ex_num(max_val), '"') else ""
   c(
-    paste0('    <gating:dimension gating:compensation-ref="FCS"', min_attr, max_attr, tr_attr, '>'),
+    paste0('    <gating:dimension gating:compensation-ref="', compensation_ref, '"',
+           min_attr, max_attr, tr_attr, '>'),
     paste0('      <data-type:fcs-dimension data-type:name="', .gml_ex_esc(dim_name), '" />'),
     '    </gating:dimension>'
   )
@@ -202,7 +203,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # name instead of the internal display name (Cytobank requires $PnN names).
 .gml_ex_rectangle <- function(gate, gml_id, num_id, seq_idx,
                                x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-                               pnn_fn = NULL) {
+                               pnn_fn = NULL, comp_ref_fn = NULL) {
   verts  <- gate$vertices
   x_vals <- vapply(verts, function(v) as.numeric(v[[1]]), numeric(1))
   y_vals <- vapply(verts, function(v) as.numeric(v[[2]]), numeric(1))
@@ -211,16 +212,18 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     paste0('  <gating:RectangleGate gating:id="', gml_id, '">'),
     .gml_ex_custom_info(gate$name, num_id, seq_idx, "RectangleGate", def),
     .gml_ex_dim(gate$x_channel, x_tr, min(x_vals), max(x_vals),
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$x_channel) else "uncompensated"),
     .gml_ex_dim(gate$y_channel, y_tr, min(y_vals), max(y_vals),
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$y_channel) else "uncompensated"),
     '  </gating:RectangleGate>'
   )
 }
 
 .gml_ex_polygon <- function(gate, gml_id, num_id, seq_idx,
                              x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-                             pnn_fn = NULL) {
+                             pnn_fn = NULL, comp_ref_fn = NULL) {
   def <- .gml_ex_definition_json(gate, x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params)
   vert_lines <- unlist(lapply(gate$vertices, function(v) c(
     '    <gating:vertex>',
@@ -232,9 +235,11 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     paste0('  <gating:PolygonGate gating:id="', gml_id, '">'),
     .gml_ex_custom_info(gate$name, num_id, seq_idx, "PolygonGate", def),
     .gml_ex_dim(gate$x_channel, x_tr,
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$x_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$x_channel) else "uncompensated"),
     .gml_ex_dim(gate$y_channel, y_tr,
-                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL),
+                fcs_name = if (!is.null(pnn_fn)) pnn_fn(gate$y_channel) else NULL,
+                compensation_ref = if (!is.null(comp_ref_fn)) comp_ref_fn(gate$y_channel) else "uncompensated"),
     vert_lines,
     '  </gating:PolygonGate>'
   )
@@ -252,15 +257,14 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     '  </transforms:transformation>')
 }
 
-# Build a JSON blob of per-channel scale settings — display Min/Max range,
-# logicle W, and scatter cofactor — for round-tripping into GateLabR via a
-# custom_info block. GatingML's transforms section already carries W/cofactor for
-# gated channels, but the display range (the Scales-tab view window) has no
-# native home, so we persist the full set here. Keys are display channel names.
-# Returns NULL when there is nothing to save.
+# Build a JSON blob of per-channel scale settings. Version 3 retains the legacy
+# display lo/hi values and adds raw_lo/raw_hi in compensated linear measurement
+# space. The raw endpoints are portable between GateLabR/flowCore and GateLab,
+# whose normalized logicle display coordinates are intentionally different.
 .gml_ex_build_scales_json <- function(channel_names, global_scale_ranges,
-                                      logicle_w_params, scatter_cofactor_params) {
-  if (!requireNamespace("jsonlite", quietly = TRUE)) return(NULL)
+                                      logicle_w_params, scatter_cofactor_params,
+                                      is_flow, cofactor, counts_mat,
+                                      compensation_on, spillover_matrix) {
   gsr <- as.list(global_scale_ranges %||% list())
   wl  <- as.list(logicle_w_params %||% list())
   cf  <- as.list(scatter_cofactor_params %||% list())
@@ -276,11 +280,90 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     if (is.finite(hi))    entry$hi <- hi
     if (is.finite(w))     entry$w <- w
     if (is.finite(cofac)) entry$cofactor <- cofac
+    if (is.finite(lo) && is.finite(hi) && hi > lo) {
+      raw_range <- tryCatch({
+        if (isTRUE(is_flow)) {
+          raw_vals <- if (!is.null(counts_mat) && ch %in% colnames(counts_mat)) {
+            counts_mat[, ch]
+          } else NULL
+          flow_inverse_channel_values(
+            display_vals = c(lo, hi),
+            channel_name = ch,
+            raw_channel_vals = raw_vals,
+            logicle_w_params = logicle_w_params,
+            scatter_cofactor_params = scatter_cofactor_params
+          )
+        } else {
+          raw_fn <- if (exists(".is_cytof_raw_channel", mode = "function")) {
+            .is_cytof_raw_channel
+          } else {
+            function(x) grepl("^(time|event_length|cell_length|file_number)$", x, ignore.case = TRUE)
+          }
+          if (isTRUE(raw_fn(ch))) c(lo, hi) else cofactor * sinh(c(lo, hi))
+        }
+      }, error = function(e) c(NA_real_, NA_real_))
+      if (length(raw_range) == 2L && all(is.finite(raw_range)) && raw_range[2] > raw_range[1]) {
+        entry$raw_lo <- as.numeric(raw_range[1])
+        entry$raw_hi <- as.numeric(raw_range[2])
+      }
+    }
     if (length(entry) > 0) channels[[ch]] <- entry
   }
-  if (length(channels) == 0) return(NULL)
-  as.character(jsonlite::toJSON(list(version = 1L, channels = channels),
-                                auto_unbox = TRUE, null = "null"))
+  comp_enabled <- isTRUE(is_flow) && isTRUE(compensation_on)
+  comp <- list(
+    enabled = comp_enabled,
+    reference = if (comp_enabled) "FCS" else "uncompensated",
+    channels = character(0)
+  )
+  if (comp_enabled) {
+    if (!is.matrix(spillover_matrix) || nrow(spillover_matrix) < 2L ||
+        ncol(spillover_matrix) != nrow(spillover_matrix)) {
+      stop("Compensation is enabled, but no valid spillover matrix is available for Gating-ML export.")
+    }
+    spill_channels <- colnames(spillover_matrix)
+    row_channels <- rownames(spillover_matrix)
+    if (is.null(spill_channels) || anyNA(spill_channels) || any(!nzchar(spill_channels)) ||
+        anyDuplicated(spill_channels) || is.null(row_channels) ||
+        !setequal(row_channels, spill_channels)) {
+      stop("The active spillover matrix needs matching, unique row and column channel names for Gating-ML export.")
+    }
+    spillover_matrix <- spillover_matrix[spill_channels, spill_channels, drop = FALSE]
+    if (any(!is.finite(spillover_matrix))) {
+      stop("The active spillover matrix contains non-finite values and cannot be exported safely.")
+    }
+    comp$channels <- as.character(spill_channels)
+    comp$matrix <- lapply(seq_len(nrow(spillover_matrix)), function(i) {
+      unname(as.numeric(spillover_matrix[i, ]))
+    })
+  }
+  state <- list(version = 3L, compensation = comp)
+  if (length(channels) > 0L) state$channels <- channels
+  if (!isTRUE(is_flow)) state$cytof_cofactor <- cofactor
+  as.character(jsonlite::toJSON(state,
+                                auto_unbox = TRUE, null = "null", digits = NA))
+}
+
+# Quadrant gates are not emitted yet. Omitting only their direct populations
+# would re-parent descendants and change membership, so the whole dependent
+# population branch must travel together as one explicit omission.
+.gml_ex_quadrant_omissions <- function(gates, populations) {
+  quadrant_ids <- names(Filter(function(g) identical(g$gate_type, "quadrant"), gates))
+  population_ids <- character(0)
+  add_branch <- function(pid) {
+    if (pid %in% population_ids) return(invisible(NULL))
+    population_ids <<- c(population_ids, pid)
+    for (child_id in populations[[pid]]$children %||% character(0)) add_branch(child_id)
+    invisible(NULL)
+  }
+  if (length(quadrant_ids) > 0L) {
+    for (pid in names(populations)) {
+      refs <- populations[[pid]]$gate_refs %||% list()
+      if (any(vapply(refs, function(ref) ref$gate_id %in% quadrant_ids, logical(1)))) {
+        add_branch(pid)
+      }
+    }
+  }
+  list(gate_ids = quadrant_ids, population_ids = population_ids)
 }
 
 # ── Main export function ──────────────────────────────────────────────────────
@@ -311,6 +394,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 #' @param logicle_w_params     Per-channel logicle W values (flow only)
 #' @param scatter_cofactor_params  Per-channel scatter cofactors (flow only)
 #' @param counts_mat      Raw events×channels matrix (flow only; for T estimation)
+#' @param allow_quadrant_omission Explicit acknowledgement that quadrant gates
+#'   and every dependent population branch will be omitted.
 #' @return invisibly returns file_path
 export_gatingml_to_cytobank <- function(gates, gate_order, populations,
                                         root_population_id, sce, file_path,
@@ -318,13 +403,35 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
                                         logicle_w_params = NULL,
                                         scatter_cofactor_params = NULL,
                                         counts_mat = NULL,
-                                        global_scale_ranges = NULL) {
+                                        global_scale_ranges = NULL,
+                                        compensation_on = FALSE,
+                                        spillover_matrix = NULL,
+                                        allow_quadrant_omission = FALSE) {
   format <- match.arg(format)
   cytobank_mode <- identical(format, "cytobank")
   if (!requireNamespace("base64enc", quietly = TRUE))
     stop("Package 'base64enc' is required. Install with: install.packages('base64enc')")
+  if (!requireNamespace("jsonlite", quietly = TRUE))
+    stop("Package 'jsonlite' is required. Install with: install.packages('jsonlite')")
   if (is.null(gates) || length(gates) == 0)
     stop("No gates to export.")
+
+  quadrant_omissions <- .gml_ex_quadrant_omissions(gates, populations)
+  if (length(quadrant_omissions$gate_ids) > 0L && !isTRUE(allow_quadrant_omission)) {
+    stop(
+      "This workspace contains ", length(quadrant_omissions$gate_ids),
+      " unsupported quadrant gate(s) and ", length(quadrant_omissions$population_ids),
+      " dependent population(s). Export again only after explicitly accepting their omission; ",
+      "the .rds workspace preserves them in full."
+    )
+  }
+  if (length(quadrant_omissions$gate_ids) > 0L) {
+    warning(
+      length(quadrant_omissions$gate_ids), " quadrant gate(s) and ",
+      length(quadrant_omissions$population_ids),
+      " dependent population(s), including descendants, were omitted from GatingML."
+    )
+  }
 
   md       <- S4Vectors::metadata(sce)
   is_flow  <- identical(md$instrument_type, "flow")
@@ -357,7 +464,14 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
   # Per-channel scale settings (display Min/Max range + logicle W + cofactor),
   # saved into the root custom_info block so GateLabR can restore them on import.
   scales_json <- .gml_ex_build_scales_json(ch_names, global_scale_ranges,
-                                           logicle_w_params, scatter_cofactor_params)
+                                           logicle_w_params, scatter_cofactor_params,
+                                           is_flow, cofactor, counts_mat,
+                                           compensation_on, spillover_matrix)
+  spill_channels <- if (isTRUE(is_flow) && isTRUE(compensation_on) &&
+                        is.matrix(spillover_matrix)) colnames(spillover_matrix) else character(0)
+  comp_ref_fn <- function(ch) {
+    if (ch %in% spill_channels) "FCS" else "uncompensated"
+  }
 
   # ── Gate vertices in display (export) space ─────────────────────────────────
   # Flow: gates stored in raw space → forward-transform to logicle/arcsinh space.
@@ -384,7 +498,6 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
   gate_numeric_ids <- list()   # app gate_id → integer
   gate_seq_ids     <- list()   # app gate_id → sequential index (used in <gate_id> and definition JSON)
 
-  n_quadrant_skipped <- 0L
   for (i in seq_along(gate_order)) {
     gid <- gate_order[[i]]
     if (is.null(display_gates[[gid]])) next
@@ -392,7 +505,6 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     # they get no id; populations referencing them are filtered out below (the
     # workspace .rds still preserves quadrant gates in full).
     if (identical(display_gates[[gid]]$gate_type, "quadrant")) {
-      n_quadrant_skipped <- n_quadrant_skipped + 1L
       next
     }
     num_id               <- 180000000L + i
@@ -400,11 +512,6 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     gate_to_gml_id[[gid]]   <- .gml_ex_gate_id(num_id, display_gates[[gid]]$name)
     gate_seq_ids[[gid]]      <- i
   }
-  if (n_quadrant_skipped > 0) {
-    warning(n_quadrant_skipped, " quadrant gate(s) were not exported to GatingML ",
-            "(use the .rds workspace to preserve them).")
-  }
-
   # ── Build gate XML lines ─────────────────────────────────────────────────────
   gate_lines <- character(0)
   for (i in seq_along(gate_order)) {
@@ -419,11 +526,11 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     if (identical(g$gate_type, "rectangle")) {
       gate_lines <- c(gate_lines, .gml_ex_rectangle(
         g, gml_id, num_id, i, x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-        pnn_fn = pnn_fn))
+        pnn_fn = pnn_fn, comp_ref_fn = comp_ref_fn))
     } else if (identical(g$gate_type, "polygon")) {
       gate_lines <- c(gate_lines, .gml_ex_polygon(
         g, gml_id, num_id, i, x_tr, y_tr, cofactor, is_flow, scatter_cofactor_params,
-        pnn_fn = pnn_fn))
+        pnn_fn = pnn_fn, comp_ref_fn = comp_ref_fn))
     }
   }
 
@@ -436,7 +543,8 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
   pop_to_gml      <- list()   # pop_id → gml_id  (used for hierarchy in standard mode)
   next_bool_id    <- 36000000L
 
-  for (pid in names(populations)) {
+  export_population_ids <- setdiff(names(populations), quadrant_omissions$population_ids)
+  for (pid in export_population_ids) {
     if (identical(pid, root_population_id)) next
     pop       <- populations[[pid]]
     gate_refs <- pop$gate_refs %||% list()
@@ -453,7 +561,7 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
   # Pass 2: build XML
   bool_lines <- character(0)
 
-  for (pid in names(populations)) {
+  for (pid in export_population_ids) {
     if (identical(pid, root_population_id)) next
     pop       <- populations[[pid]]
     gate_refs <- pop$gate_refs %||% list()
@@ -639,11 +747,9 @@ export_gatingml_to_cytobank <- function(gates, gate_order, populations,
     paste0('      <about>', .gml_ex_esc(about_str), '</about>'),
     paste0('      <export_timestamp>', format(Sys.time(), "%Y-%m-%dT%H:%M:%S"), '</export_timestamp>'),
     '    </cytobank>',
-    if (!is.null(scales_json)) c(
-      '    <gatelabr_scales>',
-      paste0('      <definition>', .gml_ex_esc_text(scales_json), '</definition>'),
-      '    </gatelabr_scales>'
-    ) else character(0),
+    '    <gatelabr_scales>',
+    paste0('      <definition>', .gml_ex_esc_text(scales_json), '</definition>'),
+    '    </gatelabr_scales>',
     '  </data-type:custom_info>',
     # Transform definitions
     unlist(lapply(names(tr_defs), function(id) .gml_ex_transform(id, tr_defs[[id]]))),
