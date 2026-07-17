@@ -125,7 +125,7 @@ ui <- fluidPage(
     tags$script(src = "vendor/split.min.js"),
     tags$script(src = "layout_split.js?v=20260713a"),
     tags$script(src = "cytof_plot.js?v=20260713a"),
-    tags$script(src = "mini_plot.js?v=20260713c"),
+    tags$script(src = "mini_plot.js?v=20260717a"),
     tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260713d")
@@ -585,7 +585,9 @@ ui <- fluidPage(
             control_row("Plot",
               tags$div(class = "glr-inline-choice",
                 radioButtons("illust_plot_type", NULL,
-                             choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
+                             choices = c("Biplot" = "biplot",
+                                         "Histogram" = "histogram",
+                                         "Heatmap" = "heatmap"),
                              selected = "biplot", inline = TRUE)
               ),
               conditionalPanel(
@@ -618,31 +620,37 @@ ui <- fluidPage(
               )
             ),
 
-            control_row("Layout",
-              inline_field("Plot size",
-                numericInput("illust_plot_size", NULL,
-                             value = 200, min = 150, max = 400, step = 25,
-                             width = "82px")),
-              inline_field("Columns",
-                numericInput("illust_n_columns", NULL,
-                             value = 4, min = 1, max = 12, step = 1,
-                             width = "68px")),
-              inline_check(checkboxInput("illust_fit_to_columns",
-                                         "Fit to columns", value = TRUE)),
-              control_separator(),
-              inline_field("Max events / panel",
-                numericInput("illust_max_events", NULL,
-                             value = 10000, min = 0, max = 50000, step = 1000,
-                             width = "100px")),
-              inline_check(checkboxInput("illust_all_events", "All events", value = FALSE))
+            conditionalPanel(
+              "input.illust_plot_type != 'heatmap'",
+              control_row("Layout",
+                inline_field("Plot size",
+                  numericInput("illust_plot_size", NULL,
+                               value = 200, min = 150, max = 400, step = 25,
+                               width = "82px")),
+                inline_field("Columns",
+                  numericInput("illust_n_columns", NULL,
+                               value = 4, min = 1, max = 12, step = 1,
+                               width = "68px")),
+                inline_check(checkboxInput("illust_fit_to_columns",
+                                           "Fit to columns", value = TRUE)),
+                control_separator(),
+                inline_field("Max events / panel",
+                  numericInput("illust_max_events", NULL,
+                               value = 10000, min = 0, max = 50000, step = 1000,
+                               width = "100px")),
+                inline_check(checkboxInput("illust_all_events", "All events", value = FALSE))
+              )
             ),
 
-            control_row("Populations",
-              inline_check(checkboxInput("illust_color_by_pop",
-                                         "Colour each population", value = FALSE)),
-              inline_check(checkboxInput("illust_overlay_pops",
-                                         "Overlay populations per channel", value = FALSE)),
-              control_hint("Global ranges from Scales are always used.")
+            conditionalPanel(
+              "input.illust_plot_type != 'heatmap'",
+              control_row("Populations",
+                inline_check(checkboxInput("illust_color_by_pop",
+                                           "Colour each population", value = FALSE)),
+                inline_check(checkboxInput("illust_overlay_pops",
+                                           "Overlay populations per channel", value = FALSE)),
+                control_hint("Global ranges from Scales are always used.")
+              )
             ),
 
             conditionalPanel(
@@ -710,6 +718,40 @@ ui <- fluidPage(
               )
             ),
 
+            conditionalPanel(
+              "input.illust_plot_type == 'heatmap'",
+              control_row("Heatmap",
+                inline_field("Summary",
+                  selectInput("illust_heatmap_stat", NULL,
+                              choices = c("Median" = "median", "Mean" = "mean"),
+                              selected = "median", width = "100px")),
+                inline_field("Scale",
+                  selectInput("illust_heatmap_scale", NULL,
+                              choices = c(
+                                "Per channel (0–1)" = "column_minmax",
+                                "Per population (0–1)" = "row_minmax",
+                                "Per channel z-score" = "column_zscore",
+                                "None (transformed expression)" = "none"
+                              ),
+                              selected = "column_minmax", width = "190px")),
+                inline_field("Palette",
+                  selectInput("illust_heatmap_palette", NULL,
+                              choices = c(
+                                "Histogram heat (black→yellow)" = "heat",
+                                "Viridis" = "viridis",
+                                "Blue→white→yellow→red" = "blue_white_yellow_red"
+                              ),
+                              selected = "blue_white_yellow_red", width = "210px")),
+                inline_field("Cell size",
+                  numericInput("illust_heatmap_cell_size", NULL,
+                               value = 30, min = 16, max = 72, step = 2,
+                               width = "72px")),
+                inline_check(checkboxInput("illust_heatmap_show_values",
+                                           "Show values", value = FALSE)),
+                control_hint("Uses all events in each population; empty populations are shown in grey.")
+              )
+            ),
+
             control_row("Fonts",
               inline_field("Tick",
                 numericInput("illust_tick_font_size", NULL,
@@ -732,7 +774,7 @@ ui <- fluidPage(
 
             tags$div(class = "illust-selector-grid",
               tags$section(class = "illust-selector-panel",
-                tags$div(class = "illust-selector-panel-title", "X Channels"),
+                tags$div(class = "illust-selector-panel-title", "Channels"),
                 tags$div(class = "illust-selector-panel-body",
                   uiOutput("illust_x_channels_ui")
                 )
@@ -1623,6 +1665,11 @@ server <- function(input, output, session) {
       ridge_overlap        = isolate(input$illust_ridge_overlap)                     %||% 0.7,
       ridge_col_gap        = isolate(input$illust_ridge_col_gap)                     %||% 8,
       ridge_gradient       = isTRUE(isolate(input$illust_ridge_gradient) %||% TRUE),
+      heatmap_stat         = as.character(isolate(input$illust_heatmap_stat)         %||% "median"),
+      heatmap_scale        = as.character(isolate(input$illust_heatmap_scale)        %||% "column_minmax"),
+      heatmap_palette      = as.character(isolate(input$illust_heatmap_palette)      %||% "blue_white_yellow_red"),
+      heatmap_cell_size    = isolate(input$illust_heatmap_cell_size)                 %||% 30,
+      heatmap_show_values  = isTRUE(isolate(input$illust_heatmap_show_values)),
       pub_style            = isTRUE(isolate(input$illust_pub_style)),
       gate_line_width      = isolate(input$illust_gate_line_width)                   %||% 1.5,
       kde_bandwidth        = if (isTRUE(isolate(input$illust_kde_auto) %||% TRUE)) 0 else
@@ -6365,12 +6412,12 @@ server <- function(input, output, session) {
     scope <- match.arg(scope)
     is_strategy <- identical(scope, "strategy")
 
-    if (!is_strategy && !plot_type %in% c("biplot", "histogram")) {
+    if (!is_strategy && !plot_type %in% c("biplot", "histogram", "heatmap")) {
       plot_type <- "biplot"
     }
 
     mode <- .normalize_display_mode(if (is_strategy) input$strategy_display else input$illust_display)
-    if (!is_strategy && identical(plot_type, "histogram")) {
+    if (!is_strategy && plot_type %in% c("histogram", "heatmap")) {
       mode <- "scatter"
     }
     if (is_strategy) {
@@ -7588,6 +7635,11 @@ server <- function(input, output, session) {
     if (!is.null(s$ridge_overlap))       updateSliderInput(session,    "illust_ridge_overlap",       value = s$ridge_overlap)
     if (!is.null(s$ridge_col_gap))       updateSliderInput(session,    "illust_ridge_col_gap",       value = s$ridge_col_gap)
     if (!is.null(s$ridge_gradient))      updateCheckboxInput(session,  "illust_ridge_gradient",      value = isTRUE(s$ridge_gradient))
+    if (!is.null(s$heatmap_stat))        updateSelectInput(session,    "illust_heatmap_stat",         selected = s$heatmap_stat)
+    if (!is.null(s$heatmap_scale))       updateSelectInput(session,    "illust_heatmap_scale",        selected = s$heatmap_scale)
+    if (!is.null(s$heatmap_palette))     updateSelectInput(session,    "illust_heatmap_palette",      selected = s$heatmap_palette)
+    if (!is.null(s$heatmap_cell_size))   updateNumericInput(session,   "illust_heatmap_cell_size",    value = s$heatmap_cell_size)
+    if (!is.null(s$heatmap_show_values)) updateCheckboxInput(session,  "illust_heatmap_show_values", value = isTRUE(s$heatmap_show_values))
     if (!is.null(s$pub_style))           updateCheckboxInput(session,  "illust_pub_style",           value = isTRUE(s$pub_style))
     if (!is.null(s$gate_line_width))     updateNumericInput(session,   "illust_gate_line_width",     value = s$gate_line_width)
     if (!is.null(s$kde_bandwidth)) {
@@ -7935,7 +7987,7 @@ server <- function(input, output, session) {
 
   render_illustration_tab <- function() {
     illust_plot_type <- as.character(input$illust_plot_type %||% "biplot")
-    if (!illust_plot_type %in% c("biplot", "histogram")) illust_plot_type <- "biplot"
+    if (!illust_plot_type %in% c("biplot", "histogram", "heatmap")) illust_plot_type <- "biplot"
 
     style <- collect_plot_style_params("illustration", plot_type = illust_plot_type)
     layout <- collect_layout_params("illustration")
@@ -7986,6 +8038,128 @@ server <- function(input, output, session) {
       }
       showNotification(msg, type = "warning", duration = 6)
       return(invisible(NULL))
+    }
+
+    # ── Heatmap: exact all-event population summaries ─────────────────────────
+    # Unlike point/histogram previews, a heatmap contains one summary per cell,
+    # so there is no reason to subsample. Cache the unscaled summaries and apply
+    # palette/scaling choices cheaply when the user renders again.
+    if (identical(illust_plot_type, "heatmap")) {
+      heatmap_stat <- as.character(input$illust_heatmap_stat %||% "median")
+      if (!heatmap_stat %in% c("median", "mean")) heatmap_stat <- "median"
+      heatmap_scale <- as.character(input$illust_heatmap_scale %||% "column_minmax")
+      if (!heatmap_scale %in% c("none", "column_minmax", "row_minmax", "column_zscore")) {
+        heatmap_scale <- "column_minmax"
+      }
+      heatmap_palette <- as.character(input$illust_heatmap_palette %||% "blue_white_yellow_red")
+      if (!heatmap_palette %in% c("heat", "viridis", "blue_white_yellow_red")) {
+        heatmap_palette <- "blue_white_yellow_red"
+      }
+      heatmap_cell_size <- .clamp_int(input$illust_heatmap_cell_size, default = 30L, lo = 16L, hi = 72L)
+      heatmap_show_values <- isTRUE(input$illust_heatmap_show_values)
+      z_limit <- 2.5
+
+      mask_sig <- if (is.null(rv$sample_mask)) {
+        "none"
+      } else {
+        paste0(length(rv$sample_mask), ":", sum(rv$sample_mask, na.rm = TRUE))
+      }
+      heatmap_cache_key <- jsonlite::toJSON(list(
+        family = "heatmap-summary",
+        sce_name = rv$sce_name %||% "",
+        assay_version = rv$assay_version %||% 0L,
+        gate_version = rv$gate_version %||% 0L,
+        sample_filter_key = rv$sample_filter_key %||% "all",
+        sample_mask_sig = mask_sig,
+        pop_ids = as.character(pop_ids),
+        channels = as.character(x_channels),
+        summary_stat = heatmap_stat
+      ), auto_unbox = TRUE, null = "null")
+
+      heatmap_summary <- NULL
+      if (identical(rv$.illustration_cache_key, heatmap_cache_key) &&
+          is.list(rv$.illustration_cache_payload) &&
+          identical(rv$.illustration_cache_payload$family, "heatmap-summary")) {
+        heatmap_summary <- rv$.illustration_cache_payload$summary
+      } else {
+        assay_for_illustration <- get_filtered_assay_data()
+        req(assay_for_illustration)
+        heatmap_summary <- compute_illustration_heatmap(
+          assay_for_illustration, get_plot_gates(), rv$populations,
+          rv$root_population_id, pop_ids, x_channels,
+          summary_stat = heatmap_stat, scale_mode = "none", z_limit = z_limit
+        )
+        rv$.illustration_cache_key <- heatmap_cache_key
+        rv$.illustration_cache_payload <- list(
+          family = "heatmap-summary", summary = heatmap_summary
+        )
+      }
+
+      scaled_values <- scale_illustration_heatmap(
+        heatmap_summary$raw_values, heatmap_scale, z_limit
+      )
+      finite_scaled <- scaled_values[is.finite(scaled_values)]
+      legend_range <- if (identical(heatmap_scale, "column_zscore")) {
+        c(-z_limit, z_limit)
+      } else if (heatmap_scale %in% c("column_minmax", "row_minmax")) {
+        c(0, 1)
+      } else if (length(finite_scaled)) {
+        range(finite_scaled)
+      } else {
+        c(0, 1)
+      }
+      if (legend_range[[1]] == legend_range[[2]]) legend_range <- legend_range + c(-0.5, 0.5)
+
+      heatmap_rows <- lapply(seq_along(heatmap_summary$pop_ids), function(i) {
+        pid <- heatmap_summary$pop_ids[[i]]
+        list(
+          id = pid,
+          name = heatmap_summary$pop_names[[pid]] %||% pid,
+          count = as.integer(heatmap_summary$pop_counts[[pid]] %||% 0L),
+          values = unname(as.numeric(scaled_values[i, ])),
+          raw_values = unname(as.numeric(heatmap_summary$raw_values[i, ]))
+        )
+      })
+      heatmap_channels <- lapply(heatmap_summary$channels, function(ch) {
+        list(id = as.character(ch), label = as.character(ch))
+      })
+
+      base_payload <- list(
+        plot_type = "heatmap",
+        plots = list(),
+        pop_ids = as.character(heatmap_summary$pop_ids),
+        x_channels = as.character(heatmap_summary$channels),
+        heatmap = list(
+          rows = heatmap_rows,
+          channels = heatmap_channels,
+          summary_stat = heatmap_stat,
+          scale_mode = heatmap_scale,
+          palette = heatmap_palette,
+          cell_size = heatmap_cell_size,
+          show_values = heatmap_show_values,
+          z_limit = z_limit,
+          legend_min = unname(legend_range[[1]]),
+          legend_max = unname(legend_range[[2]])
+        )
+      )
+      rv$.illustration_pdf_payload <- list(
+        payload = base_payload,
+        plot_type = "heatmap",
+        heatmap_palette = heatmap_palette,
+        heatmap_cell_size = heatmap_cell_size,
+        heatmap_show_values = heatmap_show_values,
+        font_sizes = illust_font_sizes,
+        pdf_dpi = layout$pdf_dpi
+      )
+      session$sendCustomMessage("renderIllustrationGrid", c(
+        list(
+          containerId = "illustration-grid-container",
+          plot_type = "heatmap",
+          font_sizes = illust_font_sizes
+        ),
+        base_payload
+      ))
+      return(invisible(base_payload))
     }
 
     # ── Interactive-preview event cap ─────────────────────────────────────────
@@ -8350,6 +8524,9 @@ server <- function(input, output, session) {
     input$illust_hist_fill_alpha, input$illust_hist_overlay_mode,
     input$illust_hist_layout, input$illust_ridge_overlap, input$illust_ridge_col_gap,
     input$illust_ridge_gradient,
+    input$illust_heatmap_stat, input$illust_heatmap_scale,
+    input$illust_heatmap_palette, input$illust_heatmap_cell_size,
+    input$illust_heatmap_show_values,
     input$illust_pub_style, input$illust_gate_line_width,
     input$illust_kde_auto, input$illust_kde_bandwidth
   ), {

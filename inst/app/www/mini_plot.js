@@ -1254,6 +1254,232 @@
             .text(cfg.channel || '');
     }
 
+    function _heatmapPaletteAnchors(name) {
+        if (name === 'viridis') {
+            return ['#440154', '#472d7b', '#3b528b', '#2c728e', '#21918c',
+                    '#28ae80', '#5ec962', '#addc30', '#fde725'];
+        }
+        if (name === 'heat') {
+            return ['#000000', '#5a0000', '#c41200', '#ff7b00', '#ffd000', '#ffff3a'];
+        }
+        return ['#2166ac', '#f7f7f7', '#ffff66', '#d73027'];
+    }
+
+    function _finiteHeatmapNumber(value) {
+        if (value === null || value === undefined || value === '') return null;
+        var number = Number(value);
+        return isFinite(number) ? number : null;
+    }
+
+    function _formatHeatmapValue(value) {
+        if (!isFinite(value)) return 'NA';
+        var av = Math.abs(value);
+        if (av >= 1000 || (av > 0 && av < 0.01)) return value.toExponential(2);
+        if (av >= 100) return value.toFixed(0);
+        if (av >= 10) return value.toFixed(1);
+        return value.toFixed(2);
+    }
+
+    function _heatmapTextColor(fill) {
+        var c = d3.color(fill);
+        if (!c) return '#111827';
+        var lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
+        return lum < 0.52 ? '#ffffff' : '#111827';
+    }
+
+    function renderHeatmapGrid(container, containerId, data, renderVersion) {
+        var hm = data.heatmap || {};
+        var rows = Array.isArray(hm.rows) ? hm.rows : [];
+        var channels = Array.isArray(hm.channels) ? hm.channels : [];
+        var fontSizes = data.font_sizes || {};
+        var labelFs = Math.max(6, Number(fontSizes.axis_label) || 10);
+        var valueFs = Math.max(6, Number(fontSizes.tick) || 8);
+        var cellSize = Math.max(16, Math.min(72, Number(hm.cell_size) || 30));
+        var showValues = !!hm.show_values;
+        var paletteName = String(hm.palette || 'blue_white_yellow_red');
+        var anchors = _heatmapPaletteAnchors(paletteName);
+        var interpolator = d3.interpolateRgbBasis(anchors);
+
+        var gridDiv = document.createElement('div');
+        gridDiv.className = 'mini-plot-grid illustration-grid heatmap-grid';
+        gridDiv.id = containerId + '-grid';
+        gridDiv.style.width = 'max-content';
+        gridDiv.style.padding = '4px';
+        container.appendChild(gridDiv);
+
+        if (!rows.length || !channels.length) {
+            var empty = document.createElement('div');
+            empty.style.cssText = 'padding:18px;color:#64748b;font-size:12px;';
+            empty.textContent = 'No heatmap data to display.';
+            gridDiv.appendChild(empty);
+            return;
+        }
+
+        var measureCanvas = document.createElement('canvas');
+        var measure = measureCanvas.getContext('2d');
+        measure.font = labelFs + 'px Arial, Helvetica, sans-serif';
+        var maxRowLabel = d3.max(rows, function (row) {
+            return measure.measureText(String(row.name || row.id || '')).width;
+        }) || 0;
+        var maxChannelLabel = d3.max(channels, function (ch) {
+            return measure.measureText(String(ch.label || ch.id || '')).width;
+        }) || 0;
+
+        var left = Math.ceil(maxRowLabel) + 18;
+        var top = Math.ceil(maxChannelLabel * 0.72) + 28;
+        var matrixW = channels.length * cellSize;
+        var matrixH = rows.length * cellSize;
+        var legendGap = 34;
+        var legendBarW = 14;
+        var legendTextW = 92;
+        var rightLabelPad = Math.ceil(maxChannelLabel * 0.72);
+        var width = left + matrixW + Math.max(rightLabelPad, legendGap + legendBarW + legendTextW) + 12;
+        var height = top + matrixH + 24;
+
+        var cell = document.createElement('div');
+        cell.className = 'mini-plot-cell heatmap-cell';
+        cell.style.width = width + 'px';
+        cell.style.height = height + 'px';
+        cell.style.justifySelf = 'start';
+        cell.setAttribute('data-render-family', 'illustration');
+        cell.setAttribute('data-plot-key', 'heatmap');
+        cell.setAttribute('data-render-version', renderVersion);
+        gridDiv.appendChild(cell);
+
+        var svg = d3.select(cell).append('svg')
+            .attr('width', width).attr('height', height)
+            .attr('viewBox', '0 0 ' + width + ' ' + height)
+            .style('display', 'block')
+            .style('font-family', 'Arial, Helvetica, sans-serif');
+        svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#ffffff');
+
+        var legendMin = _finiteHeatmapNumber(hm.legend_min);
+        var legendMax = _finiteHeatmapNumber(hm.legend_max);
+        if (legendMin === null) legendMin = 0;
+        if (legendMax === null || legendMax <= legendMin) legendMax = legendMin + 1;
+        var color = d3.scaleSequential(interpolator).domain([legendMin, legendMax]).clamp(true);
+        var missing = '#e5e7eb';
+
+        var cells = [];
+        rows.forEach(function (row, ri) {
+            var values = Array.isArray(row.values) ? row.values : [];
+            var raw = Array.isArray(row.raw_values) ? row.raw_values : [];
+            channels.forEach(function (channel, ci) {
+                cells.push({
+                    row: row,
+                    channel: channel,
+                    ri: ri,
+                    ci: ci,
+                    value: _finiteHeatmapNumber(values[ci]),
+                    raw: _finiteHeatmapNumber(raw[ci])
+                });
+            });
+        });
+
+        var cg = svg.append('g').attr('class', 'heatmap-cells');
+        var cellGroups = cg.selectAll('g.heatmap-cell-group').data(cells).enter()
+            .append('g').attr('class', 'heatmap-cell-group');
+        cellGroups.append('rect')
+            .attr('x', function (d) { return left + d.ci * cellSize; })
+            .attr('y', function (d) { return top + d.ri * cellSize; })
+            .attr('width', cellSize).attr('height', cellSize)
+            .attr('fill', function (d) { return d.value === null ? missing : color(d.value); })
+            .attr('stroke', '#ffffff').attr('stroke-width', 1);
+        cellGroups.append('title').text(function (d) {
+            var summary = String(hm.summary_stat || 'median');
+            var rawText = d.raw === null ? 'NA' : _formatHeatmapValue(d.raw);
+            var scaledText = d.value === null ? 'NA' : _formatHeatmapValue(d.value);
+            var count = Number(d.row.count);
+            var lines = [
+                String(d.row.name || d.row.id || ''),
+                String(d.channel.label || d.channel.id || ''),
+                summary.charAt(0).toUpperCase() + summary.slice(1) + ': ' + rawText
+            ];
+            if (String(hm.scale_mode || 'none') !== 'none') lines.push('Scaled: ' + scaledText);
+            if (isFinite(count)) lines.push('Events: ' + count.toLocaleString());
+            return lines.join('\n');
+        });
+        if (showValues && cellSize >= 24) {
+            cellGroups.append('text')
+                .attr('x', function (d) { return left + (d.ci + 0.5) * cellSize; })
+                .attr('y', function (d) { return top + (d.ri + 0.5) * cellSize; })
+                .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+                .style('font-size', Math.min(valueFs, Math.max(6, cellSize * 0.28)) + 'px')
+                .style('font-variant-numeric', 'tabular-nums')
+                .style('pointer-events', 'none')
+                .attr('fill', function (d) {
+                    return d.value === null ? '#64748b' : _heatmapTextColor(color(d.value));
+                })
+                .text(function (d) { return d.value === null ? '—' : _formatHeatmapValue(d.value); });
+        }
+
+        svg.append('g').attr('class', 'heatmap-row-labels')
+            .selectAll('text').data(rows).enter().append('text')
+            .attr('x', left - 8)
+            .attr('y', function (_d, i) { return top + (i + 0.5) * cellSize; })
+            .attr('text-anchor', 'end').attr('dominant-baseline', 'central')
+            .style('font-size', labelFs + 'px').style('fill', '#1f2937')
+            .text(function (d) { return String(d.name || d.id || ''); });
+
+        var colLabels = svg.append('g').attr('class', 'heatmap-column-labels')
+            .selectAll('text').data(channels).enter().append('text')
+            .attr('x', function (_d, i) { return left + (i + 0.5) * cellSize; })
+            .attr('y', top - 8)
+            .attr('text-anchor', 'start').attr('dominant-baseline', 'central')
+            .style('font-size', labelFs + 'px').style('fill', '#1f2937')
+            .text(function (d) { return String(d.label || d.id || ''); });
+        colLabels.attr('transform', function (_d, i) {
+            var x = left + (i + 0.5) * cellSize;
+            return 'rotate(-45,' + x + ',' + (top - 8) + ')';
+        });
+
+        svg.append('rect')
+            .attr('x', left).attr('y', top).attr('width', matrixW).attr('height', matrixH)
+            .attr('fill', 'none').attr('stroke', '#94a3b8').attr('stroke-width', 0.8);
+
+        var defs = svg.append('defs');
+        var gradId = 'heatmap-gradient-' + renderVersion;
+        var grad = defs.append('linearGradient').attr('id', gradId)
+            .attr('x1', '0%').attr('x2', '0%').attr('y1', '100%').attr('y2', '0%');
+        anchors.forEach(function (anchor, i) {
+            grad.append('stop')
+                .attr('offset', (i / Math.max(1, anchors.length - 1) * 100) + '%')
+                .attr('stop-color', anchor);
+        });
+        var legendH = Math.max(90, Math.min(200, matrixH));
+        var legendX = left + matrixW + legendGap;
+        var legendY = top + Math.max(0, (matrixH - legendH) / 2);
+        svg.append('rect')
+            .attr('x', legendX).attr('y', legendY)
+            .attr('width', legendBarW).attr('height', legendH)
+            .attr('fill', 'url(#' + gradId + ')')
+            .attr('stroke', '#64748b').attr('stroke-width', 0.6);
+        var legendScale = d3.scaleLinear().domain([legendMin, legendMax])
+            .range([legendY + legendH, legendY]);
+        var legendAxis = svg.append('g')
+            .attr('transform', 'translate(' + (legendX + legendBarW) + ',0)')
+            .call(d3.axisRight(legendScale).ticks(5).tickFormat(_formatLinearVal));
+        legendAxis.selectAll('text').style('font-size', valueFs + 'px');
+        legendAxis.selectAll('path,line').attr('stroke', '#64748b');
+
+        var statLabel = String(hm.summary_stat || 'median');
+        statLabel = statLabel.charAt(0).toUpperCase() + statLabel.slice(1);
+        var scaleLabels = {
+            column_minmax: 'Per channel (0–1)',
+            row_minmax: 'Per population (0–1)',
+            column_zscore: 'Per-channel z-score',
+            none: 'Transformed expression'
+        };
+        var legendTitle = svg.append('text')
+            .attr('x', legendX).attr('y', legendY - 9)
+            .style('font-size', labelFs + 'px').style('font-weight', 600)
+            .style('fill', '#334155');
+        legendTitle.append('tspan').attr('x', legendX).attr('dy', 0).text(statLabel);
+        legendTitle.append('tspan').attr('x', legendX).attr('dy', labelFs + 3)
+            .style('font-size', valueFs + 'px').style('font-weight', 400)
+            .text(scaleLabels[String(hm.scale_mode || 'none')] || 'Scaled expression');
+    }
+
     function renderIllustrationGrid(containerId, data) {
         var container = document.getElementById(containerId);
         if (!container) return;
@@ -1264,6 +1490,11 @@
         // Allow wide illustration grids to overflow horizontally instead of shrinking panels.
         container.style.overflowX = 'auto';
         container.style.overflowY = 'visible';
+
+        if (String(data.plot_type || '') === 'heatmap') {
+            renderHeatmapGrid(container, containerId, data, renderVersion);
+            return;
+        }
 
         var plots = data.plots || {};          // keyed by "pop_id|x_channel"
         var popIds = data.pop_ids || [];       // ordered list

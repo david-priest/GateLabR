@@ -222,6 +222,146 @@ compute_illustration_batch <- function(assay_data, gates, gate_order,
   list(plots = plots, gate_counts = gate_counts_by_pop, populations = result$populations)
 }
 
+#' Compute a population-by-channel expression heatmap.
+#'
+#' Summaries are calculated from every finite event in each selected population;
+#' the Illustration preview event cap intentionally does not apply. `assay_data`
+#' is the same display/transformed matrix used by the other Illustration plots.
+#'
+#' @param assay_data Matrix (events x channels), already in display coordinates.
+#' @param gates List of gate objects.
+#' @param populations Population hierarchy.
+#' @param root_pop_id Root population ID.
+#' @param pop_ids Ordered population IDs (heatmap rows).
+#' @param channels Ordered channel names (heatmap columns).
+#' @param summary_stat `"median"` (default) or `"mean"`.
+#' @param scale_mode One of `"none"`, `"column_minmax"`,
+#'   `"row_minmax"`, or `"column_zscore"`.
+#' @param z_limit Symmetric clipping limit for column z-scores.
+#' @return A list containing raw and scaled matrices plus row metadata.
+compute_illustration_heatmap <- function(assay_data, gates, populations,
+                                         root_pop_id, pop_ids, channels,
+                                         summary_stat = "median",
+                                         scale_mode = "column_minmax",
+                                         z_limit = 2.5) {
+  valid_channels <- intersect(as.character(channels), colnames(assay_data))
+  valid_pop_ids <- intersect(as.character(pop_ids), names(populations))
+  summary_stat <- match.arg(as.character(summary_stat), c("median", "mean"))
+  scale_mode <- match.arg(as.character(scale_mode),
+                          c("none", "column_minmax", "row_minmax", "column_zscore"))
+  z_limit <- suppressWarnings(as.numeric(z_limit))
+  if (!is.finite(z_limit) || z_limit <= 0) z_limit <- 2.5
+
+  raw_values <- matrix(
+    NA_real_, nrow = length(valid_pop_ids), ncol = length(valid_channels),
+    dimnames = list(valid_pop_ids, valid_channels)
+  )
+  pop_counts <- setNames(integer(length(valid_pop_ids)), valid_pop_ids)
+  pop_names <- setNames(character(length(valid_pop_ids)), valid_pop_ids)
+
+  if (length(valid_pop_ids) == 0 || length(valid_channels) == 0 || nrow(assay_data) == 0) {
+    return(list(
+      raw_values = raw_values, values = raw_values,
+      pop_ids = valid_pop_ids, pop_names = pop_names,
+      pop_counts = pop_counts, channels = valid_channels,
+      summary_stat = summary_stat, scale_mode = scale_mode,
+      z_limit = z_limit, legend_min = NA_real_, legend_max = NA_real_
+    ))
+  }
+
+  result <- apply_gating_strategy(gates, populations, root_pop_id, assay_data)
+  summarize <- if (identical(summary_stat, "mean")) base::mean else stats::median
+
+  for (i in seq_along(valid_pop_ids)) {
+    pop_id <- valid_pop_ids[[i]]
+    mask <- result$masks[[pop_id]]
+    idx <- if (is.null(mask)) integer(0) else which(mask %in% TRUE)
+    pop_counts[[pop_id]] <- length(idx)
+    nm <- populations[[pop_id]]$name %||% pop_id
+    pop_names[[pop_id]] <- if (is.na(nm) || !nzchar(as.character(nm))) pop_id else as.character(nm)
+    if (length(idx) == 0) next
+
+    for (j in seq_along(valid_channels)) {
+      vals <- as.numeric(assay_data[idx, valid_channels[[j]]])
+      vals <- vals[is.finite(vals)]
+      if (length(vals)) raw_values[i, j] <- summarize(vals)
+    }
+  }
+
+  scaled <- scale_illustration_heatmap(raw_values, scale_mode, z_limit)
+  finite_scaled <- scaled[is.finite(scaled)]
+  legend_range <- if (identical(scale_mode, "column_zscore")) {
+    c(-z_limit, z_limit)
+  } else if (scale_mode %in% c("column_minmax", "row_minmax")) {
+    c(0, 1)
+  } else if (length(finite_scaled)) {
+    range(finite_scaled)
+  } else {
+    c(NA_real_, NA_real_)
+  }
+  if (all(is.finite(legend_range)) && legend_range[[1]] == legend_range[[2]]) {
+    legend_range <- legend_range + c(-0.5, 0.5)
+  }
+
+  list(
+    raw_values = raw_values,
+    values = scaled,
+    pop_ids = valid_pop_ids,
+    pop_names = pop_names,
+    pop_counts = pop_counts,
+    channels = valid_channels,
+    summary_stat = summary_stat,
+    scale_mode = scale_mode,
+    z_limit = z_limit,
+    legend_min = legend_range[[1]],
+    legend_max = legend_range[[2]]
+  )
+}
+
+#' Scale a heatmap summary matrix while preserving missing values.
+scale_illustration_heatmap <- function(values, scale_mode = "column_minmax", z_limit = 2.5) {
+  scale_mode <- match.arg(as.character(scale_mode),
+                          c("none", "column_minmax", "row_minmax", "column_zscore"))
+  out <- values
+  if (identical(scale_mode, "none") || length(values) == 0) return(out)
+
+  minmax <- function(x) {
+    finite <- is.finite(x)
+    if (!any(finite)) return(x)
+    limits <- range(x[finite])
+    if (limits[[2]] <= limits[[1]]) {
+      x[finite] <- 0.5
+    } else {
+      x[finite] <- (x[finite] - limits[[1]]) / (limits[[2]] - limits[[1]])
+    }
+    x
+  }
+
+  if (identical(scale_mode, "column_minmax")) {
+    for (j in seq_len(ncol(out))) out[, j] <- minmax(out[, j])
+  } else if (identical(scale_mode, "row_minmax")) {
+    for (i in seq_len(nrow(out))) out[i, ] <- minmax(out[i, ])
+  } else {
+    z_limit <- suppressWarnings(as.numeric(z_limit))
+    if (!is.finite(z_limit) || z_limit <= 0) z_limit <- 2.5
+    for (j in seq_len(ncol(out))) {
+      x <- out[, j]
+      finite <- is.finite(x)
+      n <- sum(finite)
+      if (n == 0) next
+      centre <- mean(x[finite])
+      spread <- if (n > 1) stats::sd(x[finite]) else 0
+      if (!is.finite(spread) || spread <= 0) {
+        x[finite] <- 0
+      } else {
+        x[finite] <- pmax(-z_limit, pmin(z_limit, (x[finite] - centre) / spread))
+      }
+      out[, j] <- x
+    }
+  }
+  out
+}
+
 #' Build a gate overlay list filtered for a specific channel pair
 #' (only gates on matching x/y channels, including flipped)
 build_gates_for_channels <- function(gates, gate_order, gate_counts,

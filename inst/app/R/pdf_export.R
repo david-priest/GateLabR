@@ -396,7 +396,195 @@ export_multi_strategy_pdf <- function(file_path, nodes, opts) {
 # ILLUSTRATION SVG EXPORT
 # ══════════════════════════════════════════════════════════════════════════════
 
+#' Export an Illustration population-by-channel heatmap as vector SVG.
+export_heatmap_svg <- function(file_path, payload, opts) {
+  hm <- payload$heatmap %||% list()
+  rows <- hm$rows %||% list()
+  channels <- hm$channels %||% list()
+  if (length(rows) == 0 || length(channels) == 0) return(invisible(NULL))
+
+  fs <- opts$font_sizes %||% list()
+  label_fs <- max(6, min(28, as.numeric(fs$axis_label %||% 10)))
+  value_fs <- max(6, min(24, as.numeric(fs$tick %||% 8)))
+  cell_size <- max(16, min(72, as.numeric(hm$cell_size %||% opts$heatmap_cell_size %||% 30)))
+  show_values <- isTRUE(hm$show_values %||% opts$heatmap_show_values)
+  palette_name <- as.character(hm$palette %||% opts$heatmap_palette %||% "blue_white_yellow_red")
+  anchors <- switch(
+    palette_name,
+    heat = c("#000000", "#5A0000", "#C41200", "#FF7B00", "#FFD000", "#FFFF3A"),
+    viridis = c("#440154", "#472D7B", "#3B528B", "#2C728E", "#21918C",
+                "#28AE80", "#5EC962", "#ADDC30", "#FDE725"),
+    c("#2166AC", "#F7F7F7", "#FFFF66", "#D73027")
+  )
+  palette <- grDevices::colorRampPalette(anchors, space = "Lab")(256)
+
+  row_names <- vapply(rows, function(row) as.character(row$name %||% row$id %||% ""), character(1))
+  channel_labels <- vapply(channels, function(ch) as.character(ch$label %||% ch$id %||% ""), character(1))
+  max_row_chars <- max(nchar(row_names), 0)
+  max_channel_chars <- max(nchar(channel_labels), 0)
+  left <- max(46, max_row_chars * label_fs * 0.58 + 18)
+  top <- max(38, max_channel_chars * label_fs * 0.52 + 28)
+  bottom <- 14
+  matrix_w <- length(channels) * cell_size
+  matrix_h <- length(rows) * cell_size
+  legend_gap <- 34
+  legend_bar_w <- 14
+  legend_text_w <- 96
+  right_label_pad <- max_channel_chars * label_fs * 0.52
+  page_w <- left + matrix_w + max(right_label_pad, legend_gap + legend_bar_w + legend_text_w) + 12
+  page_h <- bottom + matrix_h + top
+
+  legend_min <- suppressWarnings(as.numeric(hm$legend_min %||% 0))
+  legend_max <- suppressWarnings(as.numeric(hm$legend_max %||% 1))
+  if (!is.finite(legend_min)) legend_min <- 0
+  if (!is.finite(legend_max) || legend_max <= legend_min) legend_max <- legend_min + 1
+  map_color <- function(value) {
+    value <- suppressWarnings(as.numeric(value))
+    if (!is.finite(value)) return("#E5E7EB")
+    t <- max(0, min(1, (value - legend_min) / (legend_max - legend_min)))
+    palette[[1L + round(t * 255)]]
+  }
+  text_color <- function(fill) {
+    rgb <- grDevices::col2rgb(fill)
+    lum <- (0.2126 * rgb[1, 1] + 0.7152 * rgb[2, 1] + 0.0722 * rgb[3, 1]) / 255
+    if (lum < 0.52) "#FFFFFF" else "#111827"
+  }
+  format_value <- function(value) {
+    value <- suppressWarnings(as.numeric(value))
+    if (!is.finite(value)) return("NA")
+    av <- abs(value)
+    if (av >= 1000 || (av > 0 && av < 0.01)) return(formatC(value, format = "e", digits = 2))
+    if (av >= 100) return(formatC(value, format = "f", digits = 0))
+    if (av >= 10) return(formatC(value, format = "f", digits = 1))
+    formatC(value, format = "f", digits = 2)
+  }
+
+  .export_svg(file_path, page_w, page_h, function() {
+    grid.rect(gp = gpar(fill = "#FFFFFF", col = NA), name = "background")
+    matrix_bottom <- bottom
+
+    cell_grobs <- list(); gi <- 0L
+    for (i in seq_along(rows)) {
+      row <- rows[[i]]
+      vals <- as.numeric(unlist(row$values %||% rep(NA_real_, length(channels))))
+      if (length(vals) < length(channels)) length(vals) <- length(channels)
+      y <- matrix_bottom + (length(rows) - i) * cell_size
+      for (j in seq_along(channels)) {
+        value <- vals[[j]]
+        fill <- map_color(value)
+        x <- left + (j - 1L) * cell_size
+        children <- gList(rectGrob(
+          x = unit(x, "points"), y = unit(y, "points"),
+          width = unit(cell_size, "points"), height = unit(cell_size, "points"),
+          just = c("left", "bottom"),
+          gp = gpar(fill = fill, col = "#FFFFFF", lwd = 0.7), name = "fill"
+        ))
+        if (show_values && cell_size >= 24) {
+          children <- gList(children[[1]], textGrob(
+            format_value(value),
+            x = unit(x + cell_size / 2, "points"),
+            y = unit(y + cell_size / 2, "points"),
+            gp = gpar(fontsize = min(value_fs, max(6, cell_size * 0.28)),
+                      fontfamily = "Helvetica", col = text_color(fill)),
+            name = "value"
+          ))
+        }
+        gi <- gi + 1L
+        cell_grobs[[gi]] <- gTree(
+          children = children,
+          name = paste0("cell_", i, "_", j)
+        )
+      }
+    }
+    grid.draw(gTree(children = do.call(gList, cell_grobs), name = "heatmap_cells"))
+
+    row_grobs <- lapply(seq_along(rows), function(i) {
+      textGrob(
+        row_names[[i]], x = unit(left - 8, "points"),
+        y = unit(matrix_bottom + (length(rows) - i + 0.5) * cell_size, "points"),
+        just = c("right", "centre"),
+        gp = gpar(fontsize = label_fs, fontfamily = "Helvetica", col = "#1F2937"),
+        name = paste0("row_", i)
+      )
+    })
+    grid.draw(gTree(children = do.call(gList, row_grobs), name = "row_labels"))
+
+    col_grobs <- lapply(seq_along(channels), function(j) {
+      textGrob(
+        channel_labels[[j]],
+        x = unit(left + (j - 0.5) * cell_size, "points"),
+        y = unit(matrix_bottom + matrix_h + 7, "points"),
+        just = c("left", "centre"), rot = 45,
+        gp = gpar(fontsize = label_fs, fontfamily = "Helvetica", col = "#1F2937"),
+        name = paste0("channel_", j)
+      )
+    })
+    grid.draw(gTree(children = do.call(gList, col_grobs), name = "channel_labels"))
+    grid.rect(
+      x = unit(left, "points"), y = unit(matrix_bottom, "points"),
+      width = unit(matrix_w, "points"), height = unit(matrix_h, "points"),
+      just = c("left", "bottom"), gp = gpar(fill = NA, col = "#94A3B8", lwd = 0.8),
+      name = "matrix_border"
+    )
+
+    legend_h <- max(90, min(200, matrix_h))
+    legend_x <- left + matrix_w + legend_gap
+    legend_y <- matrix_bottom + max(0, (matrix_h - legend_h) / 2)
+    n_steps <- 80L
+    step_h <- legend_h / n_steps
+    legend_grobs <- lapply(seq_len(n_steps), function(k) {
+      rectGrob(
+        x = unit(legend_x, "points"), y = unit(legend_y + (k - 1L) * step_h, "points"),
+        width = unit(legend_bar_w, "points"), height = unit(step_h + 0.2, "points"),
+        just = c("left", "bottom"), gp = gpar(fill = palette[[1L + round((k - 1L) / (n_steps - 1L) * 255)]], col = NA),
+        name = paste0("step_", k)
+      )
+    })
+    grid.draw(gTree(children = do.call(gList, legend_grobs), name = "legend_gradient"))
+    grid.rect(
+      x = unit(legend_x, "points"), y = unit(legend_y, "points"),
+      width = unit(legend_bar_w, "points"), height = unit(legend_h, "points"),
+      just = c("left", "bottom"), gp = gpar(fill = NA, col = "#64748B", lwd = 0.6),
+      name = "legend_border"
+    )
+    tick_values <- seq(legend_min, legend_max, length.out = 5)
+    for (k in seq_along(tick_values)) {
+      y <- legend_y + (k - 1L) / 4 * legend_h
+      grid.segments(
+        x0 = unit(legend_x + legend_bar_w, "points"), x1 = unit(legend_x + legend_bar_w + 4, "points"),
+        y0 = unit(y, "points"), y1 = unit(y, "points"), gp = gpar(col = "#64748B", lwd = 0.6)
+      )
+      grid.text(
+        format_value(tick_values[[k]]),
+        x = unit(legend_x + legend_bar_w + 7, "points"), y = unit(y, "points"),
+        just = c("left", "centre"),
+        gp = gpar(fontsize = value_fs, fontfamily = "Helvetica", col = "#334155")
+      )
+    }
+    stat_label <- tools::toTitleCase(as.character(hm$summary_stat %||% "median"))
+    scale_label <- switch(
+      as.character(hm$scale_mode %||% "none"),
+      column_minmax = "Per channel (0–1)",
+      row_minmax = "Per population (0–1)",
+      column_zscore = "Per-channel z-score",
+      "Transformed expression"
+    )
+    grid.text(
+      stat_label, x = unit(legend_x, "points"), y = unit(legend_y + legend_h + 12, "points"),
+      just = c("left", "bottom"), gp = gpar(fontsize = label_fs, fontfamily = "Helvetica", fontface = "bold", col = "#334155")
+    )
+    grid.text(
+      scale_label, x = unit(legend_x, "points"), y = unit(legend_y + legend_h - 1, "points"),
+      just = c("left", "bottom"), gp = gpar(fontsize = value_fs, fontfamily = "Helvetica", col = "#334155")
+    )
+  })
+  invisible(file_path)
+}
+
 export_illustration_pdf <- function(file_path, payload, opts) {
+  if (identical(as.character(payload$plot_type %||% ""), "heatmap")) {
+    return(export_heatmap_svg(file_path, payload, opts))
+  }
   plots       <- payload$plots %||% list()
   pop_ids     <- as.character(payload$pop_ids %||% character(0))
   pop_names   <- payload$pop_names %||% list()
