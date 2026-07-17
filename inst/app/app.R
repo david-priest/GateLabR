@@ -21,6 +21,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 source("R/data_utils.R")
 source("R/models.R")
+source("R/gatingml_merge.R")
 source("R/gate_engine.R")
 source("R/workspace.R")
 source("R/fcs_import.R")
@@ -9594,6 +9595,23 @@ server <- function(input, output, session) {
         return()
       }
 
+      has_existing_strategy <- has_gating_strategy(list(
+        gates = rv$gates,
+        populations = rv$populations,
+        root_population_id = rv$root_population_id
+      ))
+      current_cytof_cofactor <- suppressWarnings(
+        as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5)
+      )
+      parsed$merge_blocked_reason <- gating_merge_space_conflict(
+        has_existing_strategy = has_existing_strategy,
+        is_flow = is_flow_session(rv$sce),
+        current_compensation = rv$comp_on,
+        imported_compensation_target = parsed$compensation_resolution$target,
+        current_cytof_cofactor = current_cytof_cofactor,
+        imported_cytof_cofactor = parsed$cytof_cofactor
+      )
+      parsed$has_existing_strategy <- has_existing_strategy
       rv$.pending_gatingml_import <- parsed
       comp_res <- parsed$compensation_resolution
       comp_note <- NULL
@@ -9623,7 +9641,7 @@ server <- function(input, output, session) {
         }
       }
       showModal(modalDialog(
-        title = "Import GatingML from Cytobank",
+        title = "Import GatingML",
         tags$p(sprintf("Parsed %d gates and %d populations from %s.",
                        parsed$n_gates_imported, parsed$n_pops_imported,
                        switch(parsed$source %||% "generic",
@@ -9657,8 +9675,25 @@ server <- function(input, output, session) {
             style = "color:#8a6d3b; font-size:12px;"
           )
         },
-        tags$p("Importing will replace the current gates and populations.",
-               style = "color:#c00; font-size:12px;"),
+        radioButtons(
+          "gatingml_import_mode",
+          "How should the imported strategy be applied?",
+          choices = c(
+            if (is.null(parsed$merge_blocked_reason)) {
+              c("Merge with current strategy — keep existing gates and add imported top-level populations beneath All Events" = "merge")
+            },
+            c("Replace current strategy — remove existing gates and populations" = "replace")
+          ),
+          selected = if (isTRUE(has_existing_strategy) && is.null(parsed$merge_blocked_reason)) "merge" else "replace"
+        ),
+        tags$p(
+          "Merge preserves scientific labels and remaps only colliding internal IDs.",
+          style = "color:#555; font-size:12px;"
+        ),
+        if (!is.null(parsed$merge_blocked_reason)) {
+          tags$p(parsed$merge_blocked_reason,
+                 style = "color:#8a6d3b; font-size:12px; font-weight:600;")
+        },
         footer = tagList(
           modalButton("Cancel"),
           actionButton("confirm_import_gatingml_btn", "Import", class = "btn-primary")
@@ -9672,10 +9707,10 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$confirm_import_gatingml_btn, {
-    removeModal()
     parsed <- rv$.pending_gatingml_import
-    rv$.pending_gatingml_import <- NULL
     req(parsed)
+    import_mode <- isolate(input$gatingml_import_mode) %||% "replace"
+    if (!import_mode %in% c("merge", "replace")) import_mode <- "replace"
 
     comp_res <- parsed$compensation_resolution %||%
       list(target = NULL, source = "none", requires_confirmation = FALSE)
@@ -9688,12 +9723,68 @@ server <- function(input, output, session) {
     cytof_cofactor_changed <- !is_flow_session(rv$sce) &&
       is.finite(source_cytof_cofactor) && source_cytof_cofactor > 0 &&
       !isTRUE(all.equal(source_cytof_cofactor, current_cytof_cofactor, tolerance = 1e-12))
+    has_existing_strategy <- has_gating_strategy(list(
+      gates = rv$gates,
+      populations = rv$populations,
+      root_population_id = rv$root_population_id
+    ))
+    merge_blocked_reason <- gating_merge_space_conflict(
+      has_existing_strategy = has_existing_strategy,
+      is_flow = is_flow_session(rv$sce),
+      current_compensation = rv$comp_on,
+      imported_compensation_target = comp_target,
+      current_cytof_cofactor = current_cytof_cofactor,
+      imported_cytof_cofactor = source_cytof_cofactor
+    )
+    if (identical(import_mode, "merge") && !is.null(merge_blocked_reason)) {
+      showNotification(merge_blocked_reason, type = "error", duration = 8)
+      return()
+    }
     if (cytof_cofactor_changed && !"counts" %in% SummarizedExperiment::assayNames(rv$sce)) {
       showNotification(
         "This Gating-ML file uses a different CyTOF cofactor, but the loaded object has no raw counts assay to re-transform. The workspace was not changed.",
         type = "error", duration = 8)
       return()
     }
+
+    current_active_population_id <- rv$active_population_id
+    current_selected_gate_id <- rv$selected_gate_id
+    current_selected_gate_ids <- rv$.selected_gate_ids %||% character(0)
+    current_selected_pop_ids <- rv$.selected_pop_ids %||% character(0)
+    strategy <- if (identical(import_mode, "merge")) {
+      tryCatch(
+        merge_gating_strategies(
+          current = list(
+            gates = rv$gates,
+            gate_order = rv$gate_order,
+            populations = rv$populations,
+            root_population_id = rv$root_population_id
+          ),
+          imported = list(
+            gates = parsed$gates,
+            gate_order = parsed$gate_order %||% names(parsed$gates),
+            populations = parsed$populations,
+            root_population_id = parsed$root_population_id
+          )
+        ),
+        error = function(e) {
+          showNotification(paste("GatingML merge error:", e$message),
+                           type = "error", duration = 8)
+          NULL
+        }
+      )
+    } else {
+      list(
+        gates = parsed$gates,
+        gate_order = parsed$gate_order %||% names(parsed$gates),
+        populations = parsed$populations,
+        root_population_id = parsed$root_population_id
+      )
+    }
+    if (is.null(strategy)) return()
+
+    removeModal()
+    rv$.pending_gatingml_import <- NULL
 
     # Gate/population undo snapshots do not carry display-transform state. Do not
     # retain an unsafe route back to gates drawn in the previous linear space.
@@ -9719,14 +9810,33 @@ server <- function(input, output, session) {
       S4Vectors::metadata(rv$sce)$cofactor <- source_cytof_cofactor
       rv$cytof_axis_range <- list()
     }
-    rv$gates <- parsed$gates
-    rv$gate_order <- parsed$gate_order %||% names(parsed$gates)
-    rv$populations <- parsed$populations
-    rv$root_population_id <- parsed$root_population_id
+    rv$gates <- strategy$gates
+    rv$gate_order <- strategy$gate_order
+    rv$populations <- strategy$populations
+    rv$root_population_id <- strategy$root_population_id
     sort_population_tree_state()
 
-    rv$active_population_id <- rv$root_population_id
-    rv$selected_gate_id <- NULL
+    if (identical(import_mode, "merge")) {
+      rv$active_population_id <- if (!is.null(current_active_population_id) &&
+                                      current_active_population_id %in% names(rv$populations)) {
+        current_active_population_id
+      } else {
+        rv$root_population_id
+      }
+      rv$selected_gate_id <- if (!is.null(current_selected_gate_id) &&
+                                 current_selected_gate_id %in% names(rv$gates)) {
+        current_selected_gate_id
+      } else {
+        NULL
+      }
+      rv$.selected_gate_ids <- intersect(current_selected_gate_ids, names(rv$gates))
+      rv$.selected_pop_ids <- intersect(current_selected_pop_ids, names(rv$populations))
+    } else {
+      rv$active_population_id <- rv$root_population_id
+      rv$selected_gate_id <- NULL
+      rv$.selected_gate_ids <- character(0)
+      rv$.selected_pop_ids <- character(0)
+    }
     rv$gate_version <- rv$gate_version + 1L
 
     # Restore per-channel scales saved in the GatingML custom_info (if present).
@@ -9794,8 +9904,12 @@ server <- function(input, output, session) {
     autosave()
     send_full_plot(reset_view = TRUE)
 
-    msg <- paste0("Imported ", parsed$n_gates_imported, " gates and ",
-                  parsed$n_pops_imported, " populations from GatingML")
+    msg <- paste0(
+      if (identical(import_mode, "merge")) "Merged " else "Imported ",
+      parsed$n_gates_imported, " gates and ", parsed$n_pops_imported,
+      " populations from GatingML; ",
+      if (identical(import_mode, "merge")) "existing strategy retained" else "current strategy replaced"
+    )
     if (identical(comp_target, TRUE)) msg <- paste0(msg, "; FCS compensation enabled")
     if (identical(comp_target, FALSE)) msg <- paste0(msg, "; compensation disabled")
     if (n_scales > 0) msg <- paste0(msg, "; restored scales for ", n_scales, " channel(s)")
@@ -10798,7 +10912,7 @@ ui_with_runjs <- tagList(
         'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
         'save_rds_dl':        'Download the SCE (with embedded workspace) as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
-        'import_gatingml_upload': 'Import Cytobank Gating-ML gates and positive AND populations; files containing NOT/OR logic or unmatched channels are rejected without changing the workspace',
+        'import_gatingml_upload': 'Import Gating-ML gates and positive AND populations, then choose whether to merge them into the current hierarchy or replace the current strategy; files containing NOT/OR logic or unmatched channels are rejected without changing the workspace',
         'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML ($PnN channel names, flat BooleanGates + custom_info) — re-imports into GateLabR / GateLab and uploads to Cytobank',
         // Mode toolbar
         'mode_rect':     'Draw a rectangle gate',
