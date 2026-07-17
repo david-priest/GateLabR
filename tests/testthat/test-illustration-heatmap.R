@@ -90,3 +90,46 @@ test_that("illustration heatmap supports mean summaries and selected order", {
   expect_equal(unname(hm$raw_values), rbind(c(2, 8), c(8, 2)))
   expect_equal(unname(hm$values), rbind(c(0, 1), c(1, 0)))
 })
+
+test_that("illustration heatmap exports labelled vector SVG", {
+  file <- tempfile(fileext = ".svg")
+  payload <- list(
+    plot_type = "heatmap",
+    heatmap = list(
+      rows = list(
+        list(
+          id = "low", name = "Low barcode", count = 3L,
+          values = c(0, 1), raw_values = c(2, 8)
+        ),
+        list(
+          id = "empty", name = "No events", count = 0L,
+          values = c(NA_real_, NA_real_), raw_values = c(NA_real_, NA_real_)
+        )
+      ),
+      channels = list(
+        list(id = "BarcodeA", label = "Barcode A"),
+        list(id = "BarcodeB", label = "Barcode B")
+      ),
+      summary_stat = "median",
+      scale_mode = "column_minmax",
+      palette = "blue_white_yellow_red",
+      cell_size = 30,
+      show_values = TRUE,
+      legend_min = 0,
+      legend_max = 1
+    )
+  )
+
+  export_illustration_pdf(
+    file, payload,
+    list(font_sizes = list(axis_label = 10, tick = 8))
+  )
+
+  expect_true(file.exists(file))
+  expect_gt(file.info(file)$size, 1000)
+  svg <- paste(readLines(file, warn = FALSE), collapse = "\n")
+  expect_match(svg, "Low barcode", fixed = TRUE)
+  expect_match(svg, "Barcode A", fixed = TRUE)
+  expect_match(svg, "heatmap_cells", fixed = TRUE)
+  expect_match(svg, "legend_gradient", fixed = TRUE)
+})

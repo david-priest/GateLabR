@@ -564,8 +564,8 @@ export_heatmap_svg <- function(file_path, payload, opts) {
     stat_label <- tools::toTitleCase(as.character(hm$summary_stat %||% "median"))
     scale_label <- switch(
       as.character(hm$scale_mode %||% "none"),
-      column_minmax = "Per channel (0–1)",
-      row_minmax = "Per population (0–1)",
+      column_minmax = "Per channel (0-1)",
+      row_minmax = "Per population (0-1)",
       column_zscore = "Per-channel z-score",
       "Transformed expression"
     )

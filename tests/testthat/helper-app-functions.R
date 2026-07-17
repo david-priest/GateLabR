@@ -13,6 +13,7 @@ for (file in c(
   "models.R",
   "gate_engine.R",
   "strategy_utils.R",
+  "pdf_export.R",
   "workspace.R",
   "fcs_import.R",
   "fcs_export.R"
