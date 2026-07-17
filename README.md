@@ -72,9 +72,11 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   previews of any `colData` composition (e.g. cluster or division proportions by
   condition), with per-sample averaging and faceting.
 - **Figure export.** Strategy and Illustration tabs render publication-style
-  multi-panel grids; SVG export uses `gridSVG` to produce Adobe Illustrator-
-  friendly grouped vector files (rasterised data, vector axes / gates /
-  labels).
+  multi-panel grids. Illustration includes biplot and histogram grids, stacked
+  ridgelines, and population-by-channel median / mean expression heatmaps with
+  per-channel, per-population or z-score scaling and three colour palettes. SVG
+  export uses `gridSVG` to produce Adobe Illustrator-friendly grouped vector
+  files (rasterised data, vector axes / gates / labels).
 
 ## How GateLabR compares with other tools
 

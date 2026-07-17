@@ -21,6 +21,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 source("R/data_utils.R")
 source("R/models.R")
+source("R/gatingml_merge.R")
 source("R/gate_engine.R")
 source("R/workspace.R")
 source("R/fcs_import.R")
@@ -125,7 +126,7 @@ ui <- fluidPage(
     tags$script(src = "vendor/split.min.js"),
     tags$script(src = "layout_split.js?v=20260713a"),
     tags$script(src = "cytof_plot.js?v=20260713a"),
-    tags$script(src = "mini_plot.js?v=20260713c"),
+    tags$script(src = "mini_plot.js?v=20260717b"),
     tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260713d")
@@ -585,7 +586,9 @@ ui <- fluidPage(
             control_row("Plot",
               tags$div(class = "glr-inline-choice",
                 radioButtons("illust_plot_type", NULL,
-                             choices = c("Biplot" = "biplot", "Histogram" = "histogram"),
+                             choices = c("Biplot" = "biplot",
+                                         "Histogram" = "histogram",
+                                         "Heatmap" = "heatmap"),
                              selected = "biplot", inline = TRUE)
               ),
               conditionalPanel(
@@ -618,31 +621,39 @@ ui <- fluidPage(
               )
             ),
 
-            control_row("Layout",
-              inline_field("Plot size",
-                numericInput("illust_plot_size", NULL,
-                             value = 200, min = 150, max = 400, step = 25,
-                             width = "82px")),
-              inline_field("Columns",
-                numericInput("illust_n_columns", NULL,
-                             value = 4, min = 1, max = 12, step = 1,
-                             width = "68px")),
-              inline_check(checkboxInput("illust_fit_to_columns",
-                                         "Fit to columns", value = TRUE)),
-              control_separator(),
-              inline_field("Max events / panel",
-                numericInput("illust_max_events", NULL,
-                             value = 10000, min = 0, max = 50000, step = 1000,
-                             width = "100px")),
-              inline_check(checkboxInput("illust_all_events", "All events", value = FALSE))
+            conditionalPanel(
+              "input.illust_plot_type != 'heatmap'",
+              control_row("Layout",
+                inline_field("Plot size",
+                  sliderInput("illust_plot_size", NULL,
+                              value = 200, min = 150, max = 500, step = 25,
+                              width = "170px", ticks = FALSE),
+                  class = "glr-slider-field",
+                  title = "Rendered panel size; click Render Illustration to apply"),
+                inline_field("Columns",
+                  numericInput("illust_n_columns", NULL,
+                               value = 4, min = 1, max = 12, step = 1,
+                               width = "68px")),
+                inline_check(checkboxInput("illust_fit_to_columns",
+                                           "Fit to columns", value = TRUE)),
+                control_separator(),
+                inline_field("Max events / panel",
+                  numericInput("illust_max_events", NULL,
+                               value = 10000, min = 0, max = 50000, step = 1000,
+                               width = "100px")),
+                inline_check(checkboxInput("illust_all_events", "All events", value = FALSE))
+              )
             ),
 
-            control_row("Populations",
-              inline_check(checkboxInput("illust_color_by_pop",
-                                         "Colour each population", value = FALSE)),
-              inline_check(checkboxInput("illust_overlay_pops",
-                                         "Overlay populations per channel", value = FALSE)),
-              control_hint("Global ranges from Scales are always used.")
+            conditionalPanel(
+              "input.illust_plot_type != 'heatmap'",
+              control_row("Populations",
+                inline_check(checkboxInput("illust_color_by_pop",
+                                           "Colour each population", value = FALSE)),
+                inline_check(checkboxInput("illust_overlay_pops",
+                                           "Overlay populations per channel", value = FALSE)),
+                control_hint("Global ranges from Scales are always used.")
+              )
             ),
 
             conditionalPanel(
@@ -710,19 +721,57 @@ ui <- fluidPage(
               )
             ),
 
+            conditionalPanel(
+              "input.illust_plot_type == 'heatmap'",
+              control_row("Heatmap",
+                inline_field("Summary",
+                  selectInput("illust_heatmap_stat", NULL,
+                              choices = c("Median" = "median", "Mean" = "mean"),
+                              selected = "median", width = "100px")),
+                inline_field("Scale",
+                  selectInput("illust_heatmap_scale", NULL,
+                              choices = c(
+                                "Per channel (0–1)" = "column_minmax",
+                                "Per population (0–1)" = "row_minmax",
+                                "Per channel z-score" = "column_zscore",
+                                "None (transformed expression)" = "none"
+                              ),
+                              selected = "column_minmax", width = "190px")),
+                inline_field("Palette",
+                  selectInput("illust_heatmap_palette", NULL,
+                              choices = c(
+                                "Histogram heat (black→yellow)" = "heat",
+                                "Viridis" = "viridis",
+                                "RColorBrewer RdYlBu (blue→yellow→red)" = "blue_white_yellow_red"
+                              ),
+                              selected = "blue_white_yellow_red", width = "260px")),
+                inline_field("Plot size",
+                  sliderInput("illust_heatmap_cell_size", NULL,
+                              value = 30, min = 16, max = 72, step = 2,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field",
+                  title = "Heatmap cell size; click Render Illustration to apply"),
+                inline_check(checkboxInput("illust_heatmap_show_values",
+                                           "Show values", value = FALSE)),
+                control_hint("Uses all events in each population; empty populations are shown in grey.")
+              )
+            ),
+
             control_row("Fonts",
               inline_field("Tick",
                 numericInput("illust_tick_font_size", NULL,
-                             value = 8, min = 6, max = 24, step = 1, width = "64px")),
+                             value = 9, min = 6, max = 24, step = 1, width = "64px")),
               inline_field("Axis",
                 numericInput("illust_axis_label_font_size", NULL,
-                             value = 10, min = 6, max = 28, step = 1, width = "64px")),
+                             value = 12, min = 6, max = 28, step = 1, width = "64px")),
               inline_field("Title",
                 numericInput("illust_title_font_size", NULL,
-                             value = 10, min = 6, max = 28, step = 1, width = "64px")),
+                             value = 12, min = 6, max = 28, step = 1, width = "64px")),
               inline_field("Gate",
                 numericInput("illust_gate_label_font_size", NULL,
-                             value = 8, min = 6, max = 24, step = 1, width = "64px")),
+                             value = 10, min = 6, max = 24, step = 1, width = "64px")),
+              inline_check(checkboxInput("illust_scale_fonts_with_plot",
+                                         "Scale with plot", value = TRUE)),
               control_separator(),
               inline_field("SVG raster DPI",
                 numericInput("illust_pdf_dpi", NULL,
@@ -732,7 +781,7 @@ ui <- fluidPage(
 
             tags$div(class = "illust-selector-grid",
               tags$section(class = "illust-selector-panel",
-                tags$div(class = "illust-selector-panel-title", "X Channels"),
+                tags$div(class = "illust-selector-panel-title", "Channels"),
                 tags$div(class = "illust-selector-panel-body",
                   uiOutput("illust_x_channels_ui")
                 )
@@ -1608,10 +1657,11 @@ server <- function(input, output, session) {
       plot_size            = isolate(input$illust_plot_size)                         %||% 200L,
       n_columns            = isolate(input$illust_n_columns)                         %||% 4L,
       fit_to_columns       = isTRUE(isolate(input$illust_fit_to_columns)),
-      tick_font_size       = isolate(input$illust_tick_font_size)                    %||% 8L,
-      axis_label_font_size = isolate(input$illust_axis_label_font_size)              %||% 10L,
-      title_font_size      = isolate(input$illust_title_font_size)                   %||% 10L,
-      gate_label_font_size = isolate(input$illust_gate_label_font_size)              %||% 8L,
+      tick_font_size       = isolate(input$illust_tick_font_size)                    %||% 9L,
+      axis_label_font_size = isolate(input$illust_axis_label_font_size)              %||% 12L,
+      title_font_size      = isolate(input$illust_title_font_size)                   %||% 12L,
+      gate_label_font_size = isolate(input$illust_gate_label_font_size)              %||% 10L,
+      scale_fonts_with_plot = isTRUE(isolate(input$illust_scale_fonts_with_plot) %||% TRUE),
       pdf_dpi              = isolate(input$illust_pdf_dpi)                           %||% 300L,
       point_size           = isolate(input$illust_point_size)                        %||% 1.2,
       point_alpha          = isolate(input$illust_point_alpha)                       %||% 0.35,
@@ -1623,6 +1673,11 @@ server <- function(input, output, session) {
       ridge_overlap        = isolate(input$illust_ridge_overlap)                     %||% 0.7,
       ridge_col_gap        = isolate(input$illust_ridge_col_gap)                     %||% 8,
       ridge_gradient       = isTRUE(isolate(input$illust_ridge_gradient) %||% TRUE),
+      heatmap_stat         = as.character(isolate(input$illust_heatmap_stat)         %||% "median"),
+      heatmap_scale        = as.character(isolate(input$illust_heatmap_scale)        %||% "column_minmax"),
+      heatmap_palette      = as.character(isolate(input$illust_heatmap_palette)      %||% "blue_white_yellow_red"),
+      heatmap_cell_size    = isolate(input$illust_heatmap_cell_size)                 %||% 30,
+      heatmap_show_values  = isTRUE(isolate(input$illust_heatmap_show_values)),
       pub_style            = isTRUE(isolate(input$illust_pub_style)),
       gate_line_width      = isolate(input$illust_gate_line_width)                   %||% 1.5,
       kde_bandwidth        = if (isTRUE(isolate(input$illust_kde_auto) %||% TRUE)) 0 else
@@ -6365,12 +6420,12 @@ server <- function(input, output, session) {
     scope <- match.arg(scope)
     is_strategy <- identical(scope, "strategy")
 
-    if (!is_strategy && !plot_type %in% c("biplot", "histogram")) {
+    if (!is_strategy && !plot_type %in% c("biplot", "histogram", "heatmap")) {
       plot_type <- "biplot"
     }
 
     mode <- .normalize_display_mode(if (is_strategy) input$strategy_display else input$illust_display)
-    if (!is_strategy && identical(plot_type, "histogram")) {
+    if (!is_strategy && plot_type %in% c("histogram", "heatmap")) {
       mode <- "scatter"
     }
     if (is_strategy) {
@@ -6383,19 +6438,19 @@ server <- function(input, output, session) {
 
     tick_font <- .clamp_int(
       if (is_strategy) input$strategy_tick_font_size else input$illust_tick_font_size,
-      default = 8L, lo = 6L, hi = 24L
+      default = if (is_strategy) 8L else 9L, lo = 6L, hi = 24L
     )
     axis_font <- .clamp_int(
       if (is_strategy) input$strategy_axis_label_font_size else input$illust_axis_label_font_size,
-      default = 10L, lo = 6L, hi = 28L
+      default = if (is_strategy) 10L else 12L, lo = 6L, hi = 28L
     )
     title_font <- .clamp_int(
       if (is_strategy) input$strategy_title_font_size else input$illust_title_font_size,
-      default = 10L, lo = 6L, hi = 28L
+      default = if (is_strategy) 10L else 12L, lo = 6L, hi = 28L
     )
     gate_label_font <- .clamp_int(
       if (is_strategy) input$strategy_gate_label_font_size else input$illust_gate_label_font_size,
-      default = 8L, lo = 6L, hi = 24L
+      default = if (is_strategy) 8L else 10L, lo = 6L, hi = 24L
     )
 
     contour_threshold <- .clamp_num(
@@ -7566,7 +7621,7 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, "illust_overlay_pops",  value = isTRUE(s$overlay_pops))
     if (!is.null(s$all_events))          updateCheckboxInput(session,  "illust_all_events",          value = isTRUE(s$all_events))
     if (!is.null(s$max_events))          updateNumericInput(session,   "illust_max_events",          value = s$max_events)
-    if (!is.null(s$plot_size))           updateNumericInput(session,   "illust_plot_size",           value = s$plot_size)
+    if (!is.null(s$plot_size))           updateSliderInput(session,    "illust_plot_size",           value = s$plot_size)
     # n_columns — handle old key "n_cols" for backward compat
     n_cols_val <- s$n_columns %||% s$n_cols
     if (!is.null(n_cols_val))            updateNumericInput(session,   "illust_n_columns",           value = n_cols_val)
@@ -7577,6 +7632,8 @@ server <- function(input, output, session) {
     if (!is.null(axis_lbl_val))          updateNumericInput(session,   "illust_axis_label_font_size", value = axis_lbl_val)
     if (!is.null(s$title_font_size))     updateNumericInput(session,   "illust_title_font_size",     value = s$title_font_size)
     if (!is.null(s$gate_label_font_size))updateNumericInput(session,   "illust_gate_label_font_size",value = s$gate_label_font_size)
+    updateCheckboxInput(session, "illust_scale_fonts_with_plot",
+                        value = isTRUE(s$scale_fonts_with_plot %||% TRUE))
     if (!is.null(s$pdf_dpi))             updateNumericInput(session,   "illust_pdf_dpi",             value = s$pdf_dpi)
     if (!is.null(s$point_size))          updateNumericInput(session,   "illust_point_size",          value = s$point_size)
     if (!is.null(s$point_alpha))         updateSliderInput(session,    "illust_point_alpha",         value = s$point_alpha)
@@ -7588,6 +7645,11 @@ server <- function(input, output, session) {
     if (!is.null(s$ridge_overlap))       updateSliderInput(session,    "illust_ridge_overlap",       value = s$ridge_overlap)
     if (!is.null(s$ridge_col_gap))       updateSliderInput(session,    "illust_ridge_col_gap",       value = s$ridge_col_gap)
     if (!is.null(s$ridge_gradient))      updateCheckboxInput(session,  "illust_ridge_gradient",      value = isTRUE(s$ridge_gradient))
+    if (!is.null(s$heatmap_stat))        updateSelectInput(session,    "illust_heatmap_stat",         selected = s$heatmap_stat)
+    if (!is.null(s$heatmap_scale))       updateSelectInput(session,    "illust_heatmap_scale",        selected = s$heatmap_scale)
+    if (!is.null(s$heatmap_palette))     updateSelectInput(session,    "illust_heatmap_palette",      selected = s$heatmap_palette)
+    if (!is.null(s$heatmap_cell_size))   updateSliderInput(session,    "illust_heatmap_cell_size",    value = s$heatmap_cell_size)
+    if (!is.null(s$heatmap_show_values)) updateCheckboxInput(session,  "illust_heatmap_show_values", value = isTRUE(s$heatmap_show_values))
     if (!is.null(s$pub_style))           updateCheckboxInput(session,  "illust_pub_style",           value = isTRUE(s$pub_style))
     if (!is.null(s$gate_line_width))     updateNumericInput(session,   "illust_gate_line_width",     value = s$gate_line_width)
     if (!is.null(s$kde_bandwidth)) {
@@ -7935,13 +7997,14 @@ server <- function(input, output, session) {
 
   render_illustration_tab <- function() {
     illust_plot_type <- as.character(input$illust_plot_type %||% "biplot")
-    if (!illust_plot_type %in% c("biplot", "histogram")) illust_plot_type <- "biplot"
+    if (!illust_plot_type %in% c("biplot", "histogram", "heatmap")) illust_plot_type <- "biplot"
 
     style <- collect_plot_style_params("illustration", plot_type = illust_plot_type)
     layout <- collect_layout_params("illustration")
     illust_mode <- style$display_mode
     illust_plot_size <- layout$plot_size
     illust_font_sizes <- style$font_sizes
+    illust_scale_fonts_with_plot <- isTRUE(input$illust_scale_fonts_with_plot %||% TRUE)
     illust_gate_style <- style$gate_style
     illust_n_columns <- layout$n_columns
     illust_fit_to_columns <- layout$fit_to_columns
@@ -7986,6 +8049,134 @@ server <- function(input, output, session) {
       }
       showNotification(msg, type = "warning", duration = 6)
       return(invisible(NULL))
+    }
+
+    # ── Heatmap: exact all-event population summaries ─────────────────────────
+    # Unlike point/histogram previews, a heatmap contains one summary per cell,
+    # so there is no reason to subsample. Cache the unscaled summaries and apply
+    # palette/scaling choices cheaply when the user renders again.
+    if (identical(illust_plot_type, "heatmap")) {
+      heatmap_stat <- as.character(input$illust_heatmap_stat %||% "median")
+      if (!heatmap_stat %in% c("median", "mean")) heatmap_stat <- "median"
+      heatmap_scale <- as.character(input$illust_heatmap_scale %||% "column_minmax")
+      if (!heatmap_scale %in% c("none", "column_minmax", "row_minmax", "column_zscore")) {
+        heatmap_scale <- "column_minmax"
+      }
+      heatmap_palette <- as.character(input$illust_heatmap_palette %||% "blue_white_yellow_red")
+      if (!heatmap_palette %in% c("heat", "viridis", "blue_white_yellow_red")) {
+        heatmap_palette <- "blue_white_yellow_red"
+      }
+      heatmap_cell_size <- .clamp_int(input$illust_heatmap_cell_size, default = 30L, lo = 16L, hi = 72L)
+      heatmap_show_values <- isTRUE(input$illust_heatmap_show_values)
+      z_limit <- 2.5
+
+      mask_sig <- if (is.null(rv$sample_mask)) {
+        "none"
+      } else {
+        paste0(length(rv$sample_mask), ":", sum(rv$sample_mask, na.rm = TRUE))
+      }
+      heatmap_cache_key <- jsonlite::toJSON(list(
+        family = "heatmap-summary",
+        sce_name = rv$sce_name %||% "",
+        assay_version = rv$assay_version %||% 0L,
+        gate_version = rv$gate_version %||% 0L,
+        sample_filter_key = rv$sample_filter_key %||% "all",
+        sample_mask_sig = mask_sig,
+        pop_ids = as.character(pop_ids),
+        channels = as.character(x_channels),
+        summary_stat = heatmap_stat
+      ), auto_unbox = TRUE, null = "null")
+
+      heatmap_summary <- NULL
+      if (identical(rv$.illustration_cache_key, heatmap_cache_key) &&
+          is.list(rv$.illustration_cache_payload) &&
+          identical(rv$.illustration_cache_payload$family, "heatmap-summary")) {
+        heatmap_summary <- rv$.illustration_cache_payload$summary
+      } else {
+        assay_for_illustration <- get_filtered_assay_data()
+        req(assay_for_illustration)
+        heatmap_summary <- compute_illustration_heatmap(
+          assay_for_illustration, get_plot_gates(), rv$populations,
+          rv$root_population_id, pop_ids, x_channels,
+          summary_stat = heatmap_stat, scale_mode = "none", z_limit = z_limit
+        )
+        rv$.illustration_cache_key <- heatmap_cache_key
+        rv$.illustration_cache_payload <- list(
+          family = "heatmap-summary", summary = heatmap_summary
+        )
+      }
+
+      scaled_values <- scale_illustration_heatmap(
+        heatmap_summary$raw_values, heatmap_scale, z_limit
+      )
+      finite_scaled <- scaled_values[is.finite(scaled_values)]
+      legend_range <- if (identical(heatmap_scale, "column_zscore")) {
+        c(-z_limit, z_limit)
+      } else if (heatmap_scale %in% c("column_minmax", "row_minmax")) {
+        c(0, 1)
+      } else if (length(finite_scaled)) {
+        range(finite_scaled)
+      } else {
+        c(0, 1)
+      }
+      if (legend_range[[1]] == legend_range[[2]]) legend_range <- legend_range + c(-0.5, 0.5)
+
+      heatmap_rows <- lapply(seq_along(heatmap_summary$pop_ids), function(i) {
+        pid <- heatmap_summary$pop_ids[[i]]
+        list(
+          id = pid,
+          name = heatmap_summary$pop_names[[pid]] %||% pid,
+          count = as.integer(heatmap_summary$pop_counts[[pid]] %||% 0L),
+          values = unname(as.numeric(scaled_values[i, ])),
+          raw_values = unname(as.numeric(heatmap_summary$raw_values[i, ]))
+        )
+      })
+      heatmap_channels <- lapply(heatmap_summary$channels, function(ch) {
+        list(id = as.character(ch), label = as.character(ch))
+      })
+
+      base_payload <- list(
+        plot_type = "heatmap",
+        plots = list(),
+        pop_ids = as.character(heatmap_summary$pop_ids),
+        x_channels = as.character(heatmap_summary$channels),
+        heatmap = list(
+          rows = heatmap_rows,
+          channels = heatmap_channels,
+          summary_stat = heatmap_stat,
+          scale_mode = heatmap_scale,
+          palette = heatmap_palette,
+          cell_size = heatmap_cell_size,
+          show_values = heatmap_show_values,
+          z_limit = z_limit,
+          legend_min = unname(legend_range[[1]]),
+          legend_max = unname(legend_range[[2]])
+        )
+      )
+      rv$.illustration_pdf_payload <- list(
+        payload = base_payload,
+        plot_type = "heatmap",
+        heatmap_palette = heatmap_palette,
+        heatmap_cell_size = heatmap_cell_size,
+        heatmap_show_values = heatmap_show_values,
+        font_sizes = scale_illustration_font_sizes(
+          illust_font_sizes, "heatmap",
+          heatmap_cell_size = heatmap_cell_size,
+          enabled = illust_scale_fonts_with_plot
+        ),
+        scale_fonts_with_plot = illust_scale_fonts_with_plot,
+        pdf_dpi = layout$pdf_dpi
+      )
+      session$sendCustomMessage("renderIllustrationGrid", c(
+        list(
+          containerId = "illustration-grid-container",
+          plot_type = "heatmap",
+          font_sizes = illust_font_sizes,
+          scale_fonts_with_plot = illust_scale_fonts_with_plot
+        ),
+        base_payload
+      ))
+      return(invisible(base_payload))
     }
 
     # ── Interactive-preview event cap ─────────────────────────────────────────
@@ -8284,7 +8475,12 @@ server <- function(input, output, session) {
       ridge_col_gap = style$ridge_col_gap,
       ridge_gradient = style$ridge_gradient,
       kde_bandwidth = style$kde_bandwidth,
-      font_sizes = illust_font_sizes,
+      font_sizes = scale_illustration_font_sizes(
+        illust_font_sizes, illust_plot_type,
+        plot_size = layout$export_plot_size,
+        enabled = illust_scale_fonts_with_plot
+      ),
+      scale_fonts_with_plot = illust_scale_fonts_with_plot,
       gate_style = illust_gate_style,
       overlay_populations = isTRUE(input$illust_overlay_pops),
       color_by_population = isTRUE(input$illust_color_by_pop)
@@ -8310,6 +8506,7 @@ server <- function(input, output, session) {
         ridge_gradient       = style$ridge_gradient,
         kde_bandwidth        = style$kde_bandwidth,
         font_sizes           = illust_font_sizes,
+        scale_fonts_with_plot = illust_scale_fonts_with_plot,
         gate_style           = illust_gate_style,
         color_by_population  = isTRUE(input$illust_color_by_pop),
         overlay_populations  = isTRUE(input$illust_overlay_pops),
@@ -8344,12 +8541,16 @@ server <- function(input, output, session) {
     input$illust_plot_size, input$illust_n_columns, input$illust_fit_to_columns,
     input$illust_tick_font_size, input$illust_axis_label_font_size,
     input$illust_title_font_size, input$illust_gate_label_font_size,
+    input$illust_scale_fonts_with_plot,
     input$illust_pdf_dpi,
     input$illust_point_size, input$illust_point_alpha,
     input$illust_hist_line_width, input$illust_hist_fill,
     input$illust_hist_fill_alpha, input$illust_hist_overlay_mode,
     input$illust_hist_layout, input$illust_ridge_overlap, input$illust_ridge_col_gap,
     input$illust_ridge_gradient,
+    input$illust_heatmap_stat, input$illust_heatmap_scale,
+    input$illust_heatmap_palette, input$illust_heatmap_cell_size,
+    input$illust_heatmap_show_values,
     input$illust_pub_style, input$illust_gate_line_width,
     input$illust_kde_auto, input$illust_kde_bandwidth
   ), {
@@ -8400,6 +8601,7 @@ server <- function(input, output, session) {
         ridge_gradient      = latest_style$ridge_gradient,
         kde_bandwidth       = latest_style$kde_bandwidth,
         font_sizes          = latest_style$font_sizes,
+        scale_fonts_with_plot = isTRUE(input$illust_scale_fonts_with_plot %||% TRUE),
         gate_style          = latest_style$gate_style,
         color_by_population = latest_color_by,
         overlay_populations = latest_overlay,
@@ -8429,6 +8631,15 @@ server <- function(input, output, session) {
       data$plot_size <- latest_layout$export_plot_size
       data$n_columns <- latest_layout$n_columns
       data$fit_to_columns <- latest_layout$fit_to_columns
+      data$scale_fonts_with_plot <- isTRUE(input$illust_scale_fonts_with_plot %||% TRUE)
+      data$font_sizes <- scale_illustration_font_sizes(
+        latest_style$font_sizes, illust_plot_type,
+        plot_size = latest_layout$export_plot_size,
+        heatmap_cell_size = .clamp_int(
+          input$illust_heatmap_cell_size, default = 30L, lo = 16L, hi = 72L
+        ),
+        enabled = data$scale_fonts_with_plot
+      )
       data$overlay_populations <- isTRUE(input$illust_overlay_pops)
       data$color_by_population <- isTRUE(input$illust_color_by_pop)
       pop_ids <- as.character(data$payload$pop_ids %||% character(0))
@@ -9417,6 +9628,23 @@ server <- function(input, output, session) {
         return()
       }
 
+      has_existing_strategy <- has_gating_strategy(list(
+        gates = rv$gates,
+        populations = rv$populations,
+        root_population_id = rv$root_population_id
+      ))
+      current_cytof_cofactor <- suppressWarnings(
+        as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5)
+      )
+      parsed$merge_blocked_reason <- gating_merge_space_conflict(
+        has_existing_strategy = has_existing_strategy,
+        is_flow = is_flow_session(rv$sce),
+        current_compensation = rv$comp_on,
+        imported_compensation_target = parsed$compensation_resolution$target,
+        current_cytof_cofactor = current_cytof_cofactor,
+        imported_cytof_cofactor = parsed$cytof_cofactor
+      )
+      parsed$has_existing_strategy <- has_existing_strategy
       rv$.pending_gatingml_import <- parsed
       comp_res <- parsed$compensation_resolution
       comp_note <- NULL
@@ -9446,7 +9674,7 @@ server <- function(input, output, session) {
         }
       }
       showModal(modalDialog(
-        title = "Import GatingML from Cytobank",
+        title = "Import GatingML",
         tags$p(sprintf("Parsed %d gates and %d populations from %s.",
                        parsed$n_gates_imported, parsed$n_pops_imported,
                        switch(parsed$source %||% "generic",
@@ -9480,8 +9708,25 @@ server <- function(input, output, session) {
             style = "color:#8a6d3b; font-size:12px;"
           )
         },
-        tags$p("Importing will replace the current gates and populations.",
-               style = "color:#c00; font-size:12px;"),
+        radioButtons(
+          "gatingml_import_mode",
+          "How should the imported strategy be applied?",
+          choices = c(
+            if (is.null(parsed$merge_blocked_reason)) {
+              c("Merge with current strategy — keep existing gates and add imported top-level populations beneath All Events" = "merge")
+            },
+            c("Replace current strategy — remove existing gates and populations" = "replace")
+          ),
+          selected = if (isTRUE(has_existing_strategy) && is.null(parsed$merge_blocked_reason)) "merge" else "replace"
+        ),
+        tags$p(
+          "Merge preserves scientific labels and remaps only colliding internal IDs.",
+          style = "color:#555; font-size:12px;"
+        ),
+        if (!is.null(parsed$merge_blocked_reason)) {
+          tags$p(parsed$merge_blocked_reason,
+                 style = "color:#8a6d3b; font-size:12px; font-weight:600;")
+        },
         footer = tagList(
           modalButton("Cancel"),
           actionButton("confirm_import_gatingml_btn", "Import", class = "btn-primary")
@@ -9495,10 +9740,10 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$confirm_import_gatingml_btn, {
-    removeModal()
     parsed <- rv$.pending_gatingml_import
-    rv$.pending_gatingml_import <- NULL
     req(parsed)
+    import_mode <- isolate(input$gatingml_import_mode) %||% "replace"
+    if (!import_mode %in% c("merge", "replace")) import_mode <- "replace"
 
     comp_res <- parsed$compensation_resolution %||%
       list(target = NULL, source = "none", requires_confirmation = FALSE)
@@ -9511,12 +9756,68 @@ server <- function(input, output, session) {
     cytof_cofactor_changed <- !is_flow_session(rv$sce) &&
       is.finite(source_cytof_cofactor) && source_cytof_cofactor > 0 &&
       !isTRUE(all.equal(source_cytof_cofactor, current_cytof_cofactor, tolerance = 1e-12))
+    has_existing_strategy <- has_gating_strategy(list(
+      gates = rv$gates,
+      populations = rv$populations,
+      root_population_id = rv$root_population_id
+    ))
+    merge_blocked_reason <- gating_merge_space_conflict(
+      has_existing_strategy = has_existing_strategy,
+      is_flow = is_flow_session(rv$sce),
+      current_compensation = rv$comp_on,
+      imported_compensation_target = comp_target,
+      current_cytof_cofactor = current_cytof_cofactor,
+      imported_cytof_cofactor = source_cytof_cofactor
+    )
+    if (identical(import_mode, "merge") && !is.null(merge_blocked_reason)) {
+      showNotification(merge_blocked_reason, type = "error", duration = 8)
+      return()
+    }
     if (cytof_cofactor_changed && !"counts" %in% SummarizedExperiment::assayNames(rv$sce)) {
       showNotification(
         "This Gating-ML file uses a different CyTOF cofactor, but the loaded object has no raw counts assay to re-transform. The workspace was not changed.",
         type = "error", duration = 8)
       return()
     }
+
+    current_active_population_id <- rv$active_population_id
+    current_selected_gate_id <- rv$selected_gate_id
+    current_selected_gate_ids <- rv$.selected_gate_ids %||% character(0)
+    current_selected_pop_ids <- rv$.selected_pop_ids %||% character(0)
+    strategy <- if (identical(import_mode, "merge")) {
+      tryCatch(
+        merge_gating_strategies(
+          current = list(
+            gates = rv$gates,
+            gate_order = rv$gate_order,
+            populations = rv$populations,
+            root_population_id = rv$root_population_id
+          ),
+          imported = list(
+            gates = parsed$gates,
+            gate_order = parsed$gate_order %||% names(parsed$gates),
+            populations = parsed$populations,
+            root_population_id = parsed$root_population_id
+          )
+        ),
+        error = function(e) {
+          showNotification(paste("GatingML merge error:", e$message),
+                           type = "error", duration = 8)
+          NULL
+        }
+      )
+    } else {
+      list(
+        gates = parsed$gates,
+        gate_order = parsed$gate_order %||% names(parsed$gates),
+        populations = parsed$populations,
+        root_population_id = parsed$root_population_id
+      )
+    }
+    if (is.null(strategy)) return()
+
+    removeModal()
+    rv$.pending_gatingml_import <- NULL
 
     # Gate/population undo snapshots do not carry display-transform state. Do not
     # retain an unsafe route back to gates drawn in the previous linear space.
@@ -9542,14 +9843,33 @@ server <- function(input, output, session) {
       S4Vectors::metadata(rv$sce)$cofactor <- source_cytof_cofactor
       rv$cytof_axis_range <- list()
     }
-    rv$gates <- parsed$gates
-    rv$gate_order <- parsed$gate_order %||% names(parsed$gates)
-    rv$populations <- parsed$populations
-    rv$root_population_id <- parsed$root_population_id
+    rv$gates <- strategy$gates
+    rv$gate_order <- strategy$gate_order
+    rv$populations <- strategy$populations
+    rv$root_population_id <- strategy$root_population_id
     sort_population_tree_state()
 
-    rv$active_population_id <- rv$root_population_id
-    rv$selected_gate_id <- NULL
+    if (identical(import_mode, "merge")) {
+      rv$active_population_id <- if (!is.null(current_active_population_id) &&
+                                      current_active_population_id %in% names(rv$populations)) {
+        current_active_population_id
+      } else {
+        rv$root_population_id
+      }
+      rv$selected_gate_id <- if (!is.null(current_selected_gate_id) &&
+                                 current_selected_gate_id %in% names(rv$gates)) {
+        current_selected_gate_id
+      } else {
+        NULL
+      }
+      rv$.selected_gate_ids <- intersect(current_selected_gate_ids, names(rv$gates))
+      rv$.selected_pop_ids <- intersect(current_selected_pop_ids, names(rv$populations))
+    } else {
+      rv$active_population_id <- rv$root_population_id
+      rv$selected_gate_id <- NULL
+      rv$.selected_gate_ids <- character(0)
+      rv$.selected_pop_ids <- character(0)
+    }
     rv$gate_version <- rv$gate_version + 1L
 
     # Restore per-channel scales saved in the GatingML custom_info (if present).
@@ -9617,8 +9937,12 @@ server <- function(input, output, session) {
     autosave()
     send_full_plot(reset_view = TRUE)
 
-    msg <- paste0("Imported ", parsed$n_gates_imported, " gates and ",
-                  parsed$n_pops_imported, " populations from GatingML")
+    msg <- paste0(
+      if (identical(import_mode, "merge")) "Merged " else "Imported ",
+      parsed$n_gates_imported, " gates and ", parsed$n_pops_imported,
+      " populations from GatingML; ",
+      if (identical(import_mode, "merge")) "existing strategy retained" else "current strategy replaced"
+    )
     if (identical(comp_target, TRUE)) msg <- paste0(msg, "; FCS compensation enabled")
     if (identical(comp_target, FALSE)) msg <- paste0(msg, "; compensation disabled")
     if (n_scales > 0) msg <- paste0(msg, "; restored scales for ", n_scales, " channel(s)")
@@ -10621,7 +10945,7 @@ ui_with_runjs <- tagList(
         'refresh_sce_btn':    'Re-scan the global environment for SCE objects',
         'save_rds_dl':        'Download the SCE (with embedded workspace) as an .rds file',
         'export_fcs_btn':     'Export gated population(s) as FCS files (zipped download)',
-        'import_gatingml_upload': 'Import Cytobank Gating-ML gates and positive AND populations; files containing NOT/OR logic or unmatched channels are rejected without changing the workspace',
+        'import_gatingml_upload': 'Import Gating-ML gates and positive AND populations, then choose whether to merge them into the current hierarchy or replace the current strategy; files containing NOT/OR logic or unmatched channels are rejected without changing the workspace',
         'export_gatingml_dl':          'Export gates as Cytobank-compatible Gating-ML 2.0 XML ($PnN channel names, flat BooleanGates + custom_info) — re-imports into GateLabR / GateLab and uploads to Cytobank',
         // Mode toolbar
         'mode_rect':     'Draw a rectangle gate',

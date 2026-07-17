@@ -1,0 +1,160 @@
+make_heatmap_fixture <- function() {
+  assay <- cbind(
+    X = 1:6,
+    Y = 1:6,
+    BarcodeA = c(0, 2, 4, 6, 8, 10),
+    BarcodeB = c(10, 8, 6, 4, 2, 0)
+  )
+  gates <- list(
+    low = list(
+      gate_id = "low", name = "Low", gate_type = "rectangle",
+      x_channel = "X", y_channel = "Y",
+      vertices = list(c(0, 0), c(3.5, 3.5))
+    ),
+    high = list(
+      gate_id = "high", name = "High", gate_type = "rectangle",
+      x_channel = "X", y_channel = "Y",
+      vertices = list(c(3.5, 3.5), c(7, 7))
+    ),
+    empty = list(
+      gate_id = "empty", name = "Empty", gate_type = "rectangle",
+      x_channel = "X", y_channel = "Y",
+      vertices = list(c(20, 20), c(30, 30))
+    )
+  )
+  child <- function(id, name, gate_id) list(
+    population_id = id, name = name, parent_id = "root",
+    children = character(0),
+    gate_refs = list(list(gate_id = gate_id, include = TRUE)),
+    gate_logic = "and"
+  )
+  populations <- list(
+    root = list(
+      population_id = "root", name = "All Events", parent_id = NULL,
+      children = c("low", "high", "empty"), gate_refs = list(), gate_logic = "and"
+    ),
+    low = child("low", "Low barcode", "low"),
+    high = child("high", "High barcode", "high"),
+    empty = child("empty", "No events", "empty")
+  )
+  list(assay = assay, gates = gates, populations = populations)
+}
+
+test_that("illustration heatmap calculates exact population summaries", {
+  f <- make_heatmap_fixture()
+  hm <- compute_illustration_heatmap(
+    f$assay, f$gates, f$populations, "root",
+    c("low", "high", "empty"), c("BarcodeA", "BarcodeB"),
+    summary_stat = "median", scale_mode = "none"
+  )
+
+  expect_identical(hm$pop_ids, c("low", "high", "empty"))
+  expect_identical(unname(hm$pop_counts), c(3L, 3L, 0L))
+  expect_equal(unname(hm$raw_values[1:2, ]), rbind(c(2, 8), c(8, 2)))
+  expect_true(all(is.na(hm$raw_values[3, ])))
+  expect_equal(hm$values, hm$raw_values)
+  expect_equal(c(hm$legend_min, hm$legend_max), c(2, 8))
+})
+
+test_that("illustration heatmap scaling is explicit and NA-safe", {
+  x <- rbind(
+    c(2, 8, NA),
+    c(8, 2, NA),
+    c(5, 5, NA)
+  )
+
+  expect_equal(
+    scale_illustration_heatmap(x, "column_minmax"),
+    rbind(c(0, 1, NA), c(1, 0, NA), c(0.5, 0.5, NA))
+  )
+  expect_equal(
+    scale_illustration_heatmap(x, "row_minmax"),
+    rbind(c(0, 1, NA), c(1, 0, NA), c(0.5, 0.5, NA))
+  )
+  z <- scale_illustration_heatmap(x, "column_zscore")
+  expect_equal(z[, 1], c(-1, 1, 0), tolerance = 1e-12)
+  expect_equal(z[, 2], c(1, -1, 0), tolerance = 1e-12)
+  expect_true(all(is.na(z[, 3])))
+})
+
+test_that("illustration fonts retain their baseline and scale with plot size", {
+  base <- list(tick = 9, axis_label = 12, gate_label = 10, title = 12)
+
+  expect_equal(
+    scale_illustration_font_sizes(base, "heatmap", heatmap_cell_size = 30),
+    base
+  )
+  expect_equal(
+    scale_illustration_font_sizes(base, "heatmap", heatmap_cell_size = 60),
+    list(tick = 12.5, axis_label = 17, gate_label = 14, title = 17)
+  )
+  expect_equal(
+    scale_illustration_font_sizes(base, "biplot", plot_size = 50),
+    list(tick = 7, axis_label = 9.5, gate_label = 8, title = 9.5)
+  )
+  expect_identical(
+    scale_illustration_font_sizes(base, "heatmap", heatmap_cell_size = 60, enabled = FALSE),
+    base
+  )
+})
+
+test_that("illustration heatmap supports mean summaries and selected order", {
+  f <- make_heatmap_fixture()
+  hm <- compute_illustration_heatmap(
+    f$assay, f$gates, f$populations, "root",
+    c("high", "low"), c("BarcodeB", "BarcodeA"),
+    summary_stat = "mean", scale_mode = "row_minmax"
+  )
+
+  expect_identical(hm$pop_ids, c("high", "low"))
+  expect_identical(hm$channels, c("BarcodeB", "BarcodeA"))
+  expect_equal(unname(hm$raw_values), rbind(c(2, 8), c(8, 2)))
+  expect_equal(unname(hm$values), rbind(c(0, 1), c(1, 0)))
+})
+
+test_that("illustration heatmap exports labelled vector SVG", {
+  file <- tempfile(fileext = ".svg")
+  payload <- list(
+    plot_type = "heatmap",
+    heatmap = list(
+      rows = list(
+        list(
+          id = "low", name = "Low barcode", count = 3L,
+          values = c(0, 1), raw_values = c(2, 8)
+        ),
+        list(
+          id = "empty", name = "No events", count = 0L,
+          values = c(NA_real_, NA_real_), raw_values = c(NA_real_, NA_real_)
+        )
+      ),
+      channels = list(
+        list(id = "BarcodeA", label = "Barcode A"),
+        list(id = "BarcodeB", label = "Barcode B")
+      ),
+      summary_stat = "median",
+      scale_mode = "column_minmax",
+      palette = "blue_white_yellow_red",
+      cell_size = 30,
+      show_values = TRUE,
+      legend_min = 0,
+      legend_max = 1
+    )
+  )
+
+  export_illustration_pdf(
+    file, payload,
+    list(font_sizes = list(axis_label = 10, tick = 8))
+  )
+
+  expect_true(file.exists(file))
+  expect_gt(file.info(file)$size, 1000)
+  svg <- paste(readLines(file, warn = FALSE), collapse = "\n")
+  expect_match(svg, "Low barcode", fixed = TRUE)
+  expect_match(svg, "Barcode A", fixed = TRUE)
+  expect_match(svg, "heatmap_cells", fixed = TRUE)
+  expect_match(svg, "legend_gradient", fixed = TRUE)
+  compact_svg <- gsub("[[:space:]]", "", tolower(svg))
+  # gridSVG rounds the first endpoint down by one RGB unit during serialisation.
+  expect_true(grepl("#313695|rgb\\(49,(53|54),(148|149)\\)", compact_svg))
+  expect_true(grepl("#a50026|rgb\\(165,0,38\\)", compact_svg))
+})
