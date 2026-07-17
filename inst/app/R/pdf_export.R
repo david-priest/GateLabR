@@ -404,8 +404,8 @@ export_heatmap_svg <- function(file_path, payload, opts) {
   if (length(rows) == 0 || length(channels) == 0) return(invisible(NULL))
 
   fs <- opts$font_sizes %||% list()
-  label_fs <- max(6, min(28, as.numeric(fs$axis_label %||% 10)))
-  value_fs <- max(6, min(24, as.numeric(fs$tick %||% 8)))
+  label_fs <- max(6, min(28, as.numeric(fs$axis_label %||% 12)))
+  value_fs <- max(6, min(24, as.numeric(fs$tick %||% 9)))
   cell_size <- max(16, min(72, as.numeric(hm$cell_size %||% opts$heatmap_cell_size %||% 30)))
   show_values <- isTRUE(hm$show_values %||% opts$heatmap_show_values)
   palette_name <- as.character(hm$palette %||% opts$heatmap_palette %||% "blue_white_yellow_red")
@@ -414,7 +414,9 @@ export_heatmap_svg <- function(file_path, payload, opts) {
     heat = c("#000000", "#5A0000", "#C41200", "#FF7B00", "#FFD000", "#FFFF3A"),
     viridis = c("#440154", "#472D7B", "#3B528B", "#2C728E", "#21918C",
                 "#28AE80", "#5EC962", "#ADDC30", "#FDE725"),
-    c("#2166AC", "#F7F7F7", "#FFFF66", "#D73027")
+    # CATALYST default: rev(RColorBrewer::brewer.pal(11, "RdYlBu")).
+    c("#313695", "#4575B4", "#74ADD1", "#ABD9E9", "#E0F3F8", "#FFFFBF",
+      "#FEE090", "#FDAE61", "#F46D43", "#D73027", "#A50026")
   )
   palette <- grDevices::colorRampPalette(anchors, space = "Lab")(256)
 

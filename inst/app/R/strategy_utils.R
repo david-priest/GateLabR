@@ -222,6 +222,36 @@ compute_illustration_batch <- function(assay_data, gates, gate_order,
   list(plots = plots, gate_counts = gate_counts_by_pop, populations = result$populations)
 }
 
+#' Scale Illustration typography with the rendered plot dimensions.
+#'
+#' Font inputs are base sizes at a 200 px plot panel or a 30 px heatmap cell.
+#' Square-root scaling keeps text visually proportional without allowing it to
+#' dominate large panels. Values are rounded to half-pixel steps to match the
+#' shared browser renderer.
+scale_illustration_font_sizes <- function(font_sizes, plot_type = "biplot",
+                                          plot_size = 200,
+                                          heatmap_cell_size = 30,
+                                          enabled = TRUE) {
+  if (!isTRUE(enabled)) return(font_sizes)
+  plot_type <- as.character(plot_type %||% "biplot")
+  size <- if (identical(plot_type, "heatmap")) heatmap_cell_size else plot_size
+  reference <- if (identical(plot_type, "heatmap")) 30 else 200
+  ratio <- suppressWarnings(as.numeric(size) / reference)
+  if (!is.finite(ratio) || ratio <= 0) ratio <- 1
+  factor <- max(0.8, min(1.6, sqrt(ratio)))
+  scaled <- function(value, fallback) {
+    value <- suppressWarnings(as.numeric(value))
+    if (!is.finite(value) || value <= 0) value <- fallback
+    max(6, floor(value * factor * 2 + 0.5) / 2)
+  }
+  list(
+    tick = scaled(font_sizes$tick, 9),
+    axis_label = scaled(font_sizes$axis_label, 12),
+    gate_label = scaled(font_sizes$gate_label, 10),
+    title = scaled(font_sizes$title, 12)
+  )
+}
+
 #' Compute a population-by-channel expression heatmap.
 #'
 #' Summaries are calculated from every finite event in each selected population;

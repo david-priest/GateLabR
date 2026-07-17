@@ -126,7 +126,7 @@ ui <- fluidPage(
     tags$script(src = "vendor/split.min.js"),
     tags$script(src = "layout_split.js?v=20260713a"),
     tags$script(src = "cytof_plot.js?v=20260713a"),
-    tags$script(src = "mini_plot.js?v=20260717a"),
+    tags$script(src = "mini_plot.js?v=20260717b"),
     tags$script(src = "division_plot.js?v=20260626f"),
     tags$script(src = "pop_tree_scroll.js?v=20260623b"),
     tags$link(rel = "stylesheet", href = "custom.css?v=20260713d")
@@ -625,9 +625,11 @@ ui <- fluidPage(
               "input.illust_plot_type != 'heatmap'",
               control_row("Layout",
                 inline_field("Plot size",
-                  numericInput("illust_plot_size", NULL,
-                               value = 200, min = 150, max = 400, step = 25,
-                               width = "82px")),
+                  sliderInput("illust_plot_size", NULL,
+                              value = 200, min = 150, max = 500, step = 25,
+                              width = "170px", ticks = FALSE),
+                  class = "glr-slider-field",
+                  title = "Rendered panel size; click Render Illustration to apply"),
                 inline_field("Columns",
                   numericInput("illust_n_columns", NULL,
                                value = 4, min = 1, max = 12, step = 1,
@@ -740,13 +742,15 @@ ui <- fluidPage(
                               choices = c(
                                 "Histogram heat (black→yellow)" = "heat",
                                 "Viridis" = "viridis",
-                                "Blue→white→yellow→red" = "blue_white_yellow_red"
+                                "RColorBrewer RdYlBu (blue→yellow→red)" = "blue_white_yellow_red"
                               ),
-                              selected = "blue_white_yellow_red", width = "210px")),
-                inline_field("Cell size",
-                  numericInput("illust_heatmap_cell_size", NULL,
-                               value = 30, min = 16, max = 72, step = 2,
-                               width = "72px")),
+                              selected = "blue_white_yellow_red", width = "260px")),
+                inline_field("Plot size",
+                  sliderInput("illust_heatmap_cell_size", NULL,
+                              value = 30, min = 16, max = 72, step = 2,
+                              width = "150px", ticks = FALSE),
+                  class = "glr-slider-field",
+                  title = "Heatmap cell size; click Render Illustration to apply"),
                 inline_check(checkboxInput("illust_heatmap_show_values",
                                            "Show values", value = FALSE)),
                 control_hint("Uses all events in each population; empty populations are shown in grey.")
@@ -756,16 +760,18 @@ ui <- fluidPage(
             control_row("Fonts",
               inline_field("Tick",
                 numericInput("illust_tick_font_size", NULL,
-                             value = 8, min = 6, max = 24, step = 1, width = "64px")),
+                             value = 9, min = 6, max = 24, step = 1, width = "64px")),
               inline_field("Axis",
                 numericInput("illust_axis_label_font_size", NULL,
-                             value = 10, min = 6, max = 28, step = 1, width = "64px")),
+                             value = 12, min = 6, max = 28, step = 1, width = "64px")),
               inline_field("Title",
                 numericInput("illust_title_font_size", NULL,
-                             value = 10, min = 6, max = 28, step = 1, width = "64px")),
+                             value = 12, min = 6, max = 28, step = 1, width = "64px")),
               inline_field("Gate",
                 numericInput("illust_gate_label_font_size", NULL,
-                             value = 8, min = 6, max = 24, step = 1, width = "64px")),
+                             value = 10, min = 6, max = 24, step = 1, width = "64px")),
+              inline_check(checkboxInput("illust_scale_fonts_with_plot",
+                                         "Scale with plot", value = TRUE)),
               control_separator(),
               inline_field("SVG raster DPI",
                 numericInput("illust_pdf_dpi", NULL,
@@ -1651,10 +1657,11 @@ server <- function(input, output, session) {
       plot_size            = isolate(input$illust_plot_size)                         %||% 200L,
       n_columns            = isolate(input$illust_n_columns)                         %||% 4L,
       fit_to_columns       = isTRUE(isolate(input$illust_fit_to_columns)),
-      tick_font_size       = isolate(input$illust_tick_font_size)                    %||% 8L,
-      axis_label_font_size = isolate(input$illust_axis_label_font_size)              %||% 10L,
-      title_font_size      = isolate(input$illust_title_font_size)                   %||% 10L,
-      gate_label_font_size = isolate(input$illust_gate_label_font_size)              %||% 8L,
+      tick_font_size       = isolate(input$illust_tick_font_size)                    %||% 9L,
+      axis_label_font_size = isolate(input$illust_axis_label_font_size)              %||% 12L,
+      title_font_size      = isolate(input$illust_title_font_size)                   %||% 12L,
+      gate_label_font_size = isolate(input$illust_gate_label_font_size)              %||% 10L,
+      scale_fonts_with_plot = isTRUE(isolate(input$illust_scale_fonts_with_plot) %||% TRUE),
       pdf_dpi              = isolate(input$illust_pdf_dpi)                           %||% 300L,
       point_size           = isolate(input$illust_point_size)                        %||% 1.2,
       point_alpha          = isolate(input$illust_point_alpha)                       %||% 0.35,
@@ -6431,19 +6438,19 @@ server <- function(input, output, session) {
 
     tick_font <- .clamp_int(
       if (is_strategy) input$strategy_tick_font_size else input$illust_tick_font_size,
-      default = 8L, lo = 6L, hi = 24L
+      default = if (is_strategy) 8L else 9L, lo = 6L, hi = 24L
     )
     axis_font <- .clamp_int(
       if (is_strategy) input$strategy_axis_label_font_size else input$illust_axis_label_font_size,
-      default = 10L, lo = 6L, hi = 28L
+      default = if (is_strategy) 10L else 12L, lo = 6L, hi = 28L
     )
     title_font <- .clamp_int(
       if (is_strategy) input$strategy_title_font_size else input$illust_title_font_size,
-      default = 10L, lo = 6L, hi = 28L
+      default = if (is_strategy) 10L else 12L, lo = 6L, hi = 28L
     )
     gate_label_font <- .clamp_int(
       if (is_strategy) input$strategy_gate_label_font_size else input$illust_gate_label_font_size,
-      default = 8L, lo = 6L, hi = 24L
+      default = if (is_strategy) 8L else 10L, lo = 6L, hi = 24L
     )
 
     contour_threshold <- .clamp_num(
@@ -7614,7 +7621,7 @@ server <- function(input, output, session) {
     updateCheckboxInput(session, "illust_overlay_pops",  value = isTRUE(s$overlay_pops))
     if (!is.null(s$all_events))          updateCheckboxInput(session,  "illust_all_events",          value = isTRUE(s$all_events))
     if (!is.null(s$max_events))          updateNumericInput(session,   "illust_max_events",          value = s$max_events)
-    if (!is.null(s$plot_size))           updateNumericInput(session,   "illust_plot_size",           value = s$plot_size)
+    if (!is.null(s$plot_size))           updateSliderInput(session,    "illust_plot_size",           value = s$plot_size)
     # n_columns — handle old key "n_cols" for backward compat
     n_cols_val <- s$n_columns %||% s$n_cols
     if (!is.null(n_cols_val))            updateNumericInput(session,   "illust_n_columns",           value = n_cols_val)
@@ -7625,6 +7632,8 @@ server <- function(input, output, session) {
     if (!is.null(axis_lbl_val))          updateNumericInput(session,   "illust_axis_label_font_size", value = axis_lbl_val)
     if (!is.null(s$title_font_size))     updateNumericInput(session,   "illust_title_font_size",     value = s$title_font_size)
     if (!is.null(s$gate_label_font_size))updateNumericInput(session,   "illust_gate_label_font_size",value = s$gate_label_font_size)
+    updateCheckboxInput(session, "illust_scale_fonts_with_plot",
+                        value = isTRUE(s$scale_fonts_with_plot %||% TRUE))
     if (!is.null(s$pdf_dpi))             updateNumericInput(session,   "illust_pdf_dpi",             value = s$pdf_dpi)
     if (!is.null(s$point_size))          updateNumericInput(session,   "illust_point_size",          value = s$point_size)
     if (!is.null(s$point_alpha))         updateSliderInput(session,    "illust_point_alpha",         value = s$point_alpha)
@@ -7639,7 +7648,7 @@ server <- function(input, output, session) {
     if (!is.null(s$heatmap_stat))        updateSelectInput(session,    "illust_heatmap_stat",         selected = s$heatmap_stat)
     if (!is.null(s$heatmap_scale))       updateSelectInput(session,    "illust_heatmap_scale",        selected = s$heatmap_scale)
     if (!is.null(s$heatmap_palette))     updateSelectInput(session,    "illust_heatmap_palette",      selected = s$heatmap_palette)
-    if (!is.null(s$heatmap_cell_size))   updateNumericInput(session,   "illust_heatmap_cell_size",    value = s$heatmap_cell_size)
+    if (!is.null(s$heatmap_cell_size))   updateSliderInput(session,    "illust_heatmap_cell_size",    value = s$heatmap_cell_size)
     if (!is.null(s$heatmap_show_values)) updateCheckboxInput(session,  "illust_heatmap_show_values", value = isTRUE(s$heatmap_show_values))
     if (!is.null(s$pub_style))           updateCheckboxInput(session,  "illust_pub_style",           value = isTRUE(s$pub_style))
     if (!is.null(s$gate_line_width))     updateNumericInput(session,   "illust_gate_line_width",     value = s$gate_line_width)
@@ -7995,6 +8004,7 @@ server <- function(input, output, session) {
     illust_mode <- style$display_mode
     illust_plot_size <- layout$plot_size
     illust_font_sizes <- style$font_sizes
+    illust_scale_fonts_with_plot <- isTRUE(input$illust_scale_fonts_with_plot %||% TRUE)
     illust_gate_style <- style$gate_style
     illust_n_columns <- layout$n_columns
     illust_fit_to_columns <- layout$fit_to_columns
@@ -8149,14 +8159,20 @@ server <- function(input, output, session) {
         heatmap_palette = heatmap_palette,
         heatmap_cell_size = heatmap_cell_size,
         heatmap_show_values = heatmap_show_values,
-        font_sizes = illust_font_sizes,
+        font_sizes = scale_illustration_font_sizes(
+          illust_font_sizes, "heatmap",
+          heatmap_cell_size = heatmap_cell_size,
+          enabled = illust_scale_fonts_with_plot
+        ),
+        scale_fonts_with_plot = illust_scale_fonts_with_plot,
         pdf_dpi = layout$pdf_dpi
       )
       session$sendCustomMessage("renderIllustrationGrid", c(
         list(
           containerId = "illustration-grid-container",
           plot_type = "heatmap",
-          font_sizes = illust_font_sizes
+          font_sizes = illust_font_sizes,
+          scale_fonts_with_plot = illust_scale_fonts_with_plot
         ),
         base_payload
       ))
@@ -8459,7 +8475,12 @@ server <- function(input, output, session) {
       ridge_col_gap = style$ridge_col_gap,
       ridge_gradient = style$ridge_gradient,
       kde_bandwidth = style$kde_bandwidth,
-      font_sizes = illust_font_sizes,
+      font_sizes = scale_illustration_font_sizes(
+        illust_font_sizes, illust_plot_type,
+        plot_size = layout$export_plot_size,
+        enabled = illust_scale_fonts_with_plot
+      ),
+      scale_fonts_with_plot = illust_scale_fonts_with_plot,
       gate_style = illust_gate_style,
       overlay_populations = isTRUE(input$illust_overlay_pops),
       color_by_population = isTRUE(input$illust_color_by_pop)
@@ -8485,6 +8506,7 @@ server <- function(input, output, session) {
         ridge_gradient       = style$ridge_gradient,
         kde_bandwidth        = style$kde_bandwidth,
         font_sizes           = illust_font_sizes,
+        scale_fonts_with_plot = illust_scale_fonts_with_plot,
         gate_style           = illust_gate_style,
         color_by_population  = isTRUE(input$illust_color_by_pop),
         overlay_populations  = isTRUE(input$illust_overlay_pops),
@@ -8519,6 +8541,7 @@ server <- function(input, output, session) {
     input$illust_plot_size, input$illust_n_columns, input$illust_fit_to_columns,
     input$illust_tick_font_size, input$illust_axis_label_font_size,
     input$illust_title_font_size, input$illust_gate_label_font_size,
+    input$illust_scale_fonts_with_plot,
     input$illust_pdf_dpi,
     input$illust_point_size, input$illust_point_alpha,
     input$illust_hist_line_width, input$illust_hist_fill,
@@ -8578,6 +8601,7 @@ server <- function(input, output, session) {
         ridge_gradient      = latest_style$ridge_gradient,
         kde_bandwidth       = latest_style$kde_bandwidth,
         font_sizes          = latest_style$font_sizes,
+        scale_fonts_with_plot = isTRUE(input$illust_scale_fonts_with_plot %||% TRUE),
         gate_style          = latest_style$gate_style,
         color_by_population = latest_color_by,
         overlay_populations = latest_overlay,
@@ -8607,6 +8631,15 @@ server <- function(input, output, session) {
       data$plot_size <- latest_layout$export_plot_size
       data$n_columns <- latest_layout$n_columns
       data$fit_to_columns <- latest_layout$fit_to_columns
+      data$scale_fonts_with_plot <- isTRUE(input$illust_scale_fonts_with_plot %||% TRUE)
+      data$font_sizes <- scale_illustration_font_sizes(
+        latest_style$font_sizes, illust_plot_type,
+        plot_size = latest_layout$export_plot_size,
+        heatmap_cell_size = .clamp_int(
+          input$illust_heatmap_cell_size, default = 30L, lo = 16L, hi = 72L
+        ),
+        enabled = data$scale_fonts_with_plot
+      )
       data$overlay_populations <- isTRUE(input$illust_overlay_pops)
       data$color_by_population <- isTRUE(input$illust_color_by_pop)
       pop_ids <- as.character(data$payload$pop_ids %||% character(0))

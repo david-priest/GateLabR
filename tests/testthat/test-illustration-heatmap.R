@@ -77,6 +77,27 @@ test_that("illustration heatmap scaling is explicit and NA-safe", {
   expect_true(all(is.na(z[, 3])))
 })
 
+test_that("illustration fonts retain their baseline and scale with plot size", {
+  base <- list(tick = 9, axis_label = 12, gate_label = 10, title = 12)
+
+  expect_equal(
+    scale_illustration_font_sizes(base, "heatmap", heatmap_cell_size = 30),
+    base
+  )
+  expect_equal(
+    scale_illustration_font_sizes(base, "heatmap", heatmap_cell_size = 60),
+    list(tick = 12.5, axis_label = 17, gate_label = 14, title = 17)
+  )
+  expect_equal(
+    scale_illustration_font_sizes(base, "biplot", plot_size = 50),
+    list(tick = 7, axis_label = 9.5, gate_label = 8, title = 9.5)
+  )
+  expect_identical(
+    scale_illustration_font_sizes(base, "heatmap", heatmap_cell_size = 60, enabled = FALSE),
+    base
+  )
+})
+
 test_that("illustration heatmap supports mean summaries and selected order", {
   f <- make_heatmap_fixture()
   hm <- compute_illustration_heatmap(
@@ -132,4 +153,8 @@ test_that("illustration heatmap exports labelled vector SVG", {
   expect_match(svg, "Barcode A", fixed = TRUE)
   expect_match(svg, "heatmap_cells", fixed = TRUE)
   expect_match(svg, "legend_gradient", fixed = TRUE)
+  compact_svg <- gsub("[[:space:]]", "", tolower(svg))
+  # gridSVG rounds the first endpoint down by one RGB unit during serialisation.
+  expect_true(grepl("#313695|rgb\\(49,(53|54),(148|149)\\)", compact_svg))
+  expect_true(grepl("#a50026|rgb\\(165,0,38\\)", compact_svg))
 })

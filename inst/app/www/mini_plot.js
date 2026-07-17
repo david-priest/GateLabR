@@ -1262,7 +1262,31 @@
         if (name === 'heat') {
             return ['#000000', '#5a0000', '#c41200', '#ff7b00', '#ffd000', '#ffff3a'];
         }
-        return ['#2166ac', '#f7f7f7', '#ffff66', '#d73027'];
+        // CATALYST's conventional expression-heatmap palette:
+        // rev(RColorBrewer::brewer.pal(11, "RdYlBu")).
+        return ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf',
+                '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026'];
+    }
+
+    function _scaleIllustrationFontSizes(fontSizes, size, referenceSize, enabled) {
+        var base = fontSizes || {};
+        if (!enabled) return base;
+        var ratio = Number(size) / Number(referenceSize);
+        if (!isFinite(ratio) || ratio <= 0) ratio = 1;
+        // Sub-linear scaling keeps labels in proportion without letting text
+        // dominate very large panels. The baseline sizes are unchanged at 1x.
+        var scale = Math.max(0.8, Math.min(1.6, Math.sqrt(ratio)));
+        function scaled(value, fallback) {
+            var n = Number(value);
+            if (!isFinite(n) || n <= 0) n = fallback;
+            return Math.max(6, Math.round(n * scale * 2) / 2);
+        }
+        return {
+            tick: scaled(base.tick, 9),
+            axis_label: scaled(base.axis_label, 12),
+            gate_label: scaled(base.gate_label, 10),
+            title: scaled(base.title, 12)
+        };
     }
 
     function _finiteHeatmapNumber(value) {
@@ -1291,14 +1315,17 @@
         var hm = data.heatmap || {};
         var rows = Array.isArray(hm.rows) ? hm.rows : [];
         var channels = Array.isArray(hm.channels) ? hm.channels : [];
-        var fontSizes = data.font_sizes || {};
-        var labelFs = Math.max(6, Number(fontSizes.axis_label) || 10);
-        var valueFs = Math.max(6, Number(fontSizes.tick) || 8);
         var cellSize = Math.max(16, Math.min(72, Number(hm.cell_size) || 30));
+        var fontSizes = _scaleIllustrationFontSizes(
+            data.font_sizes || {}, cellSize, 30, data.scale_fonts_with_plot !== false
+        );
+        var labelFs = Math.max(6, Number(fontSizes.axis_label) || 12);
+        var valueFs = Math.max(6, Number(fontSizes.tick) || 9);
         var showValues = !!hm.show_values;
         var paletteName = String(hm.palette || 'blue_white_yellow_red');
         var anchors = _heatmapPaletteAnchors(paletteName);
-        var interpolator = d3.interpolateRgbBasis(anchors);
+        // Match the R SVG exporter, which interpolates these stops in Lab space.
+        var interpolator = d3.piecewise(d3.interpolateLab, anchors);
 
         var gridDiv = document.createElement('div');
         gridDiv.className = 'mini-plot-grid illustration-grid heatmap-grid';
@@ -1551,6 +1578,9 @@
                 effectivePlotSize = Math.max(plotSize, fitSize);
             }
         }
+        fontSizes = _scaleIllustrationFontSizes(
+            fontSizes, effectivePlotSize, 200, data.scale_fonts_with_plot !== false
+        );
         if (typeof Shiny !== 'undefined' && Shiny && typeof Shiny.setInputValue === 'function') {
             Shiny.setInputValue('illustration_effective_plot_size', effectivePlotSize, { priority: 'event' });
         }
