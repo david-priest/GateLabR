@@ -1474,11 +1474,11 @@
             none: 'Transformed expression'
         };
         var legendTitle = svg.append('text')
-            .attr('x', legendX).attr('y', legendY - 9)
+            .attr('x', legendX).attr('y', legendY - valueFs - 8)
             .style('font-size', labelFs + 'px').style('font-weight', 600)
             .style('fill', '#334155');
         legendTitle.append('tspan').attr('x', legendX).attr('dy', 0).text(statLabel);
-        legendTitle.append('tspan').attr('x', legendX).attr('dy', labelFs + 3)
+        legendTitle.append('tspan').attr('x', legendX).attr('dy', valueFs + 2)
             .style('font-size', valueFs + 'px').style('font-weight', 400)
             .text(scaleLabels[String(hm.scale_mode || 'none')] || 'Scaled expression');
     }

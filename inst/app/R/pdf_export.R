@@ -570,11 +570,11 @@ export_heatmap_svg <- function(file_path, payload, opts) {
       "Transformed expression"
     )
     grid.text(
-      stat_label, x = unit(legend_x, "points"), y = unit(legend_y + legend_h + 12, "points"),
+      stat_label, x = unit(legend_x, "points"), y = unit(legend_y + legend_h + value_fs + 8, "points"),
       just = c("left", "bottom"), gp = gpar(fontsize = label_fs, fontfamily = "Helvetica", fontface = "bold", col = "#334155")
     )
     grid.text(
-      scale_label, x = unit(legend_x, "points"), y = unit(legend_y + legend_h - 1, "points"),
+      scale_label, x = unit(legend_x, "points"), y = unit(legend_y + legend_h + 2, "points"),
       just = c("left", "bottom"), gp = gpar(fontsize = value_fs, fontfamily = "Helvetica", col = "#334155")
     )
   })
