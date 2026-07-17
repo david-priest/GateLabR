@@ -132,7 +132,8 @@ encode_float32_base64 <- function(x) {
   base64enc::base64encode(raw_bytes)
 }
 
-#' Compute axis range for a channel
+#' Compute a robust axis range for a channel. Events outside these percentile limits remain
+#' visible as boundary pile-ups in cytof_plot.js rather than being silently discarded.
 compute_axis_range <- function(values) {
   if (length(values) == 0) return(c(0, 1))
   p_low <- as.numeric(quantile(values, 0.001, na.rm = TRUE))
