@@ -649,6 +649,19 @@
     }
 
     // ── Canvas rendering ──────────────────────────────────────────────────────
+    function _clampPointX(scale, value) {
+        return Math.max(M.left + 1.5, Math.min(M.left + W - 1.5, scale(value) + M.left));
+    }
+    function _clampPointY(scale, value) {
+        return Math.max(M.top + 1.5, Math.min(M.top + H - 1.5, scale(value) + M.top));
+    }
+    function _clampBaseX(value) {
+        return Math.max(0, Math.min(W, _xBase(value)));
+    }
+    function _clampBaseY(value) {
+        return Math.max(0, Math.min(H, _yBase(value)));
+    }
+
     function _drawCanvas(zx, zy) {
         _ctx.clearRect(0, 0, PLOT_W, PLOT_H);
         if (!_plotData || !_plotData.x || !_plotData.x.length) return;
@@ -675,8 +688,8 @@
         _ctx.fillStyle = '#1f77b4';
         _ctx.globalAlpha = _plotData.point_alpha || 0.35;
         for (var i = 0; i < n; i++) {
-            var px = zx(x[i]) + M.left;
-            var py = zy(y[i]) + M.top;
+            var px = _clampPointX(zx, x[i]);
+            var py = _clampPointY(zy, y[i]);
             if (px < M.left - 2 || px > M.left + W + 2 ||
                 py < M.top  - 2 || py > M.top  + H + 2) continue;
             _ctx.beginPath();
@@ -709,8 +722,8 @@
             var indices = buckets[c];
             for (var j = 0; j < indices.length; j++) {
                 var idx = indices[j];
-                var px = zx(x[idx]) + M.left;
-                var py = zy(y[idx]) + M.top;
+                var px = _clampPointX(zx, x[idx]);
+                var py = _clampPointY(zy, y[idx]);
                 if (px < M.left - 2 || px > M.left + W + 2 ||
                     py < M.top  - 2 || py > M.top  + H + 2) continue;
                 _ctx.beginPath();
@@ -747,6 +760,19 @@
         for (var i = 0; i < x.length; i++) {
             var px = _xBase(x[i]), py = _yBase(y[i]);
             if (px >= 0 && px <= W && py >= 0 && py <= H) pts.push([px, py]);
+        }
+        return pts;
+    }
+
+    function _offscalePts() {
+        // Keep off-scale tails out of the KDE (which would create artificial edge contours),
+        // but return clamped pixels so contour mode can draw them as boundary outlier dots.
+        var x = _plotData.x, y = _plotData.y, pts = [];
+        for (var i = 0; i < x.length; i++) {
+            var px = _xBase(x[i]), py = _yBase(y[i]);
+            if (px < 0 || px > W || py < 0 || py > H) {
+                pts.push([_clampBaseX(x[i]), _clampBaseY(y[i])]);
+            }
         }
         return pts;
     }
@@ -958,8 +984,8 @@
             var pxArr    = new Float32Array(n), pyArr = new Float32Array(n);
 
             for (var i = 0; i < n; i++) {
-                pxArr[i] = _xBase(x[i]);
-                pyArr[i] = _yBase(y[i]);
+                pxArr[i] = _clampBaseX(x[i]);
+                pyArr[i] = _clampBaseY(y[i]);
             }
 
             // Bin points into extended grid (includes points slightly outside plot)
@@ -1022,8 +1048,8 @@
 
         for (var j = 0; j < n; j++) {
             var i = indices[j];
-            var px = zx(x[i]) + M.left;
-            var py = zy(y[i]) + M.top;
+            var px = _clampPointX(zx, x[i]);
+            var py = _clampPointY(zy, y[i]);
             if (px < M.left - 2 || px > M.left + W + 2 ||
                 py < M.top  - 2 || py > M.top  + H + 2) continue;
             var t = cache.densities[i] / cache.maxDens;
@@ -1039,7 +1065,7 @@
     function _drawContour(zx, zy) {
         if (!_contourCache) {
             var pts = _ptsInDomain();
-            if (!pts.length) { _contourCache = { contours: [], outlierPts: [] }; return; }
+            if (!pts.length) { _contourCache = { contours: [], outlierPts: _offscalePts() }; return; }
 
             var bw = _computeBandwidth(pts);
             var kde = d3.contourDensity()
@@ -1052,9 +1078,9 @@
 
             // Step 1: coarse pass to find peak density
             var coarseC = kde.thresholds(20)(pts);
-            if (!coarseC.length) { _contourCache = { contours: [], outlierPts: [] }; return; }
+            if (!coarseC.length) { _contourCache = { contours: [], outlierPts: _offscalePts() }; return; }
             var peakDensity = coarseC[coarseC.length - 1].value;
-            if (!peakDensity) { _contourCache = { contours: [], outlierPts: [] }; return; }
+            if (!peakDensity) { _contourCache = { contours: [], outlierPts: _offscalePts() }; return; }
 
             // Step 2: outer contour = threshold% of peak (not threshold% of index)
             var outerDensity = Math.max(peakDensity * (threshold / 100), peakDensity * 0.005);
@@ -1065,7 +1091,7 @@
                 return Math.exp(Math.log(outerDensity) + (Math.log(peakDensity) - Math.log(outerDensity)) * i / (nLevels - 1));
             });
             var contours = kde.thresholds(logThresholds)(pts);
-            if (!contours.length) { _contourCache = { contours: [], outlierPts: [] }; return; }
+            if (!contours.length) { _contourCache = { contours: [], outlierPts: _offscalePts() }; return; }
 
             // Step 4: classify outliers via offscreen canvas mask of the outermost contour
             var offN = 256, oxS = offN / W, oyS = offN / H;
@@ -1094,6 +1120,7 @@
                 var gy = Math.max(0, Math.min(offN - 1, Math.floor(pt[1] * oyS)));
                 return pixels[(gy * offN + gx) * 4] < 128;  // black = outside contour
             });
+            outlierPts = outlierPts.concat(_offscalePts());
 
             _contourCache = { contours: contours, outlierPts: outlierPts };
         }
