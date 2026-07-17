@@ -125,7 +125,11 @@ need it.)
 - **Illustration** renders a grid of biplots/histograms across
   populations and channels — including a **stacked ridgeline** mode with
   a black→yellow heat-gradient fill, adjustable overlap and column
-  spacing.
+  spacing. The **Heatmap** option summarizes median or mean transformed
+  expression for each selected population (rows) and channel (columns),
+  with no scaling, per-channel or per-population 0–1 scaling, or
+  per-channel z-scores; black→yellow, viridis and blue→white→yellow→red
+  palettes are available.
 
 Both export to **SVG** (vector, Illustrator-friendly) and **PNG**.
 
