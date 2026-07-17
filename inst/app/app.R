@@ -451,15 +451,18 @@ ui <- fluidPage(
             ),
 
             conditionalPanel("input.strategy_mode === 'multi'",
-              control_row("Populations",
-                inline_field("Targets",
-                  selectizeInput("strategy_multi_pop_select", NULL,
-                    choices = NULL, multiple = TRUE,
-                    options = list(placeholder = "Select populations...", plugins = list("remove_button")),
-                    width = "360px")),
-                control_hint("Full hierarchies are traced; shared parent gates appear once."),
-                tags$span(class = "strategy-multi-count",
-                          textOutput("strategy_multi_pop_hint", inline = TRUE))
+              tags$div(class = "strategy-multi-picker-block",
+                tags$div(class = "glr-picker-head",
+                  tags$span(class = "glr-control-row-label", "Populations"),
+                  tags$span(class = "strategy-multi-count",
+                            textOutput("strategy_multi_pop_hint", inline = TRUE)),
+                  tags$span(class = "glr-picker-head-actions",
+                    actionButton("strategy_multi_all_btn", "All", class = "btn-xs btn-default"),
+                    actionButton("strategy_multi_none_btn", "None", class = "btn-xs btn-default")
+                  )
+                ),
+                uiOutput("strategy_multi_pop_ui"),
+                control_hint("Full hierarchies are traced; shared parent gates appear once.")
               )
             ),
 
@@ -1008,72 +1011,6 @@ ui <- fluidPage(
           )
         ),
 
-        # ── Tab 4: Statistics ────────────────────────────────────────────────
-        tabPanel("Statistics",
-          tags$div(class = "stats-controls",
-            tags$div(class = "stats-top-actions",
-              actionButton("stats_compute_btn", "Compute Statistics",
-                           class = "btn-sm btn-primary"),
-              downloadButton("stats_export_csv", "Export CSV",
-                             class = "btn-sm btn-default")
-            ),
-
-            tags$div(class = "stats-options-grid",
-              tags$div(class = "stats-block",
-                tags$div(class = "gating-control-box-title",
-                  "Statistics",
-                  tags$span(style = "float:right; margin-top:-2px;",
-                    actionButton("stats_types_all_btn",  "All",  class = "btn-xs btn-default"),
-                    actionButton("stats_types_none_btn", "None", class = "btn-xs btn-default")
-                  )
-                ),
-                checkboxGroupInput("stats_stat_types", NULL,
-                  choices = c("Count" = "count",
-                              "% of Parent" = "pct_parent",
-                              "% of Total"  = "pct_total",
-                              "Median MFI"  = "median",
-                              "Mean MFI"    = "mean",
-                              "Geometric Mean" = "geomean",
-                              "Std Dev"     = "sd",
-                              "CV%"         = "cv"),
-                  selected = c("count", "pct_parent", "pct_total", "median"),
-                  inline = FALSE)
-              ),
-              tags$div(class = "stats-block",
-                tags$div(class = "gating-control-box-title", "Value Space (MFI)"),
-                radioButtons("stats_value_space", NULL,
-                  choices = c("Raw (linear)" = "raw",
-                              "Transformed (display)" = "transformed"),
-                  selected = "raw", inline = FALSE),
-                tags$div(style = "font-size:10px; color:#888; margin-top:4px;",
-                  "Raw = untransformed fluorescence/mass values.",
-                  tags$br(),
-                  "Transformed = arcsinh (CyTOF) or logicle (flow).")
-              )
-            ),
-
-            tags$div(class = "gating-control-box-title", style = "margin-top:8px;",
-              "Channels",
-              tags$span(style = "float:right; margin-top:-2px;",
-                actionButton("stats_channels_all_btn",  "All",  class = "btn-xs btn-default"),
-                actionButton("stats_channels_none_btn", "None", class = "btn-xs btn-default")
-              )
-            ),
-            uiOutput("stats_channels_ui"),
-            tags$div(class = "gating-control-box-title", style = "margin-top:8px;",
-              "Populations",
-              tags$span(style = "float:right; margin-top:-2px;",
-                actionButton("stats_pops_all_btn",  "All",  class = "btn-xs btn-default"),
-                actionButton("stats_pops_none_btn", "None", class = "btn-xs btn-default")
-              )
-            ),
-            uiOutput("stats_populations_ui")
-          ),
-          tags$div(class = "stats-table-container",
-            DT::dataTableOutput("stats_table")
-          )
-        ),
-
         # ── Tab 5: Panel (marker rename) ─────────────────────────────────────
         tabPanel("Panel",
           tags$div(class = "scales-controls",
@@ -1186,6 +1123,72 @@ ui <- fluidPage(
             ),
             tags$div(id = "division-plot-container",
                      style = "padding:8px 4px; min-height:430px; position:relative; width:75%; min-width:560px;")
+          )
+        ),
+
+        # ── Statistics (kept after Division to match GateLab) ────────────────
+        tabPanel("Statistics",
+          tags$div(class = "stats-controls",
+            tags$div(class = "stats-top-actions",
+              actionButton("stats_compute_btn", "Compute Statistics",
+                           class = "btn-sm btn-primary"),
+              downloadButton("stats_export_csv", "Export CSV",
+                             class = "btn-sm btn-default")
+            ),
+
+            tags$div(class = "stats-options-grid",
+              tags$div(class = "stats-block",
+                tags$div(class = "gating-control-box-title",
+                  "Statistics",
+                  tags$span(style = "float:right; margin-top:-2px;",
+                    actionButton("stats_types_all_btn",  "All",  class = "btn-xs btn-default"),
+                    actionButton("stats_types_none_btn", "None", class = "btn-xs btn-default")
+                  )
+                ),
+                checkboxGroupInput("stats_stat_types", NULL,
+                  choices = c("Count" = "count",
+                              "% of Parent" = "pct_parent",
+                              "% of Total"  = "pct_total",
+                              "Median MFI"  = "median",
+                              "Mean MFI"    = "mean",
+                              "Geometric Mean" = "geomean",
+                              "Std Dev"     = "sd",
+                              "CV%"         = "cv"),
+                  selected = c("count", "pct_parent", "pct_total", "median"),
+                  inline = FALSE)
+              ),
+              tags$div(class = "stats-block",
+                tags$div(class = "gating-control-box-title", "Value Space (MFI)"),
+                radioButtons("stats_value_space", NULL,
+                  choices = c("Raw (linear)" = "raw",
+                              "Transformed (display)" = "transformed"),
+                  selected = "raw", inline = FALSE),
+                tags$div(style = "font-size:10px; color:#888; margin-top:4px;",
+                  "Raw = untransformed fluorescence/mass values.",
+                  tags$br(),
+                  "Transformed = arcsinh (CyTOF) or logicle (flow).")
+              )
+            ),
+
+            tags$div(class = "gating-control-box-title", style = "margin-top:8px;",
+              "Channels",
+              tags$span(style = "float:right; margin-top:-2px;",
+                actionButton("stats_channels_all_btn",  "All",  class = "btn-xs btn-default"),
+                actionButton("stats_channels_none_btn", "None", class = "btn-xs btn-default")
+              )
+            ),
+            uiOutput("stats_channels_ui"),
+            tags$div(class = "gating-control-box-title", style = "margin-top:8px;",
+              "Populations",
+              tags$span(style = "float:right; margin-top:-2px;",
+                actionButton("stats_pops_all_btn",  "All",  class = "btn-xs btn-default"),
+                actionButton("stats_pops_none_btn", "None", class = "btn-xs btn-default")
+              )
+            ),
+            uiOutput("stats_populations_ui")
+          ),
+          tags$div(class = "stats-table-container",
+            DT::dataTableOutput("stats_table")
           )
         ),
 
@@ -6914,7 +6917,8 @@ server <- function(input, output, session) {
 
   # ── Multi-population strategy hint ────────────────────────────────────────
   output$strategy_multi_pop_hint <- renderText({
-    # Count combined selection from selectizeInput + checkboxes
+    # Count the Strategy picker together with any population rows selected in
+    # the shared right-hand population tree.
     sel_ids <- unique(c(
       as.character(input$strategy_multi_pop_select %||% character(0)),
       rv$.selected_pop_ids %||% character(0)
@@ -6924,37 +6928,65 @@ server <- function(input, output, session) {
     if (n == 0) "None selected." else paste0(n, " population", if (n != 1) "s" else "", " selected.")
   })
 
-  # ── Update multi-pop selectize choices when populations change ────────────
-  observe({
-    # Depend on populations reactively WITHOUT req() so the observer still runs
-    # (and clears choices) when populations become empty.
+  # ── Compact fill-down population picker for multi-population strategies ────
+  output$strategy_multi_pop_ui <- renderUI({
     pops <- rv$populations
     root <- rv$root_population_id
-    rv$gate_version  # retrigger when gates/populations mutate
-    pop_ids <- setdiff(names(pops %||% list()), root %||% character(0))
-    if (length(pop_ids) == 0) {
-      updateSelectizeInput(session, "strategy_multi_pop_select",
-                           choices = character(0), selected = character(0))
-      return()
-    }
-    pop_names <- vapply(pop_ids, function(id) pops[[id]]$name %||% id, character(1))
-    pop_choices <- setNames(pop_ids, pop_names)
-    pop_choices <- pop_choices[order(tolower(pop_names))]
-    # Preserve any existing selection that is still valid
-    current_sel <- isolate(as.character(input$strategy_multi_pop_select %||% character(0)))
-    valid_sel <- intersect(current_sel, pop_ids)
-    updateSelectizeInput(session, "strategy_multi_pop_select",
-                         choices = pop_choices, selected = valid_sel)
+    rv$gate_version
+    if (is.null(root) || is.null(pops[[root]])) return(NULL)
+
+    pop_ids <- setdiff(sort_pop_ids_tree(pops, root), root)
+    pop_ids <- c(pop_ids, setdiff(names(pops), c(root, pop_ids)))
+    if (length(pop_ids) == 0L) return(NULL)
+
+    pop_names <- vapply(pop_ids, function(id) as.character(pops[[id]]$name %||% id), character(1))
+    depths <- vapply(pop_ids, function(id) {
+      depth <- 0L
+      current <- id
+      seen <- character(0)
+      while (!identical(current, root) && !current %in% seen && !is.null(pops[[current]])) {
+        seen <- c(seen, current)
+        current <- pops[[current]]$parent_id
+        depth <- depth + 1L
+      }
+      depth
+    }, integer(1))
+    selected <- unique(c(
+      isolate(as.character(input$strategy_multi_pop_select %||% character(0))),
+      rv$.selected_pop_ids %||% character(0)
+    ))
+
+    multi_column_checkbox_group(
+      "strategy_multi_pop_select",
+      choices = setNames(pop_ids, pop_names),
+      selected = intersect(selected, pop_ids),
+      visible_rows = 6L,
+      max_columns = 4L,
+      aria_label = "Strategy populations",
+      depths = setNames(depths, pop_ids)
+    )
   })
 
-  # Sync selectizeInput with checkbox selections (when user checks boxes on Gating tab)
+  observeEvent(input$strategy_multi_all_btn, {
+    req(rv$root_population_id, rv$populations[[rv$root_population_id]])
+    pop_ids <- setdiff(sort_pop_ids_tree(rv$populations, rv$root_population_id),
+                       rv$root_population_id)
+    updateCheckboxGroupInput(session, "strategy_multi_pop_select", selected = pop_ids)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$strategy_multi_none_btn, {
+    rv$.selected_pop_ids <- character(0)
+    updateCheckboxGroupInput(session, "strategy_multi_pop_select", selected = character(0))
+  }, ignoreInit = TRUE)
+
+  # Sync the picker with checkbox selections in the shared Gating-tab tree.
   observe({
     ids <- rv$.selected_pop_ids %||% character(0)
     cur <- as.character(input$strategy_multi_pop_select %||% character(0))
     combined <- unique(c(cur, ids))
     combined <- intersect(combined, setdiff(names(rv$populations %||% list()), rv$root_population_id %||% character(0)))
     if (!setequal(combined, cur)) {
-      updateSelectizeInput(session, "strategy_multi_pop_select", selected = combined)
+      updateCheckboxGroupInput(session, "strategy_multi_pop_select", selected = combined)
     }
   })
 
@@ -9188,10 +9220,16 @@ server <- function(input, output, session) {
     all_chs <- rv$channels
     # Pre-select signal channels (not QC, not scatter for flow)
     default_selected <- all_chs[!.is_qc_channel(all_chs)]
-    checkboxGroupInput("stats_channels", NULL,
-                       choices = all_chs,
-                       selected = default_selected,
-                       inline = FALSE)
+    current <- isolate(input$stats_channels)
+    selected <- if (is.null(current)) default_selected else intersect(as.character(current), all_chs)
+    multi_column_checkbox_group(
+      "stats_channels",
+      choices = setNames(all_chs, all_chs),
+      selected = selected,
+      visible_rows = 10L,
+      max_columns = 3L,
+      aria_label = "Statistics channels"
+    )
   })
 
   observeEvent(input$stats_channels_all_btn, {
@@ -9222,12 +9260,19 @@ server <- function(input, output, session) {
   output$stats_populations_ui <- renderUI({
     rv$populations; rv$root_population_id; rv$gate_version
     if (is.null(rv$root_population_id) || length(rv$populations) == 0) return(NULL)
-    pop_choices <- setNames(names(rv$populations),
-                            vapply(rv$populations, function(p) p$name, character(1)))
-    checkboxGroupInput("stats_populations", NULL,
-                       choices = pop_choices,
-                       selected = names(rv$populations),
-                       inline = FALSE)
+    pop_ids <- sort_pop_ids_tree(rv$populations, rv$root_population_id)
+    pop_ids <- c(pop_ids, setdiff(names(rv$populations), pop_ids))
+    pop_names <- vapply(pop_ids, function(id) rv$populations[[id]]$name %||% id, character(1))
+    current <- isolate(input$stats_populations)
+    selected <- if (is.null(current)) pop_ids else intersect(as.character(current), pop_ids)
+    multi_column_checkbox_group(
+      "stats_populations",
+      choices = setNames(pop_ids, pop_names),
+      selected = selected,
+      visible_rows = 10L,
+      max_columns = 3L,
+      aria_label = "Statistics populations"
+    )
   })
 
   # Reactive: computed statistics data.frame (computed on button press)
