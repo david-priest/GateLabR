@@ -1317,12 +1317,15 @@
 
         var measureCanvas = document.createElement('canvas');
         var measure = measureCanvas.getContext('2d');
-        measure.font = labelFs + 'px Arial, Helvetica, sans-serif';
+        if (measure) measure.font = labelFs + 'px Arial, Helvetica, sans-serif';
+        function labelWidth(text) {
+            return measure ? measure.measureText(String(text)).width : String(text).length * labelFs * 0.58;
+        }
         var maxRowLabel = d3.max(rows, function (row) {
-            return measure.measureText(String(row.name || row.id || '')).width;
+            return labelWidth(row.name || row.id || '');
         }) || 0;
         var maxChannelLabel = d3.max(channels, function (ch) {
-            return measure.measureText(String(ch.label || ch.id || '')).width;
+            return labelWidth(ch.label || ch.id || '');
         }) || 0;
 
         var left = Math.ceil(maxRowLabel) + 18;
