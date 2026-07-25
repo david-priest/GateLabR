@@ -6,12 +6,15 @@
 cran_pkgs <- c(
   "shiny",      # web application framework
   "DT",         # interactive data tables
+  "digest",     # canonical compensation profile hashes
   "jsonlite",   # JSON serialisation (workspace save/load)
+  "nnls",       # authoritative CyTOF compensation solver
   "base64enc",  # base64 encoding (GatingML export)
   "uuid",       # unique gate/population IDs
   "sp",         # polygon point-in-polygon (polygon gates)
   "gridSVG",    # SVG export with proper group structure for Illustrator
-  "png"         # raster data layer in SVG export
+  "png",        # raster data layer in SVG export
+  "stringi"     # cross-language NFC channel identity normalisation
 )
 
 # ── Bioconductor packages ─────────────────────────────────────────────────────

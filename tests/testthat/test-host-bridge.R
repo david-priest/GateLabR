@@ -345,7 +345,7 @@ test_that("host workspace validation rejects mismatched SCE and compensated v3 s
       reason = "explicit",
       workspace_json = version_three
     ),
-    "version 2 hosted workspaces only"
+    "invalid compensation state"
   )
 })
 

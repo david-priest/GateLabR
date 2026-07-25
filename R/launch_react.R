@@ -84,7 +84,8 @@ launchReactGateLab <- function(
             sce_state(),
             request,
             dataset_id = dataset_id,
-            sample_column = sample_column
+            sample_column = sample_column,
+            session = session
           )
           sce_state(handled$sce)
           assign(sce_name, handled$sce, envir = .GlobalEnv)

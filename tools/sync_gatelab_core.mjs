@@ -203,6 +203,11 @@ const provenance = {
     "src/host/colDataContract.ts",
     "GATELAB_HOST_COLDATA_CONTRACT_VERSION",
   ),
+  compensationContractVersion: readContractVersion(
+    options.source,
+    "src/host/compensationContract.ts",
+    "GATELAB_HOST_COMPENSATION_CONTRACT_VERSION",
+  ),
   files,
 };
 writeFileSync(

@@ -24,7 +24,9 @@ Imports:
     shiny,
     methods,
     DT,
+    digest,
     jsonlite,
+    nnls,
     base64enc,
     uuid,
     sp,
@@ -37,6 +39,7 @@ Imports:
     SummarizedExperiment,
     S4Vectors,
     flowCore,
+    stringi,
     xml2
 Suggests:
     BiocManager,
