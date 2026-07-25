@@ -129,3 +129,28 @@ multi_column_checkbox_group <- function(input_id, choices, selected = character(
     )
   )
 }
+
+# Normalize DT row indices to a sorted, one-based vector. NULL is retained to
+# distinguish "the client has not initialised yet" from an explicit empty
+# selection.
+normalize_sample_table_rows <- function(rows, total_rows) {
+  if (is.null(rows)) return(NULL)
+  rows <- as.integer(rows)
+  rows <- rows[!is.na(rows)]
+  if (length(rows) == 0) return(integer(0))
+  if (min(rows) == 0L) rows <- rows + 1L
+  rows <- unique(rows[rows >= 1L & rows <= total_rows])
+  sort(rows)
+}
+
+# Resolve sample-table inclusion with explicit selection semantics:
+# - before the DT client initialises, all rows are included;
+# - metadata filters narrow the visible candidates;
+# - an explicit empty selection means no samples, never "all samples".
+resolve_sample_table_rows <- function(filtered_rows, selected_rows, total_rows) {
+  filtered_rows <- normalize_sample_table_rows(filtered_rows, total_rows)
+  selected_rows <- normalize_sample_table_rows(selected_rows, total_rows)
+  if (is.null(filtered_rows)) filtered_rows <- seq_len(total_rows)
+  if (is.null(selected_rows)) selected_rows <- seq_len(total_rows)
+  intersect(filtered_rows, selected_rows)
+}

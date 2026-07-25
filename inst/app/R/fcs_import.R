@@ -122,6 +122,173 @@ detect_instrument_type <- function(channel_names) {
   return("flow")
 }
 
+#' Collect channel-identity vectors that can identify an SCE's instrument
+#'
+#' Display row names are often marker labels (for example, "CD45") and are
+#' therefore weak evidence of acquisition modality. Prefer persisted FCS
+#' parameter identities and isotope/channel columns from rowData when present.
+#'
+#' @param sce A SingleCellExperiment.
+#' @return A named list of character vectors, ordered from strongest to weakest
+#'   channel-identity evidence.
+.sce_instrument_channel_sets <- function(sce) {
+  rd <- tryCatch(
+    as.data.frame(SummarizedExperiment::rowData(sce)),
+    error = function(e) data.frame()
+  )
+  sets <- list()
+
+  if (ncol(rd) > 0) {
+    rd_names <- tolower(colnames(rd))
+    preferred <- c(
+      "gatelabr_pnn", "pnn", "$pnn", "fcs_pnn", "channel_name",
+      "channel", "isotope", "metal", "mass"
+    )
+    for (field in preferred) {
+      hits <- which(rd_names == field)
+      for (idx in hits) {
+        vals <- as.character(rd[[idx]])
+        vals <- vals[!is.na(vals) & nzchar(vals)]
+        if (length(vals) > 0) {
+          sets[[paste0("rowData$", colnames(rd)[idx])]] <- vals
+        }
+      }
+    }
+  }
+
+  rn <- rownames(sce)
+  if (!is.null(rn) && length(rn) > 0) {
+    sets$rownames <- as.character(rn)
+  }
+  sets
+}
+
+#' Score one channel-identity vector as CyTOF or flow evidence
+#'
+#' @param channel_names Character vector containing FCS identities or display
+#'   labels.
+#' @return A list containing instrument scores and the underlying counts.
+.instrument_channel_evidence <- function(channel_names) {
+  channel_names <- as.character(channel_names)
+  n_total <- length(channel_names)
+  n_metal <- sum(.is_metal_channel(channel_names))
+  n_scatter <- sum(.is_scatter_channel(channel_names))
+  n_flow_suffix <- sum(.has_flow_suffix(channel_names))
+  n_qc <- sum(.is_qc_channel(channel_names))
+  n_signal <- max(0L, n_total - n_qc)
+
+  cytof_score <- 0
+  flow_score <- 0
+  if (n_scatter >= 2) flow_score <- flow_score + 6
+  if (n_flow_suffix >= 3) flow_score <- flow_score + 4
+  if (n_flow_suffix > n_metal) flow_score <- flow_score + 1
+
+  if (n_metal >= 3 && n_flow_suffix == 0) cytof_score <- cytof_score + 6
+  if (n_signal > 0 && n_metal / n_signal >= 0.35 && n_metal > n_flow_suffix) {
+    cytof_score <- cytof_score + 3
+  }
+  if (n_metal > 0 && n_scatter == 0) cytof_score <- cytof_score + 1
+
+  list(
+    cytof = cytof_score,
+    flow = flow_score,
+    n_metal = n_metal,
+    n_scatter = n_scatter,
+    n_flow_suffix = n_flow_suffix
+  )
+}
+
+#' Detect instrument type from an SCE without trusting marker display labels
+#'
+#' Explicit/manual metadata is authoritative. Auto-detected metadata is
+#' rechecked against persisted FCS parameter identities and rowData so a CyTOF
+#' SCE whose row names are marker labels is not silently reclassified as flow.
+#'
+#' @param sce A SingleCellExperiment.
+#' @return A list with `type`, `confidence`, and `evidence`.
+detect_sce_instrument_type <- function(sce) {
+  md <- S4Vectors::metadata(sce)
+  stored <- as.character(md$instrument_type %||% "")
+  stored <- if (length(stored) == 1L && stored %in% c("cytof", "flow")) stored else NULL
+  source <- as.character(md$instrument_type_source %||% "")
+  mode_choice <- as.character(md$instrument_mode_choice %||% "auto")
+
+  if (length(mode_choice) == 1L && mode_choice %in% c("cytof", "flow")) {
+    return(list(
+      type = mode_choice,
+      confidence = "explicit",
+      evidence = "instrument_mode_choice"
+    ))
+  }
+  if (!is.null(stored) &&
+      length(source) == 1L &&
+      source %in% c("manual_override", "user", "explicit", "workspace")) {
+    return(list(type = stored, confidence = "explicit", evidence = "stored_metadata"))
+  }
+
+  sets <- .sce_instrument_channel_sets(sce)
+  scored <- lapply(sets, .instrument_channel_evidence)
+  cytof_score <- if (length(scored) > 0) {
+    max(vapply(scored, `[[`, numeric(1), "cytof"))
+  } else {
+    0
+  }
+  flow_score <- if (length(scored) > 0) {
+    max(vapply(scored, `[[`, numeric(1), "flow"))
+  } else {
+    0
+  }
+
+  transform_type <- tolower(as.character(md$transform_type %||% ""))
+  cofactor <- suppressWarnings(as.numeric(md$cofactor %||% NA))
+  if (length(transform_type) == 1L && transform_type %in% c("arcsinh", "asinh") &&
+      length(cofactor) == 1L && is.finite(cofactor) && cofactor <= 10) {
+    cytof_score <- cytof_score + 3
+  } else if (length(transform_type) == 1L && transform_type == "logicle") {
+    flow_score <- flow_score + 3
+  }
+
+  if (cytof_score > flow_score && cytof_score >= 3) {
+    return(list(type = "cytof", confidence = "high", evidence = names(sets)))
+  }
+  if (flow_score > cytof_score && flow_score >= 3) {
+    return(list(type = "flow", confidence = "high", evidence = names(sets)))
+  }
+
+  # Ambiguous evidence must not erase an existing instrument assignment.
+  if (!is.null(stored)) {
+    return(list(type = stored, confidence = "stored", evidence = "stored_metadata"))
+  }
+
+  fallback_names <- if (length(sets) > 0) sets[[length(sets)]] else character(0)
+  list(
+    type = detect_instrument_type(fallback_names),
+    confidence = "low",
+    evidence = if (length(sets) > 0) names(sets)[length(sets)] else "fallback"
+  )
+}
+
+#' Resolve auto/manual instrument choice for an SCE
+#'
+#' @param sce A SingleCellExperiment.
+#' @param mode_choice One of `"auto"`, `"cytof"`, or `"flow"`.
+#' @return A list used by the app's instrument synchronisation path.
+resolve_sce_instrument_type <- function(sce, mode_choice = "auto") {
+  if (is.null(mode_choice) || length(mode_choice) != 1L ||
+      !mode_choice %in% c("auto", "cytof", "flow")) {
+    mode_choice <- "auto"
+  }
+  detection <- detect_sce_instrument_type(sce)
+  chosen <- if (identical(mode_choice, "auto")) detection$type else mode_choice
+  list(
+    detected = detection$type,
+    chosen = chosen,
+    mode_choice = mode_choice,
+    confidence = detection$confidence,
+    evidence = detection$evidence
+  )
+}
+
 # ---------------------------------------------------------------------------
 # Flow channel filtering (BD S8 spectral and similar instruments)
 # ---------------------------------------------------------------------------

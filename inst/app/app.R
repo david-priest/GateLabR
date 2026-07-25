@@ -222,14 +222,17 @@ ui <- fluidPage(
         ),
         tags$div(class = "sample-filter-panel",
           tags$div(class = "sample-filter-subheader",
-                   "Use column filters or click rows to select samples"),
+                   "Highlighted rows are included; metadata filters narrow the displayed data"),
           tags$div(style = "display:flex; gap:4px; margin-bottom:4px;",
-            actionButton("sample_filter_select_all_btn", "Select all displayed",
+            actionButton("sample_filter_select_all_btn", "All shown",
                          class = "btn-xs btn-default", style = "flex:1;",
                          title = "Select every sample currently shown by the column filters"),
-            actionButton("sample_filter_clear_btn", "Deselect all",
+            actionButton("sample_filter_clear_btn", "None",
                          class = "btn-xs btn-default", style = "flex:1;",
-                         title = "Clear the selection and column filters — show all samples")
+                         title = "Display no samples"),
+            actionButton("sample_filter_reset_btn", "Reset",
+                         class = "btn-xs btn-default", style = "flex:1;",
+                         title = "Clear metadata filters and include all samples")
           ),
           DT::dataTableOutput("sample_filter_table")
         ),
@@ -1392,7 +1395,10 @@ server <- function(input, output, session) {
     undo_stack = list(), redo_stack = list(),
     overlay_factor = NULL, overlay_selected = NULL, overlay_palette = "paired",
     sample_info = NULL, sample_mask = NULL, sample_filter_key = "all",
+    sample_selected_keys = NULL,
     .sample_filter_reset = 0L,                  # bump to force a fresh sample-table re-render
+    .sample_selection_client_ready = FALSE,     # distinguishes DT startup NULL from explicit none
+    .gating_scale_observer_binding = NULL,      # guards dynamic Min/Max inputs across channel changes
     .range_cache = list(),
     .gate_counts_cache_key = NULL, .gate_counts_cache = NULL,
     .population_tree_cache_key = NULL, .population_tree_cache = NULL,
@@ -1463,7 +1469,9 @@ server <- function(input, output, session) {
         if (!is.null(valid_global_scale_range(ch))) next
         vals <- tryCatch(get_filtered_channel_values(ch, for_plot = FALSE), error = function(e) numeric(0))
         rng <- if (sum(is.finite(vals)) >= 2) {
-          compute_range_from_values(vals, channel = ch, span_scale = 1.2)
+          # Match GateLab's robust initial framing: 0.1st–99.9th percentiles
+          # with 5% padding. Rare outliers remain visible as edge pile-ups.
+          compute_axis_range(vals)
         } else if (!is_flow_session(rv$sce)) {
           get_cytof_axis_range(ch)
         } else {
@@ -1932,15 +1940,10 @@ server <- function(input, output, session) {
   }
 
   resolve_sce_instrument <- function(sce, mode_choice = "auto") {
-    mode_choice <- sanitize_mode_choice(mode_choice)
-    channels <- tryCatch(get_channel_names(sce), error = function(e) character(0))
-    detected <- if (length(channels) > 0) {
-      detect_instrument_type(channels)
-    } else {
-      S4Vectors::metadata(sce)$instrument_type %||% "flow"
-    }
-    chosen <- if (mode_choice == "auto") detected else mode_choice
-    list(detected = detected, chosen = chosen, mode_choice = mode_choice)
+    resolve_sce_instrument_type(
+      sce,
+      mode_choice = sanitize_mode_choice(mode_choice)
+    )
   }
 
   sync_sce_instrument <- function(sce, mode_choice = "auto", recompute_exprs = FALSE,
@@ -1967,6 +1970,8 @@ server <- function(input, output, session) {
     md$instrument_type_source <-
       if (resolved$mode_choice == "auto") "auto_detected" else "manual_override"
     md$instrument_mode_choice <- resolved$mode_choice
+    md$instrument_detection_confidence <- resolved$confidence %||% "unknown"
+    md$instrument_detection_evidence <- resolved$evidence %||% character(0)
     md$transform_type <- if (resolved$chosen == "cytof") "arcsinh" else "logicle"
     md$cofactor <- cofactor
     S4Vectors::metadata(sce) <- md
@@ -2260,6 +2265,16 @@ server <- function(input, output, session) {
   .cytof_y_lo_d <- shiny::debounce(reactive(input$cytof_y_lo), 250)
   .cytof_y_hi_d <- shiny::debounce(reactive(input$cytof_y_hi), 250)
 
+  gating_scale_binding_key <- function(x_channel, y_channel, assay_name, sce_name = "") {
+    parts <- c(
+      x_channel %||% "",
+      y_channel %||% "",
+      assay_name %||% "",
+      sce_name %||% ""
+    )
+    paste0(nchar(parts, type = "bytes"), ":", parts, collapse = "|")
+  }
+
   # A pan / anchored-stretch gesture on the main plot (cytof_plot.js emits "plot_range" on mouse-up)
   # is persisted by writing the range into the Min/Max inputs, which drive the existing plot-range
   # override machinery above — no duplicate flow/CyTOF branching. (GateLab port-back.)
@@ -2277,11 +2292,22 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
 
   observeEvent(list(.cytof_x_lo_d(), .cytof_x_hi_d(),
-                    .cytof_y_lo_d(), .cytof_y_hi_d()), {
+                    .cytof_y_lo_d(), .cytof_y_hi_d(),
+                    input$gating_scale_binding_key), {
     req(rv$sce, input$x_channel, input$y_channel)
     x_ch <- input$x_channel %||% ""
     y_ch <- input$y_channel %||% ""
     if (!nzchar(x_ch) || !nzchar(y_ch)) return()
+    expected_binding <- gating_scale_binding_key(x_ch, y_ch, rv$assay_name, rv$sce_name)
+    current_binding <- input$gating_scale_binding_key %||% ""
+    if (!identical(current_binding, expected_binding)) return()
+    # Dynamic Shiny controls can report their previous pair's values while the
+    # replacement UI is binding. Arm the new pair on its first complete event,
+    # but never interpret that initialisation event as a user scale edit.
+    if (!identical(rv$.gating_scale_observer_binding, current_binding)) {
+      rv$.gating_scale_observer_binding <- current_binding
+      return()
+    }
 
     # Read the (already debounced) latest values via isolate to avoid setting
     # up extra reactive dependencies — the observer is already retriggered by
@@ -2434,6 +2460,14 @@ server <- function(input, output, session) {
     tags$div(
       class = "flow-transform-controls strategy-block",
       style = "margin-top:6px;",
+      tags$div(
+        style = "display:none;",
+        textInput(
+          "gating_scale_binding_key",
+          NULL,
+          value = gating_scale_binding_key(x_ch, y_ch, rv$assay_name, rv$sce_name)
+        )
+      ),
       tags$div(class = "gating-control-box-title", "Channel Scales"),
       tags$div(class = "flow-transform-note", style = "margin:2px 0 4px 0;",
                "Edit Min/Max for current X/Y channels directly from Gating."),
@@ -2720,7 +2754,14 @@ server <- function(input, output, session) {
     updateSelectInput(session, "y_channel", choices = channels, selected = y_default)
     updateSelectInput(session, "illust_y_channel", choices = channels, selected = y_default)
 
-    rv$sample_info <- build_sample_table(sce)
+    sample_info <- build_sample_table(sce)
+    rv$sample_selected_keys <- if (is.null(sample_info)) {
+      character(0)
+    } else {
+      as.character(sample_info$keys)
+    }
+    rv$.sample_selection_client_ready <- FALSE
+    rv$sample_info <- sample_info
     rv$sample_mask <- NULL
     rv$sample_filter_key <- "all"
     rv$.last_combined_pop_mask <- NULL
@@ -2728,10 +2769,6 @@ server <- function(input, output, session) {
     # never serves a stale payload (cache is now also keyed by SCE name).
     rv$.illustration_cache_key <- NULL
     rv$.illustration_cache_payload <- NULL
-    # Clear any DT row selections from the previous SCE
-    proxy <- DT::dataTableProxy("sample_filter_table")
-    DT::selectRows(proxy, NULL)
-
     cd_names <- get_coldata_names(sce)
     rv$coldata_names <- cd_names
     updateSelectInput(session, "overlay_coldata",
@@ -2903,11 +2940,17 @@ server <- function(input, output, session) {
       updateSelectInput(session, "y_channel", choices = channels, selected = y_sel)
       updateSelectInput(session, "illust_y_channel", choices = channels, selected = y_sel)
 
-      rv$sample_info <- build_sample_table(rv$sce)
+      sample_info <- build_sample_table(rv$sce)
+      rv$sample_selected_keys <- if (is.null(sample_info)) {
+        character(0)
+      } else {
+        as.character(sample_info$keys)
+      }
+      rv$.sample_selection_client_ready <- FALSE
+      rv$sample_info <- sample_info
       rv$sample_mask <- NULL
       rv$sample_filter_key <- "all"
       rv$.last_combined_pop_mask <- NULL
-      DT::selectRows(DT::dataTableProxy("sample_filter_table"), NULL)
 
       cd_names <- get_coldata_names(rv$sce)
       rv$coldata_names <- cd_names
@@ -2972,32 +3015,17 @@ server <- function(input, output, session) {
   # SAMPLE FILTER (DT)
   # ══════════════════════════════════════════════════════════════════════════════
 
-  normalize_dt_rows <- function(rows, total_rows) {
-    if (is.null(rows)) return(NULL)
-    rows <- as.integer(rows)
-    rows <- rows[!is.na(rows)]
-    if (length(rows) == 0) return(integer(0))
-    # DT may emit 0-based row indices depending on context; normalize to 1-based.
-    if (min(rows) == 0L) rows <- rows + 1L
-    rows <- unique(rows[rows >= 1L & rows <= total_rows])
-    sort(rows)
-  }
-
   sample_keys_from_table_filter <- function(info) {
     total_rows <- nrow(info$table)
-    filtered_rows <- normalize_dt_rows(input$sample_filter_table_rows_all, total_rows)
-    selected_rows <- normalize_dt_rows(input$sample_filter_table_rows_selected, total_rows)
-
-    # If no column filtering is active, default to all rows.
-    if (is.null(filtered_rows)) filtered_rows <- seq_len(total_rows)
-
-    # Row selection is a direct sample-selection action on top of metadata filtering.
-    if (!is.null(selected_rows) && length(selected_rows) > 0) {
-      filtered_rows <- intersect(filtered_rows, selected_rows)
-    }
-
-    if (length(filtered_rows) == 0) return(character(0))
-    as.character(info$keys[filtered_rows])
+    selected_keys <- rv$sample_selected_keys
+    if (is.null(selected_keys)) selected_keys <- as.character(info$keys)
+    selected_rows <- which(as.character(info$keys) %in% as.character(selected_keys))
+    included_rows <- resolve_sample_table_rows(
+      input$sample_filter_table_rows_all,
+      selected_rows,
+      total_rows
+    )
+    as.character(info$keys[included_rows])
   }
 
   resolve_filtered_sample_keys <- function(info) {
@@ -3067,15 +3095,23 @@ server <- function(input, output, session) {
 
   output$sample_filter_table <- DT::renderDataTable({
     req(rv$sample_info)
-    rv$.sample_filter_reset    # dependency: "Deselect all" bumps this to re-render fresh
+    rv$.sample_filter_reset    # dependency: Reset rebuilds the table and clears filters
+    selected_keys <- isolate(rv$sample_selected_keys)
+    if (is.null(selected_keys)) selected_keys <- as.character(rv$sample_info$keys)
+    selected_rows <- which(as.character(rv$sample_info$keys) %in% selected_keys)
     DT::datatable(
-      rv$sample_info$table, filter = "top", selection = "multiple",
+      rv$sample_info$table, filter = "top",
       options = list(pageLength = 20, lengthMenu = c(20, 40, 80, 200),
                      scrollX = TRUE, scrollY = "420px", scrollCollapse = FALSE,
                      dom = "tip",
                      searchHighlight = TRUE, orderClasses = TRUE,
                      autoWidth = TRUE, deferRender = TRUE, stateSave = FALSE,
                      columnDefs = list(list(className = "dt-center", targets = "_all"))),
+      selection = list(
+        mode = "multiple",
+        selected = selected_rows,
+        target = "row"
+      ),
       style = "bootstrap", class = "compact stripe hover cell-border", rownames = FALSE
     )
   })
@@ -3086,18 +3122,43 @@ server <- function(input, output, session) {
   observeEvent(input$sample_filter_select_all_btn, {
     req(rv$sample_info)
     total <- nrow(rv$sample_info$table)
-    rows <- normalize_dt_rows(input$sample_filter_table_rows_all, total)
+    rows <- normalize_sample_table_rows(input$sample_filter_table_rows_all, total)
     if (is.null(rows)) rows <- seq_len(total)
+    rv$sample_selected_keys <- as.character(rv$sample_info$keys[rows])
+    rv$.sample_selection_client_ready <- TRUE
     DT::selectRows(DT::dataTableProxy("sample_filter_table"), rows)
   })
 
-  # "Deselect all": clear the row selection AND column filters -> back to base
-  # "all" state (re-render the table fresh; the mask observer then resolves to all).
+  # An explicit empty selection means no displayed samples. It must never fall
+  # back to all data, because that makes the visible table state misleading.
   observeEvent(input$sample_filter_clear_btn, {
     req(rv$sample_info)
-    DT::selectRows(DT::dataTableProxy("sample_filter_table"), NULL)
+    rv$sample_selected_keys <- character(0)
+    rv$.sample_selection_client_ready <- TRUE
+    DT::selectRows(DT::dataTableProxy("sample_filter_table"), integer(0))
+  })
+
+  # Reset clears table filters by rebuilding the widget and restores the
+  # explicit all-selected default.
+  observeEvent(input$sample_filter_reset_btn, {
+    req(rv$sample_info)
+    rv$sample_selected_keys <- as.character(rv$sample_info$keys)
+    rv$.sample_selection_client_ready <- FALSE
     rv$.sample_filter_reset <- as.integer(rv$.sample_filter_reset %||% 0L) + 1L
   })
+
+  # Keep scientific inclusion in an explicit server-side state. DT may emit
+  # NULL briefly while a widget is binding; after the client has initialised,
+  # NULL means the user deselected the final row and therefore means "none".
+  observeEvent(input$sample_filter_table_rows_selected, {
+    req(rv$sample_info)
+    rows <- input$sample_filter_table_rows_selected
+    if (is.null(rows) && !isTRUE(rv$.sample_selection_client_ready)) return()
+    rv$.sample_selection_client_ready <- TRUE
+    rows <- normalize_sample_table_rows(rows, nrow(rv$sample_info$table))
+    if (is.null(rows)) rows <- integer(0)
+    rv$sample_selected_keys <- as.character(rv$sample_info$keys[rows])
+  }, ignoreNULL = FALSE)
 
   output$sample_filter_summary <- renderText({
     info <- rv$sample_info
@@ -3660,17 +3721,9 @@ server <- function(input, output, session) {
       return(out)
     }
 
-    low <- min(vals, na.rm = TRUE)
-    high <- max(vals, na.rm = TRUE)
-    span <- high - low
-    if (span < 1e-10) span <- 1
-
-    # Keep a consistent default padding of 120% of data range.
-    lower_pad <- span * 0.05
-    upper_pad <- span * max(0, span_scale - 1)
-    out <- c(low - lower_pad, high + upper_pad)
-    if (low >= 0) out[1] <- min(0, out[1])
-
+    # Use the same robust default as GateLab. Explicit global/user ranges
+    # remain authoritative; only an unset automatic range reaches this path.
+    out <- compute_axis_range(vals)
     rv$.range_cache[[cache_key]] <- out
     out
   }
@@ -3791,10 +3844,16 @@ server <- function(input, output, session) {
       current_sample_filter_key(),
       sep = "|"
     )
-    if (!is.null(rv$.population_tree_cache_key) &&
-        identical(rv$.population_tree_cache_key, cache_key) &&
-        !is.null(rv$.population_tree_cache)) {
-      return(rv$.population_tree_cache)
+    # This helper runs inside renderUI(population_tree_ui). Cache bookkeeping
+    # must not become a reactive dependency of that output: writing a cache
+    # value while the renderer is running otherwise invalidates and re-enters
+    # the same output, producing Shiny client-state errors on sample changes.
+    cached_key <- isolate(rv$.population_tree_cache_key)
+    cached_value <- isolate(rv$.population_tree_cache)
+    if (!is.null(cached_key) &&
+        identical(cached_key, cache_key) &&
+        !is.null(cached_value)) {
+      return(cached_value)
     }
 
     event_count <- list()
@@ -3831,8 +3890,10 @@ server <- function(input, output, session) {
 
     out <- list(event_count = event_count, percent_of_parent = percent_of_parent,
                 percent_of_total = percent_of_total)
-    rv$.population_tree_cache_key <- cache_key
-    rv$.population_tree_cache <- out
+    isolate({
+      rv$.population_tree_cache_key <- cache_key
+      rv$.population_tree_cache <- out
+    })
     out
   }
 

@@ -76,7 +76,7 @@
     // x_range/y_range (the same ranges the axes + Min/Max boxes read) and repaint client-side; the
     // final range is emitted to R on mouseup so the server persists it like a gate edit.
     let _panActive = false;
-    let _pan = null;       // { px0, py0, xr, yr, alt, gx, gy } captured at mousedown
+    let _pan = null;       // { px0, py0, xr, yr, stretch, gx, gy, pointerId, captureTarget }
     let _panPending = null;
     let _panRaf = null;
 
@@ -224,7 +224,8 @@
         _svg.on('.zoom', null);
 
         // SVG pointer events (rect draw + poly click + poly mousemove)
-        _svg.on('mousedown.draw', _onMousedown)
+        _svg.on('pointerdown.navigate', _onNavigatePointerDown)
+            .on('mousedown.draw', _onMousedown)
             .on('mousemove.draw', _onMousemove)
             .on('click.draw',    _onClick);
 
@@ -246,28 +247,7 @@
 
     // ── Pointer events — rect gate ───────────────────────────────────────────
     function _onMousedown(event) {
-        // Navigate mode: drag → pan; shift- or option(alt)-drag → anchored stretch (bottom-left
-        // pinned, grabbed data point tracks the cursor). Shift is offered because the window manager
-        // grabs Alt/Option on Windows/Linux. Presses on a gate fall through to the gate's own
-        // select/drag handlers.
-        if (_mode === 'navigate') {
-            var _t = event.target;
-            if (_t && ((_t.classList && (_t.classList.contains('gate-fill') || _t.classList.contains('gate-hit') ||
-                _t.classList.contains('gate-outline'))) || (_t.closest && _t.closest('.saved-gate, .gate-label')))) return;
-            if (!_xBase || !_plotData) return;
-            event.preventDefault();
-            var _md = _ptr(event);
-            var _mxr = (_plotData.x_range || _xBase.domain()).slice();
-            var _myr = (_plotData.y_range || _yBase.domain()).slice();
-            _pan = {
-                px0: _md[0], py0: _md[1], xr: _mxr, yr: _myr, alt: !!(event.altKey || event.shiftKey),
-                gx: _mxr[0] + _clampF(_md[0] / W) * (_mxr[1] - _mxr[0]),
-                gy: _myr[1] - _clampF(_md[1] / H) * (_myr[1] - _myr[0]),
-            };
-            _panActive = true;
-            d3.select(window).on('mousemove.pan', _onPanMove).on('mouseup.pan', _onPanEnd);
-            return;
-        }
+        if (_mode === 'navigate') return;
         // Poly-close: fire on mousedown so one press is sufficient.
         // Clicking the first-vertex green circle or within CLOSEPX of it closes the polygon.
         if (_mode === 'draw-poly' && _polyVerts.length >= 3) {
@@ -337,10 +317,79 @@
     function _clampF(f) { return Math.max(0.02, Math.min(0.98, f)); }
     function _validRange(r) { return r && isFinite(r[0]) && isFinite(r[1]) && (r[1] - r[0]) > 1e-6; }
 
+    function _panRanges() {
+        if (_panPending) return { x: _panPending.x.slice(), y: _panPending.y.slice() };
+        if (_plotData && _plotData.x_range && _plotData.y_range) {
+            return { x: _plotData.x_range.slice(), y: _plotData.y_range.slice() };
+        }
+        if (_pan) return { x: _pan.xr.slice(), y: _pan.yr.slice() };
+        return null;
+    }
+
+    function _rebasePan(event, stretch) {
+        if (!_pan) return;
+        var ranges = _panRanges();
+        if (!ranges) return;
+        var m = _ptr(event);
+        _pan.px0 = m[0]; _pan.py0 = m[1];
+        _pan.xr = ranges.x; _pan.yr = ranges.y;
+        _pan.stretch = stretch;
+        _pan.gx = ranges.x[0] + _clampF(m[0] / W) * (ranges.x[1] - ranges.x[0]);
+        _pan.gy = ranges.y[1] - _clampF(m[1] / H) * (ranges.y[1] - ranges.y[0]);
+    }
+
+    function _onNavigatePointerDown(event) {
+        if (_mode !== 'navigate' || event.button !== 0) return;
+        var target = event.target;
+        if (target && (
+            (target.classList && (
+                target.classList.contains('gate-fill') ||
+                target.classList.contains('gate-hit') ||
+                target.classList.contains('gate-outline')
+            )) ||
+            (target.closest && target.closest(
+                '.saved-gate, .gate-label, .cytof-xlabel, .cytof-ylabel'
+            ))
+        )) return;
+        if (!_xBase || !_plotData) return;
+
+        event.preventDefault();
+        var m = _ptr(event);
+        var xr = (_plotData.x_range || _xBase.domain()).slice();
+        var yr = (_plotData.y_range || _yBase.domain()).slice();
+        var captureTarget = event.currentTarget;
+        if (captureTarget && captureTarget.setPointerCapture && event.pointerId != null) {
+            try { captureTarget.setPointerCapture(event.pointerId); } catch (err) { /* best effort */ }
+        }
+        _pan = {
+            px0: m[0], py0: m[1], xr: xr, yr: yr,
+            stretch: !!(event.altKey || event.shiftKey),
+            gx: xr[0] + _clampF(m[0] / W) * (xr[1] - xr[0]),
+            gy: yr[1] - _clampF(m[1] / H) * (yr[1] - yr[0]),
+            pointerId: event.pointerId,
+            captureTarget: captureTarget,
+        };
+        _panActive = true;
+        window.addEventListener('pointermove', _onPanMove, true);
+        window.addEventListener('pointerup', _onPanEnd, true);
+        window.addEventListener('pointercancel', _onPanCancel, true);
+        window.addEventListener('blur', _onPanCancel, true);
+        document.addEventListener('visibilitychange', _onPanVisibilityChange, true);
+    }
+
     function _onPanMove(event) {
         if (!_panActive || !_pan) return;
+        if (_pan.pointerId != null && event.pointerId != null &&
+            event.pointerId !== _pan.pointerId) return;
+        var wantsStretch = !!(event.altKey || event.shiftKey);
+        if (wantsStretch !== _pan.stretch) {
+            // Shift/Option is a live modifier. Rebase at the transition point so
+            // pressing or releasing it during a drag changes mode without a jump.
+            _rebasePan(event, wantsStretch);
+            return;
+        }
         var p = _pan, m = _ptr(event), nx, ny;
-        if (p.alt) {
+        if (p.stretch) {
             // Anchored stretch: x_min / y_min pinned; the grabbed data point tracks the cursor.
             var fx = _clampF(m[0] / W), fy = _clampF(m[1] / H);
             nx = [p.xr[0], p.xr[0] + (p.gx - p.xr[0]) / fx];
@@ -368,8 +417,20 @@
         _redraw();
     }
 
-    function _onPanEnd() {
-        d3.select(window).on('mousemove.pan', null).on('mouseup.pan', null);
+    function _cleanupPanListeners() {
+        window.removeEventListener('pointermove', _onPanMove, true);
+        window.removeEventListener('pointerup', _onPanEnd, true);
+        window.removeEventListener('pointercancel', _onPanCancel, true);
+        window.removeEventListener('blur', _onPanCancel, true);
+        document.removeEventListener('visibilitychange', _onPanVisibilityChange, true);
+        if (_pan && _pan.captureTarget && _pan.captureTarget.releasePointerCapture &&
+            _pan.pointerId != null) {
+            try { _pan.captureTarget.releasePointerCapture(_pan.pointerId); } catch (err) { /* already released */ }
+        }
+    }
+
+    function _finishPan(commitRange) {
+        _cleanupPanListeners();
         if (_panRaf != null) { cancelAnimationFrame(_panRaf); _panRaf = null; }
         var pend = _panPending; _panPending = null;
         _panActive = false; _pan = null;
@@ -378,10 +439,26 @@
             _xBase.domain(pend.x); _yBase.domain(pend.y);
         }
         if (_plotData) _redraw(); // _panActive now false → contour rebuilds at the final range
-        if (_plotData && window.Shiny && Shiny.setInputValue) {
+        if (commitRange && _plotData && window.Shiny && Shiny.setInputValue) {
             Shiny.setInputValue('plot_range',
                 { x_range: _plotData.x_range, y_range: _plotData.y_range }, { priority: 'event' });
         }
+    }
+
+    function _onPanEnd(event) {
+        if (_pan && _pan.pointerId != null && event && event.pointerId != null &&
+            event.pointerId !== _pan.pointerId) return;
+        _finishPan(true);
+    }
+
+    function _onPanCancel() {
+        // Losing focus or pointer capture must never leave stretch mode armed.
+        // Preserve any already-rendered range, then end the gesture cleanly.
+        _finishPan(true);
+    }
+
+    function _onPanVisibilityChange() {
+        if (document.hidden && _panActive) _onPanCancel();
     }
 
     // ── Pointer events — polygon gate ────────────────────────────────────────
