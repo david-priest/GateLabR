@@ -60,8 +60,8 @@
     source_format <- "gatelabr-legacy"
     workspace <- tryCatch(
       {
-        normalized <- normalize_workspace_graph(legacy)
-        validate_workspace_graph(normalized)
+        normalized <- .gatelabr_normalize_workspace_graph(legacy)
+        .gatelabr_validate_workspace_graph(normalized)
         normalized
       },
       error = function(cause) {
@@ -625,7 +625,7 @@
     version = 4L,
     saved_at = as.character(Sys.time())
   )
-  validate_workspace_graph(workspace)
+  .gatelabr_validate_workspace_graph(workspace)
   workspace
 }
 
@@ -682,7 +682,7 @@
     character(1),
     "id"
   )
-  invalid_gates <- validate_workspace_channels(legacy, channel_ids)
+  invalid_gates <- .gatelabr_validate_workspace_channels(legacy, channel_ids)
   if (length(invalid_gates)) {
     stop(
       "The workspace refers to channels that are absent from this SCE: ",
