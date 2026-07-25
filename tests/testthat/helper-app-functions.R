@@ -8,6 +8,8 @@ app_r_dir <- if (dir.exists(source_app_r_dir)) {
   system.file("app", "R", package = "GateLabR", mustWork = TRUE)
 }
 
+if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
+
 for (file in c(
   "data_utils.R",
   "models.R",
