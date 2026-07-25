@@ -59,15 +59,51 @@ launchReactGateLab <- function(
   )
   ui <- .gatelabr_react_ui(prefix)
   server <- function(input, output, session) {
+    sce_state <- shiny::reactiveVal(sce)
     shiny::observeEvent(input$gatelabr_react_ready, {
       .gatelabr_register_host_manifest(
         session,
-        sce,
+        sce_state(),
         dataset_id = dataset_id,
         label = sce_name,
         sample_column = sample_column
       )
     }, once = TRUE, ignoreInit = TRUE)
+    shiny::observeEvent(input$gatelabr_host_request, {
+      request <- input$gatelabr_host_request
+      request_id <- if (is.list(request) &&
+          is.character(request$requestId) &&
+          length(request$requestId) == 1L) {
+        request$requestId
+      } else {
+        ""
+      }
+      response <- tryCatch(
+        {
+          handled <- .gatelabr_handle_host_request(
+            sce_state(),
+            request,
+            dataset_id = dataset_id,
+            sample_column = sample_column
+          )
+          sce_state(handled$sce)
+          assign(sce_name, handled$sce, envir = .GlobalEnv)
+          list(
+            requestId = request_id,
+            ok = TRUE,
+            result = handled$result
+          )
+        },
+        error = function(cause) {
+          list(
+            requestId = request_id,
+            ok = FALSE,
+            error = conditionMessage(cause)
+          )
+        }
+      )
+      session$sendCustomMessage("gatelabr-host-response", response)
+    }, ignoreInit = TRUE)
   }
 
   message(

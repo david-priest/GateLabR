@@ -91,6 +91,7 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
   expect_identical(descriptor$samples[[1]]$assayByteLength, 16)
   expect_identical(descriptor$samples[[1]]$eventIndexByteLength, 8)
+  expect_identical(descriptor$colDataColumns, c("sample_id", "batch"))
 
   encoded <- jsonlite::toJSON(descriptor, auto_unbox = TRUE, null = "null")
   expect_match(encoded, '"encoding":"channel-major-float32-le"', fixed = TRUE)
@@ -197,6 +198,7 @@ test_that("legacy GateLabR workspace is carried as an explicit JSON envelope", {
   expect_identical(envelope$contractVersion, 1L)
   expect_identical(envelope$datasetId, "test-sce")
   expect_identical(envelope$sourceFormat, "gatelabr-legacy")
+  expect_identical(envelope$revision, 0L)
   expect_type(envelope$workspaceJson, "character")
   decoded <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)
   expect_identical(decoded$gate_order, "gate-1")
@@ -227,4 +229,216 @@ test_that("host manifest includes workspace metadata without registering more da
 
 test_that("SCEs without a workspace advertise no hosted workspace", {
   expect_null(GateLabR:::.gatelabr_host_workspace_envelope(make_host_bridge_sce()))
+})
+
+canonical_host_workspace_json <- function(dataset_id = "test-sce") {
+  paste0(
+    '{"format":"gatelab-workspace","version":2,',
+    '"workspaceId":"sce-workspace","savedAt":"2026-07-25T00:00:00Z",',
+    '"app":"GateLab","samples":[',
+    '{"sampleId":"', dataset_id, ':sample-0","fileName":"Donor A",',
+    '"dataPath":"data/sce-1.fcs","logicleW":{},"scatterCofactor":{},',
+    '"cytofCofactor":5,"compensationOn":false,"instrumentMode":"cytof",',
+    '"labels":{},"metadata":{}},',
+    '{"sampleId":"', dataset_id, ':sample-1","fileName":"Donor B",',
+    '"dataPath":"data/sce-2.fcs","logicleW":{},"scatterCofactor":{},',
+    '"cytofCofactor":5,"compensationOn":false,"instrumentMode":"cytof",',
+    '"labels":{},"metadata":{}}],',
+    '"activeSample":0,"gating":{"gates":{"gate-1":{',
+    '"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle",',
+    '"x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,4]],',
+    '"color":"#e41a1c","label_offset":null}},',
+    '"gate_order":["gate-1"],"populations":{"root":{',
+    '"population_id":"root","name":"All Events","gate_refs":[],',
+    '"gate_logic":"and","parent_id":null,"children":["child"],',
+    '"event_count":3,"percent_of_parent":100},"child":{',
+    '"population_id":"child","name":"CD3+","gate_refs":[',
+    '{"gate_id":"gate-1","include":true}],"gate_logic":"and",',
+    '"parent_id":"root","children":[],"event_count":2,',
+    '"percent_of_parent":66.7}},"root_population_id":"root",',
+    '"active_population_id":"child","selected_gate_id":"gate-1"},',
+    '"scales":{"globalScales":{"CD3":[0,10],"CD19":[0,20]}},',
+    '"display":{"xChannel":"CD3","yChannel":"CD19",',
+    '"mode":"pseudocolor","maxEvents":50000,"contourThreshold":5}}'
+  )
+}
+
+test_that("canonical hosted workspace writes are revisioned and mirrored atomically", {
+  sce <- make_host_bridge_sce()
+  workspace_json <- canonical_host_workspace_json()
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 7L,
+    reason = "explicit",
+    workspace_json = workspace_json
+  )
+
+  expect_identical(written$result$revision, 1L)
+  expect_identical(written$result$clientRevision, 7L)
+  canonical <- S4Vectors::metadata(written$sce)$gatelab_workspace
+  expect_identical(canonical$format, "gatelab-sce-workspace")
+  expect_identical(canonical$workspace_json, workspace_json)
+  expect_identical(canonical$event_count, 3L)
+  expect_identical(canonical$channel_ids, c("CD3", "CD19"))
+  expect_identical(
+    S4Vectors::metadata(written$sce)$gating_workspace$gate_order,
+    "gate-1"
+  )
+  expect_silent(validate_workspace_graph(
+    S4Vectors::metadata(written$sce)$gating_workspace
+  ))
+
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(
+    written$sce,
+    dataset_id = "test-sce"
+  )
+  expect_identical(envelope$sourceFormat, "gatelab-workspace")
+  expect_identical(envelope$revision, 1L)
+  expect_identical(envelope$workspaceJson, workspace_json)
+
+  expect_error(
+    GateLabR:::.gatelabr_store_host_workspace(
+      written$sce,
+      dataset_id = "test-sce",
+      expected_revision = 0L,
+      client_revision = 8L,
+      reason = "autosave",
+      workspace_json = workspace_json
+    ),
+    "revision conflict"
+  )
+})
+
+test_that("host workspace validation rejects mismatched SCE and compensated v3 state", {
+  sce <- make_host_bridge_sce()
+  wrong_dataset <- sub(
+    "test-sce:sample-0",
+    "other:sample-0",
+    canonical_host_workspace_json(),
+    fixed = TRUE
+  )
+  expect_error(
+    GateLabR:::.gatelabr_store_host_workspace(
+      sce,
+      dataset_id = "test-sce",
+      expected_revision = 0L,
+      client_revision = 1L,
+      reason = "explicit",
+      workspace_json = wrong_dataset
+    ),
+    "sample identities"
+  )
+  version_three <- sub(
+    '"version":2',
+    '"version":3',
+    canonical_host_workspace_json(),
+    fixed = TRUE
+  )
+  expect_error(
+    GateLabR:::.gatelabr_store_host_workspace(
+      sce,
+      dataset_id = "test-sce",
+      expected_revision = 0L,
+      client_revision = 1L,
+      reason = "explicit",
+      workspace_json = version_three
+    ),
+    "version 2 hosted workspaces only"
+  )
+})
+
+test_that("packed browser population masks write back in original SCE event order", {
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 2L,
+    reason = "explicit",
+    workspace_json = canonical_host_workspace_json()
+  )
+  encode_byte <- function(value) base64enc::base64encode(as.raw(value))
+  column <- list(
+    populationId = "child",
+    populationName = "CD3+",
+    columnName = "CD3_positive",
+    inLabel = "in",
+    outLabel = "out",
+    sampleMasks = list(
+      list(
+        sampleId = "sample-0",
+        eventCount = 2L,
+        membershipBitsBase64 = encode_byte(1L)
+      ),
+      list(
+        sampleId = "sample-1",
+        eventCount = 1L,
+        membershipBitsBase64 = encode_byte(1L)
+      )
+    )
+  )
+  written <- GateLabR:::.gatelabr_write_host_coldata(
+    stored$sce,
+    dataset_id = "test-sce",
+    workspace_revision = 1L,
+    columns = list(column)
+  )
+
+  expect_identical(
+    as.character(SummarizedExperiment::colData(written$sce)$CD3_positive),
+    c("in", "out", "in")
+  )
+  expect_identical(written$result$columns[[1]]$memberCount, 2L)
+
+  expect_error(
+    GateLabR:::.gatelabr_write_host_coldata(
+      written$sce,
+      dataset_id = "test-sce",
+      workspace_revision = 1L,
+      columns = list(column),
+      overwrite = FALSE
+    ),
+    "already contains"
+  )
+  overwritten <- GateLabR:::.gatelabr_write_host_coldata(
+    written$sce,
+    dataset_id = "test-sce",
+    workspace_revision = 1L,
+    columns = list(column),
+    overwrite = TRUE
+  )
+  expect_identical(
+    as.character(SummarizedExperiment::colData(overwritten$sce)$CD3_positive),
+    c("in", "out", "in")
+  )
+})
+
+test_that("host request dispatcher enforces dataset and colData contract identities", {
+  request <- list(
+    operation = "write-workspace",
+    payload = list(
+      datasetId = "test-sce",
+      expectedRevision = 0L,
+      clientRevision = 3L,
+      reason = "autosave",
+      workspaceJson = canonical_host_workspace_json()
+    )
+  )
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    make_host_bridge_sce(),
+    request,
+    dataset_id = "test-sce"
+  )
+  expect_identical(handled$result$revision, 1L)
+
+  request$payload$datasetId <- "wrong-sce"
+  expect_error(
+    GateLabR:::.gatelabr_handle_host_request(
+      make_host_bridge_sce(),
+      request,
+      dataset_id = "test-sce"
+    ),
+    "different SCE dataset"
+  )
 })

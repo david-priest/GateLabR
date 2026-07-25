@@ -6,17 +6,56 @@
 
 .gatelabr_dataset_contract_version <- 1L
 .gatelabr_workspace_contract_version <- 1L
+.gatelabr_coldata_contract_version <- 1L
+
+.gatelabr_canonical_workspace_record <- function(sce) {
+  canonical <- S4Vectors::metadata(sce)$gatelab_workspace
+  if (is.null(canonical)) return(NULL)
+
+  if (is.list(canonical) &&
+      identical(canonical$format, "gatelab-sce-workspace") &&
+      identical(as.integer(canonical$version), 1L) &&
+      is.character(canonical$workspace_json) &&
+      length(canonical$workspace_json) == 1L &&
+      !is.na(canonical$workspace_json) &&
+      nzchar(canonical$workspace_json)) {
+    revision <- suppressWarnings(as.integer(canonical$revision))
+    if (length(revision) != 1L || is.na(revision) || revision < 0L) revision <- 0L
+    return(list(
+      workspace_json = canonical$workspace_json,
+      revision = revision
+    ))
+  }
+
+  workspace_json <- if (is.character(canonical) &&
+      length(canonical) == 1L && !is.na(canonical) && nzchar(canonical)) {
+    canonical
+  } else {
+    jsonlite::toJSON(
+      canonical,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      matrix = "rowmajor",
+      POSIXt = "ISO8601",
+      digits = NA
+    )
+  }
+  list(workspace_json = as.character(workspace_json), revision = 0L)
+}
 
 .gatelabr_host_workspace_envelope <- function(
     sce,
     dataset_id = "gatelabr-sce") {
   md <- S4Vectors::metadata(sce)
-  canonical <- md$gatelab_workspace
+  canonical <- .gatelabr_canonical_workspace_record(sce)
   legacy <- md$gating_workspace
 
   if (!is.null(canonical)) {
     source_format <- "gatelab-workspace"
-    workspace <- canonical
+    workspace_json <- canonical$workspace_json
+    revision <- canonical$revision
   } else if (!is.null(legacy)) {
     source_format <- "gatelabr-legacy"
     workspace <- tryCatch(
@@ -34,31 +73,30 @@
         NULL
       }
     )
+    revision <- 0L
   } else {
     return(NULL)
   }
 
-  if (is.null(workspace)) return(NULL)
-  if (is.character(workspace) && length(workspace) == 1L &&
-      !is.na(workspace) && nzchar(workspace)) {
-    workspace_json <- workspace
-  } else {
+  if (is.null(canonical)) {
+    if (is.null(workspace)) return(NULL)
     workspace_json <- jsonlite::toJSON(
-      workspace,
-      auto_unbox = TRUE,
-      null = "null",
-      na = "null",
-      dataframe = "rows",
-      matrix = "rowmajor",
-      POSIXt = "ISO8601",
-      digits = NA
-    )
+        workspace,
+        auto_unbox = TRUE,
+        null = "null",
+        na = "null",
+        dataframe = "rows",
+        matrix = "rowmajor",
+        POSIXt = "ISO8601",
+        digits = NA
+      )
   }
 
   list(
     contractVersion = .gatelabr_workspace_contract_version,
     datasetId = dataset_id,
     sourceFormat = source_format,
+    revision = revision,
     workspaceJson = as.character(workspace_json)
   )
 }
@@ -258,7 +296,8 @@
     channels = .gatelabr_channel_descriptors(sce),
     assays = assays,
     defaultAssayId = default_assay,
-    samples = sample_partition$samples
+    samples = sample_partition$samples,
+    colDataColumns = colnames(SummarizedExperiment::colData(sce))
   )
 }
 
@@ -416,6 +455,521 @@
       )
     }
   )
+}
+
+.gatelabr_json_character_vector <- function(value, label) {
+  if (is.null(value)) return(character(0))
+  if (is.character(value)) return(as.character(value))
+  if (is.list(value) &&
+      all(vapply(value, function(entry) {
+        is.character(entry) && length(entry) == 1L && !is.na(entry)
+      }, logical(1)))) {
+    return(vapply(value, as.character, character(1)))
+  }
+  stop("Invalid GateLab workspace: ", label, " must be a string array.", call. = FALSE)
+}
+
+.gatelabr_json_numeric_pair <- function(value, label) {
+  pair <- suppressWarnings(as.numeric(unlist(value, use.names = FALSE)))
+  if (length(pair) != 2L || any(!is.finite(pair))) {
+    stop("Invalid GateLab workspace: ", label, " must contain two finite numbers.", call. = FALSE)
+  }
+  pair
+}
+
+.gatelabr_json_vertices <- function(value, gate_name) {
+  if (!is.list(value)) {
+    stop("Invalid GateLab workspace: gate '", gate_name, "' has invalid vertices.", call. = FALSE)
+  }
+  if (length(value) == 0L) return(matrix(numeric(0), ncol = 2L))
+  vertices <- do.call(rbind, lapply(
+    value,
+    .gatelabr_json_numeric_pair,
+    label = paste0("vertices for gate '", gate_name, "'")
+  ))
+  storage.mode(vertices) <- "double"
+  vertices
+}
+
+.gatelabr_legacy_workspace_from_canonical <- function(parsed, sce) {
+  gating <- parsed$gating
+  if (!is.list(gating)) {
+    stop("Invalid GateLab workspace: gating is missing.", call. = FALSE)
+  }
+
+  gates <- gating$gates
+  if (!is.list(gates)) {
+    stop("Invalid GateLab workspace: gates must be an object.", call. = FALSE)
+  }
+  gate_ids <- names(gates)
+  if (length(gates) > 0L &&
+      (is.null(gate_ids) || any(!nzchar(gate_ids)) || anyDuplicated(gate_ids))) {
+    stop("Invalid GateLab workspace: gates must have unique object keys.", call. = FALSE)
+  }
+  normalized_gates <- lapply(seq_along(gates), function(index) {
+    gate <- gates[[index]]
+    gate_id <- gate_ids[[index]]
+    if (!is.list(gate)) {
+      stop("Invalid GateLab workspace: gate '", gate_id, "' is malformed.", call. = FALSE)
+    }
+    normalized <- list(
+      gate_id = as.character(gate$gate_id),
+      name = as.character(gate$name),
+      gate_type = as.character(gate$gate_type),
+      x_channel = as.character(gate$x_channel),
+      y_channel = as.character(gate$y_channel),
+      color = as.character(gate$color),
+      label_offset = if (is.null(gate$label_offset)) NULL else
+        .gatelabr_json_numeric_pair(
+          gate$label_offset,
+          paste0("label offset for gate '", gate_id, "'")
+        )
+    )
+    if (identical(normalized$gate_type, "quadrant")) {
+      normalized$center <- .gatelabr_json_numeric_pair(
+        gate$center,
+        paste0("centre for gate '", gate_id, "'")
+      )
+    } else {
+      normalized$vertices <- .gatelabr_json_vertices(gate$vertices, gate_id)
+    }
+    normalized
+  })
+  names(normalized_gates) <- gate_ids
+
+  populations <- gating$populations
+  if (!is.list(populations) || length(populations) == 0L) {
+    stop("Invalid GateLab workspace: populations must be a non-empty object.", call. = FALSE)
+  }
+  population_ids <- names(populations)
+  if (is.null(population_ids) || any(!nzchar(population_ids)) ||
+      anyDuplicated(population_ids)) {
+    stop("Invalid GateLab workspace: populations must have unique object keys.", call. = FALSE)
+  }
+  normalized_populations <- lapply(seq_along(populations), function(index) {
+    population <- populations[[index]]
+    population_id <- population_ids[[index]]
+    if (!is.list(population)) {
+      stop(
+        "Invalid GateLab workspace: population '", population_id, "' is malformed.",
+        call. = FALSE
+      )
+    }
+    refs <- population$gate_refs
+    if (is.null(refs)) refs <- list()
+    if (!is.list(refs)) {
+      stop(
+        "Invalid GateLab workspace: population '", population_id,
+        "' has invalid gate references.",
+        call. = FALSE
+      )
+    }
+    normalized_refs <- lapply(refs, function(ref) {
+      if (!is.list(ref)) {
+        stop(
+          "Invalid GateLab workspace: population '", population_id,
+          "' has a malformed gate reference.",
+          call. = FALSE
+        )
+      }
+      result <- list(
+        gate_id = as.character(ref$gate_id),
+        include = as.logical(ref$include)
+      )
+      if (!is.null(ref$quadrant)) result$quadrant <- as.numeric(ref$quadrant)
+      result
+    })
+    list(
+      population_id = as.character(population$population_id),
+      name = as.character(population$name),
+      gate_refs = normalized_refs,
+      gate_logic = as.character(population$gate_logic),
+      parent_id = if (is.null(population$parent_id)) NULL else
+        as.character(population$parent_id),
+      children = .gatelabr_json_character_vector(
+        population$children,
+        paste0("children for population '", population_id, "'")
+      ),
+      event_count = if (is.null(population$event_count)) NULL else
+        as.numeric(population$event_count),
+      percent_of_parent = if (is.null(population$percent_of_parent)) NULL else
+        as.numeric(population$percent_of_parent)
+    )
+  })
+  names(normalized_populations) <- population_ids
+
+  global_scales <- list()
+  if (is.list(parsed$scales) && is.list(parsed$scales$globalScales)) {
+    global_scales <- lapply(
+      parsed$scales$globalScales,
+      .gatelabr_json_numeric_pair,
+      label = "global scale range"
+    )
+  }
+  gate_value_space <- if (identical(.gatelabr_sce_instrument(sce), "flow")) {
+    "raw"
+  } else {
+    "display"
+  }
+  workspace <- list(
+    gates = normalized_gates,
+    gate_order = .gatelabr_json_character_vector(gating$gate_order, "gate_order"),
+    populations = normalized_populations,
+    root_population_id = as.character(gating$root_population_id),
+    active_population_id = if (is.null(gating$active_population_id)) NULL else
+      as.character(gating$active_population_id),
+    selected_gate_id = if (is.null(gating$selected_gate_id)) NULL else
+      as.character(gating$selected_gate_id),
+    gate_value_space = gate_value_space,
+    global_scale_ranges = global_scales,
+    version = 4L,
+    saved_at = as.character(Sys.time())
+  )
+  validate_workspace_graph(workspace)
+  workspace
+}
+
+.gatelabr_validate_canonical_workspace_json <- function(
+    sce,
+    workspace_json,
+    dataset_id,
+    sample_column = NULL) {
+  if (!is.character(workspace_json) || length(workspace_json) != 1L ||
+      is.na(workspace_json) || !nzchar(workspace_json)) {
+    stop("workspaceJson must be one non-empty JSON string.", call. = FALSE)
+  }
+  parsed <- tryCatch(
+    jsonlite::fromJSON(workspace_json, simplifyVector = FALSE),
+    error = function(cause) {
+      stop("GateLab supplied unreadable workspace JSON: ", conditionMessage(cause), call. = FALSE)
+    }
+  )
+  if (!is.list(parsed) || !identical(parsed$format, "gatelab-workspace")) {
+    stop("GateLab supplied an unsupported workspace format.", call. = FALSE)
+  }
+  version <- suppressWarnings(as.integer(parsed$version))
+  if (length(version) != 1L || is.na(version) || !identical(version, 2L)) {
+    stop(
+      "GateLabR can currently store version 2 hosted workspaces only. ",
+      "A compensation-profile workspace must remain in GateLab until hosted assay persistence is available.",
+      call. = FALSE
+    )
+  }
+
+  partition <- .gatelabr_sample_partition(sce, sample_column)
+  expected_sample_ids <- paste0(
+    dataset_id,
+    ":",
+    vapply(partition$samples, `[[`, character(1), "id")
+  )
+  samples <- parsed$samples
+  if (!is.list(samples) || length(samples) != length(expected_sample_ids)) {
+    stop("The workspace sample list no longer matches this SCE.", call. = FALSE)
+  }
+  actual_sample_ids <- vapply(samples, function(sample) {
+    if (!is.list(sample) || !is.character(sample$sampleId) ||
+        length(sample$sampleId) != 1L) return("")
+    sample$sampleId
+  }, character(1))
+  if (!identical(actual_sample_ids, expected_sample_ids)) {
+    stop("The workspace sample identities no longer match this SCE.", call. = FALSE)
+  }
+
+  legacy <- .gatelabr_legacy_workspace_from_canonical(parsed, sce)
+  channel_ids <- vapply(
+    .gatelabr_channel_descriptors(sce),
+    `[[`,
+    character(1),
+    "id"
+  )
+  invalid_gates <- validate_workspace_channels(legacy, channel_ids)
+  if (length(invalid_gates)) {
+    stop(
+      "The workspace refers to channels that are absent from this SCE: ",
+      paste(invalid_gates, collapse = ", "),
+      ".",
+      call. = FALSE
+    )
+  }
+  list(parsed = parsed, legacy = legacy, channel_ids = channel_ids)
+}
+
+.gatelabr_store_host_workspace <- function(
+    sce,
+    dataset_id,
+    expected_revision,
+    client_revision,
+    reason,
+    workspace_json,
+    sample_column = NULL) {
+  expected_revision <- suppressWarnings(as.integer(expected_revision))
+  client_revision <- suppressWarnings(as.integer(client_revision))
+  if (length(expected_revision) != 1L || is.na(expected_revision) ||
+      expected_revision < 0L) {
+    stop("expectedRevision must be a non-negative integer.", call. = FALSE)
+  }
+  if (length(client_revision) != 1L || is.na(client_revision) ||
+      client_revision < 0L) {
+    stop("clientRevision must be a non-negative integer.", call. = FALSE)
+  }
+  if (!identical(reason, "autosave") && !identical(reason, "explicit")) {
+    stop("Workspace write reason must be 'autosave' or 'explicit'.", call. = FALSE)
+  }
+  current <- .gatelabr_canonical_workspace_record(sce)
+  current_revision <- if (is.null(current)) 0L else current$revision
+  if (!identical(expected_revision, current_revision)) {
+    stop(
+      "Workspace revision conflict: the browser expected revision ",
+      expected_revision,
+      " but the SCE is at revision ",
+      current_revision,
+      ". Reload GateLabR before saving again.",
+      call. = FALSE
+    )
+  }
+
+  validated <- .gatelabr_validate_canonical_workspace_json(
+    sce,
+    workspace_json,
+    dataset_id = dataset_id,
+    sample_column = sample_column
+  )
+  revision <- current_revision + 1L
+  saved_at <- format(
+    Sys.time(),
+    "%Y-%m-%dT%H:%M:%OS3%z",
+    tz = "UTC"
+  )
+  md <- S4Vectors::metadata(sce)
+  md$gatelab_workspace <- list(
+    format = "gatelab-sce-workspace",
+    version = 1L,
+    revision = revision,
+    client_revision = client_revision,
+    saved_at = saved_at,
+    reason = reason,
+    dataset_id = dataset_id,
+    sample_column = sample_column,
+    channel_ids = validated$channel_ids,
+    event_count = ncol(sce),
+    workspace_json = workspace_json
+  )
+  # Keep the established R/Shiny interface usable while the React migration is
+  # in progress. The canonical JSON above remains authoritative.
+  md$gating_workspace <- validated$legacy
+  S4Vectors::metadata(sce) <- md
+  list(
+    sce = sce,
+    result = list(
+      revision = revision,
+      clientRevision = client_revision,
+      savedAt = saved_at
+    )
+  )
+}
+
+.gatelabr_decode_membership_bits <- function(encoded, event_count) {
+  if (!is.character(encoded) || length(encoded) != 1L || is.na(encoded)) {
+    stop("Population membership payload must be base64 text.", call. = FALSE)
+  }
+  event_count <- suppressWarnings(as.integer(event_count))
+  if (length(event_count) != 1L || is.na(event_count) || event_count < 0L) {
+    stop("Population membership eventCount must be non-negative.", call. = FALSE)
+  }
+  raw <- tryCatch(
+    base64enc::base64decode(encoded),
+    error = function(cause) {
+      stop("Population membership payload is not valid base64.", call. = FALSE)
+    }
+  )
+  expected_bytes <- as.integer(ceiling(event_count / 8))
+  if (length(raw) != expected_bytes) {
+    stop(
+      "Population membership payload has ",
+      length(raw),
+      " bytes; expected ",
+      expected_bytes,
+      ".",
+      call. = FALSE
+    )
+  }
+  if (event_count == 0L) return(logical(0))
+  as.logical(as.integer(rawToBits(raw)[seq_len(event_count)]))
+}
+
+.gatelabr_write_host_coldata <- function(
+    sce,
+    dataset_id,
+    workspace_revision,
+    columns,
+    overwrite = FALSE,
+    sample_column = NULL) {
+  current <- .gatelabr_canonical_workspace_record(sce)
+  current_revision <- if (is.null(current)) 0L else current$revision
+  workspace_revision <- suppressWarnings(as.integer(workspace_revision))
+  if (length(workspace_revision) != 1L || is.na(workspace_revision) ||
+      !identical(workspace_revision, current_revision)) {
+    stop(
+      "Population memberships do not match the workspace revision stored in the SCE.",
+      call. = FALSE
+    )
+  }
+  if (!is.list(columns) || length(columns) == 0L) {
+    stop("Select at least one population to export.", call. = FALSE)
+  }
+  overwrite <- isTRUE(overwrite)
+  partition <- .gatelabr_sample_partition(sce, sample_column)
+  expected_sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
+  existing_columns <- colnames(SummarizedExperiment::colData(sce))
+
+  prepared <- lapply(columns, function(column) {
+    if (!is.list(column)) stop("A colData export entry is malformed.", call. = FALSE)
+    column_name <- as.character(column$columnName)
+    population_id <- as.character(column$populationId)
+    population_name <- as.character(column$populationName)
+    in_label <- as.character(column$inLabel)
+    out_label <- as.character(column$outLabel)
+    scalar_values <- list(
+      columnName = column_name,
+      populationId = population_id,
+      populationName = population_name,
+      inLabel = in_label,
+      outLabel = out_label
+    )
+    if (any(vapply(
+      scalar_values,
+      function(value) length(value) != 1L || is.na(value) || !nzchar(trimws(value)),
+      logical(1)
+    ))) {
+      stop("Population export names and labels must be non-empty strings.", call. = FALSE)
+    }
+    if (identical(in_label, out_label)) {
+      stop("Inside and outside labels must differ.", call. = FALSE)
+    }
+    if (column_name %in% existing_columns && !overwrite) {
+      stop(
+        "colData already contains '", column_name,
+        "'. Enable overwrite or choose another name.",
+        call. = FALSE
+      )
+    }
+
+    sample_masks <- column$sampleMasks
+    if (!is.list(sample_masks) || length(sample_masks) != length(expected_sample_ids)) {
+      stop(
+        "Population '", population_name,
+        "' does not contain one membership mask per SCE sample.",
+        call. = FALSE
+      )
+    }
+    sample_ids <- vapply(sample_masks, function(mask) {
+      if (!is.list(mask) || !is.character(mask$sampleId) ||
+          length(mask$sampleId) != 1L) return("")
+      mask$sampleId
+    }, character(1))
+    if (anyDuplicated(sample_ids) || !setequal(sample_ids, expected_sample_ids)) {
+      stop(
+        "Population '", population_name,
+        "' has mismatched SCE sample identities.",
+        call. = FALSE
+      )
+    }
+    membership <- logical(ncol(sce))
+    for (sample_index in seq_along(expected_sample_ids)) {
+      sample_id <- expected_sample_ids[[sample_index]]
+      mask <- sample_masks[[match(sample_id, sample_ids)]]
+      expected_events <- length(partition$event_indices[[sample_index]])
+      supplied_events <- suppressWarnings(as.integer(mask$eventCount))
+      if (length(supplied_events) != 1L || is.na(supplied_events) ||
+          supplied_events != expected_events) {
+        stop(
+          "Population '", population_name,
+          "' has the wrong event count for sample '", sample_id, "'.",
+          call. = FALSE
+        )
+      }
+      membership[partition$event_indices[[sample_index]]] <-
+        .gatelabr_decode_membership_bits(
+          mask$membershipBitsBase64,
+          expected_events
+        )
+    }
+    list(
+      column_name = column_name,
+      population_id = population_id,
+      membership = membership,
+      in_label = in_label,
+      out_label = out_label
+    )
+  })
+  column_names <- vapply(prepared, `[[`, character(1), "column_name")
+  if (anyDuplicated(column_names)) {
+    stop("Each exported population needs a unique colData column name.", call. = FALSE)
+  }
+
+  cd <- SummarizedExperiment::colData(sce)
+  for (entry in prepared) {
+    cd[[entry$column_name]] <- factor(
+      entry$membership,
+      levels = c(TRUE, FALSE),
+      labels = c(entry$in_label, entry$out_label)
+    )
+  }
+  SummarizedExperiment::colData(sce) <- cd
+  list(
+    sce = sce,
+    result = list(columns = lapply(prepared, function(entry) {
+      list(
+        columnName = entry$column_name,
+        populationId = entry$population_id,
+        memberCount = sum(entry$membership)
+      )
+    }))
+  )
+}
+
+.gatelabr_handle_host_request <- function(
+    sce,
+    request,
+    dataset_id,
+    sample_column = NULL) {
+  if (!is.list(request) || !is.character(request$operation) ||
+      length(request$operation) != 1L || !is.list(request$payload)) {
+    stop("GateLab supplied a malformed host request.", call. = FALSE)
+  }
+  payload <- request$payload
+  if (!is.character(payload$datasetId) || length(payload$datasetId) != 1L ||
+      !identical(payload$datasetId, dataset_id)) {
+    stop("The host request targets a different SCE dataset.", call. = FALSE)
+  }
+
+  if (identical(request$operation, "write-workspace")) {
+    return(.gatelabr_store_host_workspace(
+      sce,
+      dataset_id = dataset_id,
+      expected_revision = payload$expectedRevision,
+      client_revision = payload$clientRevision,
+      reason = payload$reason,
+      workspace_json = payload$workspaceJson,
+      sample_column = sample_column
+    ))
+  }
+  if (identical(request$operation, "write-coldata")) {
+    contract_version <- suppressWarnings(as.integer(payload$contractVersion))
+    if (length(contract_version) != 1L || is.na(contract_version) ||
+        !identical(contract_version, .gatelabr_coldata_contract_version)) {
+      stop("GateLab supplied an incompatible colData contract.", call. = FALSE)
+    }
+    return(.gatelabr_write_host_coldata(
+      sce,
+      dataset_id = dataset_id,
+      workspace_revision = payload$workspaceRevision,
+      columns = payload$columns,
+      overwrite = payload$overwrite,
+      sample_column = sample_column
+    ))
+  }
+  stop("Unsupported GateLab host operation '", request$operation, "'.", call. = FALSE)
 }
 
 # Register session-scoped, lazy binary resources and send the compact manifest
