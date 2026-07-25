@@ -5,6 +5,63 @@
 # payloads that become Float32Array views in GateLab.
 
 .gatelabr_dataset_contract_version <- 1L
+.gatelabr_workspace_contract_version <- 1L
+
+.gatelabr_host_workspace_envelope <- function(
+    sce,
+    dataset_id = "gatelabr-sce") {
+  md <- S4Vectors::metadata(sce)
+  canonical <- md$gatelab_workspace
+  legacy <- md$gating_workspace
+
+  if (!is.null(canonical)) {
+    source_format <- "gatelab-workspace"
+    workspace <- canonical
+  } else if (!is.null(legacy)) {
+    source_format <- "gatelabr-legacy"
+    workspace <- tryCatch(
+      {
+        normalized <- normalize_workspace_graph(legacy)
+        validate_workspace_graph(normalized)
+        normalized
+      },
+      error = function(cause) {
+        warning(
+          conditionMessage(cause),
+          "; loading the SCE data without its saved GateLabR workspace.",
+          call. = FALSE
+        )
+        NULL
+      }
+    )
+  } else {
+    return(NULL)
+  }
+
+  if (is.null(workspace)) return(NULL)
+  if (is.character(workspace) && length(workspace) == 1L &&
+      !is.na(workspace) && nzchar(workspace)) {
+    workspace_json <- workspace
+  } else {
+    workspace_json <- jsonlite::toJSON(
+      workspace,
+      auto_unbox = TRUE,
+      null = "null",
+      na = "null",
+      dataframe = "rows",
+      matrix = "rowmajor",
+      POSIXt = "ISO8601",
+      digits = NA
+    )
+  }
+
+  list(
+    contractVersion = .gatelabr_workspace_contract_version,
+    datasetId = dataset_id,
+    sourceFormat = source_format,
+    workspaceJson = as.character(workspace_json)
+  )
+}
 
 .gatelabr_first_rowdata_field <- function(sce, candidates) {
   rd <- as.data.frame(SummarizedExperiment::rowData(sce))
@@ -421,7 +478,11 @@
   manifest <- list(
     contractVersion = .gatelabr_dataset_contract_version,
     datasets = list(descriptor),
-    resources = resources
+    resources = resources,
+    workspace = .gatelabr_host_workspace_envelope(
+      sce,
+      dataset_id = dataset_id
+    )
   )
   session$sendCustomMessage(message_type, manifest)
   invisible(manifest)

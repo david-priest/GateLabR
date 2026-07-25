@@ -23,6 +23,50 @@ make_host_bridge_sce <- function() {
   sce
 }
 
+add_host_bridge_workspace <- function(sce) {
+  gate <- list(
+    gate_id = "gate-1",
+    name = "CD3 positive",
+    gate_type = "rectangle",
+    x_channel = "CD3",
+    y_channel = "CD19",
+    vertices = matrix(c(1, 2, 3, 4), ncol = 2, byrow = TRUE),
+    color = "#e41a1c",
+    label_offset = NULL
+  )
+  root <- list(
+    population_id = "root",
+    name = "All Events",
+    gate_refs = list(),
+    gate_logic = "and",
+    parent_id = NULL,
+    children = "cd3-positive",
+    event_count = 3L,
+    percent_of_parent = 100
+  )
+  child <- list(
+    population_id = "cd3-positive",
+    name = "CD3+",
+    gate_refs = list(list(gate_id = "gate-1", include = TRUE)),
+    gate_logic = "and",
+    parent_id = "root",
+    children = character(0),
+    event_count = 2L,
+    percent_of_parent = 2 / 3 * 100
+  )
+  S4Vectors::metadata(sce)$gating_workspace <- list(
+    gates = list(`gate-1` = gate),
+    gate_order = "gate-1",
+    populations = list(root = root, `cd3-positive` = child),
+    root_population_id = "root",
+    gate_value_space = "display",
+    global_scale_ranges = list(CD3 = c(0, 10), CD19 = c(0, 20)),
+    version = 3L,
+    saved_at = "2026-07-25 12:00:00"
+  )
+  sce
+}
+
 test_that("SCE host descriptors preserve assays, channels, and sample metadata", {
   sce <- make_host_bridge_sce()
   descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(
@@ -140,4 +184,47 @@ test_that("host manifest registers lazy per-sample assay and event resources", {
     c(0L, 1L)
   )
   unlink(event_response$content$file)
+})
+
+test_that("legacy GateLabR workspace is carried as an explicit JSON envelope", {
+  sce <- add_host_bridge_workspace(make_host_bridge_sce())
+
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(
+    sce,
+    dataset_id = "test-sce"
+  )
+
+  expect_identical(envelope$contractVersion, 1L)
+  expect_identical(envelope$datasetId, "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelabr-legacy")
+  expect_type(envelope$workspaceJson, "character")
+  decoded <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)
+  expect_identical(decoded$gate_order, "gate-1")
+  expect_identical(decoded$populations$root$children, "cd3-positive")
+  expect_equal(decoded$gates$`gate-1`$vertices[[1]], list(1, 2))
+})
+
+test_that("host manifest includes workspace metadata without registering more data resources", {
+  sce <- add_host_bridge_workspace(make_host_bridge_sce())
+  registered <- new.env(parent = emptyenv())
+  session <- new.env(parent = emptyenv())
+  session$registerDataObj <- function(name, data, filterFunc) {
+    registered[[name]] <- list(data = data, filter = filterFunc)
+    paste0("session/test/dataobj/", name)
+  }
+  session$sendCustomMessage <- function(type, message) invisible(NULL)
+
+  manifest <- GateLabR:::.gatelabr_register_host_manifest(
+    session,
+    sce,
+    dataset_id = "test-sce"
+  )
+
+  expect_identical(manifest$workspace$sourceFormat, "gatelabr-legacy")
+  expect_match(manifest$workspace$workspaceJson, '"CD3 positive"', fixed = TRUE)
+  expect_identical(length(ls(registered)), 6L)
+})
+
+test_that("SCEs without a workspace advertise no hosted workspace", {
+  expect_null(GateLabR:::.gatelabr_host_workspace_envelope(make_host_bridge_sce()))
 })

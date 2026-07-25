@@ -1,14 +1,17 @@
-import { G as s, o as t, p as o, q as r, t as A, w as T, x as d, y as n, A as E, B as G, E as H } from "./embed-Dw7xgGjI.js";
+import { G as s, o as t, p as o, q as A, t as T, w as r, x as d, y as H, A as E, B as O, E as S, H as _, I as n, J as G } from "./embed-CQWT55Wc.js";
 export {
   s as GATELAB_DATASET_CONTRACT_VERSION,
   t as GATELAB_HOST_CONTRACT_VERSION,
-  o as GateLabHostProvider,
+  o as GATELAB_HOST_WORKSPACE_CONTRACT_VERSION,
+  A as GateLabHostProvider,
+  T as convertHostedGateSpace,
   r as createBrowserHost,
-  A as createShinySceHost,
-  T as decodeChannelMajorFloat32,
-  d as decodeEventIndexUint32,
-  n as loadHostedDataset,
-  E as mountGateLab,
-  G as useGateLabHost,
-  H as useOptionalGateLabHost
+  d as createShinySceHost,
+  H as decodeChannelMajorFloat32,
+  E as decodeEventIndexUint32,
+  O as loadHostedDataset,
+  S as mountGateLab,
+  _ as readHostedWorkspace,
+  n as useGateLabHost,
+  G as useOptionalGateLabHost
 };
