@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "david-priest/GateLab-dev",
-  "sourceCommit": "192178210bd79fbc8e079ea1d5755c9c514a3131",
+  "sourceCommit": "3eb9bf75379f5b4bea7c6385228755edc07f43bc",
   "buildCommand": "npm run build:embed",
   "hostContractVersion": 1,
   "datasetContractVersion": 1,
