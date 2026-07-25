@@ -1,7 +1,7 @@
 var zi = Object.defineProperty;
 var _i = (n, i, r) => i in n ? zi(n, i, { enumerable: !0, configurable: !0, writable: !0, value: r }) : n[i] = r;
 var Yn = (n, i, r) => _i(n, typeof i != "symbol" ? i + "" : i, r);
-import { D as Ut, r as Ui, l as qi, s as Vi, z as Bi, u as Ke, a as A, j as e, b as ue, v as js, c as Gi, d as Wi, e as ws, f as Hi, F as Zi, g as Yi, C as Xi, h as Ji, i as Qi } from "./embed-CQWT55Wc.js";
+import { D as Ut, r as Ui, l as qi, s as Vi, z as Bi, u as Ke, a as A, j as e, b as ue, v as js, c as Gi, d as Wi, e as ws, f as Hi, F as Zi, g as Yi, C as Xi, h as Ji, i as Qi } from "./embed-RlN2Jv2r.js";
 class he extends Error {
   constructor(r, a, o = {}) {
     super(a);
@@ -911,7 +911,7 @@ async function Nr(n, i, r, a) {
   if (o === 0) throw new Error("No compensation pairs are available to export.");
   const c = Xs(i.sampleName, i.populationName);
   if (r === "pdf") {
-    const { jsPDF: f } = await import("./jspdf.es.min-CGZ7QdvO.js").then((N) => N.j), w = new f({ orientation: "landscape", unit: "pt", format: "a4", compress: !0 }), M = w.internal.pageSize.getWidth(), b = w.internal.pageSize.getHeight();
+    const { jsPDF: f } = await import("./jspdf.es.min-18-uOzFH.js").then((N) => N.j), w = new f({ orientation: "landscape", unit: "pt", format: "a4", compress: !0 }), M = w.internal.pageSize.getWidth(), b = w.internal.pageSize.getHeight();
     for (let N = 0; N < o; N++) {
       N > 0 && w.addPage("a4", "landscape");
       const T = n.slice(
