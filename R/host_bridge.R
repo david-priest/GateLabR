@@ -56,6 +56,18 @@
   "other"
 }
 
+.gatelabr_assay_coordinate_space <- function(sce, assay_name) {
+  md <- S4Vectors::metadata(sce)
+  overrides <- md$gatelabr_assay_coordinate_spaces
+  override <- if (is.list(overrides)) overrides[[assay_name]] else NULL
+  if (length(override) == 1L && !is.na(override) &&
+      override %in% c("linear", "display")) {
+    return(as.character(override))
+  }
+  role <- .gatelabr_assay_role(assay_name)
+  if (role %in% c("counts", "compensated")) "linear" else "display"
+}
+
 .gatelabr_assay_revision <- function(sce, assay_name) {
   md <- S4Vectors::metadata(sce)
   revisions <- md$gatelabr_assay_revisions
@@ -152,7 +164,20 @@
   if (length(assay_names) == 0L) {
     stop("The SCE has no assays.", call. = FALSE)
   }
-  default_assay <- if ("exprs" %in% assay_names) "exprs" else assay_names[[1]]
+  assay_spaces <- vapply(
+    assay_names,
+    function(assay_name) .gatelabr_assay_coordinate_space(sce, assay_name),
+    character(1)
+  )
+  default_assay <- if ("counts" %in% assay_names) {
+    "counts"
+  } else if (any(assay_spaces == "linear")) {
+    assay_names[[which(assay_spaces == "linear")[[1]]]]
+  } else if ("exprs" %in% assay_names) {
+    "exprs"
+  } else {
+    assay_names[[1]]
+  }
   event_count <- ncol(sce)
   sample_partition <- .gatelabr_sample_partition(sce, sample_column)
 
@@ -161,6 +186,7 @@
       id = assay_name,
       label = assay_name,
       role = .gatelabr_assay_role(assay_name),
+      coordinateSpace = .gatelabr_assay_coordinate_space(sce, assay_name),
       revision = .gatelabr_assay_revision(sce, assay_name),
       encoding = "channel-major-float32-le"
     )
@@ -238,4 +264,165 @@
     )
   }
   invisible(path)
+}
+
+.gatelabr_binary_file_response <- function(path) {
+  shiny::httpResponse(
+    status = 200L,
+    content_type = "application/octet-stream",
+    content = list(file = path, owned = TRUE),
+    headers = list(
+      `Cache-Control` = "no-store",
+      `X-Content-Type-Options` = "nosniff"
+    )
+  )
+}
+
+.gatelabr_register_assay_resource <- function(
+    session,
+    resource_name,
+    sce,
+    assay_name,
+    event_indices) {
+  session$registerDataObj(
+    resource_name,
+    data = list(
+      sce = sce,
+      assay_name = assay_name,
+      event_indices = event_indices
+    ),
+    filterFunc = function(data, request) {
+      if (!identical(request$REQUEST_METHOD, "GET")) {
+        return(shiny::httpResponse(
+          status = 405L,
+          content_type = "text/plain",
+          content = "Method not allowed",
+          headers = list(Allow = "GET")
+        ))
+      }
+      path <- tempfile(fileext = ".f32")
+      tryCatch(
+        {
+          .gatelabr_write_assay_payload(
+            data$sce,
+            data$assay_name,
+            path,
+            data$event_indices
+          )
+          .gatelabr_binary_file_response(path)
+        },
+        error = function(cause) {
+          if (file.exists(path)) unlink(path)
+          shiny::httpResponse(
+            status = 500L,
+            content_type = "text/plain",
+            content = conditionMessage(cause),
+            headers = list(`Cache-Control` = "no-store")
+          )
+        }
+      )
+    }
+  )
+}
+
+.gatelabr_register_event_index_resource <- function(
+    session,
+    resource_name,
+    event_indices) {
+  session$registerDataObj(
+    resource_name,
+    data = list(event_indices = event_indices),
+    filterFunc = function(data, request) {
+      if (!identical(request$REQUEST_METHOD, "GET")) {
+        return(shiny::httpResponse(
+          status = 405L,
+          content_type = "text/plain",
+          content = "Method not allowed",
+          headers = list(Allow = "GET")
+        ))
+      }
+      path <- tempfile(fileext = ".u32")
+      tryCatch(
+        {
+          .gatelabr_write_event_index_payload(data$event_indices, path)
+          .gatelabr_binary_file_response(path)
+        },
+        error = function(cause) {
+          if (file.exists(path)) unlink(path)
+          shiny::httpResponse(
+            status = 500L,
+            content_type = "text/plain",
+            content = conditionMessage(cause),
+            headers = list(`Cache-Control` = "no-store")
+          )
+        }
+      )
+    }
+  )
+}
+
+# Register session-scoped, lazy binary resources and send the compact manifest
+# consumed by createShinySceHost() in the canonical GateLab React bundle.
+.gatelabr_register_host_manifest <- function(
+    session,
+    sce,
+    dataset_id = "gatelabr-sce",
+    label = dataset_id,
+    sample_column = NULL,
+    message_type = "gatelabr-host-manifest") {
+  if (is.null(session) ||
+      !is.function(session$registerDataObj) ||
+      !is.function(session$sendCustomMessage)) {
+    stop("session must provide registerDataObj() and sendCustomMessage().", call. = FALSE)
+  }
+  descriptor <- .gatelabr_sce_dataset_descriptor(
+    sce,
+    dataset_id = dataset_id,
+    label = label,
+    sample_column = sample_column
+  )
+  partition <- .gatelabr_sample_partition(sce, sample_column)
+  assay_names <- SummarizedExperiment::assayNames(sce)
+
+  resources <- lapply(seq_along(descriptor$samples), function(sample_index) {
+    sample_descriptor <- descriptor$samples[[sample_index]]
+    event_indices <- partition$event_indices[[sample_index]]
+    prefix <- paste0(
+      "gatelabr-",
+      sample_index,
+      "-",
+      substr(gsub("[^A-Za-z0-9]", "", dataset_id), 1L, 24L)
+    )
+    assay_urls <- stats::setNames(
+      lapply(seq_along(assay_names), function(assay_index) {
+        .gatelabr_register_assay_resource(
+          session,
+          paste0(prefix, "-assay-", assay_index),
+          sce,
+          assay_names[[assay_index]],
+          event_indices
+        )
+      }),
+      assay_names
+    )
+    event_url <- .gatelabr_register_event_index_resource(
+      session,
+      paste0(prefix, "-events"),
+      event_indices
+    )
+    list(
+      datasetId = dataset_id,
+      sampleId = sample_descriptor$id,
+      eventIndexUrl = event_url,
+      assayUrls = assay_urls
+    )
+  })
+
+  manifest <- list(
+    contractVersion = .gatelabr_dataset_contract_version,
+    datasets = list(descriptor),
+    resources = resources
+  )
+  session$sendCustomMessage(message_type, manifest)
+  invisible(manifest)
 }

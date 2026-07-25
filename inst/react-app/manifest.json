@@ -1,0 +1,70 @@
+{
+  "../GateLab/node_modules/canvg/lib/index.es.js": {
+    "file": "index.es-DTc2XPUc.js",
+    "name": "index.es",
+    "src": "../GateLab/node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-Dw7xgGjI.js",
+      "_jspdf.es.min-CsaY9JaL.js"
+    ]
+  },
+  "../GateLab/node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "purify.es-_9WAe1aK.js",
+    "name": "purify.es",
+    "src": "../GateLab/node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "../GateLab/node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "html2canvas.esm-dgT_1dIT.js",
+    "name": "html2canvas.esm",
+    "src": "../GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
+  },
+  "_embed-Dw7xgGjI.js": {
+    "file": "embed-Dw7xgGjI.js",
+    "name": "embed",
+    "dynamicImports": [
+      "_jspdf.es.min-CsaY9JaL.js",
+      "src/ui/CompensationTab.tsx"
+    ]
+  },
+  "_jspdf.es.min-CsaY9JaL.js": {
+    "file": "jspdf.es.min-CsaY9JaL.js",
+    "name": "jspdf.es.min",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-Dw7xgGjI.js"
+    ],
+    "dynamicImports": [
+      "../GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
+      "../GateLab/node_modules/dompurify/dist/purify.es.mjs",
+      "../GateLab/node_modules/canvg/lib/index.es.js"
+    ]
+  },
+  "src/embed.ts": {
+    "file": "gatelab-embed.js",
+    "name": "embed",
+    "src": "src/embed.ts",
+    "isEntry": true,
+    "imports": [
+      "_embed-Dw7xgGjI.js"
+    ]
+  },
+  "src/ui/CompensationTab.tsx": {
+    "file": "CompensationTab-DEcEjJeQ.js",
+    "name": "CompensationTab",
+    "src": "src/ui/CompensationTab.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-Dw7xgGjI.js"
+    ],
+    "dynamicImports": [
+      "_jspdf.es.min-CsaY9JaL.js"
+    ]
+  },
+  "style.css": {
+    "file": "gatelab-embed.css",
+    "src": "style.css"
+  }
+}

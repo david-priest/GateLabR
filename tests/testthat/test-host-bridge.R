@@ -35,10 +35,14 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_identical(descriptor$id, "test-sce")
   expect_identical(descriptor$instrument, "cytof")
   expect_identical(descriptor$eventCount, 3L)
-  expect_identical(descriptor$defaultAssayId, "exprs")
+  expect_identical(descriptor$defaultAssayId, "counts")
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "id"), c("CD3", "CD19"))
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "pnn"), c("Nd142Di", "Eu151Di"))
   expect_identical(vapply(descriptor$assays, `[[`, character(1), "role"), c("counts", "transformed"))
+  expect_identical(
+    vapply(descriptor$assays, `[[`, character(1), "coordinateSpace"),
+    c("linear", "display")
+  )
   expect_identical(vapply(descriptor$samples, `[[`, integer(1), "eventCount"), c(2L, 1L))
   expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
   expect_identical(descriptor$samples[[1]]$assayByteLength, 16)
@@ -46,6 +50,7 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
 
   encoded <- jsonlite::toJSON(descriptor, auto_unbox = TRUE, null = "null")
   expect_match(encoded, '"encoding":"channel-major-float32-le"', fixed = TRUE)
+  expect_match(encoded, '"coordinateSpace":"linear"', fixed = TRUE)
   expect_match(encoded, '"eventIndexEncoding":"uint32-le"', fixed = TRUE)
 })
 
@@ -82,4 +87,57 @@ test_that("assay payload can stream one SCE sample without browser-side splittin
   expect_identical(as.numeric(file.info(path)$size), 16)
   values <- readBin(path, what = "numeric", n = 4, size = 4L, endian = "little")
   expect_equal(values, c(1.25, 2.5, -4.5, 0), tolerance = 1e-6)
+})
+
+test_that("host manifest registers lazy per-sample assay and event resources", {
+  sce <- make_host_bridge_sce()
+  registered <- new.env(parent = emptyenv())
+  messages <- list()
+  session <- new.env(parent = emptyenv())
+  session$registerDataObj <- function(name, data, filterFunc) {
+    registered[[name]] <- list(data = data, filter = filterFunc)
+    paste0("session/test/dataobj/", name)
+  }
+  session$sendCustomMessage <- function(type, message) {
+    messages[[type]] <<- message
+  }
+
+  manifest <- GateLabR:::.gatelabr_register_host_manifest(
+    session,
+    sce,
+    dataset_id = "test-sce",
+    label = "Test SCE"
+  )
+
+  expect_identical(messages[["gatelabr-host-manifest"]], manifest)
+  expect_identical(length(manifest$resources), 2L)
+  expect_identical(
+    names(manifest$resources[[1]]$assayUrls),
+    c("counts", "exprs")
+  )
+  expect_match(manifest$resources[[1]]$eventIndexUrl, "events$")
+  expect_identical(length(ls(registered)), 6L)
+
+  assay_name <- sub("^.*/", "", manifest$resources[[1]]$assayUrls$counts)
+  assay_response <- registered[[assay_name]]$filter(
+    registered[[assay_name]]$data,
+    list(REQUEST_METHOD = "GET")
+  )
+  expect_s3_class(assay_response, "httpResponse")
+  expect_identical(assay_response$status, 200L)
+  expect_identical(as.numeric(file.info(assay_response$content$file)$size), 16)
+  unlink(assay_response$content$file)
+
+  event_name <- sub("^.*/", "", manifest$resources[[1]]$eventIndexUrl)
+  event_response <- registered[[event_name]]$filter(
+    registered[[event_name]]$data,
+    list(REQUEST_METHOD = "GET")
+  )
+  expect_s3_class(event_response, "httpResponse")
+  expect_identical(event_response$status, 200L)
+  expect_identical(
+    readBin(event_response$content$file, "integer", n = 2, size = 4L, endian = "little"),
+    c(0L, 1L)
+  )
+  unlink(event_response$content$file)
 })
