@@ -144,6 +144,53 @@ test_that("dataset descriptors can reuse one precomputed sample partition", {
   expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
 })
 
+make_host_instrument_sce <- function(pnn) {
+  counts <- matrix(
+    seq_len(length(pnn) * 3L),
+    nrow = length(pnn),
+    dimnames = list(
+      paste0("Marker ", seq_along(pnn)),
+      paste0("event", 1:3)
+    )
+  )
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts, exprs = counts / 5),
+    colData = S4Vectors::DataFrame(
+      sample_id = c("Donor A", "Donor A", "Donor B")
+    )
+  )
+  SummarizedExperiment::rowData(sce)$gatelabr_pnn <- pnn
+  sce
+}
+
+test_that("React host instrument detection uses persisted FCS identities", {
+  sce <- make_host_instrument_sce(c("Y89Di", "Nd142Di", "Eu151Di"))
+
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce)
+
+  expect_identical(descriptor$instrument, "cytof")
+})
+
+test_that("React host corrects stale auto modality but respects explicit choices", {
+  sce <- make_host_instrument_sce(c("Y89Di", "Nd142Di", "Eu151Di"))
+  md <- S4Vectors::metadata(sce)
+  md$instrument_type <- "flow"
+  md$instrument_type_source <- "auto_detected"
+  md$instrument_mode_choice <- "auto"
+  S4Vectors::metadata(sce) <- md
+
+  expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "cytof")
+
+  S4Vectors::metadata(sce)$instrument_mode_choice <- "flow"
+  expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "flow")
+})
+
+test_that("React host recognizes conventional flow channel identities", {
+  sce <- make_host_instrument_sce(c("FSC-A", "SSC-A", "BV421-A"))
+
+  expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "flow")
+})
+
 test_that("assay roles distinguish uncompensated expression from compensation", {
   sce <- make_host_bridge_sce()
   counts <- SummarizedExperiment::assay(sce, "counts")
