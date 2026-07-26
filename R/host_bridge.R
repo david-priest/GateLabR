@@ -282,13 +282,122 @@
   )
 }
 
-.gatelabr_sce_instrument <- function(sce) {
-  instrument <- tolower(as.character(S4Vectors::metadata(sce)$instrument_type))
-  if (length(instrument) == 1L && instrument %in% c("flow", "cytof")) {
-    instrument
-  } else {
-    "unknown"
+.gatelabr_instrument_channel_evidence <- function(channel_names) {
+  channel_names <- as.character(channel_names)
+  flow_suffix <- grepl(
+    "-(A|H|W|T)(\\b|\\)|\\s|$)",
+    channel_names,
+    ignore.case = TRUE
+  )
+  scatter <- grepl(
+    paste0(
+      "^FSC|^SSC|^BSC",
+      "|^FS[[:space:]\\-_]|^SS[[:space:]\\-_]|^BS[[:space:]\\-_]",
+      "|^FS$|^SS$|^LightLoss|^Extinction"
+    ),
+    channel_names,
+    ignore.case = TRUE
+  )
+  qc <- tolower(channel_names) %in% tolower(c(
+    "Time", "Event_length", "Cell_length", "Center", "Offset", "Width",
+    "Residual", "file_number", "Beads", "Dead", "Live", "Viability"
+  ))
+  metal <- (
+    grepl("Di$", channel_names, ignore.case = TRUE) |
+      grepl(
+        "(?<![A-Za-z0-9])[A-Z][a-z]?[0-9]{2,3}(?![A-Za-z0-9])",
+        channel_names,
+        perl = TRUE
+      ) |
+      grepl(
+        "(?<![A-Za-z0-9])[0-9]{2,3}[A-Z][a-z]?(?![A-Za-z0-9])",
+        channel_names,
+        perl = TRUE
+      )
+  ) & !qc & !flow_suffix & !scatter
+
+  n_metal <- sum(metal)
+  n_scatter <- sum(scatter)
+  n_flow_suffix <- sum(flow_suffix)
+  n_signal <- max(0L, length(channel_names) - sum(qc))
+  cytof_score <- 0
+  flow_score <- 0
+  if (n_scatter >= 2L) flow_score <- flow_score + 6
+  if (n_flow_suffix >= 3L) flow_score <- flow_score + 4
+  if (n_flow_suffix > n_metal) flow_score <- flow_score + 1
+  if (n_metal >= 3L && n_flow_suffix == 0L) cytof_score <- cytof_score + 6
+  if (n_signal > 0L &&
+      n_metal / n_signal >= 0.35 &&
+      n_metal > n_flow_suffix) {
+    cytof_score <- cytof_score + 3
   }
+  if (n_metal > 0L && n_scatter == 0L) cytof_score <- cytof_score + 1
+  c(cytof = cytof_score, flow = flow_score)
+}
+
+.gatelabr_sce_instrument <- function(sce) {
+  md <- S4Vectors::metadata(sce)
+  mode_choice <- tolower(as.character(md$instrument_mode_choice))
+  if (length(mode_choice) == 1L &&
+      !is.na(mode_choice) &&
+      mode_choice %in% c("flow", "cytof")) {
+    return(mode_choice)
+  }
+
+  stored <- tolower(as.character(md$instrument_type))
+  if (length(stored) != 1L || is.na(stored) ||
+      !stored %in% c("flow", "cytof")) {
+    stored <- NULL
+  }
+  source <- tolower(as.character(md$instrument_type_source))
+  if (!is.null(stored) &&
+      length(source) == 1L &&
+      !is.na(source) &&
+      source %in% c("manual_override", "user", "explicit", "workspace")) {
+    return(stored)
+  }
+
+  channel_sets <- list()
+  pnn <- .gatelabr_first_rowdata_field(
+    sce,
+    c(
+      "gatelabr_pnn", "pnn", "$pnn", "fcs_pnn", "channel_name",
+      "channel", "isotope", "metal", "mass"
+    )
+  )
+  if (!is.null(pnn)) channel_sets$pnn <- pnn
+  if (!is.null(rownames(sce))) channel_sets$rownames <- rownames(sce)
+  scores <- lapply(channel_sets, .gatelabr_instrument_channel_evidence)
+  cytof_score <- if (length(scores)) {
+    max(vapply(scores, `[[`, numeric(1), "cytof"))
+  } else {
+    0
+  }
+  flow_score <- if (length(scores)) {
+    max(vapply(scores, `[[`, numeric(1), "flow"))
+  } else {
+    0
+  }
+
+  transform_type <- tolower(as.character(md$transform_type))
+  cofactor <- suppressWarnings(as.numeric(md$cofactor))
+  if (length(transform_type) == 1L &&
+      !is.na(transform_type) &&
+      transform_type %in% c("arcsinh", "asinh") &&
+      length(cofactor) == 1L &&
+      is.finite(cofactor) &&
+      cofactor <= 10) {
+    cytof_score <- cytof_score + 3
+  } else if (length(transform_type) == 1L &&
+      !is.na(transform_type) &&
+      identical(transform_type, "logicle")) {
+    flow_score <- flow_score + 3
+  }
+
+  if (cytof_score > flow_score && cytof_score >= 3) return("cytof")
+  if (flow_score > cytof_score && flow_score >= 3) return("flow")
+  if (!is.null(stored)) return(stored)
+  "unknown"
 }
 
 .gatelabr_sce_dataset_descriptor <- function(
