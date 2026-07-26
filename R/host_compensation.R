@@ -533,7 +533,11 @@
     }
   }
 
-  partition <- .gatelabr_sample_partition(sce, sample_column)
+  partition <- .gatelabr_sample_partition(
+    sce,
+    sample_column,
+    include_metadata = FALSE
+  )
   sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
   target_ids <- unique(vapply(
     targets,
@@ -787,7 +791,11 @@
     stop("The existing compensated assay must be numerical.", call. = FALSE)
   }
 
-  partition <- .gatelabr_sample_partition(sce, sample_column)
+  partition <- .gatelabr_sample_partition(
+    sce,
+    sample_column,
+    include_metadata = FALSE
+  )
   sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
   target_ids <- unique(vapply(
     targets,
@@ -935,7 +943,11 @@
     result,
     dataset_id,
     sample_column = NULL) {
-  partition <- .gatelabr_sample_partition(sce, sample_column)
+  partition <- .gatelabr_sample_partition(
+    sce,
+    sample_column,
+    include_metadata = FALSE
+  )
   sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
   output_assay <- result$output_assay_id
   revision <- .gatelabr_assay_revision(sce, output_assay)
