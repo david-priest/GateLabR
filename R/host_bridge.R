@@ -143,11 +143,47 @@
   })
 }
 
-.gatelabr_assay_role <- function(assay_name) {
-  key <- tolower(as.character(assay_name))
-  if (identical(key, "counts") || identical(key, "original")) return("counts")
-  if (grepl("comp", key, fixed = TRUE)) return("compensated")
-  if (key %in% c("exprs", "expression", "transformed")) return("transformed")
+.gatelabr_assay_name_traits <- function(assay_name) {
+  key <- tolower(trimws(as.character(assay_name)))
+  normalized <- gsub("[^a-z0-9]+", "_", key)
+  tokens <- strsplit(normalized, "_", fixed = TRUE)[[1]]
+  tokens <- tokens[nzchar(tokens)]
+  uncompensated <- any(tokens %in% c("uncomp", "uncompensated"))
+  transformed <- any(tokens %in% c(
+    "expr", "exprs", "expression", "transformed", "asinh", "logicle", "display"
+  )) || grepl("exprs|expression", normalized)
+  counts <- any(tokens %in% c("count", "counts", "raw")) ||
+    normalized %in% c("original", "uncomp", "uncompensated")
+  compensated <- !uncompensated && (
+    any(tokens %in% c("comp", "compensated")) ||
+      grepl("^comp(count|counts|expr|exprs|expression)$", normalized) ||
+      grepl("^(count|counts|expr|exprs|expression)comp$", normalized)
+  )
+  list(
+    key = key,
+    counts = counts,
+    transformed = transformed,
+    compensated = compensated
+  )
+}
+
+.gatelabr_assay_role <- function(assay_name, sce = NULL) {
+  if (!is.null(sce)) {
+    overrides <- S4Vectors::metadata(sce)$gatelabr_assay_roles
+    override <- if (is.list(overrides)) overrides[[assay_name]] else NULL
+    if (!is.null(override)) {
+      if (length(override) != 1L || is.na(override) ||
+          !override %in% c("counts", "transformed", "compensated", "other")) {
+        stop("Assay role override for '", assay_name, "' is invalid.",
+             call. = FALSE)
+      }
+      return(as.character(override))
+    }
+  }
+  traits <- .gatelabr_assay_name_traits(assay_name)
+  if (traits$compensated) return("compensated")
+  if (traits$transformed) return("transformed")
+  if (traits$counts) return("counts")
   "other"
 }
 
@@ -159,7 +195,9 @@
       override %in% c("linear", "display")) {
     return(as.character(override))
   }
-  role <- .gatelabr_assay_role(assay_name)
+  traits <- .gatelabr_assay_name_traits(assay_name)
+  if (traits$transformed) return("display")
+  role <- .gatelabr_assay_role(assay_name, sce)
   if (role %in% c("counts", "compensated")) "linear" else "display"
 }
 
@@ -280,7 +318,7 @@
     list(
       id = assay_name,
       label = assay_name,
-      role = .gatelabr_assay_role(assay_name),
+      role = .gatelabr_assay_role(assay_name, sce),
       coordinateSpace = .gatelabr_assay_coordinate_space(sce, assay_name),
       revision = .gatelabr_assay_revision(sce, assay_name),
       encoding = "channel-major-float32-le"
