@@ -1,10 +1,12 @@
 # Launch GateLabR with the canonical GateLab React interface
 
 Starts the shared GateLab TypeScript/React application with a thin Shiny
-adapter for a `SingleCellExperiment`. This is the migration interface;
-the established R/Shiny interface remains available through
-[`launchGatingApp`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
-until feature-parity validation is complete.
+adapter for a `SingleCellExperiment`. This is the default interface used
+by
+[`launchGatingApp`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md).
+The previous GateLabR-specific Shiny interface remains available through
+[`launchLegacyGateLabR`](https://david-priest.github.io/GateLabR/reference/launchLegacyGateLabR.md)
+for one transition release.
 
 ## Usage
 

@@ -5,28 +5,29 @@
 MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docs](https://img.shields.io/badge/docs-pkgdown-4b9fd5.svg)](https://david-priest.github.io/GateLabR)
 
-**Interactive manual gating for `SingleCellExperiment` objects in R /
-Shiny.**
+**Interactive manual gating for `SingleCellExperiment` objects in R.**
 
 *Open-source flow cytometry and CyTOF (mass cytometry) gating app for R
-/ Shiny — with FCS import, fluorescence compensation, hierarchical
-population trees, and Gating-ML exchange, all persisted inside the
-object.*
+— with FCS import, fluorescence compensation, hierarchical population
+trees, and Gating-ML exchange, all persisted inside the object.*
 
 📖 **[Documentation & Getting
 Started](https://david-priest.github.io/GateLabR)**
 
-GateLabR is a desktop-style Shiny application for hand-gating flow
-cytometry and mass cytometry (CyTOF) data directly on
+GateLabR runs the same TypeScript/React interface as GateLab, backed by
+a thin R host for hand-gating flow cytometry and mass cytometry (CyTOF)
+data directly on
 [`SingleCellExperiment`](https://bioconductor.org/packages/SingleCellExperiment/)
 objects. It slots into Bioconductor-based analysis pipelines
 (e.g. CATALYST, diffcyt) where the events already live in R as an SCE
 and you want a fast, reproducible alternative to round-tripping through
 FlowJo or Cytobank just to draw a few gates.
 
-Gates are drawn on an interactive D3.js canvas, and gates, populations,
-scales and illustration settings are persisted inside the SCE itself via
-`metadata()`, so loading the SCE again restores the entire workspace.
+Gates are drawn on an interactive D3.js canvas. Gates, populations,
+scales, assay bindings, compensation provenance and illustration
+settings persist in the SCE via `metadata()`, while explicit commands
+write panel labels to `rowData()` and population, division or sample
+annotations to `colData()`.
 
 For the same style of manual gating directly from FCS files without an R
 installation, see [GateLab](https://github.com/david-priest/GateLab),
@@ -46,13 +47,12 @@ return directly to `colData` for a Bioconductor pipeline.
   channel names. Flow uses per-channel logicle for fluorescence and
   arcsinh for FSC / SSC scatter, with editable W and cofactor; CyTOF
   channels use arcsinh (cofactor 5).
-- **Compensation.** When an `.fcs` carries an embedded spillover matrix
-  (`$SPILLOVER`), it can be applied to the raw fluorescence data before
-  gating — toggled on/off from the Scales tab, with a read-only matrix
-  viewer. Scatter and time channels are left untouched. Defaults off;
-  apply it before drawing gates, since it changes the linear space the
-  gates live in. Already-compensated / spectral-unmixed and CyTOF files
-  (no usable matrix) hide the option.
+- **Flow and CyTOF compensation.** Inspect, edit, sweep and apply spill
+  matrices in the shared Compensation tab. GateLabR performs the durable
+  calculation in R, installs a revisioned full-size SCE assay
+  atomically, preserves the original assay, and restores saved
+  compensated assays without recomputation. Existing compensated SCE
+  assays can be adopted directly.
 - **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip
   supported gates and positive AND population trees through Cytobank and
   other ISAC Gating-ML 2.0-compliant tools. Files containing NOT or OR
@@ -60,9 +60,9 @@ return directly to `colData` for a Bioconductor pipeline.
   data, are rejected before import rather than being partially or
   silently altered. (FlowJo uses its own `.wsp` format and does not
   round-trip Gating-ML.)
-- **Workspace persistence.** Gates, populations, scales and illustration
-  settings are saved inside the SCE (`metadata(sce)$gating_workspace`)
-  and re-loaded automatically.
+- **Workspace persistence.** Gates, populations, scales, active assay,
+  compensation provenance and illustration settings are saved inside the
+  SCE and re-loaded automatically.
 - **FCS export.** Export gated populations as FCS files, optionally
   split by `sample_id`.
 - **Sample filter and multi-sample overlay.** Filter by any `colData`
@@ -70,8 +70,6 @@ return directly to `colData` for a Bioconductor pipeline.
 - **Statistics tab.** Per-population, per-channel summary stats (count,
   % parent / total, median, mean, geometric mean, SD, CV) exportable to
   CSV.
-- **UMAP tab.** Overlay any populations on a precomputed UMAP and export
-  as SVG / PDF.
 - **Cell-division profiler.** A CFSE / CellTrace dye-dilution tab:
   draggable per-sample division gates on a 1-D histogram (Div0…DivN), a
   marker-vs-dye biplot with density contours, and per-cell division
@@ -179,25 +177,28 @@ launchGatingApp(my_sce)
 launchGatingApp()
 ```
 
-The app opens in your default browser. The three-column layout is:
+The app opens in your default browser.
+[`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+now starts the shared React interface. During the transition,
+[`launchLegacyGateLabR()`](https://david-priest.github.io/GateLabR/reference/launchLegacyGateLabR.md)
+starts the previous GateLabR-specific Shiny interface (including its
+former UMAP view). The three-column layout is:
 
 | Panel | Content |
 |----|----|
-| Left | Sample filter, scale controls, FCS / GatingML / workspace import-export, UMAP |
+| Left | SCE samples and workspace / Gating-ML / FCS actions |
 | Centre | Interactive plot (tabs: Gating \| Strategy \| Illustration \| Statistics \| Panel) |
 | Right | Gates list, population tree, bulk-rename controls |
 
 ### Typical workflow
 
 1.  Get your events into the app, either way:
-    - **Import `.fcs` files** directly in the app — it builds the SCE
-      and auto-detects flow vs CyTOF (and the per-channel transforms).
-    - Or **load an existing `SingleCellExperiment`** — e.g. from
-      CATALYST `prepData()` (CyTOF) or one you’ve built from `flowCore`
-      / your own pipeline.
-2.  [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
-    (then pick a loaded SCE or Import FCS), or `launchGatingApp(sce)` to
-    start from an object already in your session.
+    - Load an existing `SingleCellExperiment` — e.g. from CATALYST
+      `prepData()` (CyTOF) or one you’ve built from `flowCore` / your
+      own pipeline.
+2.  Call `launchGatingApp(sce)`, or call
+    [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+    to use the first SCE already loaded in your global environment.
 3.  Draw gates on the central plot; the gate list and population tree
     update live.
 4.  Build populations by referencing one or more gates; multiple
@@ -211,29 +212,31 @@ The app opens in your default browser. The three-column layout is:
 
 ## Data persistence
 
-GateLabR stores its state inside the SCE itself:
+GateLabR stores its canonical workspace and host provenance inside the
+SCE:
 
 ``` r
 
-metadata(sce)$gating_workspace
-#> $gates             — list of gate objects
-#> $populations       — list of population objects (hierarchy)
-#> $gate_order        — display order
-#> $root_population_id
-#> $global_scale_ranges, $cytof_axis_range, $illust_settings, ...
+metadata(sce)$gatelab_workspace
+#> revisioned GateLab workspace JSON (gates, populations, scales and settings)
+
+metadata(sce)$gatelabr_compensation
+#> compensation profiles, assay bindings, revisions and provenance
+
+rowData(sce)$gatelabr_label
+#> optional Panel-tab display-name overrides
 ```
 
-You can also export a portable workspace as a standalone `.rds`
-(`Save Workspace` button) and load it into a different SCE — channels
-are matched by name, missing ones are skipped with a warning.
+The established `metadata(sce)$gating_workspace` mirror remains
+available for compatibility with the previous GateLabR interface.
 
 ## File formats supported
 
-- **Input:** FCS 3.0 / 3.1, Cytobank Gating-ML 2.0 XML, workspace
-  `.rds`.
+- **Input:** `SingleCellExperiment` assays and Cytobank Gating-ML 2.0
+  XML.
 - **Output:** FCS, Gating-ML 2.0 (Cytobank-compatible *or* standard
-  re-importable), workspace `.rds`, SCE `.rds` (with embedded
-  workspace), per-population colData columns, CSV statistics, SVG / PDF
+  re-importable), SCE `.rds` / `.qs2` (with embedded workspace and
+  assays), per-population colData columns, CSV statistics, SVG / PDF
   figures.
 
 ## Related
@@ -316,9 +319,11 @@ channel names and spillover keyword and I’ll take a look.
 ## Launching the app
 
 - [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
-  : Launch the GateLabR interactive gating app
+  : Launch GateLabR
 - [`launchReactGateLab()`](https://david-priest.github.io/GateLabR/reference/launchReactGateLab.md)
   : Launch GateLabR with the canonical GateLab React interface
+- [`launchLegacyGateLabR()`](https://david-priest.github.io/GateLabR/reference/launchLegacyGateLabR.md)
+  : Launch the previous GateLabR Shiny interface
 
 # Articles
 

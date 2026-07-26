@@ -1,23 +1,32 @@
-# Launch the GateLabR interactive gating app
+# Launch GateLabR
 
-Opens the GateLabR Shiny application in a browser. Works both from an
-installed package
+Opens the canonical GateLab React interface with a thin
+`SingleCellExperiment` host. Works both from an installed package
 ([`library(GateLabR); launchGatingApp()`](https://david-priest.github.io/GateLabR))
 and from a source clone (`source("launch.R"); launchGatingApp()`).
 
 ## Usage
 
 ``` r
-launchGatingApp(sce = NULL, port = NULL, launch.browser = TRUE)
+launchGatingApp(
+  sce = NULL,
+  sample_column = NULL,
+  port = NULL,
+  launch.browser = TRUE
+)
 ```
 
 ## Arguments
 
 - sce:
 
-  Optional `SingleCellExperiment`. If `NULL`, the app scans the global
-  environment for any `SingleCellExperiment` objects and lets you pick
-  one (or import FCS files directly).
+  Optional `SingleCellExperiment`. If `NULL`, the first SCE in the
+  global environment is used.
+
+- sample_column:
+
+  Optional `colData` column defining samples. When omitted, common
+  sample columns such as `sample_id` are detected.
 
 - port:
 
