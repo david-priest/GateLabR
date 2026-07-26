@@ -30,6 +30,33 @@
     workspace$gate_order <- names(workspace$gates)
     if (is.null(workspace$gate_order)) workspace$gate_order <- character(0)
   }
+  # Older qs/RDS workspaces can deserialize coordinate pairs as unnamed
+  # two-element lists rather than numeric vectors. Coerce only structurally
+  # valid finite pairs; never alter their values or infer missing geometry.
+  if (is.list(workspace$gates)) {
+    workspace$gates <- lapply(workspace$gates, function(gate) {
+      if (!is.list(gate)) return(gate)
+      normalize_pair <- function(pair) {
+        candidate <- suppressWarnings(as.numeric(unlist(
+          pair,
+          use.names = FALSE
+        )))
+        if (length(candidate) == 2L && all(is.finite(candidate))) {
+          candidate
+        } else {
+          pair
+        }
+      }
+      if (is.list(gate$vertices)) {
+        gate$vertices <- lapply(gate$vertices, normalize_pair)
+      }
+      if (is.list(gate$center)) gate$center <- normalize_pair(gate$center)
+      if (is.list(gate$label_offset)) {
+        gate$label_offset <- normalize_pair(gate$label_offset)
+      }
+      gate
+    })
+  }
   workspace
 }
 

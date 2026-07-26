@@ -92,11 +92,46 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_identical(descriptor$samples[[1]]$assayByteLength, 16)
   expect_identical(descriptor$samples[[1]]$eventIndexByteLength, 8)
   expect_identical(descriptor$colDataColumns, c("sample_id", "batch"))
+  expect_identical(descriptor$rowDataRevision, 0)
 
   encoded <- jsonlite::toJSON(descriptor, auto_unbox = TRUE, null = "null")
   expect_match(encoded, '"encoding":"channel-major-float32-le"', fixed = TRUE)
   expect_match(encoded, '"coordinateSpace":"linear"', fixed = TRUE)
   expect_match(encoded, '"eventIndexEncoding":"uint32-le"', fixed = TRUE)
+})
+
+test_that("panel display labels write to revisioned rowData without replacing channel identity", {
+  sce <- make_host_bridge_sce()
+  written <- GateLabR:::.gatelabr_write_host_rowdata_labels(
+    sce,
+    expected_revision = 0,
+    changes = list(
+      list(channelId = "CD3", label = "T-cell marker"),
+      list(channelId = "CD19", label = "")
+    )
+  )
+
+  expect_identical(written$result$revision, 1)
+  expect_identical(written$result$changedChannelIds, "CD3")
+  expect_identical(
+    as.character(SummarizedExperiment::rowData(written$sce)$gatelabr_label),
+    c("T-cell marker", NA_character_)
+  )
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(written$sce)
+  expect_identical(descriptor$rowDataRevision, 1)
+  expect_identical(descriptor$channels[[1]]$id, "CD3")
+  expect_identical(descriptor$channels[[1]]$pnn, "Nd142Di")
+  expect_identical(descriptor$channels[[1]]$pns, "CD3")
+  expect_identical(descriptor$channels[[1]]$displayLabel, "T-cell marker")
+
+  expect_error(
+    GateLabR:::.gatelabr_write_host_rowdata_labels(
+      written$sce,
+      expected_revision = 0,
+      changes = list(list(channelId = "CD3", label = "stale"))
+    ),
+    "rowData revision"
+  )
 })
 
 test_that("lightweight sample partitions preserve identity without rescanning metadata", {
@@ -441,6 +476,40 @@ test_that("canonical hosted workspace writes are revisioned and mirrored atomica
   )
 })
 
+test_that("legacy workspaces restore list-encoded coordinate pairs without changing values", {
+  sce <- add_host_bridge_workspace(make_host_bridge_sce())
+  original <- S4Vectors::metadata(sce)$gating_workspace$gates[["gate-1"]]$vertices
+  S4Vectors::metadata(sce)$gating_workspace$gates[["gate-1"]]$gate_type <-
+    "polygon"
+  S4Vectors::metadata(sce)$gating_workspace$gates[["gate-1"]]$vertices <- list(
+    list(original[1, 1], original[1, 2]),
+    list(original[2, 1], original[2, 2]),
+    list(original[1, 1], original[2, 2])
+  )
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(
+    sce,
+    dataset_id = "test-sce"
+  )
+
+  expect_identical(envelope$sourceFormat, "gatelabr-legacy")
+  restored <- jsonlite::fromJSON(
+    envelope$workspaceJson,
+    simplifyVector = FALSE
+  )
+  vertices <- restored$gates[["gate-1"]]$vertices
+  expect_true(all(vapply(
+    vertices,
+    function(pair) is.numeric(unlist(pair)) && length(pair) == 2L,
+    logical(1)
+  )))
+  expect_equal(
+    unlist(vertices, use.names = FALSE),
+    c(original[1, 1], original[1, 2],
+      original[2, 1], original[2, 2],
+      original[1, 1], original[2, 2])
+  )
+})
+
 test_that("React host state survives a browser-session reconnect", {
   sce_name <- ".gatelabr_reconnect_test_sce"
   on.exit(
@@ -591,6 +660,52 @@ test_that("packed browser population masks write back in original SCE event orde
     as.character(SummarizedExperiment::colData(overwritten$sce)$CD3_positive),
     c("in", "out", "in")
   )
+})
+
+test_that("categorical sample and event annotations write atomically in SCE event order", {
+  sce <- make_host_bridge_sce()
+  column <- list(
+    columnName = "review_group",
+    levels = list("control", "stimulated"),
+    sampleValues = list(
+      list(
+        sampleId = "sample-0",
+        eventCount = 2L,
+        codesBase64 = base64enc::base64encode(as.raw(c(0L, 1L)))
+      ),
+      list(
+        sampleId = "sample-1",
+        eventCount = 1L,
+        constantCode = 255L
+      )
+    )
+  )
+  written <- GateLabR:::.gatelabr_write_host_categorical_coldata(
+    sce,
+    columns = list(column)
+  )
+
+  expect_identical(
+    as.character(SummarizedExperiment::colData(written$sce)$review_group),
+    c("control", "stimulated", NA_character_)
+  )
+  expect_identical(
+    unlist(written$result$columns[[1]]$valueCounts, use.names = TRUE),
+    c(control = 1L, stimulated = 1L)
+  )
+  expect_identical(written$result$columns[[1]]$missingCount, 1L)
+
+  bad <- column
+  bad$sampleValues[[1]]$codesBase64 <-
+    base64enc::base64encode(as.raw(c(0L, 2L)))
+  expect_error(
+    GateLabR:::.gatelabr_write_host_categorical_coldata(
+      sce,
+      columns = list(bad)
+    ),
+    "outside its declared levels"
+  )
+  expect_false("review_group" %in% colnames(SummarizedExperiment::colData(sce)))
 })
 
 test_that("host request dispatcher enforces dataset and colData contract identities", {
