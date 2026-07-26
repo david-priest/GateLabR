@@ -1,9 +1,10 @@
 #' Launch GateLabR with the canonical GateLab React interface
 #'
 #' Starts the shared GateLab TypeScript/React application with a thin Shiny
-#' adapter for a \code{SingleCellExperiment}. This is the migration interface;
-#' the established R/Shiny interface remains available through
-#' \code{\link{launchGatingApp}} until feature-parity validation is complete.
+#' adapter for a \code{SingleCellExperiment}. This is the default interface
+#' used by \code{\link{launchGatingApp}}. The previous GateLabR-specific Shiny
+#' interface remains available through \code{\link{launchLegacyGateLabR}} for
+#' one transition release.
 #'
 #' @param sce A \code{SingleCellExperiment}. If \code{NULL}, the first SCE in
 #'   the global environment is used.
@@ -220,9 +221,13 @@ launchReactGateLab <- function(
 .gatelabr_react_asset_dir <- function() {
   if (exists(".gatelabr_src_dir", inherits = TRUE) &&
       !is.null(.gatelabr_src_dir)) {
-    candidate <- file.path(.gatelabr_src_dir, "..", "inst", "react-app")
-    if (file.exists(file.path(candidate, "gatelab-embed.js"))) {
-      return(normalizePath(candidate))
+    for (candidate in c(
+      file.path(.gatelabr_src_dir, "inst", "react-app"),
+      file.path(.gatelabr_src_dir, "..", "inst", "react-app")
+    )) {
+      if (file.exists(file.path(candidate, "gatelab-embed.js"))) {
+        return(normalizePath(candidate))
+      }
     }
   }
   installed <- system.file("react-app", package = "GateLabR")

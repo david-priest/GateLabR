@@ -1,20 +1,20 @@
 Package: GateLabR
 Title: Interactive Manual Gating for SingleCellExperiment Objects
-Version: 1.3.0
+Version: 2.0.0
 Authors@R:
     person("David", "Priest", email = "david.priest898@gmail.com",
            role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0095-6718"))
-Description: A desktop-style Shiny application for interactive manual gating of
+Description: An interactive application for manual gating of
     flow cytometry and mass cytometry (CyTOF) data directly on
-    SingleCellExperiment objects. Supports polygon, rectangle and quadrant
-    gates, boolean population hierarchies, per-channel logicle / arcsinh
-    transforms, embedded-spillover compensation, GatingML 2.0 import and export,
-    FCS export, publication-style figure export, a cell-division (CFSE /
-    CellTrace dye-dilution) profiler that writes per-cell Div0..DivN calls back to
-    the object, and a colData composition-preview tab (stacked-bar and boxplot
-    proportions). Gates, populations and settings persist inside the object's
-    metadata.
+    SingleCellExperiment objects. The shared GateLab TypeScript and React
+    interface is hosted by a thin R adapter that streams SCE assays, performs
+    R-native compensation, and writes panel labels and event annotations back
+    to rowData and colData. Supports polygon, rectangle and quadrant gates,
+    positive-AND population hierarchies, explicit linear and transformed assay
+    spaces, GatingML 2.0 exchange, FCS export, publication-style figures, and a
+    cell-division profiler. Gates, populations, scales, assay bindings and
+    settings persist inside the object's metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
 URL: https://david-priest.github.io/GateLabR, https://github.com/david-priest/GateLabR

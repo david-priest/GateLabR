@@ -2,14 +2,21 @@
 % Please edit documentation in R/launch.R
 \name{launchGatingApp}
 \alias{launchGatingApp}
-\title{Launch the GateLabR interactive gating app}
+\title{Launch GateLabR}
 \usage{
-launchGatingApp(sce = NULL, port = NULL, launch.browser = TRUE)
+launchGatingApp(
+  sce = NULL,
+  sample_column = NULL,
+  port = NULL,
+  launch.browser = TRUE
+)
 }
 \arguments{
-\item{sce}{Optional \code{SingleCellExperiment}. If \code{NULL}, the app scans
-the global environment for any \code{SingleCellExperiment} objects and lets
-you pick one (or import FCS files directly).}
+\item{sce}{Optional \code{SingleCellExperiment}. If \code{NULL}, the first
+SCE in the global environment is used.}
+
+\item{sample_column}{Optional \code{colData} column defining samples. When
+omitted, common sample columns such as \code{sample_id} are detected.}
 
 \item{port}{Port for Shiny (default: auto-select).}
 
@@ -19,7 +26,8 @@ you pick one (or import FCS files directly).}
 Invisibly \code{NULL}; runs the Shiny app (blocking).
 }
 \description{
-Opens the GateLabR Shiny application in a browser. Works both from an
-installed package (\code{library(GateLabR); launchGatingApp()}) and from a
-source clone (\code{source("launch.R"); launchGatingApp()}).
+Opens the canonical GateLab React interface with a thin
+\code{SingleCellExperiment} host. Works both from an installed package
+(\code{library(GateLabR); launchGatingApp()}) and from a source clone
+(\code{source("launch.R"); launchGatingApp()}).
 }
