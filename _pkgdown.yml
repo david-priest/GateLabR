@@ -27,3 +27,4 @@ reference:
     contents:
       - launchGatingApp
       - launchReactGateLab
+      - launchLegacyGateLabR
