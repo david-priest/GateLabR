@@ -63,6 +63,11 @@ launchReactGateLab <- function(
   # outside the session closure ensures that saved workspace/colData changes
   # are served back to the reconnecting browser.
   sce_state <- shiny::reactiveVal(sce)
+  compensation_backend <- .gatelabr_start_compensation_backend()
+  on.exit(
+    .gatelabr_stop_compensation_backend(compensation_backend),
+    add = TRUE
+  )
   server <- .gatelabr_react_server(
     sce_state = sce_state,
     sce_name = sce_name,
@@ -91,8 +96,18 @@ launchReactGateLab <- function(
   force(sce_name)
   force(dataset_id)
   force(sample_column)
+  compensation_jobs <- .gatelabr_new_host_compensation_jobs()
 
   function(input, output, session) {
+    session$onSessionEnded(function() {
+      active <- compensation_jobs$active
+      if (!is.null(active) && identical(active$session, session)) {
+        .gatelabr_cancel_host_compensation_job(
+          compensation_jobs,
+          active$request_id
+        )
+      }
+    })
     shiny::observeEvent(input$gatelabr_react_ready, {
       .gatelabr_register_host_manifest(
         session,
@@ -110,6 +125,67 @@ launchReactGateLab <- function(
         request$requestId
       } else {
         ""
+      }
+      if (is.list(request) &&
+          identical(request$operation, "cancel-compensation") &&
+          is.list(request$payload) &&
+          is.character(request$payload$requestId) &&
+          length(request$payload$requestId) == 1L) {
+        .gatelabr_cancel_host_compensation_job(
+          compensation_jobs,
+          request$payload$requestId
+        )
+        return(invisible(NULL))
+      }
+      if (is.list(request) &&
+          identical(request$operation, "apply-compensation")) {
+        validation_error <- tryCatch(
+          {
+            if (!is.character(request_id) || length(request_id) != 1L ||
+                !nzchar(request_id) || !is.list(request$payload) ||
+                !identical(request$payload$datasetId, dataset_id)) {
+              stop(
+                "GateLab supplied a malformed host compensation request.",
+                call. = FALSE
+              )
+            }
+            contract_version <- suppressWarnings(
+              as.integer(request$payload$contractVersion)
+            )
+            if (length(contract_version) != 1L ||
+                is.na(contract_version) ||
+                !identical(
+                  contract_version,
+                  .gatelabr_host_compensation_contract_version
+                )) {
+              stop(
+                "GateLab supplied an incompatible compensation contract.",
+                call. = FALSE
+              )
+            }
+            NULL
+          },
+          error = identity
+        )
+        if (inherits(validation_error, "error")) {
+          .gatelabr_send_host_response(
+            session,
+            request_id,
+            FALSE,
+            error = conditionMessage(validation_error)
+          )
+        } else {
+          .gatelabr_start_host_compensation_job(
+            compensation_jobs,
+            sce_state,
+            sce_name,
+            request,
+            dataset_id,
+            sample_column,
+            session
+          )
+        }
+        return(invisible(NULL))
       }
       response <- tryCatch(
         {

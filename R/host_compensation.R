@@ -497,7 +497,7 @@
   )
 }
 
-.gatelabr_apply_host_compensation <- function(
+.gatelabr_prepare_host_compensation <- function(
     sce,
     dataset_id,
     profile_json,
@@ -583,48 +583,137 @@
 
   state <- .gatelabr_compensation_state(sce)
   output_assay <- .gatelabr_compensation_output_assay(sce, state)
-  if (output_assay %in% SummarizedExperiment::assayNames(sce)) {
+  output_existed <- output_assay %in%
+    SummarizedExperiment::assayNames(sce)
+  output_revision <- if (output_existed) {
+    .gatelabr_assay_revision(sce, output_assay)
+  } else {
+    0
+  }
+  if (output_existed) {
     output <- SummarizedExperiment::assay(sce, output_assay) + 0
   } else {
     output <- source + 0
   }
-  for (target_position in target_positions) {
-    event_indices <- partition$event_indices[[target_position]]
-    measured <- as.matrix(source[channel_positions, event_indices, drop = FALSE])
-    storage.mode(measured) <- "double"
-    if (any(!is.finite(measured))) {
-      stop("The SCE source assay contains non-finite compensation values.",
-           call. = FALSE)
-    }
-    if (identical(scientific$kind, "cytof-spillover")) {
-      solve_matrix <- .gatelabr_adapt_cytof_matrix(
-        validated$matrix,
-        scientific$includedChannels
-      )
-      solved <- .gatelabr_solve_cytof_events(
-        measured,
-        t(solve_matrix),
-        worker_count = worker_count
-      )
-    } else {
-      spill <- validated$matrix$matrix[
-        included,
-        included,
-        drop = FALSE
-      ]
-      inverse <- tryCatch(
-        solve(spill),
-        error = function(cause) {
-          stop("The flow spillover matrix is singular: ",
-               conditionMessage(cause), call. = FALSE)
-        }
-      )
-      solved <- t(t(measured) %*% inverse)
-    }
-    output[channel_positions, event_indices] <- solved
+  solve_design <- if (identical(scientific$kind, "cytof-spillover")) {
+    t(.gatelabr_adapt_cytof_matrix(
+      validated$matrix,
+      scientific$includedChannels
+    ))
+  } else {
+    spill <- validated$matrix$matrix[
+      included,
+      included,
+      drop = FALSE
+    ]
+    tryCatch(
+      solve(spill),
+      error = function(cause) {
+        stop("The flow spillover matrix is singular: ",
+             conditionMessage(cause), call. = FALSE)
+      }
+    )
+  }
+  target_event_indices <- lapply(
+    target_positions,
+    function(position) partition$event_indices[[position]]
+  )
+  target_event_counts <- vapply(
+    target_event_indices,
+    length,
+    integer(1)
+  )
+
+  list(
+    dataset_id = dataset_id,
+    profile = profile,
+    profile_json = profile_json,
+    scientific = scientific,
+    state = state,
+    source_assay = source_assay,
+    expected_source_revision = expected_revision,
+    source = source,
+    output_assay = output_assay,
+    output_existed = output_existed,
+    expected_output_revision = output_revision,
+    output = output,
+    channel_positions = channel_positions,
+    solve_design = solve_design,
+    worker_count = worker_count,
+    target_ids = target_ids,
+    active_ids = active_ids,
+    target_event_indices = target_event_indices,
+    target_event_counts = target_event_counts,
+    total_events = sum(as.double(target_event_counts)),
+    completed_events = 0
+  )
+}
+
+.gatelabr_solve_host_compensation_chunk <- function(
+    measured,
+    kind,
+    solve_design,
+    worker_count = 1L) {
+  if (!is.matrix(measured)) measured <- as.matrix(measured)
+  storage.mode(measured) <- "double"
+  if (any(!is.finite(measured))) {
+    stop("The SCE source assay contains non-finite compensation values.",
+         call. = FALSE)
+  }
+  if (identical(kind, "cytof-spillover")) {
+    return(.gatelabr_solve_cytof_events(
+      measured,
+      solve_design,
+      worker_count = worker_count
+    ))
+  }
+  t(t(measured) %*% solve_design)
+}
+
+.gatelabr_commit_host_compensation <- function(sce, prepared) {
+  assay_names <- SummarizedExperiment::assayNames(sce)
+  if (!prepared$source_assay %in% assay_names ||
+      .gatelabr_assay_revision(sce, prepared$source_assay) !=
+        prepared$expected_source_revision) {
+    stop(
+      "The SCE source assay changed while compensation was running; the staged result was discarded.",
+      call. = FALSE
+    )
+  }
+  output_exists_now <- prepared$output_assay %in% assay_names
+  if (!identical(output_exists_now, prepared$output_existed) ||
+      (output_exists_now &&
+       .gatelabr_assay_revision(sce, prepared$output_assay) !=
+         prepared$expected_output_revision)) {
+    stop(
+      "The SCE compensated assay changed while compensation was running; the staged result was discarded.",
+      call. = FALSE
+    )
+  }
+  if (prepared$completed_events != prepared$total_events) {
+    stop(
+      "The staged compensation result is incomplete and was not written to the SCE.",
+      call. = FALSE
+    )
+  }
+  source_now <- SummarizedExperiment::assay(sce, prepared$source_assay)
+  if (!identical(dim(source_now), dim(prepared$output))) {
+    stop(
+      "The SCE dimensions changed while compensation was running; the staged result was discarded.",
+      call. = FALSE
+    )
   }
 
-  SummarizedExperiment::assay(sce, output_assay) <- output
+  output_assay <- prepared$output_assay
+  state <- prepared$state
+  profile <- prepared$profile
+  target_ids <- prepared$target_ids
+  active_ids <- prepared$active_ids
+  source_assay <- prepared$source_assay
+  profile_json <- prepared$profile_json
+  dataset_id <- prepared$dataset_id
+
+  SummarizedExperiment::assay(sce, output_assay) <- prepared$output
   md <- S4Vectors::metadata(sce)
   spaces <- md$gatelabr_assay_coordinate_spaces
   if (!is.list(spaces)) spaces <- list()
@@ -704,6 +793,44 @@
       output_assay_id = output_assay
     )
   )
+}
+
+.gatelabr_apply_host_compensation <- function(
+    sce,
+    dataset_id,
+    profile_json,
+    targets,
+    worker_count = 1L,
+    sample_column = NULL) {
+  prepared <- .gatelabr_prepare_host_compensation(
+    sce,
+    dataset_id = dataset_id,
+    profile_json = profile_json,
+    targets = targets,
+    worker_count = worker_count,
+    sample_column = sample_column
+  )
+  for (target_index in seq_along(prepared$target_event_indices)) {
+    event_indices <- prepared$target_event_indices[[target_index]]
+    measured <- prepared$source[
+      prepared$channel_positions,
+      event_indices,
+      drop = FALSE
+    ]
+    solved <- .gatelabr_solve_host_compensation_chunk(
+      measured,
+      kind = prepared$scientific$kind,
+      solve_design = prepared$solve_design,
+      worker_count = prepared$worker_count
+    )
+    prepared$output[
+      prepared$channel_positions,
+      event_indices
+    ] <- solved
+    prepared$completed_events <-
+      prepared$completed_events + length(event_indices)
+  }
+  .gatelabr_commit_host_compensation(sce, prepared)
 }
 
 .gatelabr_adopt_host_compensation <- function(
