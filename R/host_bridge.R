@@ -219,9 +219,14 @@
   as.character(value)
 }
 
-.gatelabr_sample_partition <- function(sce, sample_column = NULL) {
-  cd <- as.data.frame(SummarizedExperiment::colData(sce))
+.gatelabr_sample_partition <- function(
+    sce,
+    sample_column = NULL,
+    include_metadata = TRUE) {
+  cd <- SummarizedExperiment::colData(sce)
   candidates <- c("sample_id", "sample", "file_name", "filename", "fcs_file")
+  include_metadata <- isTRUE(include_metadata)
+  metadata_cd <- if (include_metadata) as.data.frame(cd) else NULL
 
   if (!is.null(sample_column)) {
     if (length(sample_column) != 1L || !sample_column %in% colnames(cd)) {
@@ -240,13 +245,18 @@
   }
 
   levels <- unique(sample_values)
+  level_indices <- match(sample_values, levels)
+  event_indices <- unname(split(
+    seq_along(sample_values),
+    factor(level_indices, levels = seq_along(levels))
+  ))
   samples <- lapply(seq_along(levels), function(level_index) {
     level <- levels[[level_index]]
-    rows <- which(sample_values == level)
+    rows <- event_indices[[level_index]]
     metadata <- list()
-    if (ncol(cd) > 0L) {
-      for (field in colnames(cd)) {
-        values <- cd[[field]][rows]
+    if (include_metadata && ncol(metadata_cd) > 0L) {
+      for (field in colnames(metadata_cd)) {
+        values <- metadata_cd[[field]][rows]
         comparable <- as.character(values)
         comparable <- comparable[!is.na(comparable)]
         if (length(comparable) == 0L || length(unique(comparable)) != 1L) next
@@ -267,7 +277,7 @@
   list(
     column = sample_column,
     levels = levels,
-    event_indices = lapply(levels, function(level) which(sample_values == level)),
+    event_indices = event_indices,
     samples = samples
   )
 }
@@ -285,7 +295,8 @@
     sce,
     dataset_id = "gatelabr-sce",
     label = dataset_id,
-    sample_column = NULL) {
+    sample_column = NULL,
+    sample_partition = NULL) {
   if (!methods::is(sce, "SingleCellExperiment")) {
     stop("sce must be a SingleCellExperiment.", call. = FALSE)
   }
@@ -312,7 +323,9 @@
     assay_names[[1]]
   }
   event_count <- ncol(sce)
-  sample_partition <- .gatelabr_sample_partition(sce, sample_column)
+  if (is.null(sample_partition)) {
+    sample_partition <- .gatelabr_sample_partition(sce, sample_column)
+  }
 
   assays <- lapply(assay_names, function(assay_name) {
     list(
@@ -694,7 +707,11 @@
     )
   }
 
-  partition <- .gatelabr_sample_partition(sce, sample_column)
+  partition <- .gatelabr_sample_partition(
+    sce,
+    sample_column,
+    include_metadata = FALSE
+  )
   expected_sample_ids <- paste0(
     dataset_id,
     ":",
@@ -906,7 +923,11 @@
     stop("Select at least one population to export.", call. = FALSE)
   }
   overwrite <- isTRUE(overwrite)
-  partition <- .gatelabr_sample_partition(sce, sample_column)
+  partition <- .gatelabr_sample_partition(
+    sce,
+    sample_column,
+    include_metadata = FALSE
+  )
   expected_sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
   existing_columns <- colnames(SummarizedExperiment::colData(sce))
 
@@ -1135,13 +1156,14 @@
       !is.function(session$sendCustomMessage)) {
     stop("session must provide registerDataObj() and sendCustomMessage().", call. = FALSE)
   }
+  partition <- .gatelabr_sample_partition(sce, sample_column)
   descriptor <- .gatelabr_sce_dataset_descriptor(
     sce,
     dataset_id = dataset_id,
     label = label,
-    sample_column = sample_column
+    sample_column = sample_column,
+    sample_partition = partition
   )
-  partition <- .gatelabr_sample_partition(sce, sample_column)
   assay_names <- SummarizedExperiment::assayNames(sce)
 
   resources <- lapply(seq_along(descriptor$samples), function(sample_index) {

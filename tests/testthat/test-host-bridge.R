@@ -99,6 +99,51 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_match(encoded, '"eventIndexEncoding":"uint32-le"', fixed = TRUE)
 })
 
+test_that("lightweight sample partitions preserve identity without rescanning metadata", {
+  sce <- make_host_bridge_sce()
+  complete <- GateLabR:::.gatelabr_sample_partition(
+    sce,
+    include_metadata = TRUE
+  )
+  lightweight <- GateLabR:::.gatelabr_sample_partition(
+    sce,
+    include_metadata = FALSE
+  )
+
+  expect_identical(lightweight$column, complete$column)
+  expect_identical(lightweight$levels, complete$levels)
+  expect_identical(lightweight$event_indices, complete$event_indices)
+  expect_identical(
+    vapply(lightweight$samples, `[[`, character(1), "id"),
+    vapply(complete$samples, `[[`, character(1), "id")
+  )
+  expect_identical(
+    vapply(lightweight$samples, `[[`, integer(1), "eventCount"),
+    vapply(complete$samples, `[[`, integer(1), "eventCount")
+  )
+  expect_true(all(vapply(
+    lightweight$samples,
+    function(sample) length(sample$metadata) == 0L,
+    logical(1)
+  )))
+  expect_identical(complete$samples[[1]]$metadata$batch, "one")
+})
+
+test_that("dataset descriptors can reuse one precomputed sample partition", {
+  sce <- make_host_bridge_sce()
+  partition <- GateLabR:::.gatelabr_sample_partition(sce)
+  partition$samples[[1]]$label <- "Cached donor"
+
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(
+    sce,
+    dataset_id = "test-sce",
+    sample_partition = partition
+  )
+
+  expect_identical(descriptor$samples[[1]]$label, "Cached donor")
+  expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
+})
+
 test_that("assay roles distinguish uncompensated expression from compensation", {
   sce <- make_host_bridge_sce()
   counts <- SummarizedExperiment::assay(sce, "counts")
