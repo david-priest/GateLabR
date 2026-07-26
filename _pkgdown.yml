@@ -26,3 +26,4 @@ reference:
   - title: Launching the app
     contents:
       - launchGatingApp
+      - launchReactGateLab
