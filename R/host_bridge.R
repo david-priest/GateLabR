@@ -1087,6 +1087,37 @@
     }
     return(applied)
   }
+  if (identical(request$operation, "adopt-compensated-assay")) {
+    contract_version <- suppressWarnings(as.integer(payload$contractVersion))
+    if (length(contract_version) != 1L || is.na(contract_version) ||
+        !identical(
+          contract_version,
+          .gatelabr_host_compensation_contract_version
+        )) {
+      stop("GateLab supplied an incompatible compensation contract.",
+           call. = FALSE)
+    }
+    adopted <- .gatelabr_adopt_host_compensation(
+      sce,
+      dataset_id = dataset_id,
+      profile_json = payload$profileJson,
+      output_assay_id = payload$outputAssayId,
+      expected_output_assay_revision =
+        payload$expectedOutputAssayRevision,
+      targets = payload$targets,
+      sample_column = sample_column
+    )
+    if (!is.null(session)) {
+      adopted$result$targets <- .gatelabr_register_host_compensation_targets(
+        session,
+        adopted$sce,
+        adopted$result,
+        dataset_id = dataset_id,
+        sample_column = sample_column
+      )
+    }
+    return(adopted)
+  }
   stop("Unsupported GateLab host operation '", request$operation, "'.", call. = FALSE)
 }
 
