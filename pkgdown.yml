@@ -3,7 +3,7 @@ pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   getting-started: getting-started.html
-last_built: 2026-07-26T04:30Z
+last_built: 2026-07-26T04:50Z
 urls:
   reference: https://david-priest.github.io/GateLabR/reference
   article: https://david-priest.github.io/GateLabR/articles
