@@ -27,7 +27,8 @@ Invisibly \code{NULL}; runs the Shiny app (blocking).
 }
 \description{
 Starts the shared GateLab TypeScript/React application with a thin Shiny
-adapter for a \code{SingleCellExperiment}. This is the migration interface;
-the established R/Shiny interface remains available through
-\code{\link{launchGatingApp}} until feature-parity validation is complete.
+adapter for a \code{SingleCellExperiment}. This is the default interface
+used by \code{\link{launchGatingApp}}. The previous GateLabR-specific Shiny
+interface remains available through \code{\link{launchLegacyGateLabR}} for
+one transition release.
 }

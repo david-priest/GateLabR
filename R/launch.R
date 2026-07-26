@@ -1,20 +1,47 @@
-#' Launch the GateLabR interactive gating app
+#' Launch GateLabR
 #'
-#' Opens the GateLabR Shiny application in a browser. Works both from an
-#' installed package (\code{library(GateLabR); launchGatingApp()}) and from a
-#' source clone (\code{source("launch.R"); launchGatingApp()}).
+#' Opens the canonical GateLab React interface with a thin
+#' \code{SingleCellExperiment} host. Works both from an installed package
+#' (\code{library(GateLabR); launchGatingApp()}) and from a source clone
+#' (\code{source("launch.R"); launchGatingApp()}).
 #'
-#' @param sce Optional \code{SingleCellExperiment}. If \code{NULL}, the app scans
-#'   the global environment for any \code{SingleCellExperiment} objects and lets
-#'   you pick one (or import FCS files directly).
+#' @param sce Optional \code{SingleCellExperiment}. If \code{NULL}, the first
+#'   SCE in the global environment is used.
+#' @param sample_column Optional \code{colData} column defining samples. When
+#'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny (default: auto-select).
 #' @param launch.browser Whether to open a browser window (default: \code{TRUE}).
 #' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
 #' @export
-launchGatingApp <- function(sce = NULL, port = NULL, launch.browser = TRUE) {
+launchGatingApp <- function(
+    sce = NULL,
+    sample_column = NULL,
+    port = NULL,
+    launch.browser = TRUE) {
+  launchReactGateLab(
+    sce = sce,
+    sample_column = sample_column,
+    port = port,
+    launch.browser = launch.browser
+  )
+}
+
+#' Launch the previous GateLabR Shiny interface
+#'
+#' Opens the original GateLabR-specific Shiny application. This transition
+#' launcher remains available for workflows that have not yet moved to the
+#' shared React interface, including the former Shiny-only UMAP view.
+#'
+#' @inheritParams launchGatingApp
+#' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
+#' @export
+launchLegacyGateLabR <- function(
+    sce = NULL,
+    port = NULL,
+    launch.browser = TRUE) {
   app_dir <- .gatelabr_app_dir()
 
-  # Say which copy is running. When sourced, launchGatingApp lives in the global
+  # Say which copy is running. When sourced, the launcher lives in the global
   # environment and shadows the installed package's, so this disambiguates.
   installed <- system.file("app", package = "GateLabR")
   is_installed <- nzchar(installed) &&
@@ -74,8 +101,12 @@ launchGatingApp <- function(sce = NULL, port = NULL, launch.browser = TRUE) {
   # edits take effect — even if an installed copy also exists. Fall back to the
   # installed package when loaded as a library (no source dir captured).
   if (!is.null(.gatelabr_src_dir)) {
-    dev <- file.path(.gatelabr_src_dir, "..", "inst", "app")
-    if (file.exists(file.path(dev, "app.R"))) return(normalizePath(dev))
+    for (dev in c(
+      file.path(.gatelabr_src_dir, "inst", "app"),
+      file.path(.gatelabr_src_dir, "..", "inst", "app")
+    )) {
+      if (file.exists(file.path(dev, "app.R"))) return(normalizePath(dev))
+    }
   }
   d <- system.file("app", package = "GateLabR")
   if (nzchar(d) && file.exists(file.path(d, "app.R"))) return(d)
