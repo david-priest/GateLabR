@@ -179,6 +179,26 @@ test_that("GateLabR reproduces the shared R and TypeScript CyTOF oracle", {
       actual_events[, match(gate$yChannel, input_channels)] /
         gate$cofactor
     )
+    expected_x <- asinh(
+      expected_events[, match(gate$xChannel, input_channels)] /
+        gate$cofactor
+    )
+    expected_y <- asinh(
+      expected_events[, match(gate$yChannel, input_channels)] /
+        gate$cofactor
+    )
+    expect_equal(
+      x,
+      expected_x,
+      tolerance = 2e-12,
+      info = paste(fixture$name, "transformed x coordinates")
+    )
+    expect_equal(
+      y,
+      expected_y,
+      tolerance = 2e-12,
+      info = paste(fixture$name, "transformed y coordinates")
+    )
     vertices <- oracle_numeric_matrix(gate$vertices)
     members <- which(
       x >= min(vertices[, 1]) &
