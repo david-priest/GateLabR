@@ -7,6 +7,7 @@
 .gatelabr_dataset_contract_version <- 1L
 .gatelabr_workspace_contract_version <- 1L
 .gatelabr_coldata_contract_version <- 1L
+.gatelabr_rowdata_contract_version <- 1L
 
 .gatelabr_canonical_workspace_record <- function(sce) {
   canonical <- S4Vectors::metadata(sce)$gatelab_workspace
@@ -128,6 +129,10 @@
     sce,
     c("gatelabr_pns", "pns", "$pns", "fcs_pns", "marker", "desc", "description")
   )
+  display_labels <- .gatelabr_first_rowdata_field(
+    sce,
+    c("gatelabr_label")
+  )
 
   lapply(seq_along(ids), function(index) {
     channel <- list(id = ids[[index]], label = labels[[index]])
@@ -139,8 +144,23 @@
         !is.na(pns[[index]]) && nzchar(pns[[index]])) {
       channel$pns <- pns[[index]]
     }
+    if (!is.null(display_labels) && length(display_labels) >= index &&
+        !is.na(display_labels[[index]]) &&
+        nzchar(trimws(display_labels[[index]]))) {
+      channel$displayLabel <- trimws(display_labels[[index]])
+    }
     channel
   })
+}
+
+.gatelabr_rowdata_revision <- function(sce) {
+  revision <- suppressWarnings(
+    as.numeric(S4Vectors::metadata(sce)$gatelabr_rowdata_revision)
+  )
+  if (length(revision) != 1L || !is.finite(revision) || revision < 0) {
+    return(0)
+  }
+  revision
 }
 
 .gatelabr_assay_name_traits <- function(assay_name) {
@@ -457,7 +477,8 @@
     assays = assays,
     defaultAssayId = default_assay,
     samples = sample_partition$samples,
-    colDataColumns = colnames(SummarizedExperiment::colData(sce))
+    colDataColumns = colnames(SummarizedExperiment::colData(sce)),
+    rowDataRevision = .gatelabr_rowdata_revision(sce)
   )
 }
 
@@ -1146,6 +1167,259 @@
   )
 }
 
+.gatelabr_decode_categorical_codes <- function(
+    sample_values,
+    event_count,
+    level_count,
+    column_name,
+    sample_id) {
+  has_constant <- !is.null(sample_values$constantCode)
+  has_payload <- is.character(sample_values$codesBase64) &&
+    length(sample_values$codesBase64) == 1L &&
+    !is.na(sample_values$codesBase64) &&
+    nzchar(sample_values$codesBase64)
+  if (identical(has_constant, has_payload)) {
+    stop(
+      "Categorical column '", column_name, "' must provide exactly one of ",
+      "constantCode or codesBase64 for sample '", sample_id, "'.",
+      call. = FALSE
+    )
+  }
+  if (has_constant) {
+    code <- suppressWarnings(as.integer(sample_values$constantCode))
+    if (length(code) != 1L || is.na(code)) {
+      stop(
+        "Categorical column '", column_name,
+        "' has an invalid constant code for sample '", sample_id, "'.",
+        call. = FALSE
+      )
+    }
+    codes <- rep.int(code, event_count)
+  } else {
+    raw <- tryCatch(
+      base64enc::base64decode(sample_values$codesBase64),
+      error = function(...) raw(0)
+    )
+    if (length(raw) != event_count) {
+      stop(
+        "Categorical column '", column_name, "' has ", length(raw),
+        " codes for sample '", sample_id, "'; expected ", event_count, ".",
+        call. = FALSE
+      )
+    }
+    codes <- as.integer(raw)
+  }
+  valid <- codes == 255L | (codes >= 0L & codes < level_count)
+  if (anyNA(valid) || any(!valid)) {
+    stop(
+      "Categorical column '", column_name,
+      "' contains a code outside its declared levels for sample '",
+      sample_id, "'.",
+      call. = FALSE
+    )
+  }
+  codes
+}
+
+.gatelabr_write_host_categorical_coldata <- function(
+    sce,
+    columns,
+    overwrite = FALSE,
+    sample_column = NULL) {
+  if (!is.list(columns) || length(columns) == 0L) {
+    stop("Select at least one categorical column to write.", call. = FALSE)
+  }
+  overwrite <- isTRUE(overwrite)
+  partition <- .gatelabr_sample_partition(
+    sce,
+    sample_column,
+    include_metadata = FALSE
+  )
+  expected_sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
+  existing_columns <- colnames(SummarizedExperiment::colData(sce))
+
+  prepared <- lapply(columns, function(column) {
+    if (!is.list(column)) {
+      stop("A categorical colData entry is malformed.", call. = FALSE)
+    }
+    column_name <- as.character(column$columnName)
+    if (length(column_name) != 1L || is.na(column_name) ||
+        !nzchar(trimws(column_name))) {
+      stop("Categorical colData names must be non-empty strings.",
+           call. = FALSE)
+    }
+    column_name <- trimws(column_name)
+    if (column_name %in% existing_columns && !overwrite) {
+      stop(
+        "colData already contains '", column_name,
+        "'. Enable overwrite or choose another name.",
+        call. = FALSE
+      )
+    }
+    levels <- as.character(unlist(column$levels, use.names = FALSE))
+    if (length(levels) >= 255L || anyNA(levels) ||
+        any(!nzchar(levels)) || anyDuplicated(levels)) {
+      stop(
+        "Categorical column '", column_name,
+        "' must declare fewer than 255 unique, non-empty levels.",
+        call. = FALSE
+      )
+    }
+    sample_values <- column$sampleValues
+    if (!is.list(sample_values) ||
+        length(sample_values) != length(expected_sample_ids)) {
+      stop(
+        "Categorical column '", column_name,
+        "' does not contain one value payload per SCE sample.",
+        call. = FALSE
+      )
+    }
+    sample_ids <- vapply(sample_values, function(value) {
+      if (!is.list(value) || !is.character(value$sampleId) ||
+          length(value$sampleId) != 1L) return("")
+      value$sampleId
+    }, character(1))
+    if (anyDuplicated(sample_ids) || !setequal(sample_ids, expected_sample_ids)) {
+      stop(
+        "Categorical column '", column_name,
+        "' has mismatched SCE sample identities.",
+        call. = FALSE
+      )
+    }
+
+    values <- rep(NA_character_, ncol(sce))
+    for (sample_index in seq_along(expected_sample_ids)) {
+      sample_id <- expected_sample_ids[[sample_index]]
+      supplied <- sample_values[[match(sample_id, sample_ids)]]
+      expected_events <- length(partition$event_indices[[sample_index]])
+      supplied_events <- suppressWarnings(as.integer(supplied$eventCount))
+      if (length(supplied_events) != 1L || is.na(supplied_events) ||
+          supplied_events != expected_events) {
+        stop(
+          "Categorical column '", column_name,
+          "' has the wrong event count for sample '", sample_id, "'.",
+          call. = FALSE
+        )
+      }
+      codes <- .gatelabr_decode_categorical_codes(
+        supplied,
+        expected_events,
+        length(levels),
+        column_name,
+        sample_id
+      )
+      present <- codes != 255L
+      sample_result <- rep(NA_character_, expected_events)
+      if (any(present)) sample_result[present] <- levels[codes[present] + 1L]
+      values[partition$event_indices[[sample_index]]] <- sample_result
+    }
+    list(column_name = column_name, levels = levels, values = values)
+  })
+  column_names <- vapply(prepared, `[[`, character(1), "column_name")
+  if (anyDuplicated(column_names)) {
+    stop("Each categorical colData write needs a unique column name.",
+         call. = FALSE)
+  }
+
+  cd <- SummarizedExperiment::colData(sce)
+  for (entry in prepared) {
+    cd[[entry$column_name]] <- factor(entry$values, levels = entry$levels)
+  }
+  SummarizedExperiment::colData(sce) <- cd
+  list(
+    sce = sce,
+    result = list(columns = lapply(prepared, function(entry) {
+      counts <- table(
+        factor(entry$values, levels = entry$levels),
+        useNA = "no"
+      )
+      list(
+        columnName = entry$column_name,
+        valueCounts = as.list(as.integer(counts)) |>
+          stats::setNames(names(counts)),
+        missingCount = sum(is.na(entry$values))
+      )
+    }))
+  )
+}
+
+.gatelabr_write_host_rowdata_labels <- function(
+    sce,
+    expected_revision,
+    changes) {
+  current_revision <- .gatelabr_rowdata_revision(sce)
+  expected_revision <- suppressWarnings(as.numeric(expected_revision))
+  if (length(expected_revision) != 1L || !is.finite(expected_revision) ||
+      !identical(expected_revision, current_revision)) {
+    stop(
+      "Panel labels do not match the current SCE rowData revision.",
+      call. = FALSE
+    )
+  }
+  if (!is.list(changes) || length(changes) == 0L) {
+    stop("Select at least one panel label to write.", call. = FALSE)
+  }
+  descriptors <- .gatelabr_channel_descriptors(sce)
+  channel_ids <- vapply(descriptors, `[[`, character(1), "id")
+  prepared <- lapply(changes, function(change) {
+    if (!is.list(change) || !is.character(change$channelId) ||
+        length(change$channelId) != 1L || is.na(change$channelId) ||
+        !is.character(change$label) || length(change$label) != 1L ||
+        is.na(change$label)) {
+      stop("A panel-label write entry is malformed.", call. = FALSE)
+    }
+    channel_id <- change$channelId
+    position <- match(channel_id, channel_ids)
+    if (is.na(position)) {
+      stop("Panel label targets unknown channel '", channel_id, "'.",
+           call. = FALSE)
+    }
+    label <- trimws(change$label)
+    if (nchar(label, type = "chars") > 1024L) {
+      stop("Panel labels cannot exceed 1024 characters.", call. = FALSE)
+    }
+    list(channel_id = channel_id, position = position, label = label)
+  })
+  supplied_ids <- vapply(prepared, `[[`, character(1), "channel_id")
+  if (anyDuplicated(supplied_ids)) {
+    stop("Each panel channel may be written only once.", call. = FALSE)
+  }
+
+  rd <- SummarizedExperiment::rowData(sce)
+  current <- if ("gatelabr_label" %in% colnames(rd)) {
+    as.character(rd$gatelabr_label)
+  } else {
+    rep(NA_character_, nrow(sce))
+  }
+  next_labels <- current
+  for (entry in prepared) {
+    next_labels[[entry$position]] <- if (nzchar(entry$label)) {
+      entry$label
+    } else {
+      NA_character_
+    }
+  }
+  changed <- !(
+    (is.na(current) & is.na(next_labels)) |
+      (!is.na(current) & !is.na(next_labels) & current == next_labels)
+  )
+  changed_ids <- channel_ids[changed]
+  if (any(changed)) {
+    rd$gatelabr_label <- next_labels
+    SummarizedExperiment::rowData(sce) <- rd
+    md <- S4Vectors::metadata(sce)
+    md$gatelabr_rowdata_revision <- current_revision + 1
+    S4Vectors::metadata(sce) <- md
+  }
+  list(
+    sce = sce,
+    result = list(
+      revision = if (any(changed)) current_revision + 1 else current_revision,
+      changedChannelIds = unname(changed_ids)
+    )
+  )
+}
+
 .gatelabr_handle_host_request <- function(
     sce,
     request,
@@ -1186,6 +1460,33 @@
       columns = payload$columns,
       overwrite = payload$overwrite,
       sample_column = sample_column
+    ))
+  }
+  if (identical(request$operation, "write-categorical-coldata")) {
+    contract_version <- suppressWarnings(as.integer(payload$contractVersion))
+    if (length(contract_version) != 1L || is.na(contract_version) ||
+        !identical(contract_version, .gatelabr_coldata_contract_version)) {
+      stop("GateLab supplied an incompatible categorical colData contract.",
+           call. = FALSE)
+    }
+    return(.gatelabr_write_host_categorical_coldata(
+      sce,
+      columns = payload$columns,
+      overwrite = payload$overwrite,
+      sample_column = sample_column
+    ))
+  }
+  if (identical(request$operation, "write-rowdata-labels")) {
+    contract_version <- suppressWarnings(as.integer(payload$contractVersion))
+    if (length(contract_version) != 1L || is.na(contract_version) ||
+        !identical(contract_version, .gatelabr_rowdata_contract_version)) {
+      stop("GateLab supplied an incompatible rowData contract.",
+           call. = FALSE)
+    }
+    return(.gatelabr_write_host_rowdata_labels(
+      sce,
+      expected_revision = payload$expectedRevision,
+      changes = payload$changes
     ))
   }
   if (identical(request$operation, "apply-compensation")) {
