@@ -99,6 +99,44 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_match(encoded, '"eventIndexEncoding":"uint32-le"', fixed = TRUE)
 })
 
+test_that("assay roles distinguish uncompensated expression from compensation", {
+  sce <- make_host_bridge_sce()
+  counts <- SummarizedExperiment::assay(sce, "counts")
+  exprs <- SummarizedExperiment::assay(sce, "exprs")
+  SummarizedExperiment::assay(sce, "exprs_uncomp") <- exprs
+  SummarizedExperiment::assay(sce, "counts_uncomp") <- counts
+  SummarizedExperiment::assay(sce, "compcounts") <- counts
+  SummarizedExperiment::assay(sce, "compexprs") <- exprs
+  SummarizedExperiment::assay(sce, "custom_display_comp") <- exprs
+  metadata <- S4Vectors::metadata(sce)
+  metadata$gatelabr_assay_roles <- list(
+    custom_display_comp = "compensated"
+  )
+  metadata$gatelabr_assay_coordinate_spaces <- list(
+    custom_display_comp = "display"
+  )
+  S4Vectors::metadata(sce) <- metadata
+
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce)
+  assays <- setNames(descriptor$assays, vapply(
+    descriptor$assays,
+    `[[`,
+    character(1),
+    "id"
+  ))
+
+  expect_identical(assays$exprs_uncomp$role, "transformed")
+  expect_identical(assays$exprs_uncomp$coordinateSpace, "display")
+  expect_identical(assays$counts_uncomp$role, "counts")
+  expect_identical(assays$counts_uncomp$coordinateSpace, "linear")
+  expect_identical(assays$compcounts$role, "compensated")
+  expect_identical(assays$compcounts$coordinateSpace, "linear")
+  expect_identical(assays$compexprs$role, "compensated")
+  expect_identical(assays$compexprs$coordinateSpace, "display")
+  expect_identical(assays$custom_display_comp$role, "compensated")
+  expect_identical(assays$custom_display_comp$coordinateSpace, "display")
+})
+
 test_that("assay payload is channel-major Float32 little-endian", {
   sce <- make_host_bridge_sce()
   path <- tempfile(fileext = ".f32")

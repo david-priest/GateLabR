@@ -589,6 +589,9 @@
   spaces <- md$gatelabr_assay_coordinate_spaces
   if (!is.list(spaces)) spaces <- list()
   spaces[[output_assay]] <- "linear"
+  roles <- md$gatelabr_assay_roles
+  if (!is.list(roles)) roles <- list()
+  roles[[output_assay]] <- "compensated"
   revisions <- md$gatelabr_assay_revisions
   if (!is.list(revisions)) revisions <- list()
   previous_revision <- suppressWarnings(as.numeric(revisions[[output_assay]]))
@@ -642,6 +645,7 @@
   )
   state$applications <- c(retained, list(application))
   md$gatelabr_assay_coordinate_spaces <- spaces
+  md$gatelabr_assay_roles <- roles
   md$gatelabr_assay_revisions <- revisions
   md$gatelabr_compensation <- state
   S4Vectors::metadata(sce) <- md

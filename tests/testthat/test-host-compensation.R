@@ -136,6 +136,10 @@ test_that("R host CyTOF Apply is transactional and preserves unchecked events", 
     "linear"
   )
   expect_identical(
+    S4Vectors::metadata(handled$sce)$gatelabr_assay_roles[[output_name]],
+    "compensated"
+  )
+  expect_identical(
     handled$result$application$outputAssay$role,
     "compensated"
   )
