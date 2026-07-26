@@ -648,10 +648,10 @@
     stop("GateLab supplied an unsupported workspace format.", call. = FALSE)
   }
   version <- suppressWarnings(as.integer(parsed$version))
-  if (length(version) != 1L || is.na(version) || !identical(version, 2L)) {
+  if (length(version) != 1L || is.na(version) ||
+      !version %in% c(2L, 3L)) {
     stop(
-      "GateLabR can currently store version 2 hosted workspaces only. ",
-      "A compensation-profile workspace must remain in GateLab until hosted assay persistence is available.",
+      "GateLabR can store GateLab workspace versions 2 and 3 only.",
       call. = FALSE
     )
   }
@@ -673,6 +673,56 @@
   }, character(1))
   if (!identical(actual_sample_ids, expected_sample_ids)) {
     stop("The workspace sample identities no longer match this SCE.", call. = FALSE)
+  }
+  if (identical(version, 3L)) {
+    if (!is.list(parsed$compensation) ||
+        !is.list(parsed$compensation$lineages)) {
+      stop("The version 3 workspace has invalid compensation state.",
+           call. = FALSE)
+    }
+    state <- .gatelabr_compensation_state(sce)
+    for (sample_index in seq_along(samples)) {
+      assay <- samples[[sample_index]]$assay
+      if (!is.list(assay) ||
+          !identical(assay$schema, "gatelab.sample-assay-binding.v1")) {
+        stop("The version 3 workspace has an invalid sample assay binding.",
+             call. = FALSE)
+      }
+      binding <- assay$compensatedLayer
+      if (is.null(binding)) next
+      if (!is.list(binding) || !is.character(binding$profileId) ||
+          length(binding$profileId) != 1L) {
+        stop("The version 3 workspace has an invalid compensated layer.",
+             call. = FALSE)
+      }
+      sample_id <- substring(
+        actual_sample_ids[[sample_index]],
+        nchar(dataset_id) + 2L
+      )
+      application <- Filter(
+        function(candidate) {
+          identical(candidate$profile_id, binding$profileId) &&
+            sample_id %in% candidate$target_sample_ids &&
+            candidate$output_assay_id %in%
+              SummarizedExperiment::assayNames(sce)
+        },
+        state$applications
+      )
+      if (length(application) != 1L) {
+        stop(
+          "The workspace refers to a compensated assay that is not current in this SCE.",
+          call. = FALSE
+        )
+      }
+      stored_profile <- jsonlite::fromJSON(
+        application[[1]]$profile_json,
+        simplifyVector = FALSE
+      )
+      if (!identical(stored_profile$profileHash, binding$profileHash)) {
+        stop("The workspace compensation profile does not match the SCE assay.",
+             call. = FALSE)
+      }
+    }
   }
 
   legacy <- .gatelabr_legacy_workspace_from_canonical(parsed, sce)
@@ -932,7 +982,8 @@
     sce,
     request,
     dataset_id,
-    sample_column = NULL) {
+    sample_column = NULL,
+    session = NULL) {
   if (!is.list(request) || !is.character(request$operation) ||
       length(request$operation) != 1L || !is.list(request$payload)) {
     stop("GateLab supplied a malformed host request.", call. = FALSE)
@@ -968,6 +1019,35 @@
       overwrite = payload$overwrite,
       sample_column = sample_column
     ))
+  }
+  if (identical(request$operation, "apply-compensation")) {
+    contract_version <- suppressWarnings(as.integer(payload$contractVersion))
+    if (length(contract_version) != 1L || is.na(contract_version) ||
+        !identical(
+          contract_version,
+          .gatelabr_host_compensation_contract_version
+        )) {
+      stop("GateLab supplied an incompatible compensation contract.",
+           call. = FALSE)
+    }
+    applied <- .gatelabr_apply_host_compensation(
+      sce,
+      dataset_id = dataset_id,
+      profile_json = payload$profileJson,
+      targets = payload$targets,
+      worker_count = payload$workerCount,
+      sample_column = sample_column
+    )
+    if (!is.null(session)) {
+      applied$result$targets <- .gatelabr_register_host_compensation_targets(
+        session,
+        applied$sce,
+        applied$result,
+        dataset_id = dataset_id,
+        sample_column = sample_column
+      )
+    }
+    return(applied)
   }
   stop("Unsupported GateLab host operation '", request$operation, "'.", call. = FALSE)
 }
@@ -1036,7 +1116,9 @@
     workspace = .gatelabr_host_workspace_envelope(
       sce,
       dataset_id = dataset_id
-    )
+    ),
+    compensationApplications =
+      .gatelabr_host_compensation_applications(sce, dataset_id)
   )
   session$sendCustomMessage(message_type, manifest)
   invisible(manifest)

@@ -12,6 +12,7 @@ test_that("bundled GateLab core has pinned, internally consistent provenance", {
   expect_identical(provenance$datasetContractVersion, 1L)
   expect_identical(provenance$workspaceContractVersion, 1L)
   expect_identical(provenance$colDataContractVersion, 1L)
+  expect_identical(provenance$compensationContractVersion, 1L)
 
   files <- unlist(provenance$files, use.names = TRUE)
   expect_true(is.character(files))
