@@ -58,8 +58,41 @@ launchReactGateLab <- function(
     substr(gsub("[^A-Za-z0-9_-]", "-", sce_name), 1L, 48L)
   )
   ui <- .gatelabr_react_ui(prefix)
-  server <- function(input, output, session) {
-    sce_state <- shiny::reactiveVal(sce)
+  # This state belongs to the running app, not to an individual browser
+  # connection. A page reload creates a new Shiny session; keeping the state
+  # outside the session closure ensures that saved workspace/colData changes
+  # are served back to the reconnecting browser.
+  sce_state <- shiny::reactiveVal(sce)
+  server <- .gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = dataset_id,
+    sample_column = sample_column
+  )
+
+  message(
+    "GateLabR: launching the shared GateLab React interface\n",
+    "  SCE: ", sce_name, "\n",
+    "  Core assets: ", assets
+  )
+  shiny::runApp(
+    shiny::shinyApp(ui = ui, server = server),
+    port = port,
+    launch.browser = launch.browser
+  )
+}
+
+.gatelabr_react_server <- function(
+    sce_state,
+    sce_name,
+    dataset_id,
+    sample_column = NULL) {
+  force(sce_state)
+  force(sce_name)
+  force(dataset_id)
+  force(sample_column)
+
+  function(input, output, session) {
     shiny::observeEvent(input$gatelabr_react_ready, {
       .gatelabr_register_host_manifest(
         session,
@@ -106,17 +139,6 @@ launchReactGateLab <- function(
       session$sendCustomMessage("gatelabr-host-response", response)
     }, ignoreInit = TRUE)
   }
-
-  message(
-    "GateLabR: launching the shared GateLab React interface\n",
-    "  SCE: ", sce_name, "\n",
-    "  Core assets: ", assets
-  )
-  shiny::runApp(
-    shiny::shinyApp(ui = ui, server = server),
-    port = port,
-    launch.browser = launch.browser
-  )
 }
 
 .gatelabr_react_asset_dir <- function() {

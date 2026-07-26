@@ -441,6 +441,55 @@ test_that("canonical hosted workspace writes are revisioned and mirrored atomica
   )
 })
 
+test_that("React host state survives a browser-session reconnect", {
+  sce_name <- ".gatelabr_reconnect_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+  sce_state <- shiny::reactiveVal(make_host_bridge_sce())
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce"
+  )
+  request <- list(
+    requestId = "write-1",
+    operation = "write-workspace",
+    payload = list(
+      datasetId = "test-sce",
+      expectedRevision = 0L,
+      clientRevision = 7L,
+      reason = "explicit",
+      workspaceJson = canonical_host_workspace_json()
+    )
+  )
+
+  suppressWarnings(shiny::testServer(server, {
+    session$flushReact()
+    session$setInputs(gatelabr_host_request = request)
+    session$flushReact()
+  }))
+  expect_identical(
+    GateLabR:::.gatelabr_canonical_workspace_record(
+      shiny::isolate(sce_state())
+    )$revision,
+    1L
+  )
+
+  # A page reload creates a second Shiny session backed by the same app-level
+  # state. Its manifest must therefore expose the revision written above.
+  suppressWarnings(shiny::testServer(server, {
+    reconnect_revision <- GateLabR:::.gatelabr_host_workspace_envelope(
+      shiny::isolate(sce_state()),
+      dataset_id = "test-sce"
+    )$revision
+    expect_identical(reconnect_revision, 1L)
+  }))
+})
+
 test_that("host workspace validation rejects mismatched SCE and compensated v3 state", {
   sce <- make_host_bridge_sce()
   wrong_dataset <- sub(
