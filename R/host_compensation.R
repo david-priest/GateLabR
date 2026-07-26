@@ -15,6 +15,7 @@
   "gatelab.compensation-profile-record.v1"
 .gatelabr_r_cytof_solver <- "r-nnls-v1"
 .gatelabr_r_flow_solver <- "r-matrix-inverse-v1"
+.gatelabr_r_adopted_solver <- "r-external-precomputed-v1"
 
 .gatelabr_comp_json_array <- function(values) {
   unname(lapply(values, jsonlite::unbox))
@@ -270,7 +271,10 @@
   .gatelabr_comp_sha256(payload)
 }
 
-.gatelabr_validate_host_compensation_profile <- function(profile_json) {
+.gatelabr_validate_host_compensation_profile <- function(
+    profile_json,
+    purpose = c("apply", "adopt")) {
+  purpose <- match.arg(purpose)
   if (!is.character(profile_json) || length(profile_json) != 1L ||
       is.na(profile_json) || !nzchar(profile_json)) {
     stop("profileJson must contain one compensation profile.", call. = FALSE)
@@ -295,18 +299,38 @@
          call. = FALSE)
   }
   if (identical(scientific$kind, "cytof-spillover")) {
+    allowed_solver <- if (identical(purpose, "apply")) {
+      .gatelabr_r_cytof_solver
+    } else {
+      .gatelabr_r_adopted_solver
+    }
     if (!identical(scientific$method, "nnls") ||
-        !identical(scientific$solverVersion,
-                   .gatelabr_r_cytof_solver)) {
-      stop("CyTOF SCE Apply requires the R NNLS solver identity.",
-           call. = FALSE)
+        !identical(scientific$solverVersion, allowed_solver)) {
+      stop(
+        if (identical(purpose, "apply")) {
+          "CyTOF SCE Apply requires the R NNLS solver identity."
+        } else {
+          "CyTOF assay adoption requires the external precomputed solver identity."
+        },
+        call. = FALSE
+      )
     }
   } else if (identical(scientific$kind, "flow-spillover")) {
+    allowed_solver <- if (identical(purpose, "apply")) {
+      .gatelabr_r_flow_solver
+    } else {
+      .gatelabr_r_adopted_solver
+    }
     if (!identical(scientific$method, "matrix-inverse") ||
-        !identical(scientific$solverVersion,
-                   .gatelabr_r_flow_solver)) {
-      stop("Flow SCE Apply requires the R matrix solver identity.",
-           call. = FALSE)
+        !identical(scientific$solverVersion, allowed_solver)) {
+      stop(
+        if (identical(purpose, "apply")) {
+          "Flow SCE Apply requires the R matrix solver identity."
+        } else {
+          "Flow assay adoption requires the external precomputed solver identity."
+        },
+        call. = FALSE
+      )
     }
   } else {
     stop("The compensation kind is unsupported.", call. = FALSE)
@@ -423,7 +447,10 @@
 
 .gatelabr_compensation_output_assay <- function(sce, state) {
   managed <- unique(vapply(
-    state$applications,
+    Filter(
+      function(application) !identical(application$managed_output, FALSE),
+      state$applications
+    ),
     function(application) as.character(application$output_assay_id),
     character(1)
   ))
@@ -442,16 +469,25 @@
     sce,
     dataset_id) {
   output_assay <- application$output_assay_id
+  execution <- if (identical(
+    application$execution,
+    "adopted-existing-assay"
+  )) {
+    "adopted-existing-assay"
+  } else {
+    "computed"
+  }
   list(
     contractVersion = .gatelabr_host_compensation_contract_version,
     datasetId = dataset_id,
     profileJson = application$profile_json,
     sourceAssayId = application$source_assay_id,
+    execution = execution,
     outputAssay = list(
       id = output_assay,
       label = output_assay,
       role = "compensated",
-      coordinateSpace = "linear",
+      coordinateSpace = .gatelabr_assay_coordinate_space(sce, output_assay),
       revision = .gatelabr_assay_revision(sce, output_assay),
       encoding = "channel-major-float32-le"
     ),
@@ -635,6 +671,8 @@
     source_assay_id = source_assay,
     output_assay_id = output_assay,
     output_assay_revision = revisions[[output_assay]],
+    execution = "computed",
+    managed_output = TRUE,
     target_sample_ids = merged_targets,
     active_sample_ids = merged_active,
     applied_at = format(
@@ -660,6 +698,217 @@
       ),
       target_sample_ids = target_ids,
       output_assay_id = output_assay
+    )
+  )
+}
+
+.gatelabr_adopt_host_compensation <- function(
+    sce,
+    dataset_id,
+    profile_json,
+    output_assay_id,
+    expected_output_assay_revision,
+    targets,
+    sample_column = NULL) {
+  validated <- .gatelabr_validate_host_compensation_profile(
+    profile_json,
+    purpose = "adopt"
+  )
+  profile <- validated$profile
+  scientific <- profile$scientific
+  assay_names <- SummarizedExperiment::assayNames(sce)
+  if (!is.character(output_assay_id) || length(output_assay_id) != 1L ||
+      is.na(output_assay_id) || !output_assay_id %in% assay_names) {
+    stop("The existing compensated assay is not present in the SCE.",
+         call. = FALSE)
+  }
+  if (!identical(
+    .gatelabr_assay_coordinate_space(sce, output_assay_id),
+    "linear"
+  )) {
+    stop(
+      "Only a linear existing SCE assay can be adopted as compensated data.",
+      call. = FALSE
+    )
+  }
+  output_revision <- .gatelabr_assay_revision(sce, output_assay_id)
+  supplied_output_revision <- suppressWarnings(
+    as.numeric(expected_output_assay_revision)
+  )
+  if (length(supplied_output_revision) != 1L ||
+      !is.finite(supplied_output_revision) ||
+      supplied_output_revision != output_revision) {
+    stop("The existing compensated assay changed before adoption.",
+         call. = FALSE)
+  }
+  if (!is.list(targets) || length(targets) == 0L) {
+    stop("Assay adoption requires at least one SCE sample.", call. = FALSE)
+  }
+  source_assays <- unique(vapply(targets, function(target) {
+    as.character(target$sourceAssayId)
+  }, character(1)))
+  if (length(source_assays) != 1L ||
+      !source_assays[[1]] %in% assay_names) {
+    stop("Assay adoption targets must use one current SCE source assay.",
+         call. = FALSE)
+  }
+  source_assay <- source_assays[[1]]
+  if (identical(source_assay, output_assay_id)) {
+    stop("The original and compensated assays must be different.",
+         call. = FALSE)
+  }
+  if (!identical(
+    .gatelabr_assay_coordinate_space(sce, source_assay),
+    "linear"
+  )) {
+    stop("The source assay must use linear coordinates.", call. = FALSE)
+  }
+  source_revision <- .gatelabr_assay_revision(sce, source_assay)
+  for (target in targets) {
+    supplied_revision <- suppressWarnings(
+      as.numeric(target$expectedAssayRevision)
+    )
+    if (length(supplied_revision) != 1L ||
+        !is.finite(supplied_revision) ||
+        supplied_revision != source_revision) {
+      stop("The SCE source assay changed before adoption.", call. = FALSE)
+    }
+  }
+
+  source <- SummarizedExperiment::assay(sce, source_assay)
+  output <- SummarizedExperiment::assay(sce, output_assay_id)
+  if (!identical(dim(source), dim(output))) {
+    stop(
+      "The existing compensated assay must have the same dimensions as the source assay.",
+      call. = FALSE
+    )
+  }
+  if (!is.numeric(output)) {
+    stop("The existing compensated assay must be numerical.", call. = FALSE)
+  }
+
+  partition <- .gatelabr_sample_partition(sce, sample_column)
+  sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
+  target_ids <- unique(vapply(
+    targets,
+    function(target) as.character(target$sampleId),
+    character(1)
+  ))
+  target_positions <- match(target_ids, sample_ids)
+  if (anyNA(target_positions)) {
+    stop("An assay-adoption target no longer exists in the SCE.",
+         call. = FALSE)
+  }
+  active_ids <- unique(vapply(targets, function(target) {
+    if (identical(target$activeLayer, "compensated")) {
+      as.character(target$sampleId)
+    } else {
+      ""
+    }
+  }, character(1)))
+  active_ids <- active_ids[nzchar(active_ids)]
+
+  pnns <- .gatelabr_host_channel_pnns(sce)
+  if (anyDuplicated(pnns)) {
+    stop("The SCE has duplicate exact channel identities.", call. = FALSE)
+  }
+  included <- if (identical(scientific$kind, "cytof-spillover")) {
+    .gatelabr_comp_axis(scientific$includedChannels, "Included")
+  } else {
+    validated$matrix$receiverChannels
+  }
+  channel_positions <- match(included, pnns)
+  if (anyNA(channel_positions)) {
+    stop(
+      "Compensation channels are absent from the SCE: ",
+      paste(included[is.na(channel_positions)], collapse = ", "),
+      ".",
+      call. = FALSE
+    )
+  }
+  event_indices <- unlist(
+    partition$event_indices[target_positions],
+    use.names = FALSE
+  )
+  adopted_values <- output[
+    channel_positions,
+    event_indices,
+    drop = FALSE
+  ]
+  if (any(!is.finite(adopted_values))) {
+    stop(
+      "The existing compensated assay contains non-finite values in the adopted samples.",
+      call. = FALSE
+    )
+  }
+
+  md <- S4Vectors::metadata(sce)
+  spaces <- md$gatelabr_assay_coordinate_spaces
+  if (!is.list(spaces)) spaces <- list()
+  spaces[[output_assay_id]] <- "linear"
+  roles <- md$gatelabr_assay_roles
+  if (!is.list(roles)) roles <- list()
+  roles[[output_assay_id]] <- "compensated"
+  revisions <- md$gatelabr_assay_revisions
+  if (!is.list(revisions)) revisions <- list()
+  if (is.null(revisions[[output_assay_id]])) {
+    revisions[[output_assay_id]] <- output_revision
+  }
+
+  state <- .gatelabr_compensation_state(sce)
+  retained <- list()
+  for (application in state$applications) {
+    same_output <- identical(
+      as.character(application$output_assay_id),
+      output_assay_id
+    )
+    unaffected <- if (same_output) {
+      setdiff(application$target_sample_ids, target_ids)
+    } else {
+      application$target_sample_ids
+    }
+    if (length(unaffected) > 0L) {
+      application$target_sample_ids <- unaffected
+      application$active_sample_ids <- intersect(
+        application$active_sample_ids,
+        unaffected
+      )
+      retained[[length(retained) + 1L]] <- application
+    }
+  }
+  application <- list(
+    profile_id = profile$profileId,
+    profile_json = profile_json,
+    source_assay_id = source_assay,
+    output_assay_id = output_assay_id,
+    output_assay_revision = output_revision,
+    execution = "adopted-existing-assay",
+    managed_output = FALSE,
+    target_sample_ids = target_ids,
+    active_sample_ids = active_ids,
+    applied_at = format(
+      as.POSIXct(Sys.time(), tz = "UTC"),
+      "%Y-%m-%dT%H:%M:%OS3Z",
+      tz = "UTC"
+    )
+  )
+  state$applications <- c(retained, list(application))
+  md$gatelabr_assay_coordinate_spaces <- spaces
+  md$gatelabr_assay_roles <- roles
+  md$gatelabr_assay_revisions <- revisions
+  md$gatelabr_compensation <- state
+  S4Vectors::metadata(sce) <- md
+
+  list(
+    sce = sce,
+    result = list(
+      application = .gatelabr_host_compensation_application_descriptor(
+        application,
+        sce,
+        dataset_id
+      ),
+      target_sample_ids = target_ids,
+      output_assay_id = output_assay_id
     )
   )
 }
