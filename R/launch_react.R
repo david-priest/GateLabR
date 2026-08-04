@@ -65,7 +65,17 @@ launchReactGateLab <- function(
   # about their data before they gate on it.
   precompensation <- tryCatch(
     .gatelabr_precompensation_note(sce),
-    error = function(...) NULL
+    error = function(cause) {
+      # Never fail a launch over an advisory note, but never swallow it either:
+      # a silent NULL is indistinguishable from "nothing detected", which sends
+      # anyone debugging an assay-role question down the wrong path.
+      warning(
+        "GateLabR could not check whether this SCE is already compensated: ",
+        conditionMessage(cause),
+        call. = FALSE
+      )
+      NULL
+    }
   )
   if (!is.null(precompensation)) message(precompensation)
 
