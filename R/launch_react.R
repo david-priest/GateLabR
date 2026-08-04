@@ -1,10 +1,8 @@
 #' Launch GateLabR with the canonical GateLab React interface
 #'
 #' Starts the shared GateLab TypeScript/React application with a thin Shiny
-#' adapter for a \code{SingleCellExperiment}. This is the default interface
-#' used by \code{\link{launchGatingApp}}. The previous GateLabR-specific Shiny
-#' interface remains available through \code{\link{launchLegacyGateLabR}} for
-#' one transition release.
+#' adapter for a \code{SingleCellExperiment}. This is the interface started by
+#' \code{\link{launchGatingApp}}, which is the single supported entry point.
 #'
 #' @param sce A \code{SingleCellExperiment}. If \code{NULL}, the first SCE in
 #'   the global environment is used.

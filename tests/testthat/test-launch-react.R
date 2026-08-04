@@ -43,7 +43,7 @@ test_that("launchGatingApp delegates to the shared React SCE launcher", {
   ))
 })
 
-test_that("source-clone launcher exposes both default and legacy entry points", {
+test_that("source-clone launcher exposes one React entry point and no legacy UI", {
   source_launcher <- test_path("..", "..", "launch.R")
   skip_if_not(
     file.exists(source_launcher),
@@ -54,5 +54,8 @@ test_that("source-clone launcher exposes both default and legacy entry points", 
 
   expect_true(is.function(environment$launchGatingApp))
   expect_true(is.function(environment$launchReactGateLab))
-  expect_true(is.function(environment$launchLegacyGateLabR))
+  # The previous GateLabR-specific Shiny UI is retired: there must be no way to
+  # start it, from a source clone or an installed package.
+  expect_null(environment$launchLegacyGateLabR)
+  expect_false(exists("launchLegacyGateLabR", envir = asNamespace("GateLabR")))
 })
