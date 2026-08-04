@@ -61,6 +61,23 @@ launchReactGateLab <- function(
     "GateLabR will save gates, populations and colData back to `", sce_name,
     "` in your global environment."
   )
+  # Likewise for an inferred assay role: the user must know what was assumed
+  # about their data before they gate on it.
+  precompensation <- tryCatch(
+    .gatelabr_precompensation_note(sce),
+    error = function(cause) {
+      # Never fail a launch over an advisory note, but never swallow it either:
+      # a silent NULL is indistinguishable from "nothing detected", which sends
+      # anyone debugging an assay-role question down the wrong path.
+      warning(
+        "GateLabR could not check whether this SCE is already compensated: ",
+        conditionMessage(cause),
+        call. = FALSE
+      )
+      NULL
+    }
+  )
+  if (!is.null(precompensation)) message(precompensation)
 
   assets <- .gatelabr_react_asset_dir()
   prefix <- paste0(
