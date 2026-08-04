@@ -736,3 +736,66 @@ test_that("host request dispatcher enforces dataset and colData contract identit
     "different SCE dataset"
   )
 })
+
+test_that("a workspace write never leaks the accessory into the user's SCE", {
+  # The whole design rests on this: sce_state is both what is served to React and
+  # what is assigned back to the user's global on every write, including autosave.
+  # The accessory is deliberately kept out of it, so a full write must leave the
+  # primary's assays and metadata keys exactly as they were.
+  skip_if_not_installed("shiny")
+  sce_name <- ".gatelabr_accessory_leak_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+
+  primary <- make_host_bridge_sce()
+  accessory <- primary
+  SummarizedExperiment::assay(accessory, "counts") <-
+    SummarizedExperiment::assay(primary, "counts") / 2
+
+  before_assays <- SummarizedExperiment::assayNames(primary)
+  before_metadata <- names(S4Vectors::metadata(primary))
+
+  sce_state <- shiny::reactiveVal(primary)
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce",
+    accessory = accessory
+  )
+  request <- list(
+    requestId = "write-1",
+    operation = "write-workspace",
+    payload = list(
+      datasetId = "test-sce",
+      expectedRevision = 0L,
+      clientRevision = 7L,
+      reason = "autosave",
+      workspaceJson = canonical_host_workspace_json()
+    )
+  )
+
+  suppressWarnings(shiny::testServer(server, {
+    session$flushReact()
+    session$setInputs(gatelabr_host_request = request)
+    session$flushReact()
+  }))
+
+  written <- get(sce_name, envir = .GlobalEnv)
+  expect_identical(SummarizedExperiment::assayNames(written), before_assays)
+  expect_false("gatelabr_uncompensated" %in% SummarizedExperiment::assayNames(written))
+  # Only workspace keys may appear; no accessory bookkeeping.
+  expect_true(all(before_metadata %in% names(S4Vectors::metadata(written))))
+  expect_identical(
+    SummarizedExperiment::assay(written, "counts"),
+    SummarizedExperiment::assay(primary, "counts")
+  )
+  # And the accessory itself is untouched.
+  expect_identical(
+    SummarizedExperiment::assay(accessory, "counts"),
+    SummarizedExperiment::assay(primary, "counts") / 2
+  )
+})

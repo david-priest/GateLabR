@@ -5,6 +5,9 @@
 # payloads that become Float32Array views in GateLab.
 
 .gatelabr_dataset_contract_version <- 1L
+# Assay id for a read-only uncompensated accessory SCE. Namespaced so it can
+# never collide with a real assay name in the primary object.
+.gatelabr_accessory_assay_id <- "gatelabr_uncompensated"
 .gatelabr_workspace_contract_version <- 1L
 .gatelabr_coldata_contract_version <- 1L
 .gatelabr_rowdata_contract_version <- 1L
@@ -218,7 +221,7 @@
 
 # Describe any pre-compensation GateLabR inferred, so the assumption is stated
 # rather than silent. NULL when nothing was inferred.
-.gatelabr_precompensation_note <- function(sce) {
+.gatelabr_precompensation_note <- function(sce, accessory = NULL) {
   names <- tryCatch(SummarizedExperiment::assayNames(sce), error = function(...) NULL)
   if (is.null(names)) return(NULL)
   overrides <- S4Vectors::metadata(sce)$gatelabr_assay_roles
@@ -226,7 +229,7 @@
     # An explicit role override is the user's decision; never narrate it.
     if (is.list(overrides) && !is.null(overrides[[name]])) next
     if (!.gatelabr_assay_name_traits(name)$transformed) next
-    found <- .gatelabr_transformed_assay_compensation(sce, name)
+    found <- .gatelabr_transformed_assay_compensation(sce, name, accessory)
     if (!isTRUE(found$compensated)) next
     reason <- switch(
       found$evidence,
@@ -267,17 +270,141 @@
 # CATALYST and related R pipelines leave the spillover matrix in metadata().
 # Finding it both proves compensation happened and supplies the matrix itself,
 # so a pre-compensated SCE need not be re-derived or hand-declared.
-.gatelabr_sce_spillover_matrix <- function(sce) {
-  md <- S4Vectors::metadata(sce)
-  for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
-    value <- md[[key]]
-    if (is.matrix(value) && is.numeric(value) && nrow(value) > 0L &&
-        ncol(value) > 0L && !is.null(rownames(value)) &&
-        !is.null(colnames(value))) {
-      return(value)
+.gatelabr_sce_spillover_matrix <- function(sce, accessory = NULL) {
+  # The matrix may live on either object: a workflow that compensates in place
+  # often keeps the matrix beside the uncompensated copy it started from.
+  # The primary wins when both carry one.
+  for (candidate in list(sce, accessory)) {
+    if (is.null(candidate)) next
+    md <- S4Vectors::metadata(candidate)
+    for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
+      value <- md[[key]]
+      if (is.matrix(value) && is.numeric(value) && nrow(value) > 0L &&
+          ncol(value) > 0L && !is.null(rownames(value)) &&
+          !is.null(colnames(value))) {
+        return(value)
+      }
     }
   }
   NULL
+}
+
+# Validate an accessory (uncompensated) SCE against the primary before it is
+# served alongside it. Event indices are derived from the PRIMARY's colData and
+# then used to slice the accessory's payload, so any difference in cell count,
+# cell order or channel order would silently produce a wrong before/after
+# comparison. Reject rather than coerce: a misaligned comparison that still
+# renders is worse than a refusal.
+.gatelabr_validate_accessory_sce <- function(sce, accessory, sample_column = NULL) {
+  if (!methods::is(accessory, "SingleCellExperiment")) {
+    stop("`uncompensated` must be a SingleCellExperiment.", call. = FALSE)
+  }
+  if (ncol(accessory) != ncol(sce)) {
+    stop(
+      "`uncompensated` has ", ncol(accessory), " cells but the SCE has ",
+      ncol(sce), ". They must describe exactly the same cells.",
+      call. = FALSE
+    )
+  }
+  if (nrow(accessory) != nrow(sce)) {
+    stop(
+      "`uncompensated` has ", nrow(accessory), " channels but the SCE has ",
+      nrow(sce), ". They must describe exactly the same channels.",
+      call. = FALSE
+    )
+  }
+  if (!identical(rownames(accessory), rownames(sce))) {
+    stop(
+      "`uncompensated` channels differ from the SCE's, or are in a different ",
+      "order. Channel identity and order must match exactly.",
+      call. = FALSE
+    )
+  }
+
+  primary_cells <- colnames(sce)
+  accessory_cells <- colnames(accessory)
+  if (!is.null(primary_cells) || !is.null(accessory_cells)) {
+    if (!identical(primary_cells, accessory_cells)) {
+      stop(
+        "`uncompensated` cell names differ from the SCE's, or are in a ",
+        "different order. Cell identity and order must match exactly.",
+        call. = FALSE
+      )
+    }
+  } else {
+    # Neither object names its cells, so pin the order through the sample
+    # partition instead — otherwise nothing constrains cell correspondence.
+    primary_partition <- .gatelabr_sample_partition(sce, sample_column)
+    accessory_partition <- tryCatch(
+      .gatelabr_sample_partition(accessory, sample_column),
+      error = function(...) NULL
+    )
+    if (is.null(accessory_partition) ||
+        !identical(primary_partition$levels, accessory_partition$levels) ||
+        !identical(primary_partition$event_indices, accessory_partition$event_indices)) {
+      stop(
+        "`uncompensated` has unnamed cells whose sample grouping does not ",
+        "match the SCE's. Cell order cannot be verified, so the comparison ",
+        "would be meaningless.",
+        call. = FALSE
+      )
+    }
+  }
+
+  accessory_counts <- .gatelabr_counts_assay_name(accessory)
+  if (is.null(accessory_counts)) {
+    stop(
+      "`uncompensated` has no linear counts assay to compare against. ",
+      "Its assays are: ",
+      paste(SummarizedExperiment::assayNames(accessory), collapse = ", "), ".",
+      call. = FALSE
+    )
+  }
+
+  primary_counts <- .gatelabr_counts_assay_name(sce)
+  if (!is.null(primary_counts)) {
+    identical_values <- tryCatch(
+      .gatelabr_assays_match(sce, primary_counts, accessory, accessory_counts),
+      error = function(...) NA
+    )
+    if (isTRUE(identical_values)) {
+      warning(
+        "`uncompensated` holds the same values as the SCE's `", primary_counts,
+        "` assay, so the Original/Compensated comparison would show no ",
+        "difference. Check that the intended uncompensated object was passed.",
+        call. = FALSE
+      )
+    }
+  }
+
+  list(counts_assay = accessory_counts)
+}
+
+# Bounded-sample equality between one assay of each of two SCEs. Mirrors the
+# sampling used by .gatelabr_transformed_assay_matches_counts().
+.gatelabr_assays_match <- function(sce, assay_name, other, other_assay_name,
+                                   tolerance = 1e-9) {
+  n_events <- ncol(sce)
+  if (n_events == 0L) return(NA)
+  index <- if (n_events > 2000L) {
+    unique(round(seq(1, n_events, length.out = 2000L)))
+  } else {
+    seq_len(n_events)
+  }
+  left <- tryCatch(
+    as.matrix(SummarizedExperiment::assay(sce, assay_name)[, index, drop = FALSE]),
+    error = function(...) NULL
+  )
+  right <- tryCatch(
+    as.matrix(SummarizedExperiment::assay(other, other_assay_name)[, index, drop = FALSE]),
+    error = function(...) NULL
+  )
+  if (is.null(left) || is.null(right) || !identical(dim(left), dim(right))) {
+    return(NA)
+  }
+  usable <- is.finite(left) & is.finite(right)
+  if (!any(usable)) return(NA)
+  max(abs(left[usable] - right[usable])) <= tolerance
 }
 
 .gatelabr_counts_assay_name <- function(sce) {
@@ -331,12 +458,13 @@
 # Decide whether a display-space assay already carries compensation, and say
 # why. Returns compensated (TRUE/FALSE), the evidence used, and the spillover
 # matrix when the object carries one.
-.gatelabr_transformed_assay_compensation <- function(sce, assay_name) {
+.gatelabr_transformed_assay_compensation <- function(sce, assay_name,
+                                                     accessory = NULL) {
   none <- list(compensated = FALSE, evidence = "none", spillover = NULL,
                counts_assay = NULL)
   counts_name <- .gatelabr_counts_assay_name(sce)
   if (is.null(counts_name) || identical(counts_name, assay_name)) return(none)
-  spillover <- .gatelabr_sce_spillover_matrix(sce)
+  spillover <- .gatelabr_sce_spillover_matrix(sce, accessory)
   matches <- .gatelabr_transformed_assay_matches_counts(sce, assay_name, counts_name)
   if (isTRUE(matches)) {
     # Plain transform of the counts assay: not independently compensated, even
@@ -578,7 +706,9 @@
     dataset_id = "gatelabr-sce",
     label = dataset_id,
     sample_column = NULL,
-    sample_partition = NULL) {
+    sample_partition = NULL,
+    accessory = NULL,
+    accessory_assay = NULL) {
   if (!methods::is(sce, "SingleCellExperiment")) {
     stop("sce must be a SingleCellExperiment.", call. = FALSE)
   }
@@ -619,6 +749,39 @@
       encoding = "channel-major-float32-le"
     )
   })
+
+  if (!is.null(accessory)) {
+    # GateLab loads exactly one linear assay as its base ("Original") layer, and
+    # picks the FIRST descriptor whose role is "counts" in linear space. The
+    # accessory therefore has to lead the list, and the primary's own linear
+    # counts must stop claiming that role — which is honest here, since supplying
+    # an uncompensated accessory asserts the primary is the compensated one. The
+    # primary's assay stays advertised and linear, so it remains adoptable as the
+    # Compensated layer.
+    if (is.null(accessory_assay)) {
+      accessory_assay <- .gatelabr_counts_assay_name(accessory)
+    }
+    if (is.null(accessory_assay)) {
+      stop("The uncompensated SCE has no linear counts assay.", call. = FALSE)
+    }
+    assays <- lapply(assays, function(entry) {
+      if (identical(entry$role, "counts") &&
+          identical(entry$coordinateSpace, "linear")) {
+        entry$role <- "compensated"
+      }
+      entry
+    })
+    accessory_entry <- list(
+      id = .gatelabr_accessory_assay_id,
+      label = "Uncompensated",
+      role = "counts",
+      coordinateSpace = "linear",
+      revision = .gatelabr_assay_revision(accessory, accessory_assay),
+      encoding = "channel-major-float32-le"
+    )
+    assays <- c(list(accessory_entry), assays)
+    default_assay <- .gatelabr_accessory_assay_id
+  }
 
   list(
     contractVersion = .gatelabr_dataset_contract_version,
@@ -1713,11 +1876,17 @@
     dataset_id = "gatelabr-sce",
     label = dataset_id,
     sample_column = NULL,
-    message_type = "gatelabr-host-manifest") {
+    message_type = "gatelabr-host-manifest",
+    accessory = NULL) {
   if (is.null(session) ||
       !is.function(session$registerDataObj) ||
       !is.function(session$sendCustomMessage)) {
     stop("session must provide registerDataObj() and sendCustomMessage().", call. = FALSE)
+  }
+  accessory_assay <- if (is.null(accessory)) {
+    NULL
+  } else {
+    .gatelabr_counts_assay_name(accessory)
   }
   partition <- .gatelabr_sample_partition(sce, sample_column)
   descriptor <- .gatelabr_sce_dataset_descriptor(
@@ -1725,7 +1894,9 @@
     dataset_id = dataset_id,
     label = label,
     sample_column = sample_column,
-    sample_partition = partition
+    sample_partition = partition,
+    accessory = accessory,
+    accessory_assay = accessory_assay
   )
   assay_names <- SummarizedExperiment::assayNames(sce)
 
@@ -1750,6 +1921,19 @@
       }),
       assay_names
     )
+    if (!is.null(accessory)) {
+      # Served straight from the accessory object, which is never placed in
+      # sce_state and so can never reach the user's global on a writeback.
+      # Sliced by the PRIMARY's event indices — validated cell-identical.
+      assay_urls[[.gatelabr_accessory_assay_id]] <-
+        .gatelabr_register_assay_resource(
+          session,
+          paste0(prefix, "-assay-uncompensated"),
+          accessory,
+          accessory_assay,
+          event_indices
+        )
+    }
     event_url <- .gatelabr_register_event_index_resource(
       session,
       paste0(prefix, "-events"),

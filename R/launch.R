@@ -11,13 +11,20 @@
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny (default: auto-select).
 #' @param launch.browser Whether to open a browser window (default: \code{TRUE}).
+#' @param uncompensated Optional read-only \code{SingleCellExperiment} holding the
+#'   pre-compensation values for the same cells, for workflows that compensate in
+#'   place and keep the original in a separate object. It is served as the
+#'   Original layer for comparison and is never modified or written back; only
+#'   \code{sce} is saved to. Cell count, cell order and channels must match
+#'   exactly or the launch is refused.
 #' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
 #' @export
 launchGatingApp <- function(
     sce = NULL,
     sample_column = NULL,
     port = NULL,
-    launch.browser = TRUE) {
+    launch.browser = TRUE,
+    uncompensated = NULL) {
   # Forward the caller's own symbol. substitute() resolves in THIS frame, so
   # without this the callee would only ever see the local parameter name `sce`
   # and would write every result back to a global called "sce" instead of the
@@ -28,7 +35,8 @@ launchGatingApp <- function(
     sample_column = sample_column,
     port = port,
     launch.browser = launch.browser,
-    sce_name = if (is.symbol(supplied)) deparse(supplied) else ""
+    sce_name = if (is.symbol(supplied)) deparse(supplied) else "",
+    uncompensated = uncompensated
   )
 }
 
