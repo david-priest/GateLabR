@@ -18,11 +18,17 @@ launchGatingApp <- function(
     sample_column = NULL,
     port = NULL,
     launch.browser = TRUE) {
+  # Forward the caller's own symbol. substitute() resolves in THIS frame, so
+  # without this the callee would only ever see the local parameter name `sce`
+  # and would write every result back to a global called "sce" instead of the
+  # object the user launched on.
+  supplied <- substitute(sce)
   launchReactGateLab(
     sce = sce,
     sample_column = sample_column,
     port = port,
-    launch.browser = launch.browser
+    launch.browser = launch.browser,
+    sce_name = if (is.symbol(supplied)) deparse(supplied) else ""
   )
 }
 

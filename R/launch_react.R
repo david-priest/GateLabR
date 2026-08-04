@@ -10,14 +10,29 @@
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny (default: auto-select).
 #' @param launch.browser Whether to open a browser window (default: \code{TRUE}).
+#' @param sce_name Optional name of the global-environment variable that gates,
+#'   populations and \code{colData} are written back to. Defaults to the symbol
+#'   the caller passed as \code{sce}. Delegating wrappers must forward the user's
+#'   symbol explicitly, because \code{substitute()} would otherwise resolve to
+#'   the wrapper's own parameter name.
 #' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
 #' @export
 launchReactGateLab <- function(
     sce = NULL,
     sample_column = NULL,
     port = NULL,
-    launch.browser = TRUE) {
-  sce_name <- deparse(substitute(sce))
+    launch.browser = TRUE,
+    sce_name = NULL) {
+  # Resolve the global-environment name that gates, populations and colData are
+  # written back to. substitute() only sees the CALLER's argument expression, so
+  # a delegating wrapper (launchGatingApp) must forward the user's own symbol —
+  # otherwise every write lands on a variable literally named "sce". Only a bare
+  # symbol is a usable target: an inline call such as launchGatingApp(readRDS(f))
+  # has no name to write back to and falls through to the explicit default.
+  if (is.null(sce_name)) {
+    supplied <- substitute(sce)
+    sce_name <- if (is.symbol(supplied)) deparse(supplied) else ""
+  }
   if (is.null(sce)) {
     candidates <- ls(envir = .GlobalEnv)
     candidates <- candidates[vapply(candidates, function(name) {
@@ -41,6 +56,11 @@ launchReactGateLab <- function(
     if (!nzchar(sce_name) || identical(sce_name, "NULL")) sce_name <- "gatelabr_sce"
     assign(sce_name, sce, envir = .GlobalEnv)
   }
+  # Say it out loud: silent writeback to a guessed name is how work goes missing.
+  message(
+    "GateLabR will save gates, populations and colData back to `", sce_name,
+    "` in your global environment."
+  )
 
   assets <- .gatelabr_react_asset_dir()
   prefix <- paste0(

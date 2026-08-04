@@ -17,12 +17,14 @@ test_that("launchGatingApp delegates to the shared React SCE launcher", {
         sce = NULL,
         sample_column = NULL,
         port = NULL,
-        launch.browser = TRUE) {
+        launch.browser = TRUE,
+        sce_name = NULL) {
       captured <<- list(
         sce = sce,
         sample_column = sample_column,
         port = port,
-        launch.browser = launch.browser
+        launch.browser = launch.browser,
+        sce_name = sce_name
       )
       invisible(NULL)
     },
@@ -39,8 +41,39 @@ test_that("launchGatingApp delegates to the shared React SCE launcher", {
     sce = "sentinel",
     sample_column = "sample_id",
     port = 3325,
-    launch.browser = FALSE
+    launch.browser = FALSE,
+    # A literal is not a symbol, so there is no caller variable to write back to.
+    sce_name = ""
   ))
+})
+
+test_that("launchGatingApp forwards the caller's own symbol for SCE writeback", {
+  # Regression: launchGatingApp(my_sce) used to reach launchReactGateLab as the
+  # wrapper's local symbol `sce`, so every gate/population/colData write landed
+  # on a global literally named "sce" and the user's object was never updated.
+  captured <- NULL
+  testthat::local_mocked_bindings(
+    launchReactGateLab = function(
+        sce = NULL,
+        sample_column = NULL,
+        port = NULL,
+        launch.browser = TRUE,
+        sce_name = NULL) {
+      captured <<- sce_name
+      invisible(NULL)
+    },
+    .package = "GateLabR"
+  )
+
+  sce_np2 <- "sentinel"
+  GateLabR::launchGatingApp(sce_np2, launch.browser = FALSE)
+  expect_identical(captured, "sce_np2")
+  expect_false(identical(captured, "sce"))
+
+  # An inline expression has no symbol to write back to; the callee then falls
+  # through to its explicit default rather than assigning to a garbage name.
+  GateLabR::launchGatingApp(identity("sentinel"), launch.browser = FALSE)
+  expect_identical(captured, "")
 })
 
 test_that("source-clone launcher exposes one React entry point and no legacy UI", {
