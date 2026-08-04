@@ -202,9 +202,162 @@
   }
   traits <- .gatelabr_assay_name_traits(assay_name)
   if (traits$compensated) return("compensated")
-  if (traits$transformed) return("transformed")
+  if (traits$transformed) {
+    # An assay named `exprs` says nothing about whether it was compensated:
+    # compensated and uncompensated arcsinh values are indistinguishable by
+    # name. Ask the data instead (see .gatelabr_transformed_assay_compensation).
+    if (!is.null(sce) &&
+        isTRUE(.gatelabr_transformed_assay_compensation(sce, assay_name)$compensated)) {
+      return("compensated")
+    }
+    return("transformed")
+  }
   if (traits$counts) return("counts")
   "other"
+}
+
+# Describe any pre-compensation GateLabR inferred, so the assumption is stated
+# rather than silent. NULL when nothing was inferred.
+.gatelabr_precompensation_note <- function(sce) {
+  names <- tryCatch(SummarizedExperiment::assayNames(sce), error = function(...) NULL)
+  if (is.null(names)) return(NULL)
+  overrides <- S4Vectors::metadata(sce)$gatelabr_assay_roles
+  for (name in names) {
+    # An explicit role override is the user's decision; never narrate it.
+    if (is.list(overrides) && !is.null(overrides[[name]])) next
+    if (!.gatelabr_assay_name_traits(name)$transformed) next
+    found <- .gatelabr_transformed_assay_compensation(sce, name)
+    if (!isTRUE(found$compensated)) next
+    reason <- switch(
+      found$evidence,
+      "spillover" = paste0(
+        "a spillover matrix is stored in metadata()"
+      ),
+      "values-differ+spillover" = paste0(
+        "its values are not the plain arcsinh transform of `", found$counts_assay,
+        "`, and a spillover matrix is stored in metadata()"
+      ),
+      paste0(
+        "its values are not the plain arcsinh transform of `",
+        found$counts_assay, "`"
+      )
+    )
+    return(paste0(
+      "GateLabR is treating assay `", name, "` as already compensated, because ",
+      reason, ". `", found$counts_assay, "` is treated as the uncompensated ",
+      "original, so you can switch between them in the app.",
+      if (is.null(found$spillover)) {
+        paste0(
+          "\n  No spillover matrix was found, so the matrix itself cannot be ",
+          "shown or edited."
+        )
+      } else {
+        paste0(
+          "\n  Spillover matrix: ", nrow(found$spillover), " x ",
+          ncol(found$spillover), ", read from metadata()."
+        )
+      },
+      "\n  To override: metadata(sce)$gatelabr_assay_roles <- list(", name,
+      " = \"transformed\")"
+    ))
+  }
+  NULL
+}
+
+# CATALYST and related R pipelines leave the spillover matrix in metadata().
+# Finding it both proves compensation happened and supplies the matrix itself,
+# so a pre-compensated SCE need not be re-derived or hand-declared.
+.gatelabr_sce_spillover_matrix <- function(sce) {
+  md <- S4Vectors::metadata(sce)
+  for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
+    value <- md[[key]]
+    if (is.matrix(value) && is.numeric(value) && nrow(value) > 0L &&
+        ncol(value) > 0L && !is.null(rownames(value)) &&
+        !is.null(colnames(value))) {
+      return(value)
+    }
+  }
+  NULL
+}
+
+.gatelabr_counts_assay_name <- function(sce) {
+  names <- SummarizedExperiment::assayNames(sce)
+  for (name in names) {
+    traits <- .gatelabr_assay_name_traits(name)
+    if (traits$counts && !traits$transformed) return(name)
+  }
+  NULL
+}
+
+# TRUE when `assay_name` is reproducible from the counts assay by the recorded
+# arcsinh transform. CATALYST::prepData() alone yields exprs = asinh(counts/cf)
+# with no compensation, so a match means the assay is only a display transform.
+# A mismatch means something was applied in between — in practice, compensation.
+.gatelabr_transformed_assay_matches_counts <- function(sce, assay_name,
+                                                       counts_name,
+                                                       tolerance = 1e-6) {
+  md <- S4Vectors::metadata(sce)
+  cofactor <- suppressWarnings(as.numeric(md$cofactor))
+  if (length(cofactor) != 1L || !is.finite(cofactor) || cofactor <= 0) {
+    cofactor <- 5
+  }
+  n_events <- ncol(sce)
+  if (n_events == 0L) return(NA)
+  # Bounded, evenly spread sample: enough to separate "identical transform"
+  # from "different values" without materialising a multi-million-event assay.
+  index <- if (n_events > 2000L) {
+    unique(round(seq(1, n_events, length.out = 2000L)))
+  } else {
+    seq_len(n_events)
+  }
+  observed <- tryCatch(
+    as.matrix(SummarizedExperiment::assay(sce, assay_name)[, index, drop = FALSE]),
+    error = function(...) NULL
+  )
+  counts <- tryCatch(
+    as.matrix(SummarizedExperiment::assay(sce, counts_name)[, index, drop = FALSE]),
+    error = function(...) NULL
+  )
+  if (is.null(observed) || is.null(counts) ||
+      !identical(dim(observed), dim(counts))) {
+    return(NA)
+  }
+  expected <- asinh(counts / cofactor)
+  usable <- is.finite(expected) & is.finite(observed)
+  if (!any(usable)) return(NA)
+  max(abs(expected[usable] - observed[usable])) <= tolerance
+}
+
+# Decide whether a display-space assay already carries compensation, and say
+# why. Returns compensated (TRUE/FALSE), the evidence used, and the spillover
+# matrix when the object carries one.
+.gatelabr_transformed_assay_compensation <- function(sce, assay_name) {
+  none <- list(compensated = FALSE, evidence = "none", spillover = NULL,
+               counts_assay = NULL)
+  counts_name <- .gatelabr_counts_assay_name(sce)
+  if (is.null(counts_name) || identical(counts_name, assay_name)) return(none)
+  spillover <- .gatelabr_sce_spillover_matrix(sce)
+  matches <- .gatelabr_transformed_assay_matches_counts(sce, assay_name, counts_name)
+  if (isTRUE(matches)) {
+    # Plain transform of the counts assay: not independently compensated, even
+    # if a spillover matrix is stored alongside (it may be unapplied).
+    return(none)
+  }
+  if (isFALSE(matches)) {
+    return(list(
+      compensated = TRUE,
+      evidence = if (is.null(spillover)) "values-differ" else "values-differ+spillover",
+      spillover = spillover,
+      counts_assay = counts_name
+    ))
+  }
+  # Probe inconclusive (unreadable or all-NA assay). Fall back to the stored
+  # matrix as the only remaining evidence.
+  if (!is.null(spillover)) {
+    return(list(compensated = TRUE, evidence = "spillover",
+                spillover = spillover, counts_assay = counts_name))
+  }
+  none
 }
 
 .gatelabr_assay_coordinate_space <- function(sce, assay_name) {
