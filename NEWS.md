@@ -2,9 +2,11 @@
 
 - `launchGatingApp()` now starts the shared GateLab TypeScript/React interface,
   and is the single supported entry point.
-- **Breaking:** `launchLegacyGateLabR()` is removed. The previous
-  GateLabR-specific Shiny interface (including its former UMAP view) is no
-  longer reachable; use `launchGatingApp()`.
+- **Breaking:** `launchLegacyGateLabR()` is defunct and the previous
+  GateLabR-specific Shiny interface is no longer reachable; use
+  `launchGatingApp()`. Calling it now signals an error explaining the change.
+  Note that the former Shiny-only UMAP view goes with it and is not yet
+  available in the React interface.
 - SCE assays are streamed lazily through a thin R host with explicit linear
   versus display-coordinate contracts.
 - Compensation Apply runs in a cancellable background R process and installs

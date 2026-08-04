@@ -87,8 +87,8 @@ test_that("source-clone launcher exposes one React entry point and no legacy UI"
 
   expect_true(is.function(environment$launchGatingApp))
   expect_true(is.function(environment$launchReactGateLab))
-  # The previous GateLabR-specific Shiny UI is retired: there must be no way to
-  # start it, from a source clone or an installed package.
-  expect_null(environment$launchLegacyGateLabR)
-  expect_false(exists("launchLegacyGateLabR", envir = asNamespace("GateLabR")))
+  # The previous GateLabR-specific Shiny UI is retired. The entry point survives
+  # only to explain itself, so it must error rather than start an application.
+  expect_error(environment$launchLegacyGateLabR(), "defunct")
+  expect_error(GateLabR::launchLegacyGateLabR(), "defunct")
 })

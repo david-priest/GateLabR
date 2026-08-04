@@ -32,6 +32,30 @@ launchGatingApp <- function(
   )
 }
 
+#' Launch the previous GateLabR Shiny interface (defunct)
+#'
+#' The GateLabR-specific Shiny interface was retired in GateLabR 2.0.0.
+#' GateLabR now has a single entry point, \code{\link{launchGatingApp}}, which
+#' starts the shared GateLab React interface.
+#'
+#' The entry point is kept only so that existing scripts fail with an
+#' explanation instead of \dQuote{could not find function}. It never starts an
+#' application.
+#'
+#' @param ... Ignored.
+#' @return Never returns; always signals an error.
+#' @export
+launchLegacyGateLabR <- function(...) {
+  .Defunct(
+    new = "launchGatingApp",
+    msg = paste0(
+      "launchLegacyGateLabR() is defunct. The previous GateLabR-specific ",
+      "Shiny interface was retired in GateLabR 2.0.0. Use launchGatingApp(), ",
+      "which starts the shared GateLab React interface."
+    )
+  )
+}
+
 # Directory of this file, captured when it is source()d from a clone (a frame
 # carries $ofile then). NULL when the installed package is loaded, in which case
 # system.file() is used instead.
