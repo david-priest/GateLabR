@@ -5,8 +5,7 @@ adapter for a `SingleCellExperiment`. This is the default interface used
 by
 [`launchGatingApp`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md).
 The previous GateLabR-specific Shiny interface remains available through
-[`launchLegacyGateLabR`](https://david-priest.github.io/GateLabR/reference/launchLegacyGateLabR.md)
-for one transition release.
+`launchLegacyGateLabR` for one transition release.
 
 ## Usage
 

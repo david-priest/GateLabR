@@ -39,9 +39,9 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.0.0" id="gatelabr-200">GateLabR 2.0.0<a class="anchor" aria-label="anchor" href="#gatelabr-200"></a></h2>
 <ul><li>
-<code><a href="../reference/launchGatingApp.html">launchGatingApp()</a></code> now starts the shared GateLab TypeScript/React interface.</li>
+<code><a href="../reference/launchGatingApp.html">launchGatingApp()</a></code> now starts the shared GateLab TypeScript/React interface, and is the single supported entry point.</li>
 <li>
-<code><a href="../reference/launchLegacyGateLabR.html">launchLegacyGateLabR()</a></code> retains the previous GateLabR-specific Shiny interface for one transition release.</li>
+<strong>Breaking:</strong> <code>launchLegacyGateLabR()</code> is defunct and the previous GateLabR-specific Shiny interface is no longer reachable; use <code><a href="../reference/launchGatingApp.html">launchGatingApp()</a></code>. Calling it now signals an error explaining the change. Note that the former Shiny-only UMAP view goes with it and is not yet available in the React interface.</li>
 <li>SCE assays are streamed lazily through a thin R host with explicit linear versus display-coordinate contracts.</li>
 <li>Compensation Apply runs in a cancellable background R process and installs revisioned assays atomically.</li>
 <li>Panel labels, population memberships, division calls and editable sample annotations have explicit <code>rowData()</code> / <code>colData()</code> write-back actions.</li>
