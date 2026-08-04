@@ -155,10 +155,8 @@ launchGatingApp(my_sce)
 launchGatingApp()
 ```
 
-The app opens in your default browser. `launchGatingApp()` now starts the shared
-React interface. During the transition, `launchLegacyGateLabR()` starts the
-previous GateLabR-specific Shiny interface (including its former UMAP view).
-The three-column layout is:
+The app opens in your default browser. `launchGatingApp()` is the single entry
+point and starts the shared React interface. The three-column layout is:
 
 | Panel | Content |
 |------|---------|

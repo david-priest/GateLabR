@@ -76,7 +76,7 @@ test_that("launchGatingApp forwards the caller's own symbol for SCE writeback", 
   expect_identical(captured, "")
 })
 
-test_that("source-clone launcher exposes both default and legacy entry points", {
+test_that("source-clone launcher exposes one React entry point and no legacy UI", {
   source_launcher <- test_path("..", "..", "launch.R")
   skip_if_not(
     file.exists(source_launcher),
@@ -87,5 +87,8 @@ test_that("source-clone launcher exposes both default and legacy entry points", 
 
   expect_true(is.function(environment$launchGatingApp))
   expect_true(is.function(environment$launchReactGateLab))
-  expect_true(is.function(environment$launchLegacyGateLabR))
+  # The previous GateLabR-specific Shiny UI is retired. The entry point survives
+  # only to explain itself, so it must error rather than start an application.
+  expect_error(environment$launchLegacyGateLabR(), "defunct")
+  expect_error(GateLabR::launchLegacyGateLabR(), "defunct")
 })

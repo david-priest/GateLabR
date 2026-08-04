@@ -32,93 +32,28 @@ launchGatingApp <- function(
   )
 }
 
-#' Launch the previous GateLabR Shiny interface
+#' Launch the previous GateLabR Shiny interface (defunct)
 #'
-#' Opens the original GateLabR-specific Shiny application. This transition
-#' launcher remains available for workflows that have not yet moved to the
-#' shared React interface, including the former Shiny-only UMAP view.
+#' The GateLabR-specific Shiny interface was retired in GateLabR 2.0.0.
+#' GateLabR now has a single entry point, \code{\link{launchGatingApp}}, which
+#' starts the shared GateLab React interface.
 #'
-#' @inheritParams launchGatingApp
-#' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
+#' The entry point is kept only so that existing scripts fail with an
+#' explanation instead of \dQuote{could not find function}. It never starts an
+#' application.
+#'
+#' @param ... Ignored.
+#' @return Never returns; always signals an error.
 #' @export
-launchLegacyGateLabR <- function(
-    sce = NULL,
-    port = NULL,
-    launch.browser = TRUE) {
-  app_dir <- .gatelabr_app_dir()
-
-  # Say which copy is running. When sourced, the launcher lives in the global
-  # environment and shadows the installed package's, so this disambiguates.
-  installed <- system.file("app", package = "GateLabR")
-  is_installed <- nzchar(installed) &&
-    identical(normalizePath(installed, mustWork = FALSE),
-              normalizePath(app_dir,   mustWork = FALSE))
-  message("GateLabR: launching the ", if (is_installed) "installed package" else "source clone",
-          " app\n  ", app_dir)
-
-  # Discover SingleCellExperiment objects already in the global environment.
-  sce_names <- character(0)
-  for (nm in ls(envir = .GlobalEnv)) {
-    ok <- tryCatch(methods::is(get(nm, envir = .GlobalEnv), "SingleCellExperiment"),
-                   error = function(e) FALSE)
-    if (isTRUE(ok)) sce_names <- c(sce_names, nm)
-  }
-
-  default_sce <- NULL
-  if (!is.null(sce)) {
-    sce_var_name <- deparse(substitute(sce))
-    if (!sce_var_name %in% sce_names) {
-      assign(sce_var_name, sce, envir = .GlobalEnv)
-      sce_names <- c(sce_var_name, sce_names)
-    }
-    default_sce <- sce_var_name
-  } else if (length(sce_names) > 0) {
-    default_sce <- sce_names[1]
-  }
-
-  # The app is sourced into a fresh environment whose parent is the global
-  # environment, so it reads `.cytof_gate_env` from there via lexical scoping.
-  # Publish (or update) it in the global environment before launching.
-  env <- if (exists(".cytof_gate_env", envir = .GlobalEnv, inherits = FALSE)) {
-    get(".cytof_gate_env", envir = .GlobalEnv)
-  } else {
-    new.env(parent = emptyenv())
-  }
-  env$sce_names   <- sce_names
-  env$default_sce <- default_sce
-  assign(".cytof_gate_env", env, envir = .GlobalEnv)
-
-  if (length(sce_names) == 0) {
-    message("No SingleCellExperiment objects found. Launching GateLabR in blank mode; use Import FCS to load data.")
-  } else {
-    message("Found SCE objects: ", paste(sce_names, collapse = ", "))
-  }
-
-  shiny::runApp(appDir = app_dir, port = port, launch.browser = launch.browser)
-}
-
-#' Locate the bundled Shiny app directory.
-#' Installed package -> system.file("app"); source clone -> ../inst/app relative
-#' to this file (captured at source time in .gatelabr_src_dir).
-#' @keywords internal
-#' @noRd
-.gatelabr_app_dir <- function() {
-  # When launched via source() from a clone, prefer THAT clone's app so local
-  # edits take effect — even if an installed copy also exists. Fall back to the
-  # installed package when loaded as a library (no source dir captured).
-  if (!is.null(.gatelabr_src_dir)) {
-    for (dev in c(
-      file.path(.gatelabr_src_dir, "inst", "app"),
-      file.path(.gatelabr_src_dir, "..", "inst", "app")
-    )) {
-      if (file.exists(file.path(dev, "app.R"))) return(normalizePath(dev))
-    }
-  }
-  d <- system.file("app", package = "GateLabR")
-  if (nzchar(d) && file.exists(file.path(d, "app.R"))) return(d)
-  stop("Could not locate the GateLabR app directory (looked in ../inst/app and ",
-       "the installed package). When using source(), source launch.R from a ",
-       "GateLabR clone.")
+launchLegacyGateLabR <- function(...) {
+  .Defunct(
+    new = "launchGatingApp",
+    msg = paste0(
+      "launchLegacyGateLabR() is defunct. The previous GateLabR-specific ",
+      "Shiny interface was retired in GateLabR 2.0.0. Use launchGatingApp(), ",
+      "which starts the shared GateLab React interface."
+    )
+  )
 }
 
 # Directory of this file, captured when it is source()d from a clone (a frame
