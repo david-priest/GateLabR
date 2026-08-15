@@ -162,9 +162,22 @@
         ctnr.appendChild(svgEl);
         _svg = d3.select(svgEl);
 
-        // Clip path
-        _svg.append('defs').append('clipPath').attr('id', 'cytof-clip')
+        // Clip paths. The plot-area clip is used for the drawing layer; the two axis clips
+        // are BANDS, not the plot rect: a tick label legitimately sits outside the plot (below
+        // the x axis, left of the y axis), so clipping to the rect would erase every label.
+        // Each band is unbounded in the label direction and bounded along the axis, so nothing
+        // can render past the ends of the frame even mid-zoom, before a new payload arrives.
+        var defs = _svg.append('defs');
+        defs.append('clipPath').attr('id', 'cytof-clip')
             .append('rect').attr('width', W).attr('height', H);
+        defs.append('clipPath').attr('id', 'cytof-clip-xaxis')
+            .append('rect')
+            .attr('x', 0).attr('y', -2)
+            .attr('width', W).attr('height', M.bottom + 4);
+        defs.append('clipPath').attr('id', 'cytof-clip-yaxis')
+            .append('rect')
+            .attr('x', -M.left).attr('y', 0)
+            .attr('width', M.left + 2).attr('height', H);
 
         // Main group (inside margins)
         _g = _svg.append('g')
@@ -192,8 +205,10 @@
 
         // Axes
         _g.append('g').attr('class', 'x-axis')
-            .attr('transform', 'translate(0,' + H + ')');
-        _g.append('g').attr('class', 'y-axis');
+            .attr('transform', 'translate(0,' + H + ')')
+            .attr('clip-path', 'url(#cytof-clip-xaxis)');
+        _g.append('g').attr('class', 'y-axis')
+            .attr('clip-path', 'url(#cytof-clip-yaxis)');
 
         // Axis labels — click to open channel picker
         _g.append('text').attr('class', 'cytof-xlabel')
@@ -622,6 +637,18 @@
         }
         var allPositions = majorPos.concat(minorPos);
         allPositions.sort(function(a, b) { return a - b; });
+        // Clip to the scale's CURRENT domain. d3 places a tickValue wherever the scale maps
+        // it, so a value outside the domain is drawn outside the plot frame. The domain here
+        // is the zoom-transformed one, which can be narrower than the range the ticks were
+        // generated for — during an interactive zoom the payload has not caught up yet.
+        // Sparse decade ticks rarely expose this; evenly spaced linear ticks do immediately.
+        var dom = scale.domain();
+        var dLo = Math.min(dom[0], dom[dom.length - 1]);
+        var dHi = Math.max(dom[0], dom[dom.length - 1]);
+        var eps = (dHi - dLo) * 1e-9;
+        allPositions = allPositions.filter(function (v) {
+            return v >= dLo - eps && v <= dHi + eps;
+        });
         var axis = axisFn(scale)
             .tickValues(allPositions)
             .tickFormat(function(d) { return labelMap[d] || ''; })
@@ -1058,12 +1085,18 @@
 
         // Compute per-point density using a grid-based approach for performance
         if (!_densityCache) {
-            // Use a binned density grid at 256×256 for 4× the cells vs the old 128×128.
+            // 512×512. Density is estimated once in BASE coordinates and cached, so colour is
+            // invariant under pan and zoom; the cost is that magnifying far past the estimation
+            // scale shows the bins. A finer grid halves the visible block size at any zoom for a
+            // few milliseconds of blur, without making colour depend on the viewport.
             // The grid is padded by `pad` cells on every side so that points just outside
             // the plot boundary (common for CyTOF arcsinh data piled near 0) still
             // contribute to the smoothed density of edge cells, eliminating the axis shadow.
-            var gridSize = 256;
-            var radius   = 3;
+            var gridSize = 512;
+            // The blur radius is in CELLS, so it must scale with the grid or the smoothing
+            // changes when the resolution does: 3 cells at 256 covers twice the plot area
+            // that 3 cells at 512 does, which is why a finer grid looked rougher.
+            var radius   = Math.max(1, Math.round(3 * gridSize / 256));
             var pad      = radius;         // padding so blur sees data beyond the plot edge
             var extSize  = gridSize + 2 * pad;
             var grid     = new Float32Array(extSize * extSize);
@@ -1084,21 +1117,30 @@
                 }
             }
 
-            // Box-blur the extended grid
-            var smoothed = new Float32Array(extSize * extSize);
+            // Separable box blur: two 1-D passes instead of one (2r+1)^2 window. Identical
+            // result for a box kernel, but O(gridSize^2 * r) rather than O(gridSize^2 * r^2),
+            // which is what makes the larger grid and larger radius affordable.
+            var tmp = new Float32Array(extSize * extSize);
             for (var sy = 0; sy < extSize; sy++) {
+                var rowOff = sy * extSize;
                 for (var sx = 0; sx < extSize; sx++) {
                     var sum = 0, cnt = 0;
-                    for (var dy = -radius; dy <= radius; dy++) {
-                        for (var dx = -radius; dx <= radius; dx++) {
-                            var ny = sy + dy, nx = sx + dx;
-                            if (ny >= 0 && ny < extSize && nx >= 0 && nx < extSize) {
-                                sum += grid[ny * extSize + nx];
-                                cnt++;
-                            }
-                        }
-                    }
-                    smoothed[sy * extSize + sx] = sum / cnt;
+                    var from = sx - radius, to = sx + radius;
+                    if (from < 0) from = 0;
+                    if (to > extSize - 1) to = extSize - 1;
+                    for (var k = from; k <= to; k++) { sum += grid[rowOff + k]; cnt++; }
+                    tmp[rowOff + sx] = sum / cnt;
+                }
+            }
+            var smoothed = new Float32Array(extSize * extSize);
+            for (var sx2 = 0; sx2 < extSize; sx2++) {
+                for (var sy2 = 0; sy2 < extSize; sy2++) {
+                    var sum2 = 0, cnt2 = 0;
+                    var f2 = sy2 - radius, t2 = sy2 + radius;
+                    if (f2 < 0) f2 = 0;
+                    if (t2 > extSize - 1) t2 = extSize - 1;
+                    for (var k2 = f2; k2 <= t2; k2++) { sum2 += tmp[k2 * extSize + sx2]; cnt2++; }
+                    smoothed[sy2 * extSize + sx2] = sum2 / cnt2;
                 }
             }
 
