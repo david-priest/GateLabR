@@ -1115,16 +1115,42 @@
                 if (densities[i] > maxDens) maxDens = densities[i];
             }
 
-            _densityCache = { densities: densities, maxDens: maxDens, px: pxArr, py: pyArr };
+            // Equal-probability (quantile) colour mapping: an event's colour is the
+            // FRACTION OF EVENTS AT LOWER DENSITY, not its density relative to the single
+            // densest bin. This is what FlowJo does for its density and contour plots, and
+            // it is self-normalising: a sparse sample and a dense one produce comparable
+            // pictures without tuning, where the old density/maxDens mapping collapsed
+            // everything outside the core into the bottom of the ramp.
+            //
+            // The sort also supplies the draw order, which used to be recomputed on every
+            // repaint (pan, zoom, gate drag) — it now happens once, with the density.
+            var order = new Array(n);
+            for (var i = 0; i < n; i++) order[i] = i;
+            order.sort(function (a, b) { return densities[a] - densities[b]; });
+
+            // Tied densities share a mid-rank, so two events in the same bin cannot end up
+            // different colours purely because of their order in the sort.
+            var rank = new Float32Array(n);
+            var denom = n > 1 ? n - 1 : 1;
+            for (var r = 0; r < n; ) {
+                var runStart = r;
+                while (r + 1 < n && densities[order[r + 1]] === densities[order[runStart]]) r++;
+                var mid = ((runStart + r) / 2) / denom;
+                for (var k = runStart; k <= r; k++) rank[order[k]] = mid;
+                r++;
+            }
+
+            _densityCache = {
+                densities: densities, maxDens: maxDens, px: pxArr, py: pyArr,
+                order: order, rank: rank,
+            };
         }
 
         var cache = _densityCache;
         if (!cache.maxDens) { _drawScatter(zx, zy); return; }
 
-        // Sort by density so high-density points draw on top
-        var indices = new Array(n);
-        for (var i = 0; i < n; i++) indices[i] = i;
-        indices.sort(function(a, b) { return cache.densities[a] - cache.densities[b]; });
+        // Ascending density, so the densest points draw on top. Computed with the cache.
+        var indices = cache.order;
 
         _ctx.save();
         _ctx.beginPath();
@@ -1138,7 +1164,7 @@
             var py = _clampPointY(zy, y[i]);
             if (px < M.left - 2 || px > M.left + W + 2 ||
                 py < M.top  - 2 || py > M.top  + H + 2) continue;
-            var t = cache.densities[i] / cache.maxDens;
+            var t = cache.rank[i];
             var lutIdx = Math.max(0, Math.min(255, Math.floor(t * 255)));
             _ctx.fillStyle = _jetLUT[lutIdx];
             _ctx.beginPath();
