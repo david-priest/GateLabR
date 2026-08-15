@@ -770,7 +770,7 @@
             if (px < M.left - 2 || px > M.left + W + 2 ||
                 py < M.top  - 2 || py > M.top  + H + 2) continue;
             _ctx.beginPath();
-            _ctx.arc(px, py, 1.5, 0, 6.2832);
+            _ctx.arc(px, py, _pointRadius(), 0, 6.2832);
             _ctx.fill();
         }
         _ctx.restore();
@@ -804,7 +804,7 @@
                 if (px < M.left - 2 || px > M.left + W + 2 ||
                     py < M.top  - 2 || py > M.top  + H + 2) continue;
                 _ctx.beginPath();
-                _ctx.arc(px, py, 1.5, 0, 6.2832);
+                _ctx.arc(px, py, _pointRadius(), 0, 6.2832);
                 _ctx.fill();
             }
         }
@@ -1032,6 +1032,15 @@
 
     // Build a 256-entry lookup table for fast pseudocolor rendering
     var _jetLUT = null;
+    // Point radius in px. Density colouring is computed from a fixed 256x256 binned grid
+    // and is independent of this: changing the mark size never changes a density value,
+    // only how much the marks overlap.
+    var POINT_RADIUS_DEFAULT = 1.5;
+    function _pointRadius() {
+        var r = _plotData && +_plotData.point_size;
+        return (isFinite(r) && r > 0) ? Math.max(0.2, Math.min(6, r)) : POINT_RADIUS_DEFAULT;
+    }
+
     function _ensureJetLUT() {
         if (_jetLUT) return;
         _jetLUT = new Array(256);
@@ -1133,7 +1142,7 @@
             var lutIdx = Math.max(0, Math.min(255, Math.floor(t * 255)));
             _ctx.fillStyle = _jetLUT[lutIdx];
             _ctx.beginPath();
-            _ctx.arc(px, py, 1.5, 0, 6.2832);
+            _ctx.arc(px, py, _pointRadius(), 0, 6.2832);
             _ctx.fill();
         }
         _ctx.restore();
