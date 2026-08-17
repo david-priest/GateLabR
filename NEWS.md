@@ -2,6 +2,12 @@
 
 - `launchGatingApp()` now starts the shared GateLab TypeScript/React interface,
   and is the single supported entry point.
+- `launchGatingApp()` gains `uncompensated =`, an optional read-only SCE holding
+  the pre-compensation values for the same cells. It is served as the Original
+  layer so compensation can be checked side by side, and is never modified or
+  written back; only the primary SCE is saved to. Cell count, cell order and
+  channels must match exactly or the launch is refused.
+- A spillover matrix stored in `metadata()` is now found on either object.
 - **Breaking:** `launchLegacyGateLabR()` is defunct and the previous
   GateLabR-specific Shiny interface is no longer reachable; use
   `launchGatingApp()`. Calling it now signals an error explaining the change.

@@ -15,6 +15,12 @@
 #'   the caller passed as \code{sce}. Delegating wrappers must forward the user's
 #'   symbol explicitly, because \code{substitute()} would otherwise resolve to
 #'   the wrapper's own parameter name.
+#' @param uncompensated Optional read-only \code{SingleCellExperiment} holding the
+#'   pre-compensation values for the same cells, for workflows that compensate in
+#'   place and keep the original in a separate object. It is served as the
+#'   Original layer for comparison and is never modified or written back; only
+#'   \code{sce} is saved to. Cell count, cell order and channels must match
+#'   exactly or the launch is refused.
 #' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
 #' @export
 launchReactGateLab <- function(
@@ -22,7 +28,8 @@ launchReactGateLab <- function(
     sample_column = NULL,
     port = NULL,
     launch.browser = TRUE,
-    sce_name = NULL) {
+    sce_name = NULL,
+    uncompensated = NULL) {
   # Resolve the global-environment name that gates, populations and colData are
   # written back to. substitute() only sees the CALLER's argument expression, so
   # a delegating wrapper (launchGatingApp) must forward the user's own symbol —
@@ -56,6 +63,17 @@ launchReactGateLab <- function(
     if (!nzchar(sce_name) || identical(sce_name, "NULL")) sce_name <- "gatelabr_sce"
     assign(sce_name, sce, envir = .GlobalEnv)
   }
+  # Validate the accessory before anything else happens, and never touch it
+  # again except to read. It is deliberately NOT placed in sce_state, so no
+  # writeback path can reach it or leak it into the user's primary object.
+  if (!is.null(uncompensated)) {
+    .gatelabr_validate_accessory_sce(sce, uncompensated, sample_column)
+    message(
+      "GateLabR loaded a read-only uncompensated SCE for comparison. It is ",
+      "served as the Original layer and is never written to; `", sce_name,
+      "` remains the only object saved back to."
+    )
+  }
   # Say it out loud: silent writeback to a guessed name is how work goes missing.
   message(
     "GateLabR will save gates, populations and colData back to `", sce_name,
@@ -64,7 +82,7 @@ launchReactGateLab <- function(
   # Likewise for an inferred assay role: the user must know what was assumed
   # about their data before they gate on it.
   precompensation <- tryCatch(
-    .gatelabr_precompensation_note(sce),
+    .gatelabr_precompensation_note(sce, uncompensated),
     error = function(cause) {
       # Never fail a launch over an advisory note, but never swallow it either:
       # a silent NULL is indistinguishable from "nothing detected", which sends
@@ -108,7 +126,8 @@ launchReactGateLab <- function(
     sce_state = sce_state,
     sce_name = sce_name,
     dataset_id = dataset_id,
-    sample_column = sample_column
+    sample_column = sample_column,
+    accessory = uncompensated
   )
 
   message(
@@ -127,11 +146,15 @@ launchReactGateLab <- function(
     sce_state,
     sce_name,
     dataset_id,
-    sample_column = NULL) {
+    sample_column = NULL,
+    accessory = NULL) {
   force(sce_state)
   force(sce_name)
   force(dataset_id)
   force(sample_column)
+  # A plain local, deliberately not a reactiveVal: the accessory never changes
+  # and must never participate in the writeback state.
+  force(accessory)
   compensation_jobs <- .gatelabr_new_host_compensation_jobs()
 
   function(input, output, session) {
@@ -150,7 +173,8 @@ launchReactGateLab <- function(
         sce_state(),
         dataset_id = dataset_id,
         label = sce_name,
-        sample_column = sample_column
+        sample_column = sample_column,
+        accessory = accessory
       )
     }, once = TRUE, ignoreInit = TRUE)
     shiny::observeEvent(input$gatelabr_host_request, {
