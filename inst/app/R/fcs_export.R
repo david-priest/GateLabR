@@ -22,6 +22,48 @@
 #' @param gating_data Optional authoritative event-by-channel gating matrix from
 #'   the live app session.
 #' @param gate_value_space Optional explicit workspace gate value space.
+#' Make one path component safe without destroying population identity
+#'
+#' Immunology population names are built from + and -, and the minus is usually the Unicode
+#' U+2212 the app renders. Mapping both to "_" made sibling gates collide on one file name:
+#' CD45RB+IgD+, CD45RB+IgD- and CD45RB-IgD+ all became "CD45RB_IgD_", so exporting a whole
+#' strategy wrote one file where three were expected and the earlier ones were overwritten with
+#' no error. + and - are legal on every filesystem, so the signs survive.
+#' @keywords internal
+.safe_file_part <- function(x) {
+  # enc2utf8 + perl: population names carry U+2212, and under a C locale gsub() fails outright
+  # with "unable to translate to a wide string" rather than returning something wrong. Marking
+  # the encoding and using PCRE keeps the same result whatever locale R was started in.
+  x <- enc2utf8(as.character(x %||% ""))
+  # Matched as UTF-8 BYTES, so the result is the same whatever locale R was started in. A
+  # character-class pattern is re-encoded from the session locale and silently stops matching
+  # under C, which turned "CD45RB+IgD−" into escaped bytes on one machine and "CD45RB+IgD-" on
+  # another -- names that differ by environment.
+  for (dash in c("\xe2\x88\x92",   # U+2212 minus, what the app renders
+                 "\xe2\x80\x92", "\xe2\x80\x93", "\xe2\x80\x94",  # figure/en/em dash
+                 "\xe2\x80\x90", "\xe2\x80\x91")) {                  # hyphen variants
+    x <- gsub(dash, "-", x, useBytes = TRUE)
+  }
+  gsub("[^A-Za-z0-9._+-]", "_", x, useBytes = TRUE)
+}
+
+#' Never write over a file that is already there
+#'
+#' Sanitising can still map two distinct names onto one string, and write.FCS would replace the
+#' earlier file without complaint. A numbered sibling keeps both.
+#' @keywords internal
+.unique_export_path <- function(path) {
+  if (!file.exists(path)) return(path)
+  stem <- sub("\\.fcs$", "", path, ignore.case = TRUE)
+  n <- 2L
+  repeat {
+    candidate <- sprintf("%s_%d.fcs", stem, n)
+    if (!file.exists(candidate)) return(candidate)
+    n <- n + 1L
+  }
+}
+
+
 #' @return Character vector of written file paths
 export_population_as_fcs <- function(sce,
                                       population_id,
@@ -114,13 +156,11 @@ export_population_as_fcs <- function(sce,
 
   # ── Population name for filenames ─────────────────────────────────────────
   pop      <- populations[[population_id]]
-  pop_name <- if (!is.null(pop)) {
-    gsub("[^A-Za-z0-9._-]", "_", pop$name)
-  } else "population"
+  pop_name <- if (!is.null(pop)) .safe_file_part(pop$name) else "population"
 
   if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
   safe_suffix <- trimws(as.character(filename_suffix %||% ""))
-  safe_suffix <- gsub("[^A-Za-z0-9._-]", "_", safe_suffix)
+  safe_suffix <- .safe_file_part(safe_suffix)
   safe_suffix <- if (nchar(safe_suffix) > 0) paste0("_", safe_suffix) else ""
 
   written_files <- character(0)
@@ -133,8 +173,9 @@ export_population_as_fcs <- function(sce,
       ff      <- .matrix_to_flowframe(sub_mat, channel_names, channel_desc)
       fname   <- file.path(output_dir,
                   paste0(filename_prefix,
-                    gsub("[^A-Za-z0-9._-]", "_", sid),
+                    .safe_file_part(sid),
                     "_", pop_name, safe_suffix, ".fcs"))
+      fname <- .unique_export_path(fname)
       flowCore::write.FCS(ff, fname)
       written_files <- c(written_files, fname)
       message("Wrote ", nrow(sub_mat), " events → ", basename(fname))
@@ -144,6 +185,7 @@ export_population_as_fcs <- function(sce,
     ff      <- .matrix_to_flowframe(sub_mat, channel_names, channel_desc)
     fname   <- file.path(output_dir,
                          paste0(filename_prefix, pop_name, "_", assay_name, safe_suffix, ".fcs"))
+    fname <- .unique_export_path(fname)
     flowCore::write.FCS(ff, fname)
     written_files <- fname
     message("Wrote ", nrow(sub_mat), " events → ", basename(fname))
