@@ -429,6 +429,7 @@
         _panPending = null;
         _xBase.domain(_plotData.x_range);
         _yBase.domain(_plotData.y_range);
+        _contourCache = null; // base domain changed: cached contours are in base-scale pixel space
         _redraw();
     }
 
@@ -452,8 +453,9 @@
         if (_plotData && pend) {
             _plotData.x_range = pend.x; _plotData.y_range = pend.y;
             _xBase.domain(pend.x); _yBase.domain(pend.y);
+            _contourCache = null; // base domain changed: cached contours are in base-scale pixel space
         }
-        if (_plotData) _redraw(); // _panActive now false → contour rebuilds at the final range
+        if (_plotData) _redraw(); // _panActive now false → _drawContour runs, on the cleared cache
         if (commitRange && _plotData && window.Shiny && Shiny.setInputValue) {
             Shiny.setInputValue('plot_range',
                 { x_range: _plotData.x_range, y_range: _plotData.y_range }, { priority: 'event' });
