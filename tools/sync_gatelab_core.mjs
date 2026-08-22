@@ -167,11 +167,41 @@ if (existsSync(staging)) {
   );
 }
 mkdirSync(dirname(staging), { recursive: true });
+
+// Vite copies everything in GateLab's publicDir into the build verbatim, and that directory is
+// LOCAL DEV DATA: GateLab gitignores it as "local dev sample data (not committed)". The previous
+// sync therefore carried real FCS files and a Gating-ML export of the lab's own panel into this
+// repository, which is public. The .fcs never reached git (a *.FCS ignore rule caught them), so
+// CORE_PROVENANCE.json listed two files nobody else could ever have — making the manifest
+// unverifiable on any other clone.
+//
+// Excluded on the path RELATIVE to the build root, not on basename, so nested build output such
+// as assets/compensation.worker-*.js — which the bundle genuinely loads — is untouched.
+const publicDir = join(options.source, "public");
+const passthrough = existsSync(publicDir)
+  ? new Set(
+      readdirSync(publicDir, { withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => entry.name),
+    )
+  : new Set();
+const excluded = [];
 cpSync(buildDir, staging, {
   recursive: true,
   errorOnExist: true,
   force: false,
+  filter: (src) => {
+    const rel = relative(buildDir, src).split(sep).join("/");
+    if (!passthrough.has(rel)) return true;
+    excluded.push(rel);
+    return false;
+  },
 });
+if (excluded.length > 0) {
+  console.log(
+    `Excluded ${excluded.length} publicDir passthrough file(s) from the bundle: ${excluded.join(", ")}`,
+  );
+}
 
 const files = Object.fromEntries(
   artifactFiles(staging).map((file) => [file, md5(join(staging, file))]),
