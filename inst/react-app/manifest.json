@@ -1,46 +1,46 @@
 {
-  "../GateLab/node_modules/canvg/lib/index.es.js": {
-    "file": "index.es-DyHA5mPE.js",
-    "name": "index.es",
-    "src": "../GateLab/node_modules/canvg/lib/index.es.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "_embed-BbLvKWsr.js",
-      "_jspdf.es.min-D6upbH1z.js"
-    ]
-  },
-  "../GateLab/node_modules/dompurify/dist/purify.es.mjs": {
-    "file": "purify.es-_9WAe1aK.js",
-    "name": "purify.es",
-    "src": "../GateLab/node_modules/dompurify/dist/purify.es.mjs",
-    "isDynamicEntry": true
-  },
-  "../GateLab/node_modules/html2canvas/dist/html2canvas.esm.js": {
-    "file": "html2canvas.esm-dgT_1dIT.js",
-    "name": "html2canvas.esm",
-    "src": "../GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
-    "isDynamicEntry": true
-  },
-  "_embed-BbLvKWsr.js": {
-    "file": "embed-BbLvKWsr.js",
+  "_embed-CJyorL_r.js": {
+    "file": "embed-CJyorL_r.js",
     "name": "embed",
     "dynamicImports": [
-      "_jspdf.es.min-D6upbH1z.js",
+      "_jspdf.es.min-DZzxspid.js",
       "src/ui/CompensationTab.tsx"
     ]
   },
-  "_jspdf.es.min-D6upbH1z.js": {
-    "file": "jspdf.es.min-D6upbH1z.js",
+  "_jspdf.es.min-DZzxspid.js": {
+    "file": "jspdf.es.min-DZzxspid.js",
     "name": "jspdf.es.min",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BbLvKWsr.js"
+      "_embed-CJyorL_r.js"
     ],
     "dynamicImports": [
-      "../GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
-      "../GateLab/node_modules/dompurify/dist/purify.es.mjs",
-      "../GateLab/node_modules/canvg/lib/index.es.js"
+      "node_modules/html2canvas/dist/html2canvas.esm.js",
+      "node_modules/dompurify/dist/purify.es.mjs",
+      "node_modules/canvg/lib/index.es.js"
     ]
+  },
+  "node_modules/canvg/lib/index.es.js": {
+    "file": "index.es-DQyrDzaY.js",
+    "name": "index.es",
+    "src": "node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-CJyorL_r.js",
+      "_jspdf.es.min-DZzxspid.js"
+    ]
+  },
+  "node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "purify.es-_9WAe1aK.js",
+    "name": "purify.es",
+    "src": "node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "html2canvas.esm-dgT_1dIT.js",
+    "name": "html2canvas.esm",
+    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
   },
   "src/embed.ts": {
     "file": "gatelab-embed.js",
@@ -48,19 +48,19 @@
     "src": "src/embed.ts",
     "isEntry": true,
     "imports": [
-      "_embed-BbLvKWsr.js"
+      "_embed-CJyorL_r.js"
     ]
   },
   "src/ui/CompensationTab.tsx": {
-    "file": "CompensationTab-gDC-BLBI.js",
+    "file": "CompensationTab-BeoIZdg6.js",
     "name": "CompensationTab",
     "src": "src/ui/CompensationTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BbLvKWsr.js"
+      "_embed-CJyorL_r.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-D6upbH1z.js"
+      "_jspdf.es.min-DZzxspid.js"
     ]
   },
   "style.css": {
