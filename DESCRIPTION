@@ -1,6 +1,6 @@
 Package: GateLabR
 Title: Interactive Manual Gating for SingleCellExperiment Objects
-Version: 2.2.0
+Version: 1.4.0
 Authors@R:
     person("David", "Priest", email = "david.priest898@gmail.com",
            role = c("aut", "cre"),

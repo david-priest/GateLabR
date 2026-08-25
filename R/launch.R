@@ -34,7 +34,7 @@ launchGatingApp <- function(
 
 #' Launch the previous GateLabR Shiny interface (defunct)
 #'
-#' The GateLabR-specific Shiny interface was retired in GateLabR 2.0.0.
+#' The GateLabR-specific Shiny interface was retired in GateLabR 1.4.0.
 #' GateLabR now has a single entry point, \code{\link{launchGatingApp}}, which
 #' starts the shared GateLab React interface.
 #'
@@ -50,7 +50,7 @@ launchLegacyGateLabR <- function(...) {
     new = "launchGatingApp",
     msg = paste0(
       "launchLegacyGateLabR() is defunct. The previous GateLabR-specific ",
-      "Shiny interface was retired in GateLabR 2.0.0. Use launchGatingApp(), ",
+      "Shiny interface was retired in GateLabR 1.4.0. Use launchGatingApp(), ",
       "which starts the shared GateLab React interface."
     )
   )
