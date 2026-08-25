@@ -51,6 +51,14 @@
         gate$vertices <- lapply(gate$vertices, normalize_pair)
       }
       if (is.list(gate$center)) gate$center <- normalize_pair(gate$center)
+      if (is.list(gate$mean)) gate$mean <- normalize_pair(gate$mean)
+      if (is.list(gate$covariance)) {
+        rows <- lapply(gate$covariance, normalize_pair)
+        if (length(rows) == 2L && all(vapply(rows, is.numeric, logical(1))) &&
+            all(vapply(rows, length, integer(1)) == 2L)) {
+          gate$covariance <- do.call(rbind, rows)
+        }
+      }
       if (is.list(gate$label_offset)) {
         gate$label_offset <- normalize_pair(gate$label_offset)
       }
@@ -124,7 +132,7 @@
     }
     if (!is.character(gate$gate_type) ||
         length(gate$gate_type) != 1L ||
-        !gate$gate_type %in% c("polygon", "rectangle", "quadrant")) {
+        !gate$gate_type %in% c("polygon", "rectangle", "quadrant", "ellipse")) {
       .gatelabr_workspace_error(sprintf(
         "gate '%s' has an unsupported gate_type.",
         gate_id
@@ -150,6 +158,25 @@
           !all(is.finite(gate$center)))) {
       .gatelabr_workspace_error(sprintf(
         "quadrant gate '%s' has an invalid center.",
+        gate_id
+      ))
+    }
+    # An ellipse is defined by mean, a symmetric 2x2 covariance and the distanceSquare its
+    # boundary sits at. It has no vertices of its own, so the checks above deliberately do not
+    # apply to it; membership is decided from these numbers directly.
+    if (identical(gate$gate_type, "ellipse") &&
+        (!is.numeric(gate$mean) ||
+          length(gate$mean) != 2L ||
+          !all(is.finite(gate$mean)) ||
+          !is.numeric(gate$covariance) ||
+          !identical(dim(gate$covariance), c(2L, 2L)) ||
+          !all(is.finite(gate$covariance)) ||
+          !is.numeric(gate$distance_square) ||
+          length(gate$distance_square) != 1L ||
+          !is.finite(gate$distance_square) ||
+          gate$distance_square <= 0)) {
+      .gatelabr_workspace_error(sprintf(
+        "ellipse gate '%s' has invalid geometry.",
         gate_id
       ))
     }

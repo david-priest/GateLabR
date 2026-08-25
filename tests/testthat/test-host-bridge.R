@@ -736,3 +736,63 @@ test_that("host request dispatcher enforces dataset and colData contract identit
     "different SCE dataset"
   )
 })
+
+ellipse_host_workspace_json <- function(dataset_id = "test-sce") {
+  sub(
+    '"gates":{"gate-1":{"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle","x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,4]],"color":"#e41a1c","label_offset":null}}',
+    paste0(
+      '"gates":{"gate-1":{"gate_id":"gate-1","name":"CD3 positive",',
+      '"gate_type":"ellipse","x_channel":"CD3","y_channel":"CD19",',
+      '"mean":[3,4],"covariance":[[4,0],[0,1]],"distance_square":1,',
+      '"color":"#e41a1c","label_offset":null}}'
+    ),
+    canonical_host_workspace_json(dataset_id),
+    fixed = TRUE
+  )
+}
+
+test_that("an ellipse gate does not break the autosave mirror", {
+  # Reported from a live GateLabR session as
+  #   "SCE autosave failed: Invalid GateLab workspace: gate '<id>' has invalid vertices."
+  # An ellipse stores mean/covariance/distanceSquare and no vertices, but the legacy mirror
+  # demanded vertices for every non-quadrant gate, so the whole autosave aborted.
+  sce <- make_host_bridge_sce()
+  workspace_json <- ellipse_host_workspace_json()
+  expect_false(identical(workspace_json, canonical_host_workspace_json()))
+
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = workspace_json
+  )
+
+  expect_identical(written$result$revision, 1L)
+  mirrored <- S4Vectors::metadata(written$sce)$gating_workspace$gates[["gate-1"]]
+  expect_identical(mirrored$gate_type, "ellipse")
+  expect_equal(mirrored$mean, c(3, 4))
+  expect_equal(mirrored$covariance, matrix(c(4, 0, 0, 1), nrow = 2L))
+  expect_equal(mirrored$distance_square, 1)
+})
+
+test_that("the mirrored ellipse carries a boundary anything reading vertices can use", {
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = ellipse_host_workspace_json()
+  )
+  mirrored <- S4Vectors::metadata(written$sce)$gating_workspace$gates[["gate-1"]]
+
+  expect_equal(dim(mirrored$vertices), c(64L, 2L))
+  # Every sampled point must sit exactly on the boundary the covariance defines:
+  # (p - mu)' Sigma^-1 (p - mu) == distance_square. Asserted through the quadratic form rather
+  # than by coordinate, so an eigenvector sign flip cannot make a correct ring look wrong.
+  centred <- sweep(mirrored$vertices, 2L, mirrored$mean, "-")
+  quadratic <- rowSums((centred %*% solve(mirrored$covariance)) * centred)
+  expect_equal(quadratic, rep(1, 64L), tolerance = 1e-9)
+})

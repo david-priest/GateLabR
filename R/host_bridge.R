@@ -811,6 +811,47 @@
   pair
 }
 
+.gatelabr_json_covariance <- function(value, gate_name) {
+  if (!is.list(value) || length(value) != 2L) {
+    stop(
+      "Invalid GateLab workspace: gate '", gate_name,
+      "' has an invalid covariance matrix.",
+      call. = FALSE
+    )
+  }
+  rows <- lapply(
+    value,
+    .gatelabr_json_numeric_pair,
+    label = paste0("covariance for gate '", gate_name, "'")
+  )
+  covariance <- do.call(rbind, rows)
+  storage.mode(covariance) <- "double"
+  if (!isTRUE(all.equal(covariance[1L, 2L], covariance[2L, 1L]))) {
+    stop(
+      "Invalid GateLab workspace: gate '", gate_name,
+      "' has a non-symmetric covariance matrix.",
+      call. = FALSE
+    )
+  }
+  covariance
+}
+
+# The ellipse boundary sampled as a closed ring, so the legacy record still carries a polygon
+# for anything that reads `vertices`. Gating-ML puts the boundary at
+# (p - mu)' Sigma^-1 (p - mu) = D^2, so a principal half-axis is sqrt(lambda * D^2); eigen() on
+# the symmetric covariance gives both the lambdas and the rotation. Membership is always decided
+# from the covariance itself, never from this sampling.
+.gatelabr_ellipse_boundary <- function(mean, covariance, distance_square, n = 64L) {
+  decomposition <- eigen(covariance, symmetric = TRUE)
+  half_axes <- sqrt(pmax(0, decomposition$values * distance_square))
+  angles <- 2 * pi * seq.int(0L, n - 1L) / n
+  unit <- rbind(half_axes[[1L]] * cos(angles), half_axes[[2L]] * sin(angles))
+  points <- decomposition$vectors %*% unit
+  boundary <- cbind(mean[[1L]] + points[1L, ], mean[[2L]] + points[2L, ])
+  storage.mode(boundary) <- "double"
+  boundary
+}
+
 .gatelabr_json_vertices <- function(value, gate_name) {
   if (!is.list(value)) {
     stop("Invalid GateLab workspace: gate '", gate_name, "' has invalid vertices.", call. = FALSE)
@@ -863,6 +904,31 @@
       normalized$center <- .gatelabr_json_numeric_pair(
         gate$center,
         paste0("centre for gate '", gate_id, "'")
+      )
+    } else if (identical(normalized$gate_type, "ellipse")) {
+      # An ellipse carries the Gating-ML form and no vertices at all, so requiring vertices
+      # here rejected every workspace holding one -- which surfaced as a failed SCE autosave.
+      # The parameters are the record; the sampled boundary is added alongside them so anything
+      # reading `vertices` still receives the correct geometry.
+      normalized$mean <- .gatelabr_json_numeric_pair(
+        gate$mean,
+        paste0("mean for gate '", gate_id, "'")
+      )
+      normalized$covariance <- .gatelabr_json_covariance(gate$covariance, gate_id)
+      distance_square <- suppressWarnings(as.numeric(gate$distance_square))
+      if (length(distance_square) != 1L || !is.finite(distance_square) ||
+          distance_square <= 0) {
+        stop(
+          "Invalid GateLab workspace: gate '", gate_id,
+          "' has an invalid distance_square.",
+          call. = FALSE
+        )
+      }
+      normalized$distance_square <- distance_square
+      normalized$vertices <- .gatelabr_ellipse_boundary(
+        normalized$mean,
+        normalized$covariance,
+        distance_square
       )
     } else {
       normalized$vertices <- .gatelabr_json_vertices(gate$vertices, gate_id)
