@@ -8,7 +8,8 @@ launchReactGateLab(
   sce = NULL,
   sample_column = NULL,
   port = NULL,
-  launch.browser = TRUE
+  launch.browser = TRUE,
+  sce_name = NULL
 )
 }
 \arguments{
@@ -21,14 +22,18 @@ omitted, common sample columns such as \code{sample_id} are detected.}
 \item{port}{Port for Shiny (default: auto-select).}
 
 \item{launch.browser}{Whether to open a browser window (default: \code{TRUE}).}
+
+\item{sce_name}{Optional name of the global-environment variable that gates,
+populations and \code{colData} are written back to. Defaults to the symbol
+the caller passed as \code{sce}. Delegating wrappers must forward the user's
+symbol explicitly, because \code{substitute()} would otherwise resolve to
+the wrapper's own parameter name.}
 }
 \value{
 Invisibly \code{NULL}; runs the Shiny app (blocking).
 }
 \description{
 Starts the shared GateLab TypeScript/React application with a thin Shiny
-adapter for a \code{SingleCellExperiment}. This is the default interface
-used by \code{\link{launchGatingApp}}. The previous GateLabR-specific Shiny
-interface remains available through \code{\link{launchLegacyGateLabR}} for
-one transition release.
+adapter for a \code{SingleCellExperiment}. This is the interface started by
+\code{\link{launchGatingApp}}, which is the single supported entry point.
 }
