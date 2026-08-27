@@ -796,3 +796,74 @@ test_that("the mirrored ellipse carries a boundary anything reading vertices can
   quadratic <- rowSums((centred %*% solve(mirrored$covariance)) * centred)
   expect_equal(quadratic, rep(1, 64L), tolerance = 1e-9)
 })
+
+test_that("a revision conflict carries the data a browser needs to resync", {
+  # The browser learns the stored revision only from a successful write, so a write whose reply
+  # is lost leaves it behind for good. Reported live as "expected revision 14 but the SCE is at
+  # revision 15", curable only by reloading. The conflict now reports the current revision and
+  # who wrote it.
+  sce <- make_host_bridge_sce()
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = canonical_host_workspace_json(),
+    writer_id = "browser-a"
+  )
+  expect_identical(written$result$revision, 1L)
+  expect_identical(
+    S4Vectors::metadata(written$sce)$gatelab_workspace$writer_id,
+    "browser-a"
+  )
+
+  conflict <- tryCatch(
+    GateLabR:::.gatelabr_store_host_workspace(
+      written$sce,
+      dataset_id = "test-sce",
+      expected_revision = 0L, # stale: the SCE has moved to 1
+      client_revision = 2L,
+      reason = "autosave",
+      workspace_json = canonical_host_workspace_json(),
+      writer_id = "browser-a"
+    ),
+    gatelabr_revision_conflict = function(cause) cause
+  )
+
+  expect_s3_class(conflict, "gatelabr_revision_conflict")
+  expect_identical(conflict$current_revision, 1L)
+  expect_identical(conflict$expected_revision, 0L)
+  # The winning write was this same browser's, which is what lets it resync instead of reloading.
+  expect_identical(conflict$writer_id, "browser-a")
+  expect_match(conditionMessage(conflict), "expected revision 0 but the SCE is at revision 1")
+})
+
+test_that("a conflict is unattributable when the stored write carried no writer id", {
+  # Workspaces written before writer ids exist must not be mistaken for the current browser's
+  # own work, or resyncing would silently overwrite them.
+  sce <- make_host_bridge_sce()
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = canonical_host_workspace_json()
+  )
+  expect_true(is.na(S4Vectors::metadata(written$sce)$gatelab_workspace$writer_id))
+
+  conflict <- tryCatch(
+    GateLabR:::.gatelabr_store_host_workspace(
+      written$sce,
+      dataset_id = "test-sce",
+      expected_revision = 0L,
+      client_revision = 2L,
+      reason = "autosave",
+      workspace_json = canonical_host_workspace_json(),
+      writer_id = "browser-a"
+    ),
+    gatelabr_revision_conflict = function(cause) cause
+  )
+  expect_true(is.na(conflict$writer_id))
+})
