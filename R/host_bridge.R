@@ -1148,6 +1148,30 @@
   list(parsed = parsed, legacy = legacy, channel_ids = channel_ids)
 }
 
+# A revision conflict carries the numbers the browser needs to recover, not just a message.
+#
+# The browser learns the stored revision only from a successful write, so a write that lands
+# while its response is lost -- a closing session, a reconnect, a replaced tab -- leaves the
+# browser permanently behind and every later save failing. Reporting the current revision and
+# the id of whoever wrote it lets a browser recognise its own lost write and resync, instead of
+# dead-ending until the user reloads.
+.gatelabr_revision_conflict <- function(expected_revision, current_revision, writer_id) {
+  structure(
+    list(
+      message = paste0(
+        "Workspace revision conflict: the browser expected revision ",
+        expected_revision, " but the SCE is at revision ", current_revision,
+        ". Another session wrote to this SCE; reload GateLabR before saving again."
+      ),
+      call = NULL,
+      expected_revision = expected_revision,
+      current_revision = current_revision,
+      writer_id = writer_id
+    ),
+    class = c("gatelabr_revision_conflict", "error", "condition")
+  )
+}
+
 .gatelabr_store_host_workspace <- function(
     sce,
     dataset_id,
@@ -1155,6 +1179,7 @@
     client_revision,
     reason,
     workspace_json,
+    writer_id = NULL,
     sample_column = NULL) {
   expected_revision <- suppressWarnings(as.integer(expected_revision))
   client_revision <- suppressWarnings(as.integer(client_revision))
@@ -1169,17 +1194,28 @@
   if (!identical(reason, "autosave") && !identical(reason, "explicit")) {
     stop("Workspace write reason must be 'autosave' or 'explicit'.", call. = FALSE)
   }
+  if (is.null(writer_id)) {
+    writer_id <- NA_character_
+  } else {
+    writer_id <- as.character(writer_id)
+    writer_id <- if (length(writer_id) == 1L && !is.na(writer_id) &&
+                     nzchar(writer_id)) writer_id else NA_character_
+  }
   current <- .gatelabr_canonical_workspace_record(sce)
   current_revision <- if (is.null(current)) 0L else current$revision
   if (!identical(expected_revision, current_revision)) {
-    stop(
-      "Workspace revision conflict: the browser expected revision ",
+    stored <- S4Vectors::metadata(sce)$gatelab_workspace
+    stored_writer <- if (is.list(stored) && is.character(stored$writer_id) &&
+                         length(stored$writer_id) == 1L) {
+      stored$writer_id
+    } else {
+      NA_character_
+    }
+    stop(.gatelabr_revision_conflict(
       expected_revision,
-      " but the SCE is at revision ",
       current_revision,
-      ". Reload GateLabR before saving again.",
-      call. = FALSE
-    )
+      stored_writer
+    ))
   }
 
   validated <- .gatelabr_validate_canonical_workspace_json(
@@ -1200,6 +1236,7 @@
     version = 1L,
     revision = revision,
     client_revision = client_revision,
+    writer_id = writer_id,
     saved_at = saved_at,
     reason = reason,
     dataset_id = dataset_id,
@@ -1663,6 +1700,7 @@
       client_revision = payload$clientRevision,
       reason = payload$reason,
       workspace_json = payload$workspaceJson,
+      writer_id = payload$writerId,
       sample_column = sample_column
     ))
   }

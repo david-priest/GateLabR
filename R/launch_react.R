@@ -241,11 +241,22 @@ launchReactGateLab <- function(
           )
         },
         error = function(cause) {
-          list(
+          response <- list(
             requestId = request_id,
             ok = FALSE,
             error = conditionMessage(cause)
           )
+          # A revision conflict travels with its numbers so the browser can resync from its
+          # own lost write rather than dead-ending until the user reloads.
+          if (inherits(cause, "gatelabr_revision_conflict")) {
+            response$errorCode <- "workspace-revision-conflict"
+            response$errorData <- list(
+              expectedRevision = cause$expected_revision,
+              currentRevision = cause$current_revision,
+              writerId = if (is.na(cause$writer_id)) NULL else cause$writer_id
+            )
+          }
+          response
         }
       )
       session$sendCustomMessage("gatelabr-host-response", response)
