@@ -11,8 +11,8 @@ authors:
 repository-code: "https://github.com/david-priest/GateLabR"
 url: "https://github.com/david-priest/GateLabR"
 license: MIT
-version: 1.4.0
-date-released: "2026-08-25"
+version: 1.4.1
+date-released: "2026-08-28"
 doi: "10.5281/zenodo.20404387"
 identifiers:
   - type: doi
