@@ -1,3 +1,16 @@
+# GateLabR 1.4.1
+
+- Fixed: saving into the SCE could fail permanently with a workspace revision conflict, reporting
+  that the browser expected one revision while the SCE was at the next, and recovering only when
+  the user reloaded. The SCE advances on every accepted write, but the browser learns the new
+  revision only from that write's reply, so a reply lost to a closing session, a reconnect or a
+  replaced tab left the browser a revision behind for good and every later save was rejected.
+  Because exporting populations saves the workspace first, this also blocked writing populations
+  to `colData` before any of that work began. Writes now record which browser made them, and a
+  conflict reports the stored revision and its writer, so a browser that recognises its own lost
+  write resyncs and retries instead of stalling. A conflict raised by a genuinely different
+  session still stops and says so, rather than overwriting that session's work.
+
 # GateLabR 1.4.0
 
 - **Breaking:** `launchGatingApp()` now starts the shared GateLab TypeScript/React interface and
