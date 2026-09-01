@@ -1,3 +1,9 @@
+# GateLabR 1.4.4
+
+- Fixed: an assay whose name says it is uncompensated could still be reported to the app as compensated. The bridge decides whether a display-space assay already carries compensation by trying to reproduce it as `asinh(counts / cofactor)` and treating a mismatch as evidence, and that inference was allowed to overrule the name — so an assay called `exprs_uncomp` arrived marked compensated. A probe that cannot reproduce a transform has other explanations besides compensation: a different cofactor, a different transform family, a scaled or corrected assay. The name now wins where it explicitly says uncompensated. A neutral name such as `exprs` is still decided from the data, which is the case that detection exists for.
+- The R test suite passes again. Two host-bridge tests had been failing since the compensation detector was added on 2026-08-04, and were released red in 1.4.0 through 1.4.3; one was this defect, the other a fixture whose `exprs` was a plain rescale rather than a transform.
+- The embedded GateLab core is unchanged at 0.7.2.
+
 # GateLabR 1.4.3
 
 - Added: the manage dialog can reorder the loaded files by name, in either direction. Sorting is numeric-aware, so exp10 follows exp9 rather than exp1, and case-insensitive. This is the workspace's own sample order, so it also drives the samples panel and is saved with the workspace.
