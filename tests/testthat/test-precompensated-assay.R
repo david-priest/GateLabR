@@ -102,3 +102,34 @@ test_that("an explicit role override wins and is not narrated", {
   expect_identical(GateLabR:::.gatelabr_assay_role("exprs", sce), "transformed")
   expect_null(GateLabR:::.gatelabr_precompensation_note(sce))
 })
+
+test_that("a name that says uncompensated is not overruled by the probe", {
+  # The probe only ever infers: it reports "compensated" for anything it cannot
+  # reproduce as asinh(counts / cofactor), which also covers a different cofactor, a
+  # different transform family, and any scaled or corrected assay. A name carrying
+  # `uncomp` is the author saying what the assay is, so the inference must not win --
+  # otherwise an assay called `exprs_uncomp` reaches the app marked compensated.
+  counts <- raw_counts()
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts, exprs_uncomp = asinh((counts - c(2, 3)) / 5)),
+    metadata = list(cofactor = 5)
+  )
+
+  # The probe still says what it sees; the role is what refuses to act on it.
+  expect_true(
+    GateLabR:::.gatelabr_transformed_assay_compensation(sce, "exprs_uncomp")$compensated
+  )
+  expect_identical(GateLabR:::.gatelabr_assay_role("exprs_uncomp", sce), "transformed")
+  expect_identical(
+    GateLabR:::.gatelabr_assay_coordinate_space(sce, "exprs_uncomp"),
+    "display"
+  )
+})
+
+test_that("a neutral name is still decided by the data", {
+  # The guard above must not blunt the feature it sits next to: `exprs` says nothing
+  # either way, so an assay that no transform reproduces is still reported compensated.
+  counts <- raw_counts()
+  sce <- make_sce(counts, asinh((counts - c(2, 3)) / 5), list(cofactor = 5))
+  expect_identical(GateLabR:::.gatelabr_assay_role("exprs", sce), "compensated")
+})

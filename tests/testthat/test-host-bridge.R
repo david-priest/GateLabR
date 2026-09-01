@@ -9,7 +9,11 @@ make_host_bridge_sce <- function() {
     dimnames = list(c("CD3", "CD19"), paste0("event", 1:3))
   )
   sce <- SingleCellExperiment::SingleCellExperiment(
-    assays = list(counts = counts, exprs = counts / 5),
+    # exprs is the arcsinh of counts at the default cofactor, which is what a real
+    # object carries. counts / 5 was a plain rescale that no transform reproduces, so
+    # the bridge rightly reported it as independently compensated -- an answer this
+    # test never meant to assert.
+    assays = list(counts = counts, exprs = asinh(counts / 5)),
     colData = S4Vectors::DataFrame(
       sample_id = c("Donor A", "Donor A", "Donor B"),
       batch = c("one", "one", "two")
