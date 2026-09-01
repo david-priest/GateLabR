@@ -183,7 +183,8 @@
     key = key,
     counts = counts,
     transformed = transformed,
-    compensated = compensated
+    compensated = compensated,
+    uncompensated = uncompensated
   )
 }
 
@@ -206,7 +207,15 @@
     # An assay named `exprs` says nothing about whether it was compensated:
     # compensated and uncompensated arcsinh values are indistinguishable by
     # name. Ask the data instead (see .gatelabr_transformed_assay_compensation).
-    if (!is.null(sce) &&
+    #
+    # A name that says `uncomp` is not silent, though: it is the author stating
+    # what the assay is. The data probe only ever infers -- it reports
+    # "compensated" for anything it cannot reproduce as asinh(counts/cofactor),
+    # which includes a different cofactor, a different transform family, or any
+    # scaled or corrected assay. An inference must not overrule the statement,
+    # or an assay called `exprs_uncomp` is reported to the app as compensated.
+    if (!isTRUE(traits$uncompensated) &&
+        !is.null(sce) &&
         isTRUE(.gatelabr_transformed_assay_compensation(sce, assay_name)$compensated)) {
       return("compensated")
     }
