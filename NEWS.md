@@ -1,3 +1,10 @@
+# GateLabR 1.4.2
+
+- Fixed: a gate could quietly change meaning when a workspace was reopened from the SCE. Each gate records the coordinate space its numbers live in, and the axis transforms it was drawn under, and both survive the SCE untouched — but reading the workspace back dropped them, so a gate saved in display space came back read in the sample's default. The same coordinates then selected a different set of events, with nothing on screen to say so. Ellipses were affected every time, because a drawn ellipse is always created in display space: an ellipse on screen is not an ellipse in raw space, so converting it would bend it into something else. The fields are now restored for every gate type, and a workspace carrying a transform GateLabR cannot read is refused rather than loaded as though the gate had none.
+- Added: FCS files can be dragged onto the samples panel to load them, which does the same thing as the "+ Files…" button. Folders still go through "+ Folder…".
+- Faster: editing a gate on a large workspace. On four files totalling 6.2 million events, moving a gate near the top of the hierarchy took about 790 ms of work before the interface could respond, and now takes about 300 ms. Gates whose shape did not change are no longer re-measured, each population is examined only over the events its parent holds rather than the whole file, and the Illustration tab's per-sample figures are no longer rebuilt while that tab is closed.
+- The embedded GateLab core is 0.7.1.
+
 # GateLabR 1.4.1
 
 - Fixed: saving into the SCE could fail permanently with a workspace revision conflict, reporting
