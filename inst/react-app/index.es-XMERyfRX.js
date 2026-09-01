@@ -1,5 +1,5 @@
-import { o as Va, q as il } from "./embed-Bg9xAj5b.js";
-import { _ as La } from "./jspdf.es.min-Sr--SEsl.js";
+import { o as Va, q as il } from "./embed-LaltpL8k.js";
+import { _ as La } from "./jspdf.es.min-DuRQwbm6.js";
 var fn = {}, cn = {}, cr, vn;
 function Q() {
   if (vn) return cr;

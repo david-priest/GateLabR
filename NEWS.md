@@ -1,3 +1,9 @@
+# GateLabR 1.4.3
+
+- Added: the manage dialog can reorder the loaded files by name, in either direction. Sorting is numeric-aware, so exp10 follows exp9 rather than exp1, and case-insensitive. This is the workspace's own sample order, so it also drives the samples panel and is saved with the workspace.
+- Changed: on the Illustration tab the contour bandwidth is now always shown, rather than appearing only after switching off automatic smoothing. It reads "auto" while automatic and can be set by hand once automatic is off. Nothing about the rendering changes, but the automatic value depends on the plotted event count and the panel size, so being able to see and pin it is what lets a contour here be matched to the same population in the gating plot.
+- The embedded GateLab core is 0.7.2.
+
 # GateLabR 1.4.2
 
 - Fixed: a gate could quietly change meaning when a workspace was reopened from the SCE. Each gate records the coordinate space its numbers live in, and the axis transforms it was drawn under, and both survive the SCE untouched — but reading the workspace back dropped them, so a gate saved in display space came back read in the sample's default. The same coordinates then selected a different set of events, with nothing on screen to say so. Ellipses were affected every time, because a drawn ellipse is always created in display space: an ellipse on screen is not an ellipse in raw space, so converting it would bend it into something else. The fields are now restored for every gate type, and a workspace carrying a transform GateLabR cannot read is refused rather than loaded as though the gate had none.
