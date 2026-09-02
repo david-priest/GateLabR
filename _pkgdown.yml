@@ -27,3 +27,9 @@ reference:
     contents:
       - launchGatingApp
       - launchReactGateLab
+  - title: Retired
+    desc: >
+      Kept as an exported stub so existing scripts fail with an explanation
+      rather than "could not find function". It never starts an application.
+    contents:
+      - launchLegacyGateLabR
