@@ -1,11 +1,9 @@
 # Launch GateLabR with the canonical GateLab React interface
 
 Starts the shared GateLab TypeScript/React application with a thin Shiny
-adapter for a `SingleCellExperiment`. This is the default interface used
-by
-[`launchGatingApp`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md).
-The previous GateLabR-specific Shiny interface remains available through
-`launchLegacyGateLabR` for one transition release.
+adapter for a `SingleCellExperiment`. This is the interface started by
+[`launchGatingApp`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md),
+which is the single supported entry point.
 
 ## Usage
 
@@ -14,7 +12,8 @@ launchReactGateLab(
   sce = NULL,
   sample_column = NULL,
   port = NULL,
-  launch.browser = TRUE
+  launch.browser = TRUE,
+  sce_name = NULL
 )
 ```
 
@@ -37,6 +36,15 @@ launchReactGateLab(
 - launch.browser:
 
   Whether to open a browser window (default: `TRUE`).
+
+- sce_name:
+
+  Optional name of the global-environment variable that gates,
+  populations and `colData` are written back to. Defaults to the symbol
+  the caller passed as `sce`. Delegating wrappers must forward the
+  user's symbol explicitly, because
+  [`substitute()`](https://rdrr.io/r/base/substitute.html) would
+  otherwise resolve to the wrapper's own parameter name.
 
 ## Value
 

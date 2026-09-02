@@ -1,30 +1,28 @@
-# Launch the previous GateLabR Shiny interface
+# Launch the previous GateLabR Shiny interface (defunct)
 
-Opens the original GateLabR-specific Shiny application. This transition
-launcher remains available for workflows that have not yet moved to the
-shared React interface, including the former Shiny-only UMAP view.
+The GateLabR-specific Shiny interface was retired in GateLabR 1.4.0.
+GateLabR now has a single entry point,
+[`launchGatingApp`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md),
+which starts the shared GateLab React interface.
 
 ## Usage
 
 ``` r
-launchLegacyGateLabR(sce = NULL, port = NULL, launch.browser = TRUE)
+launchLegacyGateLabR(...)
 ```
 
 ## Arguments
 
-- sce:
+- ...:
 
-  Optional `SingleCellExperiment`. If `NULL`, the first SCE in the
-  global environment is used.
-
-- port:
-
-  Port for Shiny (default: auto-select).
-
-- launch.browser:
-
-  Whether to open a browser window (default: `TRUE`).
+  Ignored.
 
 ## Value
 
-Invisibly `NULL`; runs the Shiny app (blocking).
+Never returns; always signals an error.
+
+## Details
+
+The entry point is kept only so that existing scripts fail with an
+explanation instead of “could not find function”. It never starts an
+application.
