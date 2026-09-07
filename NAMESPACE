@@ -2,6 +2,7 @@
 
 export(gatelabHierarchies)
 export(gatelabHierarchy)
+export(gatelabImportGate)
 export(gatelabLeafPopulation)
 export(gatelabPopulations)
 export(launchGatingApp)
