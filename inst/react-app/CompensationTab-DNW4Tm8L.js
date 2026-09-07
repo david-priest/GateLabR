@@ -1,7 +1,7 @@
-var Js = Object.defineProperty;
-var Qs = (n, s, r) => s in n ? Js(n, s, { enumerable: !0, configurable: !0, writable: !0, value: r }) : n[s] = r;
-var st = (n, s, r) => Qs(n, typeof s != "symbol" ? s + "" : s, r);
-import { D as Xt, r as er, l as nr, s as tr, z as ir, u as Le, a as M, j as e, b as me, c as ne, p as en, v as qt, d as sr, e as rr, f as ar, g as Pi, h as or, F as lr, i as cr, k as dr, C as ur, m as hr } from "./embed-LaltpL8k.js";
+var er = Object.defineProperty;
+var nr = (n, s, r) => s in n ? er(n, s, { enumerable: !0, configurable: !0, writable: !0, value: r }) : n[s] = r;
+var st = (n, s, r) => nr(n, typeof s != "symbol" ? s + "" : s, r);
+import { D as Yt, r as tr, l as ir, s as sr, z as rr, u as Le, a as M, j as e, b as me, c as ne, p as en, v as Ut, d as ar, e as or, f as lr, g as cr, h as Ki, i as dr, F as ur, k as hr, m as pr, C as mr, n as fr } from "./embed-CfuhqSHI.js";
 class fe extends Error {
   constructor(r, a, o = {}) {
     super(a);
@@ -11,18 +11,18 @@ class fe extends Error {
     this.name = "CompensationMatrixTableError", this.code = r, this.row = o.row, this.column = o.column;
   }
 }
-const pr = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
-function Vt(n) {
+const gr = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+function qt(n) {
   return n.trim().normalize("NFC");
 }
-function mr(n) {
-  const s = Vt(n).toLowerCase();
+function xr(n) {
+  const s = qt(n).toLowerCase();
   return s === "" || s === "x" || s === "row.names" || s === "channel" || s === "source";
 }
-function fr(n) {
+function vr(n) {
   return n === "csv" ? "," : "	";
 }
-function gr(n) {
+function br(n) {
   let s = 0, r = 0, a = !1, o = !1, c = 1;
   const d = () => {
     if (s > 0 && r > 0)
@@ -59,7 +59,7 @@ function gr(n) {
   }
   return d();
 }
-function xr(n, s) {
+function yr(n, s) {
   const r = [];
   let a = [], o = "", c = !1, d = !1, m = 1, g = 1;
   const f = () => {
@@ -113,9 +113,9 @@ function xr(n, s) {
     ({ cells: k }) => !(k.length === 1 && k[0].trim().length === 0)
   );
 }
-function vr(n, s, r) {
+function jr(n, s, r) {
   const a = n.trim();
-  if (!pr.test(a))
+  if (!gr.test(a))
     throw new fe(
       "invalid-coefficient",
       `Matrix coefficient at row ${s}, column ${r} is not a finite decimal number.`,
@@ -130,14 +130,14 @@ function vr(n, s, r) {
     );
   return o;
 }
-function br(n, s, r) {
+function wr(n, s, r) {
   return Object.freeze({
     sourceChannels: Object.freeze(Array.from(n)),
     receiverChannels: Object.freeze(Array.from(s)),
     matrix: Object.freeze(r.map((a) => Object.freeze(Array.from(a))))
   });
 }
-function yr(n, s = {}) {
+function Nr(n, s = {}) {
   if (typeof n != "string")
     throw new fe(
       "invalid-input",
@@ -152,7 +152,7 @@ function yr(n, s = {}) {
       "invalid-delimiter",
       "The compensation matrix delimiter must be auto, csv, or tsv."
     );
-  const o = a ?? "auto", c = o === "auto" ? gr(r) : o, d = xr(r, fr(c));
+  const o = a ?? "auto", c = o === "auto" ? br(r) : o, d = yr(r, vr(c));
   if (d.length === 0)
     throw new fe("empty-file", "The compensation matrix file is empty.");
   const m = d[0];
@@ -163,7 +163,7 @@ function yr(n, s = {}) {
       { row: m.row }
     );
   const g = m.cells[0];
-  if (!mr(g))
+  if (!xr(g))
     throw new fe(
       "missing-source-column",
       "The first column must identify source channels (blank, X, row.names, channel, or source).",
@@ -175,7 +175,7 @@ function yr(n, s = {}) {
       "The compensation matrix does not contain any source-channel rows.",
       { row: m.row + 1 }
     );
-  const f = m.cells.slice(1).map(Vt), w = [], k = [];
+  const f = m.cells.slice(1).map(qt), w = [], k = [];
   for (const v of d.slice(1)) {
     if (v.cells.length !== m.cells.length)
       throw new fe(
@@ -183,34 +183,34 @@ function yr(n, s = {}) {
         `Matrix row ${v.row} has ${v.cells.length} columns; expected ${m.cells.length}.`,
         { row: v.row }
       );
-    const C = Vt(v.cells[0]);
-    if (C.length === 0)
+    const S = qt(v.cells[0]);
+    if (S.length === 0)
       throw new fe(
         "missing-source-channel",
         `Matrix row ${v.row} has no source-channel identity.`,
         { row: v.row, column: 1 }
       );
-    w.push(C), k.push(
-      v.cells.slice(1).map((T, P) => vr(T, v.row, P + 2))
+    w.push(S), k.push(
+      v.cells.slice(1).map((T, I) => jr(T, v.row, I + 2))
     );
   }
   return Object.freeze({
-    input: br(w, f, k),
+    input: wr(w, f, k),
     format: Object.freeze({ delimiter: c, sourceColumnHeader: g })
   });
 }
-function Bt(n) {
+function Vt(n) {
   const s = n.trim().normalize("NFC"), r = s.match(/^([A-Z][a-z]?)(\d{2,3})(?:Di)?(?:$|[_\s(\-])/);
   if (r)
     return { element: r[1], mass: Number(r[2]) };
   const a = s.match(/^(\d{2,3})([A-Z][a-z]?)(?:Di)?(?:$|[_\s(\-])/);
   return a ? { element: a[2], mass: Number(a[1]) } : null;
 }
-function Ii(n) {
-  return n.map((s, r) => ({ channel: s, index: r, isotope: Bt(s) })).sort((s, r) => s.isotope && r.isotope ? s.isotope.mass - r.isotope.mass || s.isotope.element.localeCompare(r.isotope.element) || s.index - r.index : s.isotope ? -1 : r.isotope ? 1 : s.index - r.index).map(({ index: s }) => s);
+function Ri(n) {
+  return n.map((s, r) => ({ channel: s, index: r, isotope: Vt(s) })).sort((s, r) => s.isotope && r.isotope ? s.isotope.mass - r.isotope.mass || s.isotope.element.localeCompare(r.isotope.element) || s.index - r.index : s.isotope ? -1 : r.isotope ? 1 : s.index - r.index).map(({ index: s }) => s);
 }
-function jr(n) {
-  const s = Ii(n.sourceChannels), r = Ii(n.receiverChannels);
+function Cr(n) {
+  const s = Ri(n.sourceChannels), r = Ri(n.receiverChannels);
   return {
     sourceChannels: s.map((a) => n.sourceChannels[a]),
     receiverChannels: r.map((a) => n.receiverChannels[a]),
@@ -221,7 +221,7 @@ function jr(n) {
 }
 function Cn(n, s) {
   if (n === s) return "self";
-  const r = Bt(n), a = Bt(s);
+  const r = Vt(n), a = Vt(s);
   if (!r || !a) return "other";
   const o = a.mass - r.mass;
   return r.element === a.element ? o === -1 ? "M-1" : o === 1 ? "M+1" : "same-element" : o === -1 ? "M-1" : o === 1 ? "M+1" : o === 16 ? "oxide (+16)" : "other";
@@ -281,13 +281,13 @@ function lt(n) {
   const a = n.reduce((d, m) => d + m, 0) / n.length, o = n.reduce((d, m) => d + (m - a) ** 2, 0) / Math.max(1, n.length - 1), c = Math.sqrt(o);
   return Number.isFinite(c) && c > 0 ? c : 1e-12;
 }
-function Gt(n, s, r = 12) {
+function Bt(n, s, r = 12) {
   if (n.length !== s.length || n.length < r * 8) return null;
   const a = Array.from({ length: n.length }, (m, g) => g).sort((m, g) => n[m] - n[g]), o = [];
   for (let m = 0; m < r; m++) {
     const g = Math.floor(m * a.length / r), f = Math.floor((m + 1) * a.length / r), w = a.slice(g, f);
     if (w.length < 8) continue;
-    const k = De(w.map((C) => n[C])), v = De(w.map((C) => s[C]));
+    const k = De(w.map((S) => n[S])), v = De(w.map((S) => s[S]));
     Number.isFinite(k) && Number.isFinite(v) && o.push({ x: k, y: v });
   }
   const c = [];
@@ -301,7 +301,7 @@ function Gt(n, s, r = 12) {
   const d = De(c);
   return Number.isFinite(d) ? d : null;
 }
-function wr(n, s) {
+function Sr(n, s) {
   if (n.length !== s.length || n.length < 120)
     return { excessMad: null, slopeDeltaMad: null };
   const r = Array.from({ length: n.length }, (A, K) => K).filter((A) => Number.isFinite(n[A]) && Number.isFinite(s[A])).sort((A, K) => n[A] - n[K]);
@@ -309,20 +309,20 @@ function wr(n, s) {
   const a = Math.max(96, Math.floor(r.length * 0.8)), o = Math.min(r.length - 24, Math.floor(r.length * 0.9)), c = r.slice(0, a), d = r.slice(o);
   if (c.length < 96 || d.length < 24)
     return { excessMad: null, slopeDeltaMad: null };
-  const m = c.map((A) => n[A]), g = c.map((A) => s[A]), f = Gt(m, g, 10);
+  const m = c.map((A) => n[A]), g = c.map((A) => s[A]), f = Bt(m, g, 10);
   if (f === null) return { excessMad: null, slopeDeltaMad: null };
   const w = De(c.map((A) => s[A] - f * n[A])), k = c.map((A) => s[A] - (w + f * n[A])), v = Math.max(
     lt(k),
     lt(g) * 0.05,
     1e-12
-  ), C = d.map((A) => s[A] - (w + f * n[A])).sort((A, K) => A - K), T = hn(C, 0.75) / v, P = r.slice(Math.floor(r.length * 0.75)), $ = P.map((A) => n[A]), E = P.map((A) => s[A]), I = Gt($, E, 4), F = hn($, 0.9) - hn($, 0.1), N = I === null || !(F > 0) ? null : (I - f) * F / v;
+  ), S = d.map((A) => s[A] - (w + f * n[A])).sort((A, K) => A - K), T = hn(S, 0.75) / v, I = r.slice(Math.floor(r.length * 0.75)), $ = I.map((A) => n[A]), E = I.map((A) => s[A]), P = Bt($, E, 4), F = hn($, 0.9) - hn($, 0.1), N = P === null || !(F > 0) ? null : (P - f) * F / v;
   return {
     excessMad: Number.isFinite(T) ? T : null,
     slopeDeltaMad: Number.isFinite(N) ? N : null
   };
 }
-function ss(n, s, r, a, o, c) {
-  const d = r.length, m = wr(r, a), g = Math.min(50, Math.max(12, Math.floor(d * 0.01))), f = (i = 0, R = 0, ge = 0) => ({
+function as(n, s, r, a, o, c) {
+  const d = r.length, m = Sr(r, a), g = Math.min(50, Math.max(12, Math.floor(d * 0.01))), f = (i = 0, R = 0, ge = 0) => ({
     status: "insufficient",
     sourceLowEvents: i,
     sourceHighEvents: R,
@@ -336,20 +336,20 @@ function ss(n, s, r, a, o, c) {
   if (d < g * 3) return f();
   const w = [...r].sort((i, R) => i - R), k = hn(w, 0.25), v = r.flatMap((i, R) => i <= k ? [R] : []);
   if (v.length < g) return f(v.length);
-  const C = v.map((i) => r[i]), T = De(C), P = lt(C);
-  let $ = r.flatMap((i, R) => i >= T + 3 * P ? [R] : []);
+  const S = v.map((i) => r[i]), T = De(S), I = lt(S);
+  let $ = r.flatMap((i, R) => i >= T + 3 * I ? [R] : []);
   if ($.length < g && ($ = Array.from({ length: d }, (i, R) => R).sort((i, R) => r[R] - r[i]).slice(0, g)), $.length < g) return f(v.length, $.length);
-  const E = v.map((i) => a[i]), I = De(E), F = lt(E), N = I + 5 * F, A = a.flatMap((i, R) => i <= N ? [R] : []), K = new Set(A), O = v.filter((i) => K.has(i)), D = $.filter((i) => K.has(i));
+  const E = v.map((i) => a[i]), P = De(E), F = lt(E), N = P + 5 * F, A = a.flatMap((i, R) => i <= N ? [R] : []), K = new Set(A), O = v.filter((i) => K.has(i)), D = $.filter((i) => K.has(i));
   if (O.length < g || D.length < g)
     return f(v.length, $.length, A.length);
-  const q = (De(D.map((i) => a[i])) - De(O.map((i) => a[i]))) / F, J = A.map((i) => n[i]), Z = A.map((i) => s[i]);
+  const U = (De(D.map((i) => a[i])) - De(O.map((i) => a[i]))) / F, J = A.map((i) => n[i]), Z = A.map((i) => s[i]);
   return {
     status: "ready",
     sourceLowEvents: v.length,
     sourceHighEvents: $.length,
     destinationNegativeEvents: A.length,
-    normalizedNegativeShift: Number.isFinite(q) ? q : null,
-    residualSlope: Gt(J, Z),
+    normalizedNegativeShift: Number.isFinite(U) ? U : null,
+    residualSlope: Bt(J, Z),
     upperTailExcessMad: m.excessMad,
     upperTailSlopeDeltaMad: m.slopeDeltaMad,
     receiverZeroDeltaFraction: d > 0 ? (c - o) / d : 0
@@ -371,7 +371,7 @@ function ct(n, s, r, a, o, c) {
     })
   };
 }
-function Dt(n, s, r, a = {}) {
+function Ot(n, s, r, a = {}) {
   var i;
   if (n.compensatedLayerStatus().state !== "ready")
     return { ready: !1, reason: "Apply compensation to compare Original and Compensated data." };
@@ -391,20 +391,20 @@ function Dt(n, s, r, a = {}) {
   for (const R of m)
     if (R >= n.fcs.nEvents || a.eventMask && !a.eventMask[R])
       return { ready: !1, reason: "The frozen compensation event selection is no longer valid." };
-  const g = n.channels[c].key, f = n.channels[d].key, w = n.originalColumnData(c), k = n.originalColumnData(d), v = n.compensatedColumnData(c), C = n.compensatedColumnData(d), T = [], P = [], $ = [], E = [], I = [], F = [], N = [], A = [];
+  const g = n.channels[c].key, f = n.channels[d].key, w = n.originalColumnData(c), k = n.originalColumnData(d), v = n.compensatedColumnData(c), S = n.compensatedColumnData(d), T = [], I = [], $ = [], E = [], P = [], F = [], N = [], A = [];
   for (const R of m) {
-    const ge = n.rawToDisplay(g, w[R]), _ = n.rawToDisplay(f, k[R]), j = n.rawToDisplay(g, v[R]), H = n.rawToDisplay(f, C[R]);
-    [ge, _, j, H].every(Number.isFinite) && (T.push(ge), P.push(_), $.push(w[R]), E.push(k[R]), I.push(j), F.push(H), N.push(v[R]), A.push(C[R]));
+    const ge = n.rawToDisplay(g, w[R]), _ = n.rawToDisplay(f, k[R]), j = n.rawToDisplay(g, v[R]), H = n.rawToDisplay(f, S[R]);
+    [ge, _, j, H].every(Number.isFinite) && (T.push(ge), I.push(_), $.push(w[R]), E.push(k[R]), P.push(j), F.push(H), N.push(v[R]), A.push(S[R]));
   }
-  const K = ot([...T, ...I]), O = ot([...P, ...F]), D = n.channelTicks(c, [K[0], K[1]]), q = n.channelTicks(d, [O[0], O[1]]), J = ct(
+  const K = ot([...T, ...P]), O = ot([...I, ...F]), D = n.channelTicks(c, [K[0], K[1]]), U = n.channelTicks(d, [O[0], O[1]]), J = ct(
     T,
-    P,
+    I,
     $,
     E,
     K,
     O
   ), Z = ct(
-    I,
+    P,
     F,
     N,
     A,
@@ -419,13 +419,13 @@ function Dt(n, s, r, a = {}) {
       xRange: K,
       yRange: O,
       xTicks: D,
-      yTicks: q,
+      yTicks: U,
       original: J,
       compensated: Z,
-      evidence: ss(
+      evidence: as(
         N,
         A,
-        I,
+        P,
         F,
         J.zeroPile.receiver,
         Z.zeroPile.receiver
@@ -433,7 +433,7 @@ function Dt(n, s, r, a = {}) {
     }
   };
 }
-function Lt(n, s, r, a, o, c, d = {}) {
+function Dt(n, s, r, a, o, c, d = {}) {
   const m = at(n, s), g = at(n, r);
   if (m === void 0 || g === void 0)
     return {
@@ -442,42 +442,42 @@ function Lt(n, s, r, a, o, c, d = {}) {
     };
   if (o.length !== a.length || c.length !== a.length)
     return { ready: !1, reason: "The solved compensation preview does not match the frozen event selection." };
-  const f = n.channels[m].key, w = n.channels[g].key, k = n.originalColumnData(m), v = n.originalColumnData(g), C = [], T = [], P = [], $ = [], E = [], I = [], F = [], N = [];
+  const f = n.channels[m].key, w = n.channels[g].key, k = n.originalColumnData(m), v = n.originalColumnData(g), S = [], T = [], I = [], $ = [], E = [], P = [], F = [], N = [];
   for (let Z = 0; Z < a.length; Z++) {
     const i = a[Z];
     if (i >= n.fcs.nEvents)
       return { ready: !1, reason: "The frozen compensation event selection is no longer valid." };
     const R = k[i], ge = v[i], _ = o[Z], j = c[Z], H = n.rawToDisplay(f, R), ue = n.rawToDisplay(w, ge), pn = n.rawToDisplay(f, _), Se = n.rawToDisplay(w, j);
-    [R, ge, _, j, H, ue, pn, Se].every(Number.isFinite) && (C.push(H), T.push(ue), P.push(R), $.push(ge), E.push(pn), I.push(Se), F.push(_), N.push(j));
+    [R, ge, _, j, H, ue, pn, Se].every(Number.isFinite) && (S.push(H), T.push(ue), I.push(R), $.push(ge), E.push(pn), P.push(Se), F.push(_), N.push(j));
   }
-  const A = d.xRange ?? ot([...C, ...E]), K = d.yRange ?? ot([...T, ...I]), O = n.channelTicks(m, [A[0], A[1]]), D = n.channelTicks(g, [K[0], K[1]]), q = ct(C, T, P, $, A, K), J = ct(E, I, F, N, A, K);
+  const A = d.xRange ?? ot([...S, ...E]), K = d.yRange ?? ot([...T, ...P]), O = n.channelTicks(m, [A[0], A[1]]), D = n.channelTicks(g, [K[0], K[1]]), U = ct(S, T, I, $, A, K), J = ct(E, P, F, N, A, K);
   return {
     ready: !0,
     preview: {
-      eventCount: C.length,
+      eventCount: S.length,
       totalEvents: d.totalEvents ?? n.fcs.nEvents,
       xRange: A,
       yRange: K,
       xTicks: O,
       yTicks: D,
-      original: q,
+      original: U,
       compensated: J,
-      evidence: ss(
+      evidence: as(
         F,
         N,
         E,
-        I,
-        q.zeroPile.receiver,
+        P,
+        U.zeroPile.receiver,
         J.zeroPile.receiver
       )
     }
   };
 }
-const Ki = 0.5, Nr = 0.01, Cr = 1e-4, Sr = 0.05, Mr = 3, Er = 1, kr = 5;
-function rs(n, s) {
+const Oi = 0.5, Mr = 0.01, Er = 1e-4, kr = 0.05, Ar = 3, Tr = 1, Fr = 5;
+function os(n, s) {
   const r = n.evidence.normalizedNegativeShift ?? 0, a = n.evidence.residualSlope ?? 0, o = Math.max(0, n.evidence.upperTailExcessMad ?? 0), c = Math.max(0, n.evidence.upperTailSlopeDeltaMad ?? 0), d = Math.abs(n.coefficient), m = Math.max(
-    Cr,
-    d * Sr
+    Er,
+    d * kr
   );
   return {
     negativeShift: Math.max(0, -r),
@@ -487,19 +487,19 @@ function rs(n, s) {
     positiveSlope: Math.max(0, a),
     upperTailExcess: o,
     upperTailSlopeDelta: c,
-    hasNegativeShift: r <= -Ki,
+    hasNegativeShift: r <= -Oi,
     hasNegativeSlope: a <= -m,
-    hasNewZeroPile: s === "cytof" && n.evidence.receiverZeroDeltaFraction >= Nr,
-    hasPositiveShift: r >= Ki,
+    hasNewZeroPile: s === "cytof" && n.evidence.receiverZeroDeltaFraction >= Mr,
+    hasPositiveShift: r >= Oi,
     hasPositiveSlope: a >= m,
-    hasHighTailCurve: o >= Mr && (c >= Er || o >= kr)
+    hasHighTailCurve: o >= Ar && (c >= Tr || o >= Fr)
   };
 }
-function Ar(n) {
+function $r(n) {
   return Number(n.hasNegativeShift) + Number(n.hasNegativeSlope) + Number(n.hasNewZeroPile) > 1 ? "multiple-overcompensation-signals" : n.hasNewZeroPile ? "new-zero-pile" : n.hasNegativeShift ? "negative-receiver-shift" : "negative-residual-slope";
 }
-function Wt(n, s, r = "biological") {
-  const a = rs(n, s), o = a.hasNegativeShift || a.hasNegativeSlope || a.hasNewZeroPile, c = a.hasPositiveShift || a.hasPositiveSlope, d = a.hasHighTailCurve || r === "control" && c;
+function Gt(n, s, r = "biological") {
+  const a = os(n, s), o = a.hasNegativeShift || a.hasNegativeSlope || a.hasNewZeroPile, c = a.hasPositiveShift || a.hasPositiveSlope, d = a.hasHighTailCurve || r === "control" && c;
   return o && d ? {
     category: "mixed-evidence",
     label: "Mixed evidence · inspect",
@@ -510,7 +510,7 @@ function Wt(n, s, r = "biological") {
     category: "overcompensation-like",
     label: "Overcompensation-like",
     detail: "A negative receiver shift, negative residual slope, or new NNLS zero pile is present. This is a review prompt, not an automatic coefficient verdict.",
-    reason: Ar(a),
+    reason: $r(a),
     automaticFollowup: !0
   } : a.hasHighTailCurve ? r === "control" ? {
     category: "undercompensation-like",
@@ -560,38 +560,38 @@ function Qe(n, s) {
     else break;
   return a / r.length;
 }
-function Tr(n, s, r = "biological") {
+function Ir(n, s, r = "biological") {
   const a = n.map((T) => ({
-    ...rs(T, s),
+    ...os(T, s),
     coefficient: Math.abs(T.coefficient)
-  })), o = (T) => a.map((P) => typeof P[T] == "number" ? P[T] : 0), c = o("negativeShift"), d = o("negativeSlope"), m = o("zeroDelta"), g = o("positiveShift"), f = o("positiveSlope"), w = o("upperTailExcess"), k = o("upperTailSlopeDelta"), v = o("coefficient"), C = n.flatMap((T, P) => {
-    const $ = Wt(T, s, r);
+  })), o = (T) => a.map((I) => typeof I[T] == "number" ? I[T] : 0), c = o("negativeShift"), d = o("negativeSlope"), m = o("zeroDelta"), g = o("positiveShift"), f = o("positiveSlope"), w = o("upperTailExcess"), k = o("upperTailSlopeDelta"), v = o("coefficient"), S = n.flatMap((T, I) => {
+    const $ = Gt(T, s, r);
     if (!$.automaticFollowup || $.reason === null) return [];
-    const E = a[P], I = 0.22 * Qe(E.negativeShift, c) + 0.13 * Qe(E.negativeSlope, d) + 0.14 * Qe(E.zeroDelta, m) + (r === "control" ? 0.13 * Qe(E.positiveShift, g) : 0) + (r === "control" ? 0.08 * Qe(E.positiveSlope, f) : 0) + 0.12 * Qe(E.upperTailExcess, w) + 0.08 * Qe(E.upperTailSlopeDelta, k) + 0.05 * Qe(E.coefficient, v) + 0.05 * Math.max(0, Math.min(1, T.physicalPrior));
+    const E = a[I], P = 0.22 * Qe(E.negativeShift, c) + 0.13 * Qe(E.negativeSlope, d) + 0.14 * Qe(E.zeroDelta, m) + (r === "control" ? 0.13 * Qe(E.positiveShift, g) : 0) + (r === "control" ? 0.08 * Qe(E.positiveSlope, f) : 0) + 0.12 * Qe(E.upperTailExcess, w) + 0.08 * Qe(E.upperTailSlopeDelta, k) + 0.05 * Qe(E.coefficient, v) + 0.05 * Math.max(0, Math.min(1, T.physicalPrior));
     return [{
-      index: P,
-      relativePriority: I,
+      index: I,
+      relativePriority: P,
       reason: $.reason,
       category: $.category
     }];
   });
-  return Object.freeze(C.sort((T, P) => P.relativePriority - T.relativePriority || T.index - P.index));
+  return Object.freeze(S.sort((T, I) => I.relativePriority - T.relativePriority || T.index - I.index));
 }
-function Fr(n, s) {
+function Pr(n, s) {
   const r = n.index(s);
   if (r !== void 0) return r;
   const a = n.channels.findIndex((o) => o.pnn === s);
   return a < 0 ? void 0 : a;
 }
-function Zt(n, s) {
+function Wt(n, s) {
   if (n.length === 0) return 0;
   const r = Math.max(0, Math.min(1, s)) * (n.length - 1), a = Math.floor(r), o = Math.ceil(r);
   return a === o ? n[a] : n[a] + (n[o] - n[a]) * (r - a);
 }
-function $r(n) {
+function Kr(n) {
   const s = n.filter(Number.isFinite).sort((c, d) => c - d);
   if (s.length === 0) return [-1, 1];
-  let r = Zt(s, 2e-3), a = Zt(s, 0.998);
+  let r = Wt(s, 2e-3), a = Wt(s, 0.998);
   if (!(a > r)) {
     const c = Number.isFinite(r) ? r : 0, d = Math.max(1, Math.abs(c) * 0.05);
     return [c - d, c + d];
@@ -599,14 +599,14 @@ function $r(n) {
   const o = (a - r) * 0.035;
   return r -= o, a += o, [r, a];
 }
-function Pr(n) {
+function Rr(n) {
   if (n.length === 0) return "0:empty";
   let s = 2166136261;
   for (const r of n)
     s ^= r, s = Math.imul(s, 16777619) >>> 0;
   return `${n.length}:${n[0]}:${n[n.length - 1]}:${s.toString(16)}`;
 }
-function Ir(n, s, r = {}) {
+function Or(n, s, r = {}) {
   var m;
   if (n.compensatedLayerStatus().state !== "ready")
     return { ready: !1, reason: "Apply compensation before comparing Uncompensated and Compensated data." };
@@ -620,21 +620,21 @@ function Ir(n, s, r = {}) {
       return { ready: !1, reason: "The frozen global-inspector event selection is no longer valid." };
   const c = /* @__PURE__ */ new Map();
   for (const g of Array.from(new Set(s))) {
-    const f = Fr(n, g);
+    const f = Pr(n, g);
     if (f === void 0) continue;
-    const w = n.channels[f], k = n.originalColumnData(f), v = n.compensatedColumnData(f), C = new Float64Array(o.length), T = new Float64Array(o.length), P = new Float64Array(o.length), $ = new Float64Array(o.length), E = [];
+    const w = n.channels[f], k = n.originalColumnData(f), v = n.compensatedColumnData(f), S = new Float64Array(o.length), T = new Float64Array(o.length), I = new Float64Array(o.length), $ = new Float64Array(o.length), E = [];
     for (let N = 0; N < o.length; N++) {
-      const A = o[N], K = k[A], O = v[A], D = n.rawToDisplay(w.key, K), q = n.rawToDisplay(w.key, O);
-      C[N] = K, T[N] = O, P[N] = D, $[N] = q, Number.isFinite(D) && E.push(D), Number.isFinite(q) && E.push(q);
+      const A = o[N], K = k[A], O = v[A], D = n.rawToDisplay(w.key, K), U = n.rawToDisplay(w.key, O);
+      S[N] = K, T[N] = O, I[N] = D, $[N] = U, Number.isFinite(D) && E.push(D), Number.isFinite(U) && E.push(U);
     }
-    const I = $r(E), F = Object.freeze({
+    const P = Kr(E), F = Object.freeze({
       key: w.key,
       pnn: w.pnn,
-      range: I,
-      ticks: n.channelTicks(f, [I[0], I[1]]),
-      originalRaw: C,
+      range: P,
+      ticks: n.channelTicks(f, [P[0], P[1]]),
+      originalRaw: S,
       compensatedRaw: T,
-      originalDisplay: P,
+      originalDisplay: I,
       compensatedDisplay: $
     });
     c.set(g, F), c.set(w.key, F), c.set(w.pnn, F);
@@ -644,19 +644,19 @@ function Ir(n, s, r = {}) {
     ready: !0,
     dataset: Object.freeze({
       eventIndices: o,
-      eventSignature: Pr(o),
+      eventSignature: Rr(o),
       eligibleEventCount: d,
       channels: c
     })
   };
 }
-function Ri(n, s, r, a, o, c, d) {
+function Di(n, s, r, a, o, c, d) {
   const m = [], g = [];
   let f = 0, w = 0, k = 0;
   for (const v of o) {
     m.push(Math.max(c[0], Math.min(c[1], n[v]))), g.push(Math.max(d[0], Math.min(d[1], s[v])));
-    const C = Math.abs(r[v]) <= 1e-12, T = Math.abs(a[v]) <= 1e-12;
-    C && f++, T && w++, C && T && k++;
+    const S = Math.abs(r[v]) <= 1e-12, T = Math.abs(a[v]) <= 1e-12;
+    S && f++, T && w++, S && T && k++;
   }
   return {
     x: m,
@@ -664,7 +664,7 @@ function Ri(n, s, r, a, o, c, d) {
     zeroPile: Object.freeze({ source: f, receiver: w, corner: k })
   };
 }
-function as(n, s, r) {
+function ls(n, s, r) {
   const a = n.channels.get(s), o = n.channels.get(r);
   if (!a || !o)
     return { ready: !1, reason: "One or both channels are absent from the frozen global-inspector dataset." };
@@ -686,7 +686,7 @@ function as(n, s, r) {
       yRange: o.range,
       xTicks: a.ticks,
       yTicks: o.ticks,
-      original: Ri(
+      original: Di(
         a.originalDisplay,
         o.originalDisplay,
         a.originalRaw,
@@ -695,7 +695,7 @@ function as(n, s, r) {
         a.range,
         o.range
       ),
-      compensated: Ri(
+      compensated: Di(
         a.compensatedDisplay,
         o.compensatedDisplay,
         a.compensatedRaw,
@@ -707,53 +707,53 @@ function as(n, s, r) {
     })
   };
 }
-function Oi(n, s, r, a, o) {
+function Li(n, s, r, a, o) {
   const c = Math.max(1, Math.min(24, Math.round(o) || 3)), d = 256, m = c, g = d + 2 * m, f = new Float64Array(g * g), w = Math.max(1e-12, s[1] - s[0]), k = Math.max(1e-12, r[1] - r[0]);
   for (let E = 0; E < n.x.length; E++) {
-    const I = Math.max(0, Math.min(
+    const P = Math.max(0, Math.min(
       g - 1,
       Math.floor((n.x[E] - s[0]) / w * d) + m
     )), F = Math.max(0, Math.min(
       g - 1,
       Math.floor((n.y[E] - r[0]) / k * d) + m
     ));
-    f[F * g + I]++;
+    f[F * g + P]++;
   }
-  const v = new Float64Array(g * g), C = (c * 2 + 1) ** 2, T = g + 1, P = new Float64Array(T * T);
+  const v = new Float64Array(g * g), S = (c * 2 + 1) ** 2, T = g + 1, I = new Float64Array(T * T);
   for (let E = 0; E < g; E++) {
-    let I = 0;
+    let P = 0;
     for (let F = 0; F < g; F++)
-      I += f[E * g + F], P[(E + 1) * T + F + 1] = P[E * T + F + 1] + I;
+      P += f[E * g + F], I[(E + 1) * T + F + 1] = I[E * T + F + 1] + P;
   }
   for (let E = c; E < g - c; E++) {
-    const I = E - c, F = E + c + 1;
+    const P = E - c, F = E + c + 1;
     for (let N = c; N < g - c; N++) {
-      const A = N - c, K = N + c + 1, O = P[F * T + K] - P[I * T + K] - P[F * T + A] + P[I * T + A];
-      v[E * g + N] = O / C;
+      const A = N - c, K = N + c + 1, O = I[F * T + K] - I[P * T + K] - I[F * T + A] + I[P * T + A];
+      v[E * g + N] = O / S;
     }
   }
   const $ = [];
   for (let E = m; E < m + d; E++)
-    for (let I = m; I < m + d; I++) {
-      const F = v[E * g + I];
+    for (let P = m; P < m + d; P++) {
+      const F = v[E * g + P];
       F > 0 && $.push(F);
     }
-  return $.sort((E, I) => E - I), $.length === 0 ? 1 : Math.max(1e-12, Zt($, a));
+  return $.sort((E, P) => E - P), $.length === 0 ? 1 : Math.max(1e-12, Wt($, a));
 }
-function Jt(n, s) {
+function Xt(n, s) {
   const r = Math.max(1, Math.min(10, Number.isFinite(n) ? n : 6)), a = Math.max(1, (Number.isFinite(s) ? s : 220) - 50);
   return Math.max(1, Math.min(24, r * 170 / a));
 }
-function Qt(n, s = 0.95, r = 3, a = Xt) {
+function Jt(n, s = 0.95, r = 3, a = Yt) {
   const o = Math.max(
-    Oi(n.original, n.xRange, n.yRange, s, r),
-    Oi(n.compensated, n.xRange, n.yRange, s, r)
+    Li(n.original, n.xRange, n.yRange, s, r),
+    Li(n.compensated, n.xRange, n.yRange, s, r)
   );
-  return er(o, a);
+  return tr(o, a);
 }
 function dt(n, s) {
   const r = s.size / 220, a = Math.sqrt(r), o = Math.max(7, Math.min(11, 10 * a)), c = 20, d = Math.ceil(c + o + 4);
-  nr().renderMiniPlot(n, {
+  ir().renderMiniPlot(n, {
     plot_size: s.size,
     canvas_scale: s.canvasScale ?? 3,
     display_mode: "pseudocolor",
@@ -788,27 +788,27 @@ function dt(n, s) {
   });
 }
 const un = "http://www.w3.org/2000/svg", Ln = 6, En = 1123, ut = 794;
-function os(n) {
+function cs(n) {
   return Math.ceil(Math.max(0, Math.floor(n)) / Ln);
 }
-function Di(n) {
+function zi(n) {
   return n.trim().replace(/[^a-z0-9._-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "sample";
 }
-function ls(n, s) {
-  return `gatelab-compensation-${Di(n.replace(/\.[^.]+$/, ""))}-${Di(s)}`;
+function ds(n, s) {
+  return `gatelab-compensation-${zi(n.replace(/\.[^.]+$/, ""))}-${zi(s)}`;
 }
-function Ht(n, s, r, a) {
-  const o = ls(n, s);
+function Zt(n, s, r, a) {
+  const o = ds(n, s);
   return r === "pdf" || a <= 1 ? `${o}.${r}` : `${o}-${r}-pages.zip`;
 }
 function Sn(n, s, r, a, o = {}) {
   const c = document.createElementNS(un, "text");
   return c.setAttribute("x", String(r)), c.setAttribute("y", String(a)), c.setAttribute("font-family", "Arial, Helvetica, sans-serif"), c.setAttribute("font-size", String(o.size ?? 10)), c.setAttribute("font-weight", String(o.weight ?? 400)), c.setAttribute("fill", o.fill ?? "#253247"), o.anchor && c.setAttribute("text-anchor", o.anchor), c.textContent = s, n.appendChild(c), c;
 }
-function Li(n, s) {
+function _i(n, s) {
   return n.length <= s ? n : `${n.slice(0, Math.max(1, s - 1))}…`;
 }
-function zi(n, s, r, a, o, c, d, m, g, f, w) {
+function Ui(n, s, r, a, o, c, d, m, g, f, w) {
   const k = document.createElement("div");
   dt(k, {
     title: a === "original" ? "Original" : "Compensated",
@@ -823,20 +823,20 @@ function zi(n, s, r, a, o, c, d, m, g, f, w) {
     pointAlpha: w,
     canvasScale: 300 / 96
   });
-  const v = k.querySelector("canvas"), C = k.querySelector("svg");
-  if (!v || !C) throw new Error("GateLab could not render a compensation export panel.");
+  const v = k.querySelector("canvas"), S = k.querySelector("svg");
+  if (!v || !S) throw new Error("GateLab could not render a compensation export panel.");
   const T = document.createElementNS(un, "g");
   T.setAttribute("transform", `translate(${o},${c})`);
-  const P = document.createElementNS(un, "image");
-  P.setAttribute("x", "0"), P.setAttribute("y", "0"), P.setAttribute("width", String(d)), P.setAttribute("height", String(d)), P.setAttribute("href", v.toDataURL("image/png")), T.appendChild(P), T.appendChild(C.cloneNode(!0)), n.appendChild(T);
+  const I = document.createElementNS(un, "image");
+  I.setAttribute("x", "0"), I.setAttribute("y", "0"), I.setAttribute("width", String(d)), I.setAttribute("height", String(d)), I.setAttribute("href", v.toDataURL("image/png")), T.appendChild(I), T.appendChild(S.cloneNode(!0)), n.appendChild(T);
 }
-function _i(n, s, r, a) {
+function qi(n, s, r, a) {
   const o = document.createElementNS(un, "svg");
   o.setAttribute("xmlns", un), o.setAttribute("width", String(En)), o.setAttribute("height", String(ut)), o.setAttribute("viewBox", `0 0 ${En} ${ut}`);
   const c = document.createElementNS(un, "rect");
   c.setAttribute("width", "100%"), c.setAttribute("height", "100%"), c.setAttribute("fill", "#ffffff"), o.appendChild(c), Sn(o, "GateLab compensation comparison", 28, 23, { size: 15, weight: 700 }), Sn(
     o,
-    Li(`${s.sampleName} · ${s.populationName} · ${s.profileName} · ${s.filterLabel}`, 150),
+    _i(`${s.sampleName} · ${s.populationName} · ${s.profileName} · ${s.filterLabel}`, 150),
     28,
     41,
     { size: 9, fill: "#5f6d80" }
@@ -845,27 +845,27 @@ function _i(n, s, r, a) {
     fill: "#5f6d80",
     anchor: "end"
   });
-  const d = 28, m = 18, g = 53, f = 771, w = (En - d * 2 - m) / 2, k = (f - g) / 3, v = 204, C = 12, T = v * 2 + C;
-  return n.forEach((P, $) => {
-    const E = P.buildPreview(), I = Jt(s.densitySmoothing, v), F = Qt(
+  const d = 28, m = 18, g = 53, f = 771, w = (En - d * 2 - m) / 2, k = (f - g) / 3, v = 204, S = 12, T = v * 2 + S;
+  return n.forEach((I, $) => {
+    const E = I.buildPreview(), P = Xt(s.densitySmoothing, v), F = Jt(
       E,
       0.95,
-      I,
+      P,
       s.densityColorPower
-    ), N = $ % 2, A = Math.floor($ / 2), K = d + N * (w + m), O = g + A * k, D = K + (w - T) / 2, q = O + 25, J = P.relationship && P.relationship !== "other" ? ` · ${P.relationship}` : "";
+    ), N = $ % 2, A = Math.floor($ / 2), K = d + N * (w + m), O = g + A * k, D = K + (w - T) / 2, U = O + 25, J = I.relationship && I.relationship !== "other" ? ` · ${I.relationship}` : "";
     if (Sn(
       o,
-      Li(`${P.sourceLabel} → ${P.receiverLabel}`, 58),
+      _i(`${I.sourceLabel} → ${I.receiverLabel}`, 58),
       K + 5,
       O + 14,
       { size: 10.5, weight: 700 }
     ), Sn(
       o,
-      `matrix ${(P.coefficient * 100).toFixed(1)}%${J}`,
+      `matrix ${(I.coefficient * 100).toFixed(1)}%${J}`,
       K + w - 5,
       O + 14,
       { size: 8.5, fill: "#5f6d80", anchor: "end" }
-    ), zi(o, P, E, "original", D, q, v, I, F, s.densityColorPower, s.pointAlpha), zi(o, P, E, "compensated", D + v + C, q, v, I, F, s.densityColorPower, s.pointAlpha), A < 2) {
+    ), Ui(o, I, E, "original", D, U, v, P, F, s.densityColorPower, s.pointAlpha), Ui(o, I, E, "compensated", D + v + S, U, v, P, F, s.densityColorPower, s.pointAlpha), A < 2) {
       const Z = document.createElementNS(un, "line");
       Z.setAttribute("x1", String(K)), Z.setAttribute("x2", String(K + w)), Z.setAttribute("y1", String(O + k - 3)), Z.setAttribute("y2", String(O + k - 3)), Z.setAttribute("stroke", "#e6eaf0"), Z.setAttribute("stroke-width", "1"), o.appendChild(Z);
     }
@@ -877,11 +877,11 @@ function _i(n, s, r, a) {
     { size: 8, fill: "#718096" }
   ), o;
 }
-function Ui(n) {
+function Vi(n) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 ${new XMLSerializer().serializeToString(n)}`;
 }
-async function qi(n, s = 300) {
+async function Bi(n, s = 300) {
   const r = URL.createObjectURL(new Blob([n], { type: "image/svg+xml" }));
   try {
     const a = await new Promise((m, g) => {
@@ -898,32 +898,32 @@ async function qi(n, s = 300) {
     URL.revokeObjectURL(r);
   }
 }
-function Vi(n, s) {
+function Gi(n, s) {
   const r = URL.createObjectURL(n), a = document.createElement("a");
   a.href = r, a.download = s, document.body.appendChild(a), a.click(), a.remove(), setTimeout(() => URL.revokeObjectURL(r), 1e3);
 }
-function Kr(n, s, r, a) {
+function Dr(n, s, r, a) {
   const o = Math.max(2, String(r).length);
   return `${n}-page-${String(s + 1).padStart(o, "0")}.${a}`;
 }
-async function Rr(n, s, r, a) {
-  const o = os(n.length);
+async function Lr(n, s, r, a) {
+  const o = cs(n.length);
   if (o === 0) throw new Error("No compensation pairs are available to export.");
-  const c = ls(s.sampleName, s.populationName);
+  const c = ds(s.sampleName, s.populationName);
   if (r === "pdf") {
-    const { jsPDF: f } = await import("./jspdf.es.min-DuRQwbm6.js").then((C) => C.j), w = new f({ orientation: "landscape", unit: "pt", format: "a4", compress: !0 }), k = w.internal.pageSize.getWidth(), v = w.internal.pageSize.getHeight();
-    for (let C = 0; C < o; C++) {
-      C > 0 && w.addPage("a4", "landscape");
+    const { jsPDF: f } = await import("./jspdf.es.min-C85WF33Q.js").then((S) => S.j), w = new f({ orientation: "landscape", unit: "pt", format: "a4", compress: !0 }), k = w.internal.pageSize.getWidth(), v = w.internal.pageSize.getHeight();
+    for (let S = 0; S < o; S++) {
+      S > 0 && w.addPage("a4", "landscape");
       const T = n.slice(
-        C * Ln,
-        (C + 1) * Ln
-      ), P = Ui(_i(T, s, C, o)), $ = await qi(P), E = await new Promise((I, F) => {
+        S * Ln,
+        (S + 1) * Ln
+      ), I = Vi(qi(T, s, S, o)), $ = await Bi(I), E = await new Promise((P, F) => {
         const N = new FileReader();
-        N.onload = () => I(String(N.result)), N.onerror = () => F(N.error ?? new Error("GateLab could not read an export page.")), N.readAsDataURL($);
+        N.onload = () => P(String(N.result)), N.onerror = () => F(N.error ?? new Error("GateLab could not read an export page.")), N.readAsDataURL($);
       });
-      w.addImage(E, "PNG", 0, 0, k, v, void 0, "FAST"), a == null || a({ completedPages: C + 1, totalPages: o }), await new Promise((I) => setTimeout(I, 0));
+      w.addImage(E, "PNG", 0, 0, k, v, void 0, "FAST"), a == null || a({ completedPages: S + 1, totalPages: o }), await new Promise((P) => setTimeout(P, 0));
     }
-    w.save(Ht(s.sampleName, s.populationName, r, o));
+    w.save(Zt(s.sampleName, s.populationName, r, o));
     return;
   }
   const d = {};
@@ -932,30 +932,30 @@ async function Rr(n, s, r, a) {
     const w = n.slice(
       f * Ln,
       (f + 1) * Ln
-    ), k = Ui(_i(w, s, f, o)), v = Kr(c, f, o, r);
+    ), k = Vi(qi(w, s, f, o)), v = Dr(c, f, o, r);
     if (r === "svg") {
-      const C = tr(k);
-      d[v] = C, o === 1 && (m = new Blob([C], { type: "image/svg+xml" }));
+      const S = sr(k);
+      d[v] = S, o === 1 && (m = new Blob([S], { type: "image/svg+xml" }));
     } else {
-      const C = await qi(k), T = new Uint8Array(await C.arrayBuffer());
-      d[v] = T, o === 1 && (m = C);
+      const S = await Bi(k), T = new Uint8Array(await S.arrayBuffer());
+      d[v] = T, o === 1 && (m = S);
     }
-    a == null || a({ completedPages: f + 1, totalPages: o }), await new Promise((C) => setTimeout(C, 0));
+    a == null || a({ completedPages: f + 1, totalPages: o }), await new Promise((S) => setTimeout(S, 0));
   }
-  const g = Ht(
+  const g = Zt(
     s.sampleName,
     s.populationName,
     r,
     o
   );
-  Vi(o === 1 && m ? m : new Blob([ir(d, { level: 6 })], { type: "application/zip" }), g);
+  Gi(o === 1 && m ? m : new Blob([rr(d, { level: 6 })], { type: "application/zip" }), g);
 }
-const Or = [
+const zr = [
   { format: "pdf", title: "PDF", detail: "One multipage A4 landscape document." },
   { format: "png", title: "PNG", detail: "300 DPI numbered pages; multiple pages download as a ZIP." },
   { format: "svg", title: "SVG", detail: "Vector text and axes with embedded high-resolution density layers; multiple pages download as a ZIP." }
 ];
-function Dr({
+function _r({
   sampleName: n,
   populationName: s,
   filterLabel: r,
@@ -963,15 +963,15 @@ function Dr({
   onExport: o,
   onClose: c
 }) {
-  const { t: d } = Le(), [m, g] = M.useState("pdf"), [f, w] = M.useState(null), [k, v] = M.useState(null), C = os(a), T = f !== null && f.completedPages < f.totalPages, P = Ht(n, s, m, C), $ = async () => {
-    v(null), w({ completedPages: 0, totalPages: C });
+  const { t: d } = Le(), [m, g] = M.useState("pdf"), [f, w] = M.useState(null), [k, v] = M.useState(null), S = cs(a), T = f !== null && f.completedPages < f.totalPages, I = Zt(n, s, m, S), $ = async () => {
+    v(null), w({ completedPages: 0, totalPages: S });
     try {
       await o(m, w), c();
-    } catch (I) {
-      w(null), v(I instanceof Error ? I.message : String(I));
+    } catch (P) {
+      w(null), v(P instanceof Error ? P.message : String(P));
     }
-  }, E = (I) => {
-    I.key === "Escape" && !T && c();
+  }, E = (P) => {
+    P.key === "Escape" && !T && c();
   };
   return /* @__PURE__ */ e.jsx("div", { className: "gl-modal-backdrop", onKeyDown: E, children: /* @__PURE__ */ e.jsxs(
     "div",
@@ -985,28 +985,28 @@ function Dr({
         /* @__PURE__ */ e.jsx("p", { className: "gl-comp-export-intro", children: d("Export the currently filtered channel pairs as clean paired Original and Compensated biplots. Every pair retains the same frozen events, axes, transform, density scale, and edge piling in both panels.") }),
         /* @__PURE__ */ e.jsxs("fieldset", { className: "gl-comp-export-versions gl-comp-comparison-export-formats", children: [
           /* @__PURE__ */ e.jsx("legend", { children: d("Format") }),
-          Or.map((I) => /* @__PURE__ */ e.jsxs("label", { children: [
+          zr.map((P) => /* @__PURE__ */ e.jsxs("label", { children: [
             /* @__PURE__ */ e.jsx(
               "input",
               {
                 type: "radio",
                 name: "compensation-comparison-export-format",
-                value: I.format,
-                checked: m === I.format,
+                value: P.format,
+                checked: m === P.format,
                 disabled: T,
-                onChange: () => g(I.format)
+                onChange: () => g(P.format)
               }
             ),
             /* @__PURE__ */ e.jsxs("span", { children: [
-              /* @__PURE__ */ e.jsx("strong", { children: I.title }),
-              /* @__PURE__ */ e.jsx("small", { children: d(I.detail) })
+              /* @__PURE__ */ e.jsx("strong", { children: P.title }),
+              /* @__PURE__ */ e.jsx("small", { children: d(P.detail) })
             ] })
-          ] }, I.format))
+          ] }, P.format))
         ] }),
         /* @__PURE__ */ e.jsxs("dl", { className: "gl-comp-export-summary gl-comp-comparison-export-summary", children: [
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("dt", { children: d("File") }),
-            /* @__PURE__ */ e.jsx("dd", { title: P, children: P })
+            /* @__PURE__ */ e.jsx("dd", { title: I, children: I })
           ] }),
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("dt", { children: d("Scope") }),
@@ -1014,7 +1014,7 @@ function Dr({
           ] }),
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("dt", { children: d("Pages") }),
-            /* @__PURE__ */ e.jsx("dd", { children: d(C === 1 ? "{count} A4 landscape page · six pairs per page" : "{count} A4 landscape pages · six pairs per page", { count: C.toLocaleString() }) })
+            /* @__PURE__ */ e.jsx("dd", { children: d(S === 1 ? "{count} A4 landscape page · six pairs per page" : "{count} A4 landscape pages · six pairs per page", { count: S.toLocaleString() }) })
           ] }),
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("dt", { children: d("Population") }),
@@ -1032,16 +1032,16 @@ function Dr({
         k && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-warning", role: "alert", children: d(k) }),
         /* @__PURE__ */ e.jsxs("div", { className: "gl-modal-actions", children: [
           /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-btn-ghost", disabled: T, onClick: c, children: d("Cancel") }),
-          /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-btn", disabled: T || C === 0, onClick: () => void $(), children: T ? d("Rendering…") : d("Download {format}", { format: m.toUpperCase() }) })
+          /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-btn", disabled: T || S === 0, onClick: () => void $(), children: T ? d("Rendering…") : d("Download {format}", { format: m.toUpperCase() }) })
         ] })
       ]
     }
   ) });
 }
-function Bi(n) {
+function Wi(n) {
   return `"${n.replaceAll('"', '""')}"`;
 }
-function Gi(n, s) {
+function Zi(n, s) {
   if (!Array.isArray(n) || n.length === 0)
     throw new Error(`The ${s} channel axis is empty.`);
   const r = n.map((a, o) => {
@@ -1053,12 +1053,12 @@ function Gi(n, s) {
     throw new Error(`The ${s} channel axis contains duplicate identities.`);
   return r;
 }
-function Lr(n) {
-  const s = Gi(n.sourceChannels, "source"), r = Gi(n.receiverChannels, "receiver");
+function Ur(n) {
+  const s = Zi(n.sourceChannels, "source"), r = Zi(n.receiverChannels, "receiver");
   if (!Array.isArray(n.matrix) || n.matrix.length !== s.length)
     throw new Error("The spill matrix row count does not match its source channel axis.");
   const a = [
-    ["channel", ...r].map(Bi).join(",")
+    ["channel", ...r].map(Wi).join(",")
   ];
   return n.matrix.forEach((o, c) => {
     if (!Array.isArray(o) || o.length !== r.length)
@@ -1072,15 +1072,15 @@ function Lr(n) {
         );
       return Object.is(m, -0) ? "0" : String(m);
     });
-    a.push([Bi(s[c]), ...d].join(","));
+    a.push([Wi(s[c]), ...d].join(","));
   }), `${a.join(`
 `)}
 `;
 }
-function zr(n, s = "installed") {
+function qr(n, s = "installed") {
   return `${n.replace(/\.(?:csv|tsv|txt)$/i, "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9._-]+/g, "_").replace(/_+/g, "_").replace(/^[._-]+|[._-]+$/g, "").slice(0, 90) || "gatelab"}${s === "working" ? "_working" : ""}_spill_matrix.csv`;
 }
-function _r(n) {
+function Vr(n) {
   return [
     "spill <- as.matrix(read.csv(",
     `  "${n.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}",`,
@@ -1092,7 +1092,7 @@ function _r(n) {
   ].join(`
 `);
 }
-function Ur({
+function Br({
   profileLabel: n,
   installedLabel: s,
   installedMatrix: r,
@@ -1100,25 +1100,25 @@ function Ur({
   pendingEditCount: o = 0,
   onClose: c
 }) {
-  const { t: d } = Le(), [m, g] = M.useState("installed"), [f, w] = M.useState(null), k = m === "working" && a ? a : r, v = zr(n, m), C = M.useMemo(
-    () => _r(v),
+  const { t: d } = Le(), [m, g] = M.useState("installed"), [f, w] = M.useState(null), k = m === "working" && a ? a : r, v = qr(n, m), S = M.useMemo(
+    () => Vr(v),
     [v]
   ), T = () => {
     w(null);
     try {
-      const E = Lr(k), I = URL.createObjectURL(new Blob([E], { type: "text/csv;charset=utf-8" })), F = document.createElement("a");
-      F.href = I, F.download = v, document.body.appendChild(F), F.click(), F.remove(), setTimeout(() => URL.revokeObjectURL(I), 1e3);
+      const E = Ur(k), P = URL.createObjectURL(new Blob([E], { type: "text/csv;charset=utf-8" })), F = document.createElement("a");
+      F.href = P, F.download = v, document.body.appendChild(F), F.click(), F.remove(), setTimeout(() => URL.revokeObjectURL(P), 1e3);
     } catch (E) {
       w(E instanceof Error ? E.message : String(E));
     }
-  }, P = async () => {
+  }, I = async () => {
     var E;
     if (!((E = navigator.clipboard) != null && E.writeText)) {
       w("Clipboard access is unavailable; select the R code below and copy it manually.");
       return;
     }
     try {
-      await navigator.clipboard.writeText(C), w("R import code copied.");
+      await navigator.clipboard.writeText(S), w("R import code copied.");
     } catch {
       w("Clipboard access was denied; select the R code below and copy it manually.");
     }
@@ -1189,9 +1189,9 @@ function Ur({
             /* @__PURE__ */ e.jsx("strong", { children: d("Import in R") }),
             /* @__PURE__ */ e.jsx("span", { children: d("Run after placing the CSV in the R working directory.") })
           ] }),
-          /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-mini-btn", onClick: () => void P(), children: d("Copy R code") })
+          /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-mini-btn", onClick: () => void I(), children: d("Copy R code") })
         ] }),
-        /* @__PURE__ */ e.jsx("pre", { className: "gl-comp-export-code", children: /* @__PURE__ */ e.jsx("code", { children: C }) }),
+        /* @__PURE__ */ e.jsx("pre", { className: "gl-comp-export-code", children: /* @__PURE__ */ e.jsx("code", { children: S }) }),
         f && /* @__PURE__ */ e.jsx("div", { className: f.includes("copied") ? "gl-comp-status" : "gl-comp-warning", role: "status", children: f }),
         /* @__PURE__ */ e.jsxs("div", { className: "gl-modal-actions", children: [
           /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-btn-ghost", onClick: c, children: d("Cancel") }),
@@ -1215,12 +1215,12 @@ function Mn({
   onPointerMove: w,
   onPointerUp: k,
   onPointerCancel: v,
-  onLostPointerCapture: C,
+  onLostPointerCapture: S,
   ...T
 }) {
-  const { t: P } = Le(), $ = M.useRef(null), [E, I] = M.useState(!1), F = (N) => {
+  const { t: I } = Le(), $ = M.useRef(null), [E, P] = M.useState(!1), F = (N) => {
     var A, K, O;
-    ((A = $.current) == null ? void 0 : A.pointerId) === N.pointerId && ($.current = null, I(!1), (O = (K = N.currentTarget).hasPointerCapture) != null && O.call(K, N.pointerId) && N.currentTarget.releasePointerCapture(N.pointerId));
+    ((A = $.current) == null ? void 0 : A.pointerId) === N.pointerId && ($.current = null, P(!1), (O = (K = N.currentTarget).hasPointerCapture) != null && O.call(K, N.pointerId) && N.currentTarget.releasePointerCapture(N.pointerId));
   };
   return /* @__PURE__ */ e.jsx(
     "input",
@@ -1233,7 +1233,7 @@ function Mn({
       min: c,
       max: d,
       step: m,
-      title: g ?? P("Type a value, use the arrows, or drag vertically to adjust"),
+      title: g ?? I("Type a value, use the arrows, or drag vertically to adjust"),
       onChange: (N) => s(N.currentTarget.value),
       onPointerDown: (N) => {
         var J, Z;
@@ -1242,13 +1242,13 @@ function Mn({
         if (N.clientX >= A.right - 18) return;
         const K = Number(n), O = (r ?? Number(m)) || 0.1;
         if (!Number.isFinite(K) || !(O > 0)) return;
-        const D = String(O), q = D.includes("e-") ? Number(D.split("e-")[1]) : D.includes(".") ? D.split(".")[1].length : 0;
+        const D = String(O), U = D.includes("e-") ? Number(D.split("e-")[1]) : D.includes(".") ? D.split(".")[1].length : 0;
         $.current = {
           pointerId: N.pointerId,
           startY: N.clientY,
           startValue: K,
           step: O,
-          decimals: q,
+          decimals: U,
           lastSteps: 0
         }, (Z = (J = N.currentTarget).setPointerCapture) == null || Z.call(J, N.pointerId);
       },
@@ -1261,8 +1261,8 @@ function Mn({
         const O = K > 0 ? Math.floor(K / 4) : Math.ceil(K / 4);
         if (O === A.lastSteps) return;
         let D = A.startValue + O * A.step;
-        const q = c === void 0 ? Number.NEGATIVE_INFINITY : Number(c), J = d === void 0 ? Number.POSITIVE_INFINITY : Number(d);
-        Number.isFinite(q) && (D = Math.max(q, D)), Number.isFinite(J) && (D = Math.min(J, D)), $.current = { ...A, lastSteps: O }, I(!0), s(D.toFixed(Math.min(10, A.decimals))), N.preventDefault();
+        const U = c === void 0 ? Number.NEGATIVE_INFINITY : Number(c), J = d === void 0 ? Number.POSITIVE_INFINITY : Number(d);
+        Number.isFinite(U) && (D = Math.max(U, D)), Number.isFinite(J) && (D = Math.min(J, D)), $.current = { ...A, lastSteps: O }, P(!0), s(D.toFixed(Math.min(10, A.decimals))), N.preventDefault();
       },
       onPointerUp: (N) => {
         k == null || k(N), F(N);
@@ -1272,21 +1272,21 @@ function Mn({
       },
       onLostPointerCapture: (N) => {
         var A;
-        C == null || C(N), ((A = $.current) == null ? void 0 : A.pointerId) === N.pointerId && ($.current = null, I(!1));
+        S == null || S(N), ((A = $.current) == null ? void 0 : A.pointerId) === N.pointerId && ($.current = null, P(!1));
       }
     }
   );
 }
-const ei = M.createContext(Xt), ni = M.createContext(0.85), Wi = "", rt = [];
-let zt = !1;
-function qr(n) {
+const Qt = M.createContext(Yt), ei = M.createContext(0.85), Hi = "", rt = [];
+let Lt = !1;
+function Gr(n) {
   const s = { cancelled: !1, run: n };
   rt.push(s);
   const r = () => {
-    if (zt) return;
-    zt = !0;
+    if (Lt) return;
+    Lt = !0;
     const a = () => {
-      zt = !1;
+      Lt = !1;
       let c = rt.shift();
       for (; c != null && c.cancelled; ) c = rt.shift();
       c == null || c.run(), rt.length > 0 && r();
@@ -1309,18 +1309,18 @@ function ht({
   densitySmoothing: g,
   showZeroPile: f = !0
 }) {
-  const { t: w } = Le(), k = M.useContext(ei), v = M.useContext(ni), C = M.useRef(null);
+  const { t: w } = Le(), k = M.useContext(Qt), v = M.useContext(ei), S = M.useRef(null);
   M.useEffect(() => {
-    const $ = C.current;
+    const $ = S.current;
     if (!$) return;
-    let E = null, I = 0;
+    let E = null, P = 0;
     const F = () => {
-      var q;
+      var U;
       E = null;
-      const K = ((q = $.parentElement) == null ? void 0 : q.clientWidth) ?? 230, O = Math.max(c, Math.min(d, Math.floor(K)));
-      if (O === I && $.childElementCount > 0) return;
-      I = O;
-      const D = Jt(g, O);
+      const K = ((U = $.parentElement) == null ? void 0 : U.clientWidth) ?? 230, O = Math.max(c, Math.min(d, Math.floor(K)));
+      if (O === P && $.childElementCount > 0) return;
+      P = O;
+      const D = Xt(g, O);
       dt($, {
         title: n,
         panel: s,
@@ -1328,7 +1328,7 @@ function ht({
         sourceLabel: a,
         receiverLabel: o,
         size: O,
-        densityColorCeiling: m ?? Qt(
+        densityColorCeiling: m ?? Jt(
           r,
           0.95,
           D,
@@ -1347,21 +1347,21 @@ function ht({
       A == null || A.disconnect(), E !== null && cancelAnimationFrame(E);
     };
   }, [m, k, g, d, c, s, v, r, o, a, n]);
-  const T = ($) => r.eventCount > 0 ? `${($ / r.eventCount * 100).toFixed(1)}%` : "0.0%", P = s.zeroPile.source > 0 || s.zeroPile.receiver > 0 || s.zeroPile.corner > 0;
+  const T = ($) => r.eventCount > 0 ? `${($ / r.eventCount * 100).toFixed(1)}%` : "0.0%", I = s.zeroPile.source > 0 || s.zeroPile.receiver > 0 || s.zeroPile.corner > 0;
   return /* @__PURE__ */ e.jsxs("figure", { className: "gl-comp-biplot", "aria-label": w("{title} density biplot; {source} on x, {receiver} on y", {
     title: n,
     source: a,
     receiver: o
   }), children: [
-    /* @__PURE__ */ e.jsx("div", { ref: C, className: "gl-comp-biplot-surface" }),
-    f && P && /* @__PURE__ */ e.jsx("figcaption", { className: "gl-comp-zero-pile", children: w("Exact zero · source {source} · receiver {receiver} · both {both}", {
+    /* @__PURE__ */ e.jsx("div", { ref: S, className: "gl-comp-biplot-surface" }),
+    f && I && /* @__PURE__ */ e.jsx("figcaption", { className: "gl-comp-zero-pile", children: w("Exact zero · source {source} · receiver {receiver} · both {both}", {
       source: T(s.zeroPile.source),
       receiver: T(s.zeroPile.receiver),
       both: T(s.zeroPile.corner)
     }) })
   ] });
 }
-function Vr({
+function Wr({
   title: n,
   preview: s,
   sourceLabel: r,
@@ -1371,18 +1371,18 @@ function Vr({
   densityColorCeiling: d,
   densitySmoothing: m
 }) {
-  const { t: g } = Le(), f = M.useContext(ei), w = M.useContext(ni), k = M.useRef(null);
+  const { t: g } = Le(), f = M.useContext(Qt), w = M.useContext(ei), k = M.useRef(null);
   return M.useEffect(() => {
     const v = k.current;
     if (!v) return;
-    let C = null, T = 0;
-    const P = () => {
+    let S = null, T = 0;
+    const I = () => {
       var J;
-      C = null;
-      const I = ((J = v.parentElement) == null ? void 0 : J.clientWidth) ?? o, F = Math.max(o, Math.min(c, Math.floor(I)));
+      S = null;
+      const P = ((J = v.parentElement) == null ? void 0 : J.clientWidth) ?? o, F = Math.max(o, Math.min(c, Math.floor(P)));
       if (F === T && v.dataset.cacheReady === "true") return;
       T = F, v.dataset.cacheReady = "false";
-      const N = Jt(m, F), A = d ?? Qt(
+      const N = Xt(m, F), A = d ?? Jt(
         s,
         0.95,
         N,
@@ -1415,15 +1415,15 @@ function Vr({
         pointAlpha: w,
         canvasScale: 2
       });
-      const q = D.querySelector("canvas");
-      !K || !q || !O || (K.classList.add("gl-comp-cached-canvas", "is-original"), K.dataset.assayLayer = "original", q.classList.add("gl-comp-cached-canvas", "is-compensated"), q.dataset.assayLayer = "compensated", v.insertBefore(q, O), v.dataset.cacheReady = "true");
+      const U = D.querySelector("canvas");
+      !K || !U || !O || (K.classList.add("gl-comp-cached-canvas", "is-original"), K.dataset.assayLayer = "original", U.classList.add("gl-comp-cached-canvas", "is-compensated"), U.dataset.assayLayer = "compensated", v.insertBefore(U, O), v.dataset.cacheReady = "true");
     }, $ = () => {
-      C == null || C(), C = qr(P);
+      S == null || S(), S = Gr(I);
     };
     $();
     const E = typeof ResizeObserver > "u" ? null : new ResizeObserver($);
     return E == null || E.observe(v.parentElement ?? v), () => {
-      E == null || E.disconnect(), C == null || C();
+      E == null || E.disconnect(), S == null || S();
     };
   }, [d, f, m, c, o, w, s, a, r, n]), /* @__PURE__ */ e.jsx(
     "figure",
@@ -1444,7 +1444,7 @@ function Vr({
     }
   );
 }
-function Zi({
+function Yi({
   preview: n,
   sourceLabel: s,
   receiverLabel: r,
@@ -1519,7 +1519,7 @@ function Zi({
     ] }) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-evidence-insufficient", children: m("Residual screening needs distinct source-low/source-high groups and enough receiver-negative events; this pair remains available for visual review.") }))
   ] });
 }
-function Br({
+function Zr({
   matrixView: n,
   sourceChannels: s,
   receiverChannels: r,
@@ -1529,28 +1529,28 @@ function Br({
   maximumAbsoluteOffDiagonal: d,
   onSelect: m
 }) {
-  const { t: g } = Le(), f = 6, w = 74, k = 44, v = 10, C = r.length * f, T = s.length * f, P = w + C + w, $ = k + T + v, E = M.useMemo(() => {
+  const { t: g } = Le(), f = 6, w = 74, k = 44, v = 10, S = r.length * f, T = s.length * f, I = w + S + w, $ = k + T + v, E = M.useMemo(() => {
     const F = [];
     for (let N = 0; N < n.matrix.length; N++)
       for (let A = 0; A < n.matrix[N].length; A++) {
-        const K = n.sourceAxisKeys[N], O = n.receiverAxisKeys[A], D = `${K}${Wi}${O}`, q = c[D] ?? n.matrix[N][A], J = K === O;
-        if (!J && (!Number.isFinite(q) || q === 0)) continue;
-        const Z = d > 0 && Number.isFinite(q) ? Math.min(1, Math.abs(q) / d) : 0, i = Z > 0 ? 0.12 + 0.82 * Math.sqrt(Z) : 0;
+        const K = n.sourceAxisKeys[N], O = n.receiverAxisKeys[A], D = `${K}${Hi}${O}`, U = c[D] ?? n.matrix[N][A], J = K === O;
+        if (!J && (!Number.isFinite(U) || U === 0)) continue;
+        const Z = d > 0 && Number.isFinite(U) ? Math.min(1, Math.abs(U) / d) : 0, i = Z > 0 ? 0.12 + 0.82 * Math.sqrt(Z) : 0;
         F.push({
           sourceIndex: N,
           receiverIndex: A,
           pairKey: D,
-          value: q,
+          value: U,
           diagonal: J,
-          fill: J ? "#cfd4db" : Number.isFinite(q) ? q < 0 ? `rgba(47,128,237,${i})` : `rgba(211,47,47,${i})` : "#ae3e3e"
+          fill: J ? "#cfd4db" : Number.isFinite(U) ? U < 0 ? `rgba(47,128,237,${i})` : `rgba(211,47,47,${i})` : "#ae3e3e"
         });
       }
     return F;
-  }, [n, d, c]), I = (F) => {
+  }, [n, d, c]), P = (F) => {
     const N = F.currentTarget.getBoundingClientRect();
     if (!(N.width > 0) || !(N.height > 0)) return;
-    const A = (F.clientX - N.left) * P / N.width, K = (F.clientY - N.top) * $ / N.height, O = Math.floor((A - w) / f), D = Math.floor((K - k) / f);
-    D < 0 || D >= s.length || O < 0 || O >= r.length || n.sourceAxisKeys[D] === n.receiverAxisKeys[O] || m(`${n.sourceAxisKeys[D]}${Wi}${n.receiverAxisKeys[O]}`);
+    const A = (F.clientX - N.left) * I / N.width, K = (F.clientY - N.top) * $ / N.height, O = Math.floor((A - w) / f), D = Math.floor((K - k) / f);
+    D < 0 || D >= s.length || O < 0 || O >= r.length || n.sourceAxisKeys[D] === n.receiverAxisKeys[O] || m(`${n.sourceAxisKeys[D]}${Hi}${n.receiverAxisKeys[O]}`);
   };
   return /* @__PURE__ */ e.jsxs("section", { className: "gl-comp-mini-matrix", "aria-labelledby": "comp-mini-matrix-heading", children: [
     /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-mini-matrix-head", children: [
@@ -1560,17 +1560,17 @@ function Br({
     /* @__PURE__ */ e.jsxs(
       "svg",
       {
-        width: P,
+        width: I,
         height: $,
-        viewBox: `0 0 ${P} ${$}`,
+        viewBox: `0 0 ${I} ${$}`,
         role: "img",
         "aria-label": g("Mini compensation matrix with {sources} source rows and {receivers} receiver columns", {
           sources: s.length,
           receivers: r.length
         }),
-        onPointerDown: I,
+        onPointerDown: P,
         children: [
-          /* @__PURE__ */ e.jsx("rect", { x: w, y: k, width: C, height: T, fill: "#f8fafc", stroke: "#aeb8c6", strokeWidth: "0.7" }),
+          /* @__PURE__ */ e.jsx("rect", { x: w, y: k, width: S, height: T, fill: "#f8fafc", stroke: "#aeb8c6", strokeWidth: "0.7" }),
           r.map((F, N) => /* @__PURE__ */ e.jsx(
             "text",
             {
@@ -1599,7 +1599,7 @@ function Br({
             {
               x: w,
               y: k + a * f,
-              width: C,
+              width: S,
               height: f,
               fill: "rgba(47,128,237,0.08)",
               pointerEvents: "none"
@@ -1648,7 +1648,7 @@ function Br({
     )
   ] });
 }
-function Gr({
+function Hr({
   dataset: n,
   pair: s,
   plotSize: r,
@@ -1665,25 +1665,25 @@ function Gr({
       k(!0);
       return;
     }
-    const P = new IntersectionObserver(
+    const I = new IntersectionObserver(
       ($) => k($.some((E) => E.isIntersecting)),
       { rootMargin: "450px 0px" }
     );
-    return P.observe(T), () => P.disconnect();
+    return I.observe(T), () => I.disconnect();
   }, []);
   const v = M.useMemo(
-    () => w ? as(n, s.source.key, s.receiver.key) : null,
+    () => w ? ls(n, s.source.key, s.receiver.key) : null,
     [n, s.receiver.key, s.source.key, w]
-  ), C = v != null && v.ready ? v.preview : null;
+  ), S = v != null && v.ready ? v.preview : null;
   return /* @__PURE__ */ e.jsxs(
     "article",
     {
       ref: f,
       className: `gl-comp-global-tile${c ? " is-selected" : ""}${o ? " is-flagged" : ""}`,
       "data-pair-key": s.pairKey,
-      "data-event-signature": C == null ? void 0 : C.eventSignature,
-      "data-x-range": C ? `${C.xRange[0]},${C.xRange[1]}` : void 0,
-      "data-y-range": C ? `${C.yRange[0]},${C.yRange[1]}` : void 0,
+      "data-event-signature": S == null ? void 0 : S.eventSignature,
+      "data-x-range": S ? `${S.xRange[0]},${S.xRange[1]}` : void 0,
+      "data-y-range": S ? `${S.yRange[0]},${S.yRange[1]}` : void 0,
       style: { width: r, height: r },
       children: [
         /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-global-tile-head", children: [
@@ -1740,11 +1740,11 @@ function Gr({
               receiver: s.receiver.label,
               coefficient: (s.coefficient * 100).toFixed(1)
             }),
-            children: /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-plot", style: { width: r, height: r }, children: C ? /* @__PURE__ */ e.jsx(
-              Vr,
+            children: /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-plot", style: { width: r, height: r }, children: S ? /* @__PURE__ */ e.jsx(
+              Wr,
               {
                 title: "",
-                preview: C,
+                preview: S,
                 sourceLabel: s.source.label,
                 receiverLabel: s.receiver.label,
                 minimumSize: r,
@@ -1758,7 +1758,7 @@ function Gr({
     }
   );
 }
-function Wr({
+function Yr({
   stateKey: n,
   header: s,
   children: r
@@ -1800,51 +1800,51 @@ function Wr({
     }
   );
 }
-const Zr = {
+const Xr = {
   relevant: "Matrix-linked / relevant",
   nonzero: "Non-zero coefficients",
   physical: "Physical CyTOF relationships",
   flagged: "Flagged for follow-up",
   all: "All included pairs"
-}, Hr = [
+}, Jr = [
   { id: "evidence", label: "Evidence" },
   { id: "review", label: "Review queue" }
-], Oe = "", Hi = 2500, Yi = 400, Yr = 2500, Xi = 15e3, Ji = [2500, 5e3, 15e3, 5e4], Xr = 24, Qi = 4, es = 624, Jr = Object.freeze({});
-function ns(n) {
+], Oe = "", Xi = 2500, Ji = 400, Qr = 2500, Qi = 15e3, es = [2500, 5e3, 15e3, 5e4], ea = 24, ns = 4, ts = 624, na = Object.freeze({});
+function is(n) {
   if (!Number.isFinite(n)) return String(n);
   const s = n * 100;
   if (s === 0) return "0.0";
   const r = Math.abs(s), a = r >= 1 ? 1 : r >= 0.1 ? 2 : 3;
   return s.toFixed(a);
 }
-function _t(n) {
+function zt(n) {
   return n.replace(/(?: · (?:edited|revised))+$/u, "");
 }
 function pt(n, s) {
   const r = n.index(s), a = r === void 0 ? void 0 : n.channels[r], o = (a == null ? void 0 : a.pnn) ?? s, c = n.labelForKey(s), d = ((a == null ? void 0 : a.label) ?? "").trim() || ((a == null ? void 0 : a.marker) ?? "").trim(), m = d && d !== o ? `${d} (${o})` : o;
   return { key: s, pnn: o, label: c, combined: m };
 }
-function Ut(n, s) {
+function _t(n, s) {
   const r = n.channels.find((a) => a.pnn === s);
   return pt(n, (r == null ? void 0 : r.key) ?? s);
 }
-function Qr(n, s) {
+function ta(n, s) {
   return n === "cytof-spillover" && s === "nnls" ? "CyTOF NNLS" : "Flow linear inverse";
 }
-function ea(n) {
+function ia(n) {
   return n.replaceAll("-", " ");
 }
-function Yt(n) {
+function Ht(n) {
   if (n.length === 0) return 0;
   n.sort((r, a) => r - a);
   const s = Math.floor(n.length / 2);
   return n.length % 2 === 0 ? (n[s - 1] + n[s]) / 2 : n[s];
 }
-function na(n) {
+function sa(n) {
   return Object.fromEntries(n.scientific.solverSettings.map(({ key: s, value: r }) => [s, r]));
 }
-function ta(n, s) {
-  const r = Object.freeze({ ...n.scientific.matrix, matrix: s }), a = na(n);
+function ra(n, s) {
+  const r = Object.freeze({ ...n.scientific.matrix, matrix: s }), a = sa(n);
   return n.scientific.kind === "flow-spillover" ? {
     kind: "flow-spillover",
     method: "matrix-inverse",
@@ -1868,7 +1868,7 @@ function ta(n, s) {
     includedChannels: n.scientific.includedChannels
   };
 }
-function ts(n, s, r, a) {
+function ss(n, s, r, a) {
   const o = n.scientific.matrix.sourceChannels.indexOf(s), c = n.scientific.matrix.receiverChannels.indexOf(r);
   if (o < 0 || c < 0)
     throw new Error("The selected coefficient is absent from the installed profile axes.");
@@ -1876,7 +1876,7 @@ function ts(n, s, r, a) {
     (d, m) => Object.freeze(d.map((g, f) => m === o && f === c ? a : g))
   ));
 }
-function ia(n, s, r) {
+function aa(n, s, r) {
   var d;
   if (!n) return null;
   const a = n.scientific.matrix.sourceChannels.indexOf(s), o = n.scientific.matrix.receiverChannels.indexOf(r);
@@ -1884,53 +1884,53 @@ function ia(n, s, r) {
   const c = (d = n.scientific.matrix.matrix[a]) == null ? void 0 : d[o];
   return Number.isFinite(c) ? c : null;
 }
-function is(n, s, r) {
+function rs(n, s, r) {
   const a = Math.max(Math.abs(n), Math.abs(s), 1e-3);
   return Object.freeze(r === "cytof" ? { lower: 0, upper: Math.max(n + a, a * 2) } : { lower: n - a, upper: n + a });
 }
-function sa(n, s) {
+function oa(n, s) {
   const r = (s - n) / 3;
   return Object.freeze([n, n + r, n + 2 * r, s]);
 }
-function ra(n, s) {
+function la(n, s) {
   return n.length === s.length && n.every((r, a) => {
     var o;
     return r.length === ((o = s[a]) == null ? void 0 : o.length) && r.every((c, d) => c === s[a][d]);
   });
 }
-function aa(n, s) {
+function ca(n, s) {
   if (n.compensatedLayerStatus().state !== "ready" || s.length === 0 || n.fcs.nEvents === 0) return null;
   const a = s.flatMap((k) => {
-    const v = n.channels.findIndex((C) => C.pnn === k);
+    const v = n.channels.findIndex((S) => S.pnn === k);
     return v < 0 ? [] : [v];
   });
   if (a.length === 0) return null;
   const o = Math.min(2048, n.fcs.nEvents), c = [];
   let d = 0, m = 0, g = 0, f = "", w = -1;
   for (const k of a) {
-    const v = n.originalColumnData(k), C = n.compensatedColumnData(k), T = [];
+    const v = n.originalColumnData(k), S = n.compensatedColumnData(k), T = [];
     for (let $ = 0; $ < o; $++) {
-      const E = o === 1 ? 0 : Math.floor($ * (n.fcs.nEvents - 1) / (o - 1)), I = v[E], F = C[E], N = Math.abs(F - I);
-      T.push(N), c.push(N), N > Math.max(1e-6, Math.abs(I) * 1e-6) && d++, I < 0 && F === 0 && g++, m = Math.max(m, N);
+      const E = o === 1 ? 0 : Math.floor($ * (n.fcs.nEvents - 1) / (o - 1)), P = v[E], F = S[E], N = Math.abs(F - P);
+      T.push(N), c.push(N), N > Math.max(1e-6, Math.abs(P) * 1e-6) && d++, P < 0 && F === 0 && g++, m = Math.max(m, N);
     }
-    const P = Yt(T);
-    P > w && (w = P, f = pt(n, n.channels[k].key).combined);
+    const I = Ht(T);
+    I > w && (w = I, f = pt(n, n.channels[k].key).combined);
   }
   return {
     previewEvents: o,
     comparedValues: c.length,
     changedValues: d,
-    medianAbsoluteDelta: Yt(c),
+    medianAbsoluteDelta: Ht(c),
     maxAbsoluteDelta: m,
     zeroedNegativeValues: g,
     mostChangedChannel: f,
     mostChangedChannelMedianDelta: Math.max(0, w)
   };
 }
-function oa(n, s) {
+function da(n, s) {
   return n.origin.type === "uploaded" ? n.origin.fileName : n.origin.type === "embedded-fcs" ? `${n.origin.fileName} · ${s("embedded FCS")}` : `${n.origin.presetId} · ${s("bundled preset")} ${n.origin.presetVersion}`;
 }
-function la(n) {
+function ua(n) {
   if (!n || n.kind !== "cytof-spillover")
     return { draft: null, error: null };
   const s = {
@@ -1943,7 +1943,7 @@ function la(n) {
       delimiter: "csv",
       sourceColumnHeader: "source"
     }
-  }, r = qt(
+  }, r = Ut(
     s.input,
     "cytof-spillover"
   );
@@ -1961,7 +1961,7 @@ function la(n) {
     error: `The SCE spillover matrix is invalid. ${r.errors.map(({ message: a }) => a).join(" ")}`
   };
 }
-function ca({
+function ha({
   sample: n,
   sampleName: s = "sample.fcs",
   hostedCompensationMatrix: r = null,
@@ -1975,73 +1975,73 @@ function ca({
   installedProfile: w = null,
   applyTargetCount: k = 1,
   applyTargetEventCount: v,
-  applyWorkerCount: C,
+  applyWorkerCount: S,
   applyWorkerLimit: T,
-  onApplyWorkerCountChange: P,
+  onApplyWorkerCountChange: I,
   installedBaselineProfile: $ = null,
   reviewPopulations: E = [],
-  reviewPopulationMasks: I = Jr,
+  reviewPopulationMasks: P = na,
   onPreviewCompensationCandidate: F,
   onSolveCompensationSweep: N,
   onCancelCompensationSweep: A,
   onSuspendBackgroundWork: K,
   visible: O = !0,
   stateKey: D,
-  densityColorPower: q = Xt,
+  densityColorPower: U = Yt,
   channelLabelMode: J = "marker",
   onDensityColorPowerChange: Z = () => {
   }
 }) {
-  var Ai, Ti;
+  var Fi, $i;
   const { t: i } = Le(), R = n.compensatedLayerStatus(), ge = R.state === "missing" ? null : R.metadata, _ = (ge == null ? void 0 : ge.runtimeIdentity) === "profile" ? ge : null, j = (w == null ? void 0 : w.profileId) === (_ == null ? void 0 : _.profileId) ? w : null, H = !_ && n.instrument === "flow" ? n.spillover : null, ue = (r == null ? void 0 : r.kind) === "flow-spillover" ? r : null, pn = M.useMemo(
-    () => la(r),
+    () => ua(r),
     [r]
   ), [Se, je] = me(
     `compensation.${D}.selectedPair`,
     null
-  ), [mt, Te] = M.useState(null), [zn, ti] = me(
+  ), [mt, Te] = M.useState(null), [zn, ni] = me(
     `compensation.${D}.openDrawers`,
     { evidence: !1, review: !1 }
-  ), [mn, ii] = me(
+  ), [mn, ti] = me(
     "compensation.inspectorWidth",
-    es
+    ts
   ), [Me, _n] = me(
     `compensation.${D}.workspaceView`,
     "matrix"
   ), [Fe, Un] = me(
     `compensation.${D}.globalPairFilter`,
     "relevant"
-  ), [$e, cs] = me(
+  ), [$e, us] = me(
     `compensation.${D}.globalLayout`,
     "compact"
-  ), [ds, us] = me(
+  ), [hs, ps] = me(
     "compensation.globalPlotSize.v5",
     160
-  ), [hs, ps] = me(
+  ), [ms, fs] = me(
     "compensation.densitySmoothing.v3",
     6
-  ), [ms, fs] = me(
+  ), [gs, xs] = me(
     "compensation.pointAlpha.v1",
     0.85
-  ), [ft, gs] = me(
+  ), [ft, vs] = me(
     "compensation.pairPreviewEventLimit.v1",
-    Xi
-  ), [kn, si] = M.useState(""), [An, gt] = M.useState(!1), [xt, ri] = M.useState(null), [fn, vt] = me(
+    Qi
+  ), [kn, ii] = M.useState(""), [An, gt] = M.useState(!1), [xt, si] = M.useState(null), [fn, vt] = me(
     `compensation.${D}.reviewPopulation`,
     "all"
-  ), [qn, xs] = me(
+  ), [qn, bs] = me(
     `compensation.${D}.flaggedPairs`,
     []
-  ), [ze, vs] = me(
+  ), [ze, ys] = me(
     `compensation.${D}.evidenceMode`,
     "biological"
-  ), [bs, ys] = me(
+  ), [js, ws] = me(
     `compensation.${D}.sweepBounds`,
     {}
   ), [bt, yt] = me(
     `compensation.${D}.sweepWorkers`,
     2
-  ), [Ee, ai] = M.useState(""), [we, jt] = M.useState(""), [js, wt] = M.useState(0), [Y, Vn] = M.useState({}), [ws, nn] = M.useState({}), [_e, tn] = M.useState({ state: "idle" }), [Ns, Be] = M.useState({}), [Cs, sn] = M.useState({}), [ve, gn] = M.useState(null), [Ss, Tn] = M.useState(null), [le, xn] = M.useState(null), [oi, xe] = M.useState(null), [Bn, Nt] = M.useState(""), [Ms, li] = M.useState(!1), [Es, ci] = M.useState(!1), ke = M.useRef(0), vn = M.useRef(0), [di, he] = M.useState(null), [ui, Ue] = M.useState(!1), [W, Gn] = M.useState(
+  ), [Ee, ri] = M.useState(""), [we, jt] = M.useState(""), [Ns, wt] = M.useState(0), [Y, Vn] = M.useState({}), [Cs, nn] = M.useState({}), [_e, tn] = M.useState({ state: "idle" }), [Ss, Be] = M.useState({}), [Ms, sn] = M.useState({}), [ve, gn] = M.useState(null), [Es, Tn] = M.useState(null), [le, xn] = M.useState(null), [ai, xe] = M.useState(null), [Bn, Nt] = M.useState(""), [ks, oi] = M.useState(!1), [As, li] = M.useState(!1), ke = M.useRef(0), vn = M.useRef(0), [ci, he] = M.useState(null), [di, Ue] = M.useState(!1), [W, Gn] = M.useState(
     () => pn.draft
   ), [Fn, rn] = M.useState(
     () => {
@@ -2053,14 +2053,14 @@ function ca({
       }
       return new Set(t.filter((h) => l.get(h) === 1));
     }
-  ), [hi, Ge] = M.useState(
+  ), [ui, Ge] = M.useState(
     () => pn.error
-  ), [We, bn] = M.useState(!1), [Wn, pi] = M.useState(
+  ), [We, bn] = M.useState(!1), [Wn, hi] = M.useState(
     () => {
       var t;
       return ((t = c[0]) == null ? void 0 : t.id) ?? "";
     }
-  ), [Ct, Zn] = M.useState(!1), [Hn, Ne] = M.useState(null), [ks, Ze] = M.useState(!1), [As, He] = M.useState(null), qe = M.useRef(!1), St = M.useRef(null), mi = M.useRef(null), yn = M.useRef(null), V = ks || f !== null, Ye = Math.max(0, Math.floor(k)), Ts = Math.max(
+  ), [Ct, Zn] = M.useState(!1), [Hn, Ne] = M.useState(null), [Ts, Ze] = M.useState(!1), [Fs, He] = M.useState(null), qe = M.useRef(!1), pi = M.useRef(null), mi = M.useRef(null), yn = M.useRef(null), V = Ts || f !== null, Ye = Math.max(0, Math.floor(k)), $s = Math.max(
     0,
     Math.floor(v ?? n.fcs.nEvents)
   ), Xe = c.find(
@@ -2068,11 +2068,11 @@ function ca({
   ) ?? c[0] ?? null;
   M.useEffect(() => {
     var t;
-    Wn && c.some(({ id: l }) => l === Wn) || (pi(((t = c[0]) == null ? void 0 : t.id) ?? ""), Zn(!1));
+    Wn && c.some(({ id: l }) => l === Wn) || (hi(((t = c[0]) == null ? void 0 : t.id) ?? ""), Zn(!1));
   }, [c, Wn]);
   const te = f ?? (Hn ? {
     phase: "applying",
-    profileName: As ?? (W == null ? void 0 : W.fileName) ?? "Compensation",
+    profileName: Fs ?? (W == null ? void 0 : W.fileName) ?? "Compensation",
     fraction: Hn.fraction,
     processedEvents: Hn.processedEvents,
     totalEvents: Hn.totalEvents
@@ -2080,10 +2080,10 @@ function ca({
   M.useEffect(() => {
     O || (vn.current++, ke.current++, tn({ state: "idle" }), xn(null), gn(null), K == null || K());
   }, [K, O]);
-  const Mt = M.useMemo(
+  const St = M.useMemo(
     () => n.channels.map(({ pnn: t, columnIndex: l }) => ({ pnn: t, columnIndex: l })),
     [n]
-  ), Pe = M.useMemo(() => {
+  ), Ie = M.useMemo(() => {
     if (!H) return null;
     const t = H.channels.map((h) => {
       const x = n.index(h);
@@ -2095,7 +2095,7 @@ function ca({
         error: "The embedded matrix could not be mapped back to exact FCS channel identities.",
         keyword: void 0
       };
-    const l = qt({
+    const l = Ut({
       sourceChannels: t,
       receiverChannels: t,
       matrix: H.matrix
@@ -2105,20 +2105,20 @@ function ca({
       error: l.ok ? null : `The embedded compensation matrix cannot be applied or edited. ${l.errors.map(({ message: h }) => h).join(" ")}`,
       keyword: p
     };
-  }, [n, H]), X = fn === "all" ? null : E.find(({ id: t }) => t === fn) ?? null, ce = X ? I[X.id] ?? null : null, re = ce ? (X == null ? void 0 : X.eventCount) ?? 0 : n.fcs.nEvents, Yn = ft === "all" ? "all" : Ji.includes(Number(ft)) ? Number(ft) : Xi, $n = M.useMemo(
+  }, [n, H]), X = fn === "all" ? null : E.find(({ id: t }) => t === fn) ?? null, ce = X ? P[X.id] ?? null : null, re = ce ? (X == null ? void 0 : X.eventCount) ?? 0 : n.fcs.nEvents, Yn = ft === "all" ? "all" : es.includes(Number(ft)) ? Number(ft) : Qi, $n = M.useMemo(
     () => dn(
       n.fcs.nEvents,
       Yn === "all" ? Math.max(1, n.fcs.nEvents) : Yn,
       ce
     ),
     [Yn, re, ce, n]
-  ), Pn = M.useMemo(
+  ), In = M.useMemo(
     () => dn(n.fcs.nEvents, 2048, ce),
     [ce, n]
-  ), Et = M.useMemo(
+  ), Mt = M.useMemo(
     () => dn(
       n.fcs.nEvents,
-      Yr,
+      Qr,
       ce
     ),
     [ce, n]
@@ -2128,12 +2128,12 @@ function ca({
   }, [fn, E, vt]), M.useEffect(() => {
     ke.current++, A == null || A(), Be({}), sn({}), gn(null), xn(null), xe(null);
   }, [fn, ce, A]);
-  const ae = M.useMemo(() => W ? sr({
+  const ae = M.useMemo(() => W ? ar({
     kind: "cytof-spillover",
     matrix: W.matrix,
-    sampleChannels: Mt,
+    sampleChannels: St,
     includedChannels: Array.from(Fn)
-  }) : null, [W, Fn, Mt, J]), u = M.useMemo(() => {
+  }) : null, [W, Fn, St, J]), u = M.useMemo(() => {
     if (H) {
       const l = n.spilloverOrigin, p = l.kind === "external" ? l : null;
       return {
@@ -2149,12 +2149,12 @@ function ca({
       };
     }
     if (!j || !_) return null;
-    const t = j.scientific.kind === "cytof-spillover" ? jr(j.scientific.matrix) : j.scientific.matrix;
+    const t = j.scientific.kind === "cytof-spillover" ? Cr(j.scientific.matrix) : j.scientific.matrix;
     return t.matrix.length !== t.sourceChannels.length || t.matrix.some((l) => !l || l.length !== t.receiverChannels.length) ? null : {
       sourceAxisKeys: t.sourceChannels,
       receiverAxisKeys: t.receiverChannels,
-      sourceChannels: t.sourceChannels.map((l) => Ut(n, l)),
-      receiverChannels: t.receiverChannels.map((l) => Ut(n, l)),
+      sourceChannels: t.sourceChannels.map((l) => _t(n, l)),
+      receiverChannels: t.receiverChannels.map((l) => _t(n, l)),
       matrix: t.matrix,
       kind: j.scientific.kind === "cytof-spillover" ? "cytof" : "flow",
       title: j.scientific.kind === "cytof-spillover" ? "Uploaded spill matrix" : "Applied compensation matrix",
@@ -2166,9 +2166,9 @@ function ca({
     };
   }, [ue, _, j, n, H, i, J]), oe = (u == null ? void 0 : u.sourceChannels) ?? [], de = (u == null ? void 0 : u.receiverChannels) ?? [];
   M.useEffect(() => {
-    yt((t) => Math.max(1, Math.min(Qi, Math.round(t) || 1)));
+    yt((t) => Math.max(1, Math.min(ns, Math.round(t) || 1)));
   }, [yt]);
-  const Xn = mt ?? Se, b = M.useMemo(() => {
+  const Xn = mt ?? Se, y = M.useMemo(() => {
     if (!u || !Xn) return null;
     const [t, l] = Xn.split(Oe), p = u.sourceAxisKeys.indexOf(t), h = u.receiverAxisKeys.indexOf(l);
     return p < 0 || h < 0 || u.sourceAxisKeys[p] === u.receiverAxisKeys[h] ? null : {
@@ -2185,71 +2185,71 @@ function ca({
     };
   }, [Xn, u, de, oe]);
   M.useEffect(() => {
-    if (!b) {
+    if (!y) {
       Nt("");
       return;
     }
-    const t = Y[b.pairKey];
-    Nt(ne((t ?? b.value) * 100, 6));
-  }, [b == null ? void 0 : b.pairKey, b == null ? void 0 : b.value, Y]);
-  const be = M.useMemo(() => b ? Dt(
+    const t = Y[y.pairKey];
+    Nt(ne((t ?? y.value) * 100, 6));
+  }, [y == null ? void 0 : y.pairKey, y == null ? void 0 : y.value, Y]);
+  const be = M.useMemo(() => y ? Ot(
     n,
-    b.source.key,
-    b.receiver.key,
+    y.source.key,
+    y.receiver.key,
     {
       eventMask: ce,
       fixedEventIndices: $n,
       eligibleEventCount: re
     }
-  ) : null, [a, R.state, $n, re, ce, n, b]), Ce = M.useMemo(() => {
+  ) : null, [a, R.state, $n, re, ce, n, y]), Ce = M.useMemo(() => {
     if (!u || R.state !== "ready")
       return { candidateCount: 0, screenedCount: 0, evaluableCount: 0, items: [] };
     const t = [];
     for (let x = 0; x < u.matrix.length; x++)
-      for (let y = 0; y < u.matrix[x].length; y++) {
-        const S = u.sourceAxisKeys[x], L = u.receiverAxisKeys[y];
-        if (S === L) continue;
-        const U = u.matrix[x][y];
-        if (!Number.isFinite(U)) continue;
-        const z = u.kind === "cytof" ? Cn(S, L) : null, G = z !== null && z !== "self" && z !== "other";
-        U === 0 && !G && ze === "biological" || t.push({
+      for (let b = 0; b < u.matrix[x].length; b++) {
+        const C = u.sourceAxisKeys[x], z = u.receiverAxisKeys[b];
+        if (C === z) continue;
+        const q = u.matrix[x][b];
+        if (!Number.isFinite(q)) continue;
+        const L = u.kind === "cytof" ? Cn(C, z) : null, G = L !== null && L !== "self" && L !== "other";
+        q === 0 && !G && ze === "biological" || t.push({
           sourceIndex: x,
-          receiverIndex: y,
-          pairKey: `${S}${Oe}${L}`,
+          receiverIndex: b,
+          pairKey: `${C}${Oe}${z}`,
           source: oe[x],
-          receiver: de[y],
-          coefficient: U,
-          interaction: z,
+          receiver: de[b],
+          coefficient: q,
+          interaction: L,
           physicalPrior: G ? 1 : 0
         });
       }
-    t.sort((x, y) => y.physicalPrior - x.physicalPrior || Math.abs(y.coefficient) - Math.abs(x.coefficient));
+    t.sort((x, b) => b.physicalPrior - x.physicalPrior || Math.abs(b.coefficient) - Math.abs(x.coefficient));
     const l = t.slice(0, 240), p = l.flatMap((x) => {
-      const y = Dt(
+      const b = Ot(
         n,
         x.source.key,
         x.receiver.key,
         {
           eventMask: ce,
-          fixedEventIndices: Pn,
+          fixedEventIndices: In,
           eligibleEventCount: re
         }
       );
-      return y.ready ? [{ ...x, evidence: y.preview.evidence }] : [];
-    }), h = Tr(
-      p.map(({ coefficient: x, physicalPrior: y, evidence: S }) => ({ coefficient: x, physicalPrior: y, evidence: S })),
+      return b.ready ? [{ ...x, evidence: b.preview.evidence }] : [];
+    }), h = Ir(
+      p.map(({ coefficient: x, physicalPrior: b, evidence: C }) => ({ coefficient: x, physicalPrior: b, evidence: C })),
       u.kind,
       ze
-    ).map(({ index: x, relativePriority: y }) => ({ ...p[x], relativePriority: y }));
+    ).map(({ index: x, relativePriority: b }) => ({ ...p[x], relativePriority: b }));
     return {
       candidateCount: t.length,
       screenedCount: l.length,
       evaluableCount: p.length,
       items: h.slice(0, 8)
     };
-  }, [js, ze, R.state, u, de, Pn, re, ce, n, oe]), ie = M.useMemo(() => new Set(
+  }, [Ns, ze, R.state, u, de, In, re, ce, n, oe]), ie = M.useMemo(() => new Set(
     j ? j.scientific.kind === "flow-spillover" ? j.scientific.matrix.receiverChannels : j.scientific.includedChannels : []
-  ), [j]), se = M.useMemo(() => u ? Ir(
+  ), [j]), se = M.useMemo(() => u ? Or(
     n,
     Array.from(/* @__PURE__ */ new Set([
       ...u.sourceAxisKeys,
@@ -2257,12 +2257,12 @@ function ca({
     ])),
     {
       eventMask: ce,
-      fixedEventIndices: Et,
+      fixedEventIndices: Mt,
       eligibleEventCount: re
     }
   ) : null, [
     a,
-    Et,
+    Mt,
     R.state,
     u,
     re,
@@ -2272,75 +2272,75 @@ function ca({
   M.useEffect(() => {
     if (!u || ie.size === 0) return;
     const t = ie.has(Ee) ? Ee : u.sourceAxisKeys.find((p) => ie.has(p)) ?? "", l = ie.has(we) && we !== t ? we : u.receiverAxisKeys.find((p) => p !== t && ie.has(p)) ?? "";
-    t !== Ee && ai(t), l !== we && jt(l);
+    t !== Ee && ri(t), l !== we && jt(l);
   }, [ie, we, Ee, u]);
-  const jn = M.useMemo(() => new Set(qn), [qn]), kt = M.useMemo(() => {
+  const jn = M.useMemo(() => new Set(qn), [qn]), Et = M.useMemo(() => {
     var p;
     if (!u) return [];
     const t = [], l = ie.size > 0;
     for (let h = 0; h < u.sourceAxisKeys.length; h++) {
       const x = u.sourceAxisKeys[h];
       if (!(l && !ie.has(x)))
-        for (let y = 0; y < u.receiverAxisKeys.length; y++) {
-          const S = u.receiverAxisKeys[y];
-          if (x === S || l && !ie.has(S)) continue;
-          const L = (p = u.matrix[h]) == null ? void 0 : p[y];
-          if (!Number.isFinite(L)) continue;
-          const U = oe[h], z = de[y];
-          if (!U || !z || se != null && se.ready && (!se.dataset.channels.has(U.key) || !se.dataset.channels.has(z.key))) continue;
-          const G = u.kind === "cytof" ? Cn(x, S) : null, ee = G !== null && G !== "self" && G !== "other";
+        for (let b = 0; b < u.receiverAxisKeys.length; b++) {
+          const C = u.receiverAxisKeys[b];
+          if (x === C || l && !ie.has(C)) continue;
+          const z = (p = u.matrix[h]) == null ? void 0 : p[b];
+          if (!Number.isFinite(z)) continue;
+          const q = oe[h], L = de[b];
+          if (!q || !L || se != null && se.ready && (!se.dataset.channels.has(q.key) || !se.dataset.channels.has(L.key))) continue;
+          const G = u.kind === "cytof" ? Cn(x, C) : null, ee = G !== null && G !== "self" && G !== "other";
           t.push({
             sourceIndex: h,
-            receiverIndex: y,
-            pairKey: `${x}${Oe}${S}`,
-            source: U,
-            receiver: z,
-            coefficient: L,
+            receiverIndex: b,
+            pairKey: `${x}${Oe}${C}`,
+            source: q,
+            receiver: L,
+            coefficient: z,
             interaction: G,
             physicalPrior: ee ? 1 : 0
           });
         }
     }
     return t;
-  }, [se, ie, u, de, oe]), Ie = M.useMemo(() => {
+  }, [se, ie, u, de, oe]), Pe = M.useMemo(() => {
     const t = kn.trim().toLocaleLowerCase();
-    return kt.filter((l) => {
+    return Et.filter((l) => {
       const p = Math.abs(l.coefficient) > 1e-12, h = l.physicalPrior > 0;
       return Fe === "all" || Fe === "relevant" && (p || h) || Fe === "nonzero" && p || Fe === "physical" && h || Fe === "flagged" && jn.has(l.pairKey) ? t ? `${l.source.combined} ${l.receiver.combined}`.toLocaleLowerCase().includes(t) : !0 : !1;
     });
-  }, [jn, kt, Fe, kn]);
+  }, [jn, Et, Fe, kn]);
   M.useEffect(() => {
     var l;
     if (!xt || Me !== "global") return;
     const t = [...((l = yn.current) == null ? void 0 : l.querySelectorAll(".gl-comp-global-tile")) ?? []].find((p) => p.dataset.pairKey === xt);
-    t && (t.scrollIntoView({ block: "center", inline: "center" }), ri(null));
-  }, [An, $e, xt, Ie, Me]);
-  const At = M.useMemo(() => {
+    t && (t.scrollIntoView({ block: "center", inline: "center" }), si(null));
+  }, [An, $e, xt, Pe, Me]);
+  const kt = M.useMemo(() => {
     if ($e === "compact") return [];
     const t = /* @__PURE__ */ new Map();
-    for (const l of Ie) {
+    for (const l of Pe) {
       const p = $e === "source" ? l.source : l.receiver, h = t.get(p.key);
       h ? h.pairs.push(l) : t.set(p.key, { channel: p, pairs: [l] });
     }
     return [...t.values()];
-  }, [$e, Ie]), fi = M.useMemo(
-    () => $e === "compact" ? Ie : At.flatMap((t) => t.pairs),
-    [At, $e, Ie]
-  ), gi = `${i(Zr[Fe])}${kn.trim() ? i(" · search “{query}”", { query: kn.trim() }) : ""}`, Tt = Math.max(120, Math.min(220, Math.round(ds) || 120)), Je = Math.max(1, Math.min(10, Math.round(hs) || 6)), Jn = Math.max(0.1, Math.min(1, Number(ms) || 0.85)), Q = M.useMemo(() => !j || !u || R.state !== "ready" ? [] : qn.flatMap((t) => {
+  }, [$e, Pe]), fi = M.useMemo(
+    () => $e === "compact" ? Pe : kt.flatMap((t) => t.pairs),
+    [kt, $e, Pe]
+  ), gi = `${i(Xr[Fe])}${kn.trim() ? i(" · search “{query}”", { query: kn.trim() }) : ""}`, At = Math.max(120, Math.min(220, Math.round(hs) || 120)), Je = Math.max(1, Math.min(10, Math.round(ms) || 6)), Jn = Math.max(0.1, Math.min(1, Number(gs) || 0.85)), Q = M.useMemo(() => !j || !u || R.state !== "ready" ? [] : qn.flatMap((t) => {
     const [l, p] = t.split(Oe), h = u.sourceAxisKeys.indexOf(l), x = u.receiverAxisKeys.indexOf(p);
     if (h < 0 || x < 0 || l === p || !ie.has(l) || !ie.has(p)) return [];
-    const y = Dt(
+    const b = Ot(
       n,
       oe[h].key,
       de[x].key,
       {
         eventMask: ce,
-        fixedEventIndices: Pn,
+        fixedEventIndices: In,
         eligibleEventCount: re
       }
     );
-    if (!y.ready) return [];
-    const S = Ce.items.find((L) => L.pairKey === t);
+    if (!b.ready) return [];
+    const C = Ce.items.find((z) => z.pairKey === t);
     return [{
       sourceIndex: h,
       receiverIndex: x,
@@ -2350,10 +2350,10 @@ function ca({
       coefficient: u.matrix[h][x],
       interaction: u.kind === "cytof" ? Cn(l, p) : null,
       physicalPrior: u.kind === "cytof" && Cn(l, p) !== "other" ? 1 : 0,
-      evidence: y.preview.evidence,
-      relativePriority: (S == null ? void 0 : S.relativePriority) ?? 0
+      evidence: b.preview.evidence,
+      relativePriority: (C == null ? void 0 : C.relativePriority) ?? 0
     }];
-  }), [qn, ie, R.state, u, j, de, Ce.items, Pn, re, ce, n, oe]), Ke = Q, xi = M.useMemo(() => {
+  }), [qn, ie, R.state, u, j, de, Ce.items, In, re, ce, n, oe]), Ke = Q, xi = M.useMemo(() => {
     if (!j) return 0.01;
     const t = [];
     for (let l = 0; l < j.scientific.matrix.matrix.length; l++) {
@@ -2364,42 +2364,42 @@ function ca({
         Number.isFinite(x) && x > 1e-12 && t.push(x);
       }
     }
-    return t.length > 0 ? Yt(t) : 0.01;
-  }, [j]), Ft = (t, l) => {
-    const p = bs[t];
+    return t.length > 0 ? Ht(t) : 0.01;
+  }, [j]), Tt = (t, l) => {
+    const p = js[t];
     if (p) return p;
-    const h = is(l, xi, (u == null ? void 0 : u.kind) ?? "flow");
+    const h = rs(l, xi, (u == null ? void 0 : u.kind) ?? "flow");
     return {
       lowerPercent: ne(h.lower * 100, 5),
       upperPercent: ne(h.upper * 100, 5)
     };
-  }, In = (t, l) => {
-    const p = Ft(t, l), h = Number(p.lowerPercent) / 100, x = Number(p.upperPercent) / 100;
+  }, Pn = (t, l) => {
+    const p = Tt(t, l), h = Number(p.lowerPercent) / 100, x = Number(p.upperPercent) / 100;
     return !Number.isFinite(h) || !Number.isFinite(x) ? { lower: h, upper: x, error: "Enter finite lower and upper sweep bounds." } : (u == null ? void 0 : u.kind) === "cytof" && h < 0 ? { lower: h, upper: x, error: "CyTOF NNLS sweep bounds cannot be negative." } : x > h ? { lower: h, upper: x, error: null } : { lower: h, upper: x, error: "The upper sweep bound must be greater than the lower bound." };
   }, Qn = (t, l, p, h) => {
-    ys((x) => ({
+    ws((x) => ({
       ...x,
       [t]: {
         ...x[t] ?? (() => {
-          const y = is(l, xi, (u == null ? void 0 : u.kind) ?? "flow");
+          const b = rs(l, xi, (u == null ? void 0 : u.kind) ?? "flow");
           return {
-            lowerPercent: ne(y.lower * 100, 5),
-            upperPercent: ne(y.upper * 100, 5)
+            lowerPercent: ne(b.lower * 100, 5),
+            upperPercent: ne(b.upper * 100, 5)
           };
         })(),
         [p]: h
       }
     })), Be((x) => {
       if (!(t in x)) return x;
-      const y = { ...x };
-      return delete y[t], y;
+      const b = { ...x };
+      return delete b[t], b;
     }), sn((x) => {
       if (!(t in x)) return x;
-      const y = { ...x };
-      return delete y[t], y;
+      const b = { ...x };
+      return delete b[t], b;
     });
   }, Kn = (t, l) => {
-    xs((p) => l ? p.includes(t) ? p : [...p, t] : p.filter((h) => h !== t)), l ? (je(t), Tn(t)) : (Be((p) => {
+    bs((p) => l ? p.includes(t) ? p : [...p, t] : p.filter((h) => h !== t)), l ? (je(t), Tn(t)) : (Be((p) => {
       if (!(t in p)) return p;
       const h = { ...p };
       return delete h[t], h;
@@ -2408,7 +2408,7 @@ function ca({
       const h = { ...p };
       return delete h[t], h;
     }));
-  }, Fs = () => {
+  }, Is = () => {
     if (!u || !Ee || !we || Ee === we) return;
     if (!ie.has(Ee) || !ie.has(we)) {
       xe("Both channels must be included in the installed compensation solve.");
@@ -2416,18 +2416,18 @@ function ca({
     }
     const t = `${Ee}${Oe}${we}`;
     Kn(t, !0), xe(null);
-  }, $t = Ke.reduce((t, l) => t + (In(l.pairKey, l.coefficient).error ? 1 : 0), 0), wn = M.useMemo(() => {
+  }, Ft = Ke.reduce((t, l) => t + (Pn(l.pairKey, l.coefficient).error ? 1 : 0), 0), wn = M.useMemo(() => {
     if (!j) return null;
     const t = j.scientific.matrix.matrix.map((l) => Array.from(l));
     for (const [l, p] of Object.entries(Y)) {
-      const [h, x] = l.split(Oe), y = j.scientific.matrix.sourceChannels.indexOf(h), S = j.scientific.matrix.receiverChannels.indexOf(x);
-      y >= 0 && S >= 0 && (t[y][S] = p);
+      const [h, x] = l.split(Oe), b = j.scientific.matrix.sourceChannels.indexOf(h), C = j.scientific.matrix.receiverChannels.indexOf(x);
+      b >= 0 && C >= 0 && (t[b][C] = p);
     }
     return Object.freeze(t.map((l) => Object.freeze(l)));
   }, [j, Y]);
   M.useEffect(() => {
     const t = Object.keys(Y).length;
-    if (!O || t === 0 || !j || j.scientific.kind !== "flow-spillover" || R.state !== "ready" || !wn || !b || !F) {
+    if (!O || t === 0 || !j || j.scientific.kind !== "flow-spillover" || R.state !== "ready" || !wn || !y || !F) {
       vn.current++, tn({ state: "idle" });
       return;
     }
@@ -2435,46 +2435,46 @@ function ca({
     if (l.length === 0) {
       tn({
         state: "error",
-        pairKey: b.pairKey,
+        pairKey: y.pairKey,
         message: i("The selected review population contains no events.")
       });
       return;
     }
-    const p = ++vn.current, h = b.pairKey;
-    tn((y) => ({
+    const p = ++vn.current, h = y.pairKey;
+    tn((b) => ({
       state: "updating",
       pairKey: h,
-      ...(y.state === "ready" || y.state === "updating") && y.pairKey === h && y.preview ? { preview: y.preview } : {}
+      ...(b.state === "ready" || b.state === "updating") && b.pairKey === h && b.preview ? { preview: b.preview } : {}
     }));
     const x = window.setTimeout(() => {
       F(
         j,
         l,
         wn
-      ).then((y) => {
+      ).then((b) => {
         if (vn.current !== p) return;
-        const S = y.sourceChannels.indexOf(b.source.pnn), L = y.sourceChannels.indexOf(b.receiver.pnn);
-        if (S < 0 || L < 0)
+        const C = b.sourceChannels.indexOf(y.source.pnn), z = b.sourceChannels.indexOf(y.receiver.pnn);
+        if (C < 0 || z < 0)
           throw new Error(i("The preview result did not contain the selected flow channels."));
-        const U = Lt(
+        const q = Dt(
           n,
-          b.source.pnn,
-          b.receiver.pnn,
+          y.source.pnn,
+          y.receiver.pnn,
           l,
-          y.candidateColumns[S],
-          y.candidateColumns[L],
+          b.candidateColumns[C],
+          b.candidateColumns[z],
           { totalEvents: re }
         );
-        if (!U.ready) throw new Error(U.reason);
+        if (!q.ready) throw new Error(q.reason);
         tn({
           state: "ready",
           pairKey: h,
-          preview: U.preview
+          preview: q.preview
         });
-      }).catch((y) => {
+      }).catch((b) => {
         if (vn.current !== p) return;
-        const S = y instanceof Error ? y.message : String(y);
-        /cancel|supersed|stale/i.test(S) || tn({ state: "error", pairKey: h, message: S });
+        const C = b instanceof Error ? b.message : String(b);
+        /cancel|supersed|stale/i.test(C) || tn({ state: "error", pairKey: h, message: C });
       });
     }, 90);
     return () => window.clearTimeout(x);
@@ -2488,13 +2488,13 @@ function ca({
     n.dataRevision,
     n.displayTransformContextKey,
     n.layerRevision,
-    b,
+    y,
     Y,
     i,
     O,
     wn
   ]);
-  const $s = M.useMemo(() => !u || Object.keys(Y).length === 0 ? null : {
+  const Ps = M.useMemo(() => !u || Object.keys(Y).length === 0 ? null : {
     sourceChannels: u.sourceAxisKeys,
     receiverChannels: u.receiverAxisKeys,
     matrix: u.matrix.map(
@@ -2512,25 +2512,25 @@ function ca({
         u.sourceAxisKeys[l] === u.receiverAxisKeys[p] || !Number.isFinite(h) || h <= 1 || t.push(`${oe[l].combined} → ${de[p].combined}`);
       }
     return t;
-  }, [u, de, oe]), Pt = M.useMemo(() => {
+  }, [u, de, oe]), $t = M.useMemo(() => {
     if (!u) return [];
     const t = [];
     for (let l = 0; l < u.matrix.length; l++)
       for (let p = 0; p < u.matrix[l].length; p++) {
-        const h = u.matrix[l][p], x = u.sourceAxisKeys[l] === u.receiverAxisKeys[p], y = `${oe[l].combined} → ${de[p].combined}`;
-        Number.isFinite(h) ? x && Math.abs(h - 1) > 1e-8 ? t.push(`${oe[l].combined}: diagonal is ${en(h)}, not 100%`) : !x && h < 0 ? t.push(`${y}: negative coefficient (${en(h)})`) : !x && h > 1 && t.push(`${y}: coefficient above 100%`) : t.push(`${y}: non-finite coefficient (${String(h)})`);
+        const h = u.matrix[l][p], x = u.sourceAxisKeys[l] === u.receiverAxisKeys[p], b = `${oe[l].combined} → ${de[p].combined}`;
+        Number.isFinite(h) ? x && Math.abs(h - 1) > 1e-8 ? t.push(`${oe[l].combined}: diagonal is ${en(h)}, not 100%`) : !x && h < 0 ? t.push(`${b}: negative coefficient (${en(h)})`) : !x && h > 1 && t.push(`${b}: coefficient above 100%`) : t.push(`${b}: non-finite coefficient (${String(h)})`);
       }
     return t;
   }, [u, de, oe]), bi = M.useMemo(
     () => (u == null ? void 0 : u.matrix.some((t) => t.some((l) => !Number.isFinite(l)))) ?? !1,
     [u]
   ), Ae = M.useMemo(
-    () => _ && R.state === "ready" ? aa(n, _.includedPnns) : null,
+    () => _ && R.state === "ready" ? ca(n, _.includedPnns) : null,
     [R.state, _, n]
   ), et = M.useMemo(() => {
-    const t = [...Pt];
-    return R.state === "stale" && t.push(...R.reasons.map((l) => `Profile unavailable: ${ea(l)}`)), t;
-  }, [R, Pt]), yi = _ ? (j == null ? void 0 : j.name) ?? "Installed compensation profile" : H ? ue ? "SCE spillover matrix" : "Embedded FCS matrix" : "No compatible matrix", Ps = _ ? Qr(_.kind, _.method) : H ? "Flow linear inverse" : "Not configured", nt = i(Ps), It = (_ == null ? void 0 : _.includedPnns.length) ?? (H == null ? void 0 : H.channels.length) ?? 0, tt = (j == null ? void 0 : j.name) ?? (_ == null ? void 0 : _.profileId) ?? yi, ji = _t(tt), Is = ji !== tt || (j == null ? void 0 : j.recordType) === "revision" ? `${ji} · ${i("revised")}` : tt, Ks = H !== null && !bi || _ !== null && R.state === "ready", wi = M.useMemo(() => {
+    const t = [...$t];
+    return R.state === "stale" && t.push(...R.reasons.map((l) => `Profile unavailable: ${ia(l)}`)), t;
+  }, [R, $t]), yi = _ ? (j == null ? void 0 : j.name) ?? "Installed compensation profile" : H ? ue ? "SCE spillover matrix" : "Embedded FCS matrix" : "No compatible matrix", Ks = _ ? ta(_.kind, _.method) : H ? "Flow linear inverse" : "Not configured", nt = i(Ks), It = (_ == null ? void 0 : _.includedPnns.length) ?? (H == null ? void 0 : H.channels.length) ?? 0, tt = (j == null ? void 0 : j.name) ?? (_ == null ? void 0 : _.profileId) ?? yi, ji = zt(tt), Rs = ji !== tt || (j == null ? void 0 : j.recordType) === "revision" ? `${ji} · ${i("revised")}` : tt, Os = H !== null && !bi || _ !== null && R.state === "ready", wi = M.useMemo(() => {
     if (!u) return 0;
     let t = 0;
     for (let l = 0; l < u.matrix.length; l++)
@@ -2540,7 +2540,7 @@ function ca({
         Number.isFinite(h) && (t = Math.max(t, Math.abs(h)));
       }
     return t;
-  }, [u]), it = !!((j == null ? void 0 : j.scientific.kind) === "flow-spillover" && R.state === "ready" && u && Math.max(u.sourceAxisKeys.length, u.receiverAxisKeys.length) <= Xr), Rn = u ? it ? Math.max(42, Math.min(54, Math.floor(960 / Math.max(
+  }, [u]), it = !!((j == null ? void 0 : j.scientific.kind) === "flow-spillover" && R.state === "ready" && u && Math.max(u.sourceAxisKeys.length, u.receiverAxisKeys.length) <= ea), Rn = u ? it ? Math.max(42, Math.min(54, Math.floor(960 / Math.max(
     u.sourceAxisKeys.length,
     u.receiverAxisKeys.length
   )))) : Math.max(13, Math.min(38, Math.floor(760 / Math.max(
@@ -2552,77 +2552,79 @@ function ca({
   }, [j == null ? void 0 : j.profileId]), M.useEffect(() => {
     (u == null ? void 0 : u.kind) === "flow" && Fe === "physical" && Un("relevant");
   }, [Fe, u == null ? void 0 : u.kind, Un]);
-  const Rs = (t) => {
-    ti((l) => ({ ...l, [t]: !l[t] }));
+  const Ds = (t) => {
+    ni((l) => ({ ...l, [t]: !l[t] }));
   }, Ni = (t) => {
     var h;
     const l = ((h = yn.current) == null ? void 0 : h.getBoundingClientRect().width) ?? 1100, p = Math.max(360, Math.min(900, l - 440 - 8));
     return Math.max(360, Math.min(p, Math.round(t)));
-  }, Os = (t) => {
+  }, Ls = (t) => {
     var x;
     if (t.button !== 0) return;
     t.preventDefault();
     const l = t.currentTarget;
     (x = l.setPointerCapture) == null || x.call(l, t.pointerId);
-    const p = (y) => {
-      var L;
-      const S = (L = yn.current) == null ? void 0 : L.getBoundingClientRect();
-      S && ii(Ni(S.right - y.clientX));
+    const p = (b) => {
+      var z;
+      const C = (z = yn.current) == null ? void 0 : z.getBoundingClientRect();
+      C && ti(Ni(C.right - b.clientX));
     }, h = () => {
-      var y;
-      window.removeEventListener("pointermove", p), window.removeEventListener("pointerup", h), window.removeEventListener("pointercancel", h), (y = l.releasePointerCapture) == null || y.call(l, t.pointerId);
+      var b;
+      window.removeEventListener("pointermove", p), window.removeEventListener("pointerup", h), window.removeEventListener("pointercancel", h), (b = l.releasePointerCapture) == null || b.call(l, t.pointerId);
     };
     window.addEventListener("pointermove", p), window.addEventListener("pointerup", h), window.addEventListener("pointercancel", h);
-  }, Ds = (t) => {
+  }, zs = (t) => {
     let l = null;
-    t.key === "ArrowLeft" ? l = mn + 40 : t.key === "ArrowRight" ? l = mn - 40 : t.key === "Home" && (l = es), l !== null && (t.preventDefault(), ii(Ni(l)));
-  }, Ls = async (t) => {
+    t.key === "ArrowLeft" ? l = mn + 40 : t.key === "ArrowRight" ? l = mn - 40 : t.key === "Home" && (l = ts), l !== null && (t.preventDefault(), ti(Ni(l)));
+  }, _s = async (t) => {
     var p;
     const l = (p = t.currentTarget.files) == null ? void 0 : p[0];
-    if (t.currentTarget.value = "", !!l) {
-      Ge(null), he(null), Ue(!1), Ne(null), bn(!1);
-      try {
-        const h = yr(await l.text()), x = qt(
-          h.input,
-          "cytof-spillover"
-        );
-        if (!x.ok)
-          throw new Error(x.errors.map(({ message: L }) => L).join(" "));
-        const y = /* @__PURE__ */ new Map();
-        for (const { pnn: L } of Mt) {
-          const U = L.trim().normalize("NFC");
-          y.set(U, (y.get(U) ?? 0) + 1);
-        }
-        const S = x.value.receiverChannels.filter(
-          (L) => y.get(L) === 1
-        );
-        Gn({
-          fileName: l.name,
-          source: "file",
-          parsed: h,
-          matrix: x.value,
-          validationWarnings: x.warnings
-        }), rn(new Set(S));
-      } catch (h) {
-        Gn(null), rn(/* @__PURE__ */ new Set()), Ge(h instanceof Error ? h.message : String(h));
+    t.currentTarget.value = "", l && await Si(l);
+  }, Ci = () => void cr(pi.current, { "text/csv": [".csv", ".tsv", ".txt"] }, "CyTOF spillover matrix").then((t) => {
+    t != null && t[0] && Si(t[0]);
+  }), Si = async (t) => {
+    Ge(null), he(null), Ue(!1), Ne(null), bn(!1);
+    try {
+      const l = Nr(await t.text()), p = Ut(
+        l.input,
+        "cytof-spillover"
+      );
+      if (!p.ok)
+        throw new Error(p.errors.map(({ message: b }) => b).join(" "));
+      const h = /* @__PURE__ */ new Map();
+      for (const { pnn: b } of St) {
+        const C = b.trim().normalize("NFC");
+        h.set(C, (h.get(C) ?? 0) + 1);
       }
+      const x = p.value.receiverChannels.filter(
+        (b) => h.get(b) === 1
+      );
+      Gn({
+        fileName: t.name,
+        source: "file",
+        parsed: l,
+        matrix: p.value,
+        validationWarnings: p.warnings
+      }), rn(new Set(x));
+    } catch (l) {
+      Gn(null), rn(/* @__PURE__ */ new Set()), Ge(l instanceof Error ? l.message : String(l));
     }
-  }, zs = (t, l) => {
+  }, Us = (t, l) => {
     rn((p) => {
       const h = new Set(p);
       return l ? h.add(t) : h.delete(t), h;
     });
-  }, Ci = async () => {
+  }, Mi = async () => {
     var p, h;
     if (!W)
       throw new Error(i("Choose a CyTOF spillover matrix first."));
     const t = ((h = (p = globalThis.crypto) == null ? void 0 : p.randomUUID) == null ? void 0 : h.call(p)) ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`, l = W.fileName.replace(/\.(?:csv|tsv|txt)$/i, "") || "CyTOF compensation";
-    return Pi(
+    return Ki(
       {
         kind: "cytof-spillover",
         method: "nnls",
-        solverVersion: ur,
-        solverSettings: hr,
+        solverVersion: mr,
+        solverSettings: fr,
         matrix: W.matrix,
         includedChannels: Array.from(Fn)
       },
@@ -2642,7 +2644,7 @@ function ca({
         }
       }
     );
-  }, _s = async () => {
+  }, qs = async () => {
     if (!(qe.current || V || !W || !(ae != null && ae.canApply) || !o)) {
       if (g && !We) {
         Ge(
@@ -2652,7 +2654,7 @@ function ca({
       }
       Ge(null), he(null), Ne(null), qe.current = !0, Ze(!0), He(W.fileName);
       try {
-        const t = await Ci();
+        const t = await Mi();
         await o(t, Ne), he(i("Applied {name} to {channels} channels across {files} checked FCS files. Original measurements remain available.", {
           name: t.name,
           channels: Fn.size,
@@ -2665,7 +2667,7 @@ function ca({
         qe.current = !1, Ze(!1), He(null);
       }
     }
-  }, Us = async () => {
+  }, Vs = async () => {
     if (!(qe.current || V || !W || !(ae != null && ae.canApply) || !Xe || !d || !Ct)) {
       if (g && !We) {
         Ge(
@@ -2675,7 +2677,7 @@ function ca({
       }
       Ge(null), he(null), Ne(null), qe.current = !0, Ze(!0), He(Xe.label);
       try {
-        const t = await Ci();
+        const t = await Mi();
         await d(
           t,
           Xe,
@@ -2690,9 +2692,9 @@ function ca({
         qe.current = !1, Ze(!1), He(null);
       }
     }
-  }, qs = async () => {
+  }, Bs = async () => {
     var l, p, h;
-    if (qe.current || V || !H || !((l = Pe == null ? void 0 : Pe.validation) != null && l.ok) || !o) return;
+    if (qe.current || V || !H || !((l = Ie == null ? void 0 : Ie.validation) != null && l.ok) || !o) return;
     if (g && !We) {
       Ue(!0), he(
         i("Confirm that existing gate memberships will be recomputed in compensated coordinates before enabling matrix editing.")
@@ -2702,13 +2704,13 @@ function ca({
     const t = (ue == null ? void 0 : ue.name) || `${s.replace(/\.fcs$/i, "") || "Flow"} spillover`;
     he(null), Ue(!1), Ne(null), qe.current = !0, Ze(!0), He(t);
     try {
-      const x = ((h = (p = globalThis.crypto) == null ? void 0 : p.randomUUID) == null ? void 0 : h.call(p)) ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`, y = await Pi(
+      const x = ((h = (p = globalThis.crypto) == null ? void 0 : p.randomUUID) == null ? void 0 : h.call(p)) ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`, b = await Ki(
         {
           kind: "flow-spillover",
           method: "matrix-inverse",
-          solverVersion: lr,
-          solverSettings: or,
-          matrix: Pe.validation.value
+          solverVersion: ur,
+          solverSettings: dr,
+          matrix: Ie.validation.value
         },
         {
           profileId: `flow-${x}`,
@@ -2723,7 +2725,7 @@ function ca({
             } : {
               type: "embedded-fcs",
               fileName: s,
-              ...Pe.keyword ? { keyword: Pe.keyword } : {}
+              ...Ie.keyword ? { keyword: Ie.keyword } : {}
             }
           },
           provenance: {
@@ -2732,132 +2734,132 @@ function ca({
           }
         }
       );
-      await o(y, Ne), bn(!1), he(i(ue ? "Flow matrix editing is ready. The exact hosted matrix is retained as the baseline, and Original measurements remain available." : "Flow matrix editing is ready. The exact embedded matrix is retained as the baseline, and Original measurements remain available."));
+      await o(b, Ne), bn(!1), he(i(ue ? "Flow matrix editing is ready. The exact hosted matrix is retained as the baseline, and Original measurements remain available." : "Flow matrix editing is ready. The exact embedded matrix is retained as the baseline, and Original measurements remain available."));
     } catch (x) {
       Ue(!0), he(x instanceof Error ? x.message : String(x));
     } finally {
       qe.current = !1, Ze(!1), He(null), Ne(null);
     }
-  }, Si = (t, l) => {
-    var x, y;
+  }, Ei = (t, l) => {
+    var x, b;
     const p = oe[t], h = de[l];
-    !u || !p || !h || u.sourceAxisKeys[t] === u.receiverAxisKeys[l] || (je(`${u.sourceAxisKeys[t]}${Oe}${u.receiverAxisKeys[l]}`), (y = (x = mi.current) == null ? void 0 : x.querySelector(
+    !u || !p || !h || u.sourceAxisKeys[t] === u.receiverAxisKeys[l] || (je(`${u.sourceAxisKeys[t]}${Oe}${u.receiverAxisKeys[l]}`), (b = (x = mi.current) == null ? void 0 : x.querySelector(
       `button[data-source-index="${t}"][data-receiver-index="${l}"]`
-    )) == null || y.focus());
-  }, Vs = (t, l, p) => {
+    )) == null || b.focus());
+  }, Gs = (t, l, p) => {
     if (!u) return;
     const h = u.sourceAxisKeys.length, x = u.receiverAxisKeys.length;
-    let y = l, S = p;
-    const L = (z, G) => {
-      let ee = z + G;
+    let b = l, C = p;
+    const z = (L, G) => {
+      let ee = L + G;
       for (; ee >= 0 && ee < x; ) {
         if (u.sourceAxisKeys[l] !== u.receiverAxisKeys[ee]) return ee;
         ee += G;
       }
-      return z;
-    }, U = (z, G) => {
-      let ee = z + G;
+      return L;
+    }, q = (L, G) => {
+      let ee = L + G;
       for (; ee >= 0 && ee < h; ) {
         if (u.sourceAxisKeys[ee] !== u.receiverAxisKeys[p]) return ee;
         ee += G;
       }
-      return z;
+      return L;
     };
     switch (t.key) {
       case "ArrowLeft":
-        S = L(p, -1);
+        C = z(p, -1);
         break;
       case "ArrowRight":
-        S = L(p, 1);
+        C = z(p, 1);
         break;
       case "ArrowUp":
-        y = U(l, -1);
+        b = q(l, -1);
         break;
       case "ArrowDown":
-        y = U(l, 1);
+        b = q(l, 1);
         break;
       case "Home": {
-        S = u.sourceAxisKeys[l] === u.receiverAxisKeys[0] ? 1 : 0;
+        C = u.sourceAxisKeys[l] === u.receiverAxisKeys[0] ? 1 : 0;
         break;
       }
       case "End": {
-        const z = x - 1;
-        S = u.sourceAxisKeys[l] === u.receiverAxisKeys[z] ? z - 1 : z;
+        const L = x - 1;
+        C = u.sourceAxisKeys[l] === u.receiverAxisKeys[L] ? L - 1 : L;
         break;
       }
       default:
         return;
     }
-    t.preventDefault(), Si(y, S);
+    t.preventDefault(), Ei(b, C);
   }, On = (t, l) => {
     if (!j || !Number.isFinite(l)) return;
-    const [p, h] = t.split(Oe), x = j.scientific.matrix.sourceChannels.indexOf(p), y = j.scientific.matrix.receiverChannels.indexOf(h);
-    if (x < 0 || y < 0) return;
+    const [p, h] = t.split(Oe), x = j.scientific.matrix.sourceChannels.indexOf(p), b = j.scientific.matrix.receiverChannels.indexOf(h);
+    if (x < 0 || b < 0) return;
     if (j.scientific.kind === "cytof-spillover" && l < 0) {
       Ue(!0), he(i("CyTOF NNLS spill coefficients cannot be negative."));
       return;
     }
-    const S = j.scientific.matrix.matrix[x][y];
-    Vn((L) => {
-      const U = { ...L };
-      return l === S ? delete U[t] : U[t] = l, U;
+    const C = j.scientific.matrix.matrix[x][b];
+    Vn((z) => {
+      const q = { ...z };
+      return l === C ? delete q[t] : q[t] = l, q;
     }), Ue(!1), he(i("Staged {source} → {receiver} at {value}%. Apply the revised matrix to recompute the assay.", {
       source: p,
       receiver: h,
       value: (l * 100).toFixed(2)
     }));
-  }, Mi = (t, l, p, h) => {
+  }, ki = (t, l, p, h) => {
     const x = p[0];
     if (!x) return null;
-    const y = x.sourceChannels.indexOf(t.source.pnn), S = x.sourceChannels.indexOf(t.receiver.pnn);
-    if (y < 0 || S < 0) return null;
-    const L = Lt(
+    const b = x.sourceChannels.indexOf(t.source.pnn), C = x.sourceChannels.indexOf(t.receiver.pnn);
+    if (b < 0 || C < 0) return null;
+    const z = Dt(
       n,
       t.source.pnn,
       t.receiver.pnn,
       h,
-      x.currentColumns[y],
-      x.currentColumns[S],
+      x.currentColumns[b],
+      x.currentColumns[C],
       { totalEvents: re }
     );
-    if (!L.ready) return null;
-    const U = [{
+    if (!z.ready) return null;
+    const q = [{
       value: t.coefficient,
       isCurrent: !0,
-      preview: L.preview
+      preview: z.preview
     }];
-    return p.forEach((z, G) => {
-      const ee = z.sourceChannels.indexOf(t.source.pnn), Re = z.sourceChannels.indexOf(t.receiver.pnn);
+    return p.forEach((L, G) => {
+      const ee = L.sourceChannels.indexOf(t.source.pnn), Re = L.sourceChannels.indexOf(t.receiver.pnn);
       if (ee < 0 || Re < 0) return;
-      const ye = Lt(
+      const ye = Dt(
         n,
         t.source.pnn,
         t.receiver.pnn,
         h,
-        z.candidateColumns[ee],
-        z.candidateColumns[Re],
+        L.candidateColumns[ee],
+        L.candidateColumns[Re],
         {
           totalEvents: re,
-          xRange: L.preview.xRange,
-          yRange: L.preview.yRange
+          xRange: z.preview.xRange,
+          yRange: z.preview.yRange
         }
       );
-      ye.ready && U.push({
+      ye.ready && q.push({
         value: l[G],
         isCurrent: !1,
         preview: ye.preview
       });
-    }), U.sort((z, G) => z.value - G.value || Number(G.isCurrent) - Number(z.isCurrent)), { pairKey: t.pairKey, values: Object.freeze(U) };
-  }, Bs = async (t) => {
+    }), q.sort((L, G) => L.value - G.value || Number(G.isCurrent) - Number(L.isCurrent)), { pairKey: t.pairKey, values: Object.freeze(q) };
+  }, Ws = async (t) => {
     if (!j || !u || !N || V || le || ve) return;
-    const l = In(t.pairKey, t.coefficient);
+    const l = Pn(t.pairKey, t.coefficient);
     if (l.error) {
       xe(l.error);
       return;
     }
     const p = dn(
       n.fcs.nEvents,
-      Yi,
+      Ji,
       ce
     );
     if (p.length === 0) {
@@ -2867,39 +2869,39 @@ function ca({
     const h = ++ke.current, x = [l.lower, l.upper];
     gn(t.pairKey), xe(null);
     try {
-      const y = await N(
+      const b = await N(
         j,
         p,
-        x.map((L) => ts(
+        x.map((z) => ss(
           j,
           u.sourceAxisKeys[t.sourceIndex],
           u.receiverAxisKeys[t.receiverIndex],
-          L
+          z
         )),
         void 0,
         1
       );
       if (ke.current !== h) return;
-      const S = Mi(t, x, y, p);
-      if (!S) throw new Error(i("The fast bounds preview could not be built for this pair."));
-      sn((L) => ({ ...L, [t.pairKey]: S }));
-    } catch (y) {
+      const C = ki(t, x, b, p);
+      if (!C) throw new Error(i("The fast bounds preview could not be built for this pair."));
+      sn((z) => ({ ...z, [t.pairKey]: C }));
+    } catch (b) {
       if (ke.current !== h) return;
-      const S = y instanceof Error ? y.message : String(y);
-      xe(/cancel/i.test(S) ? i("Fast bounds preview cancelled.") : S);
+      const C = b instanceof Error ? b.message : String(b);
+      xe(/cancel/i.test(C) ? i("Fast bounds preview cancelled.") : C);
     } finally {
       ke.current === h && gn(null);
     }
-  }, Gs = async () => {
+  }, Zs = async () => {
     var h;
     if (!j || !N || Ke.length === 0 || V || le !== null || ve !== null) return;
-    if ($t > 0) {
-      xe(i("Fix the sweep bounds for {count} flagged pairs before running.", { count: $t }));
+    if (Ft > 0) {
+      xe(i("Fix the sweep bounds for {count} flagged pairs before running.", { count: Ft }));
       return;
     }
     const t = dn(
       n.fcs.nEvents,
-      Hi,
+      Xi,
       ce
     );
     if (t.length === 0) {
@@ -2907,15 +2909,15 @@ function ca({
       return;
     }
     const l = ++ke.current, p = Ke.flatMap((x) => {
-      const y = In(x.pairKey, x.coefficient);
-      return sa(y.lower, y.upper).map((S) => ({
+      const b = Pn(x.pairKey, x.coefficient);
+      return oa(b.lower, b.upper).map((C) => ({
         pair: x,
-        value: S,
-        matrix: ts(
+        value: C,
+        matrix: ss(
           j,
           u.sourceAxisKeys[x.sourceIndex],
           u.receiverAxisKeys[x.receiverIndex],
-          S
+          C
         )
       }));
     });
@@ -2924,39 +2926,39 @@ function ca({
       const x = await N(
         j,
         t,
-        p.map(({ matrix: S }) => S),
-        (S, L) => {
-          ke.current === l && xn({ completed: S, total: L });
+        p.map(({ matrix: C }) => C),
+        (C, z) => {
+          ke.current === l && xn({ completed: C, total: z });
         },
         bt
       );
       if (ke.current !== l) return;
       if (x.length !== p.length)
         throw new Error(i("The compensation worker returned an incomplete coefficient sweep."));
-      const y = {};
-      for (const S of Ke) {
-        const L = p.flatMap((z, G) => z.pair.pairKey === S.pairKey ? [G] : []), U = Mi(
-          S,
-          L.map((z) => p[z].value),
-          L.map((z) => x[z]),
+      const b = {};
+      for (const C of Ke) {
+        const z = p.flatMap((L, G) => L.pair.pairKey === C.pairKey ? [G] : []), q = ki(
+          C,
+          z.map((L) => p[L].value),
+          z.map((L) => x[L]),
           t
         );
-        U && (y[S.pairKey] = U);
+        q && (b[C.pairKey] = q);
       }
-      Be(y), Tn(((h = Ke[0]) == null ? void 0 : h.pairKey) ?? null);
+      Be(b), Tn(((h = Ke[0]) == null ? void 0 : h.pairKey) ?? null);
     } catch (x) {
       if (ke.current !== l) return;
-      const y = x instanceof Error ? x.message : String(x);
-      xe(/cancel/i.test(y) ? i("Exact coefficient sweep cancelled.") : y);
+      const b = x instanceof Error ? x.message : String(x);
+      xe(/cancel/i.test(b) ? i("Exact coefficient sweep cancelled.") : b);
     } finally {
       ke.current === l && xn(null);
     }
-  }, Ws = () => {
+  }, Hs = () => {
     ke.current++, A == null || A(), xn(null), gn(null), xe(i("Exact coefficient sweep cancelled."));
-  }, Zs = async () => {
+  }, Ys = async () => {
     var l, p;
     if (!j || !wn || !o || Object.keys(Y).length === 0) return;
-    const t = `${_t(j.name)} · edited`;
+    const t = `${zt(j.name)} · edited`;
     he(null), Ue(!1), Ze(!0), He(t), Ne(null);
     try {
       const x = {
@@ -2964,13 +2966,13 @@ function ca({
         name: t,
         createdAt: /* @__PURE__ */ new Date(),
         note: `Edited ${Object.keys(Y).length} compensation coefficient${Object.keys(Y).length === 1 ? "" : "s"} in GateLab.`
-      }, y = ($ == null ? void 0 : $.recordType) === "baseline" && ra(wn, $.scientific.matrix.matrix) ? await cr(j, $, x) : await dr(
+      }, b = ($ == null ? void 0 : $.recordType) === "baseline" && la(wn, $.scientific.matrix.matrix) ? await hr(j, $, x) : await pr(
         j,
-        ta(j, wn),
+        ra(j, wn),
         x
       );
-      await o(y, Ne), Vn({}), nn({}), Be({}), sn({}), gn(null), xe(null), wt((S) => S + 1), Q.length > 0 && (_n("attention"), je(Q[0].pairKey), Tn(Q[0].pairKey)), he(i("Applied revised matrix for {name}. Original measurements and the complete compensation revision history remain available.{flagged}", {
-        name: _t(y.name),
+      await o(b, Ne), Vn({}), nn({}), Be({}), sn({}), gn(null), xe(null), wt((C) => C + 1), Q.length > 0 && (_n("attention"), je(Q[0].pairKey), Tn(Q[0].pairKey)), he(i("Applied revised matrix for {name}. Original measurements and the complete compensation revision history remain available.{flagged}", {
+        name: zt(b.name),
         flagged: Q.length > 0 ? i(
           Q.length === 1 ? " Retained {count} flagged pair for post-correction review." : " Retained {count} flagged pairs for post-correction review.",
           { count: Q.length }
@@ -2981,11 +2983,11 @@ function ca({
     } finally {
       Ze(!1), He(null), Ne(null);
     }
-  }, Ei = (t) => {
+  }, Ai = (t) => {
     if (Q.length === 0) return;
     const l = Q.findIndex(({ pairKey: x }) => x === Se), p = l < 0 ? t > 0 ? 0 : Q.length - 1 : (l + t + Q.length) % Q.length, h = Q[p];
     Te(null), je(h.pairKey), Tn(h.pairKey);
-  }, Kt = () => /* @__PURE__ */ e.jsx(
+  }, Pt = () => /* @__PURE__ */ e.jsx(
     "div",
     {
       className: "gl-comp-inspector-resize",
@@ -2997,18 +2999,18 @@ function ca({
       "aria-valuenow": mn,
       tabIndex: 0,
       title: i("Drag to resize the coefficient inspector; use Left/Right arrow keys for fine control"),
-      onPointerDown: Os,
-      onKeyDown: Ds,
+      onPointerDown: Ls,
+      onKeyDown: zs,
       children: /* @__PURE__ */ e.jsx("span", { "aria-hidden": "true" })
     }
-  ), Hs = (t) => {
-    Te(null), je(t), gt(!0), kt.some((l) => l.pairKey === t) && (Ie.some((l) => l.pairKey === t) || (Un("all"), si("")), ri(t));
-  }, Rt = (t, l = !1) => {
-    const p = b ? jn.has(b.pairKey) : !1, h = b ? Q.find(({ pairKey: B }) => B === b.pairKey) ?? null : null, x = b ? Ft(b.pairKey, b.value) : null, y = b ? In(b.pairKey, b.value) : null, S = b ? Cs[b.pairKey] : null, L = b ? u.sourceAxisKeys[b.sourceIndex] : "", U = b ? u.receiverAxisKeys[b.receiverIndex] : "", z = b != null && b.interaction && b.interaction !== "self" && b.interaction !== "other" ? 1 : 0, G = b && (be != null && be.ready) ? Wt({
-      coefficient: b.value,
-      physicalPrior: z,
+  ), Xs = (t) => {
+    Te(null), je(t), gt(!0), Et.some((l) => l.pairKey === t) && (Pe.some((l) => l.pairKey === t) || (Un("all"), ii("")), si(t));
+  }, Kt = (t, l = !1) => {
+    const p = y ? jn.has(y.pairKey) : !1, h = y ? Q.find(({ pairKey: B }) => B === y.pairKey) ?? null : null, x = y ? Tt(y.pairKey, y.value) : null, b = y ? Pn(y.pairKey, y.value) : null, C = y ? Ms[y.pairKey] : null, z = y ? u.sourceAxisKeys[y.sourceIndex] : "", q = y ? u.receiverAxisKeys[y.receiverIndex] : "", L = y != null && y.interaction && y.interaction !== "self" && y.interaction !== "other" ? 1 : 0, G = y && (be != null && be.ready) ? Gt({
+      coefficient: y.value,
+      physicalPrior: L,
       evidence: be.preview.evidence
-    }, u.kind, ze) : null, ee = b ? ia($, L, U) : null, Re = (b == null ? void 0 : b.value) ?? null, ye = b ? Y[b.pairKey] : void 0, Nn = !!(b && (j == null ? void 0 : j.scientific.kind) === "flow-spillover" && F && Object.keys(Y).length > 0), Ve = _e.state !== "idle" && _e.state !== "error" && _e.pairKey === (b == null ? void 0 : b.pairKey) ? _e.preview : null, an = Ve ?? (be != null && be.ready ? be.preview : null), on = [];
+    }, u.kind, ze) : null, ee = y ? aa($, z, q) : null, Re = (y == null ? void 0 : y.value) ?? null, ye = y ? Y[y.pairKey] : void 0, Nn = !!(y && (j == null ? void 0 : j.scientific.kind) === "flow-spillover" && F && Object.keys(Y).length > 0), Ve = _e.state !== "idle" && _e.state !== "error" && _e.pairKey === (y == null ? void 0 : y.pairKey) ? _e.preview : null, an = Ve ?? (be != null && be.ready ? be.preview : null), on = [];
     ee !== null && Re !== null && ((j == null ? void 0 : j.recordType) === "revision" || ee !== Re) && on.push({ label: i("Baseline"), value: ee }), Re !== null && on.push({ label: i("Installed"), value: Re }), ye !== void 0 && on.push({ label: i("Staged"), value: ye });
     const ln = Q.findIndex(({ pairKey: B }) => B === Se);
     return /* @__PURE__ */ e.jsxs("section", { className: `gl-comp-inspector${l ? " is-global" : ""}`, "aria-labelledby": "comp-selected-heading", children: [
@@ -3026,7 +3028,7 @@ function ca({
                 className: "gl-mini-btn",
                 "aria-label": i("Previous flagged compensation pair"),
                 disabled: Q.length === 0,
-                onClick: () => Ei(-1),
+                onClick: () => Ai(-1),
                 children: "←"
               }
             ),
@@ -3038,7 +3040,7 @@ function ca({
                 className: "gl-mini-btn",
                 "aria-label": i("Next flagged compensation pair"),
                 disabled: Q.length === 0,
-                onClick: () => Ei(1),
+                onClick: () => Ai(1),
                 children: "→"
               }
             )
@@ -3056,18 +3058,18 @@ function ca({
           )
         ] })
       ] }),
-      b ? /* @__PURE__ */ e.jsxs("div", { className: `gl-comp-pair-detail${l ? " is-global" : ""}`, children: [
+      y ? /* @__PURE__ */ e.jsxs("div", { className: `gl-comp-pair-detail${l ? " is-global" : ""}`, children: [
         /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-pair-route", children: [
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("span", { children: i("Source channel") }),
-            /* @__PURE__ */ e.jsx("strong", { children: b.source.label }),
-            /* @__PURE__ */ e.jsx("small", { children: b.source.pnn })
+            /* @__PURE__ */ e.jsx("strong", { children: y.source.label }),
+            /* @__PURE__ */ e.jsx("small", { children: y.source.pnn })
           ] }),
           /* @__PURE__ */ e.jsx("span", { "aria-hidden": "true", children: "→" }),
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("span", { children: i("Receiver") }),
-            /* @__PURE__ */ e.jsx("strong", { children: b.receiver.label }),
-            /* @__PURE__ */ e.jsx("small", { children: b.receiver.pnn })
+            /* @__PURE__ */ e.jsx("strong", { children: y.receiver.label }),
+            /* @__PURE__ */ e.jsx("small", { children: y.receiver.pnn })
           ] })
         ] }),
         G && /* @__PURE__ */ e.jsxs(
@@ -3087,16 +3089,16 @@ function ca({
             {
               type: "checkbox",
               checked: p,
-              disabled: !j || !ie.has(u.sourceAxisKeys[b.sourceIndex]) || !ie.has(u.receiverAxisKeys[b.receiverIndex]),
-              onChange: (B) => Kn(b.pairKey, B.currentTarget.checked)
+              disabled: !j || !ie.has(u.sourceAxisKeys[y.sourceIndex]) || !ie.has(u.receiverAxisKeys[y.receiverIndex]),
+              onChange: (B) => Kn(y.pairKey, B.currentTarget.checked)
             }
           ),
           /* @__PURE__ */ e.jsx("span", { children: i("Flag for follow-up") }),
           /* @__PURE__ */ e.jsx("small", { children: i("Add this pair to the curated Flagged queue.") })
         ] }),
-        /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-coefficient-readout", title: i("Stored fraction: {value}", { value: ne(b.value, 10) }), children: [
-          /* @__PURE__ */ e.jsx("span", { children: i(Y[b.pairKey] === void 0 ? "Matrix coefficient" : "Working coefficient") }),
-          /* @__PURE__ */ e.jsx("strong", { children: Number.isFinite(Y[b.pairKey] ?? b.value) ? `${((Y[b.pairKey] ?? b.value) * 100).toFixed(1)}%` : String(Y[b.pairKey] ?? b.value) })
+        /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-coefficient-readout", title: i("Stored fraction: {value}", { value: ne(y.value, 10) }), children: [
+          /* @__PURE__ */ e.jsx("span", { children: i(Y[y.pairKey] === void 0 ? "Matrix coefficient" : "Working coefficient") }),
+          /* @__PURE__ */ e.jsx("strong", { children: Number.isFinite(Y[y.pairKey] ?? y.value) ? `${((Y[y.pairKey] ?? y.value) * 100).toFixed(1)}%` : String(Y[y.pairKey] ?? y.value) })
         ] }),
         on.length > 0 && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-coefficient-history", "aria-label": i("Coefficient history"), children: on.map((B, cn) => /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-coefficient-history-step", children: [
           cn > 0 && /* @__PURE__ */ e.jsx("span", { "aria-hidden": "true", children: "→" }),
@@ -3108,7 +3110,7 @@ function ca({
             ] })
           ] })
         ] }, `${B.label}:${cn}`)) }),
-        j && Se === b.pairKey && !mt && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-coefficient-editor", children: [
+        j && Se === y.pairKey && !mt && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-coefficient-editor", children: [
           /* @__PURE__ */ e.jsxs("label", { children: [
             /* @__PURE__ */ e.jsx("span", { children: i("Coefficient (%)") }),
             /* @__PURE__ */ e.jsx(
@@ -3118,7 +3120,7 @@ function ca({
                 value: Bn,
                 disabled: V,
                 onValueChange: (B) => {
-                  Nt(B), j.scientific.kind === "flow-spillover" && B.trim() !== "" && Number.isFinite(Number(B)) && On(b.pairKey, Number(B) / 100);
+                  Nt(B), j.scientific.kind === "flow-spillover" && B.trim() !== "" && Number.isFinite(Number(B)) && On(y.pairKey, Number(B) / 100);
                 }
               }
             )
@@ -3129,20 +3131,20 @@ function ca({
               type: "button",
               className: "gl-mini-btn",
               disabled: V || !Number.isFinite(Number(Bn)) || Bn.trim() === "",
-              onClick: () => On(b.pairKey, Number(Bn) / 100),
+              onClick: () => On(y.pairKey, Number(Bn) / 100),
               children: i("Stage value")
             }
           ),
-          Y[b.pairKey] !== void 0 && /* @__PURE__ */ e.jsx(
+          Y[y.pairKey] !== void 0 && /* @__PURE__ */ e.jsx(
             "button",
             {
               type: "button",
               className: "gl-mini-btn",
               disabled: V,
               onClick: () => {
-                On(b.pairKey, b.value), nn((B) => {
+                On(y.pairKey, y.value), nn((B) => {
                   const cn = { ...B };
-                  return delete cn[b.pairKey], cn;
+                  return delete cn[y.pairKey], cn;
                 });
               },
               children: i("Reset")
@@ -3157,21 +3159,21 @@ function ca({
               l ? i(" The gallery remains installed until Apply.") : ""
             ] })
           ] }),
-          /* @__PURE__ */ e.jsx("em", { children: ye === void 0 ? i("Working matrix") : `${(b.value * 100).toFixed(1)}% → ${(ye * 100).toFixed(1)}%` }),
-          _e.state === "updating" && _e.pairKey === b.pairKey && /* @__PURE__ */ e.jsx("span", { role: "status", children: i("Updating…") }),
-          _e.state === "error" && _e.pairKey === b.pairKey && /* @__PURE__ */ e.jsx("span", { className: "is-error", role: "alert", children: i(_e.message) })
+          /* @__PURE__ */ e.jsx("em", { children: ye === void 0 ? i("Working matrix") : `${(y.value * 100).toFixed(1)}% → ${(ye * 100).toFixed(1)}%` }),
+          _e.state === "updating" && _e.pairKey === y.pairKey && /* @__PURE__ */ e.jsx("span", { role: "status", children: i("Updating…") }),
+          _e.state === "error" && _e.pairKey === y.pairKey && /* @__PURE__ */ e.jsx("span", { className: "is-error", role: "alert", children: i(_e.message) })
         ] }),
-        b.interaction && b.interaction !== "other" && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-interaction-type", children: [
+        y.interaction && y.interaction !== "other" && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-interaction-type", children: [
           i("Physical relationship:"),
           " ",
-          /* @__PURE__ */ e.jsx("strong", { children: b.interaction })
+          /* @__PURE__ */ e.jsx("strong", { children: y.interaction })
         ] }),
         l && (an ? /* @__PURE__ */ e.jsx(
-          Zi,
+          Yi,
           {
             preview: an,
-            sourceLabel: b.source.label,
-            receiverLabel: b.receiver.label,
+            sourceLabel: y.source.label,
+            receiverLabel: y.receiver.label,
             kind: u.kind,
             densitySmoothing: Je,
             compact: !0,
@@ -3179,30 +3181,30 @@ function ca({
           }
         ) : be && !be.ready ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-biplot-unavailable", children: i(be.reason) }) : null),
         l && /* @__PURE__ */ e.jsx(
-          Br,
+          Zr,
           {
             matrixView: u,
             sourceChannels: oe,
             receiverChannels: de,
-            selectedSourceIndex: b.sourceIndex,
-            selectedReceiverIndex: b.receiverIndex,
+            selectedSourceIndex: y.sourceIndex,
+            selectedReceiverIndex: y.receiverIndex,
             stagedCoefficients: Y,
             maximumAbsoluteOffDiagonal: wi,
-            onSelect: Hs
+            onSelect: Xs
           }
         ),
         !l && (an ? /* @__PURE__ */ e.jsx(
-          Zi,
+          Yi,
           {
             preview: an,
-            sourceLabel: b.source.label,
-            receiverLabel: b.receiver.label,
+            sourceLabel: y.source.label,
+            receiverLabel: y.receiver.label,
             kind: u.kind,
             densitySmoothing: Je,
             compensatedTitle: i(Ve ? "Candidate" : "Compensated")
           }
         ) : be && !be.ready ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-biplot-unavailable", children: i(be.reason) }) : null),
-        p && h && x && y && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-bounds-tool", children: [
+        p && h && x && b && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-bounds-tool", children: [
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("strong", { children: i("Sweep bounds") }),
             /* @__PURE__ */ e.jsx("span", { children: i("Four exact candidates will be interpolated across these endpoints.") })
@@ -3216,7 +3218,7 @@ function ca({
                   step: "0.1",
                   value: x.lowerPercent,
                   disabled: V || le !== null || ve !== null,
-                  onValueChange: (B) => Qn(b.pairKey, b.value, "lowerPercent", B)
+                  onValueChange: (B) => Qn(y.pairKey, y.value, "lowerPercent", B)
                 }
               )
             ] }),
@@ -3228,7 +3230,7 @@ function ca({
                   step: "0.1",
                   value: x.upperPercent,
                   disabled: V || le !== null || ve !== null,
-                  onValueChange: (B) => Qn(b.pairKey, b.value, "upperPercent", B)
+                  onValueChange: (B) => Qn(y.pairKey, y.value, "upperPercent", B)
                 }
               )
             ] }),
@@ -3237,39 +3239,39 @@ function ca({
               {
                 type: "button",
                 className: "gl-mini-btn",
-                disabled: V || le !== null || ve !== null || y.error !== null,
-                onClick: () => void Bs(h),
-                children: i(ve === b.pairKey ? "Previewing…" : "Preview endpoints")
+                disabled: V || le !== null || ve !== null || b.error !== null,
+                onClick: () => void Ws(h),
+                children: i(ve === y.pairKey ? "Previewing…" : "Preview endpoints")
               }
             )
           ] }),
-          y.error ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-bounds-error", children: i(y.error) }) : /* @__PURE__ */ e.jsx("small", { children: i("Fast preview: exact solver on {preview} frozen events. Screening only; the four-option sweep uses up to {sweep} events.", {
-            preview: Math.min(re, Yi).toLocaleString(),
-            sweep: Math.min(re, Hi).toLocaleString()
+          b.error ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-bounds-error", children: i(b.error) }) : /* @__PURE__ */ e.jsx("small", { children: i("Fast preview: exact solver on {preview} frozen events. Screening only; the four-option sweep uses up to {sweep} events.", {
+            preview: Math.min(re, Ji).toLocaleString(),
+            sweep: Math.min(re, Xi).toLocaleString()
           }) }),
-          S && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-bounds-preview", children: S.values.map((B) => /* @__PURE__ */ e.jsx("div", { className: B.isCurrent ? "is-current" : void 0, children: /* @__PURE__ */ e.jsx(
+          C && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-bounds-preview", children: C.values.map((B) => /* @__PURE__ */ e.jsx("div", { className: B.isCurrent ? "is-current" : void 0, children: /* @__PURE__ */ e.jsx(
             ht,
             {
               title: `${B.isCurrent ? `${i("Current")} · ` : ""}${(B.value * 100).toFixed(2)}%`,
               panel: B.preview.compensated,
               preview: B.preview,
-              sourceLabel: b.source.label,
-              receiverLabel: b.receiver.label,
+              sourceLabel: y.source.label,
+              receiverLabel: y.receiver.label,
               minimumSize: 145,
               maximumSize: 220,
               densitySmoothing: Je
             }
-          ) }, `${b.pairKey}:bounds:${B.value}:${B.isCurrent}`)) })
+          ) }, `${y.pairKey}:bounds:${B.value}:${B.isCurrent}`)) })
         ] }),
         /* @__PURE__ */ e.jsx("p", { className: "gl-hint", children: i(u.coefficientNote) })
       ] }) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-inspector-empty", children: i("No coefficient selected.") })
     ] });
-  }, ki = (t, l) => /* @__PURE__ */ e.jsx(
-    Gr,
+  }, Ti = (t, l) => /* @__PURE__ */ e.jsx(
+    Hr,
     {
       dataset: l,
       pair: t,
-      plotSize: Tt,
+      plotSize: At,
       densitySmoothing: Je,
       flagged: jn.has(t.pairKey),
       selected: Se === t.pairKey,
@@ -3279,7 +3281,7 @@ function ca({
       onFlag: (p) => Kn(t.pairKey, p)
     },
     t.pairKey
-  ), Ys = async (t, l) => {
+  ), Js = async (t, l) => {
     if (!(se != null && se.ready) || !u)
       throw new Error("Apply compensation before exporting the Global inspector comparison.");
     const p = fi.map((h) => ({
@@ -3289,7 +3291,7 @@ function ca({
       coefficient: h.coefficient,
       relationship: h.interaction,
       buildPreview: () => {
-        const x = as(
+        const x = ls(
           se.dataset,
           h.source.key,
           h.receiver.key
@@ -3298,17 +3300,17 @@ function ca({
         return x.preview;
       }
     }));
-    await Rr(p, {
+    await Lr(p, {
       sampleName: s,
       profileName: (j == null ? void 0 : j.name) ?? i(u.title),
       populationName: (X == null ? void 0 : X.name) ?? i("All Events"),
       filterLabel: gi,
       densitySmoothing: Je,
-      densityColorPower: q,
+      densityColorPower: U,
       pointAlpha: Jn
     }, t, l);
   };
-  return O ? /* @__PURE__ */ e.jsx(ei.Provider, { value: q, children: /* @__PURE__ */ e.jsx(ni.Provider, { value: Jn, children: /* @__PURE__ */ e.jsxs(
+  return O ? /* @__PURE__ */ e.jsx(Qt.Provider, { value: U, children: /* @__PURE__ */ e.jsx(ei.Provider, { value: Jn, children: /* @__PURE__ */ e.jsxs(
     "div",
     {
       className: "gl-tab-panel gl-tab-fill gl-compensation-tab",
@@ -3339,7 +3341,7 @@ function ca({
                   }),
                   " "
                 ] }),
-                /* @__PURE__ */ e.jsx("strong", { children: Is }),
+                /* @__PURE__ */ e.jsx("strong", { children: Rs }),
                 /* @__PURE__ */ e.jsx("span", { children: i("{method} · {count} ch · {status}", {
                   method: nt,
                   count: It,
@@ -3367,14 +3369,11 @@ function ca({
               type: "button",
               className: "gl-mini-btn gl-comp-header-replace",
               disabled: V,
-              onClick: () => {
-                var t;
-                return (t = St.current) == null ? void 0 : t.click();
-              },
+              onClick: Ci,
               children: i("Replace matrix…")
             }
           ),
-          C !== void 0 && T !== void 0 && P && /* @__PURE__ */ e.jsxs(
+          S !== void 0 && T !== void 0 && I && /* @__PURE__ */ e.jsxs(
             "label",
             {
               className: "gl-comp-worker-control",
@@ -3385,9 +3384,9 @@ function ca({
                   "select",
                   {
                     "aria-label": i("Compensation Apply worker count"),
-                    value: C,
+                    value: S,
                     disabled: V,
-                    onChange: (t) => P(Number(t.currentTarget.value)),
+                    onChange: (t) => I(Number(t.currentTarget.value)),
                     children: Array.from({ length: T }, (t, l) => l + 1).map((t) => /* @__PURE__ */ e.jsx("option", { value: t, children: t }, t))
                   }
                 ),
@@ -3432,10 +3431,10 @@ function ca({
                     disabled: V,
                     onChange: (t) => {
                       const l = t.currentTarget.value;
-                      gs(l === "all" ? "all" : Number(l));
+                      vs(l === "all" ? "all" : Number(l));
                     },
                     children: [
-                      Ji.map((t) => /* @__PURE__ */ e.jsx("option", { value: t, children: i("{count} events", { count: t.toLocaleString() }) }, t)),
+                      es.map((t) => /* @__PURE__ */ e.jsx("option", { value: t, children: i("{count} events", { count: t.toLocaleString() }) }, t)),
                       /* @__PURE__ */ e.jsx("option", { value: "all", children: i("All available") })
                     ]
                   }
@@ -3447,20 +3446,20 @@ function ca({
               ]
             }
           ),
-          Ks && /* @__PURE__ */ e.jsx("span", { className: "gl-comp-global-layer-note", children: i("Assay selection in the top bar applies to every tab.") })
+          Os && /* @__PURE__ */ e.jsx("span", { className: "gl-comp-global-layer-note", children: i("Assay selection in the top bar applies to every tab.") })
         ] }),
         n.instrument === "cytof" && /* @__PURE__ */ e.jsx(
           "input",
           {
-            ref: St,
+            ref: pi,
             type: "file",
             accept: ".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain",
             className: "gl-sr-only",
             "aria-label": i("Choose CyTOF spillover matrix"),
-            onChange: (t) => void Ls(t)
+            onChange: (t) => void _s(t)
           }
         ),
-        di && /* @__PURE__ */ e.jsx("div", { className: ui ? "gl-comp-error" : "gl-comp-status", role: ui ? "alert" : "status", children: i(di) }),
+        ci && /* @__PURE__ */ e.jsx("div", { className: di ? "gl-comp-error" : "gl-comp-status", role: di ? "alert" : "status", children: i(ci) }),
         n.instrument === "flow" && H && !_ && /* @__PURE__ */ e.jsxs("section", { className: "gl-comp-flow-enable", "aria-labelledby": "comp-flow-enable-heading", children: [
           /* @__PURE__ */ e.jsxs("div", { children: [
             /* @__PURE__ */ e.jsx("strong", { id: "comp-flow-enable-heading", children: i(ue ? "SCE spillover matrix" : "Embedded FCS matrix") }),
@@ -3478,7 +3477,7 @@ function ca({
             ),
             /* @__PURE__ */ e.jsx("span", { children: i("Recompute existing gate memberships in compensated coordinates.") })
           ] }),
-          Pe != null && Pe.error ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-error", role: "alert", children: Pe.error }) : V ? /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-flow-enable-progress", role: "status", children: [
+          Ie != null && Ie.error ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-error", role: "alert", children: Ie.error }) : V ? /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-flow-enable-progress", role: "status", children: [
             te ? i("Preparing editor… {percent}%", { percent: Math.round(te.fraction * 100) }) : i("Preparing editor…"),
             /* @__PURE__ */ e.jsx(
               "button",
@@ -3496,7 +3495,7 @@ function ca({
               type: "button",
               className: "gl-btn",
               disabled: !o || g && !We,
-              onClick: () => void qs(),
+              onClick: () => void Bs(),
               children: i("Enable matrix editing")
             }
           )
@@ -3513,15 +3512,12 @@ function ca({
                 type: "button",
                 className: W ? "gl-btn-ghost" : "gl-btn",
                 disabled: V,
-                onClick: () => {
-                  var t;
-                  return (t = St.current) == null ? void 0 : t.click();
-                },
+                onClick: Ci,
                 children: i(W ? "Choose another matrix…" : "Import matrix…")
               }
             ) })
           ] }),
-          hi && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-error", role: "alert", children: i(hi) }),
+          ui && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-error", role: "alert", children: i(ui) }),
           W && ae && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-import-body", children: [
             /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-import-summary", children: [
               /* @__PURE__ */ e.jsxs("div", { children: [
@@ -3583,10 +3579,10 @@ function ca({
                     type: "checkbox",
                     checked: Fn.has(t),
                     disabled: !l || V,
-                    onChange: (p) => zs(t, p.currentTarget.checked)
+                    onChange: (p) => Us(t, p.currentTarget.checked)
                   }
                 ),
-                /* @__PURE__ */ e.jsx("span", { children: Ut(n, t).combined }),
+                /* @__PURE__ */ e.jsx("span", { children: _t(n, t).combined }),
                 !l && /* @__PURE__ */ e.jsx("small", { children: i("not matched") })
               ] }, t);
             }) }),
@@ -3620,7 +3616,7 @@ function ca({
                 }) : i("Preparing compensation…") : i("The Original assay is retained and can be restored at any time.") }),
                 /* @__PURE__ */ e.jsx("strong", { className: Ye === 0 ? "is-empty" : void 0, children: Ye === 0 ? i("No FCS files are checked. Select at least one file in Samples.") : i("Applies atomically to {files} checked FCS files · {events} total events", {
                   files: Ye,
-                  events: Ts.toLocaleString()
+                  events: $s.toLocaleString()
                 }) })
               ] }),
               V ? /* @__PURE__ */ e.jsx(
@@ -3638,7 +3634,7 @@ function ca({
                   type: "button",
                   className: "gl-btn",
                   disabled: !o || Ye === 0 || !ae.canApply || g && !We,
-                  onClick: () => void _s(),
+                  onClick: () => void qs(),
                   children: i("Apply NNLS compensation")
                 }
               )
@@ -3661,7 +3657,7 @@ function ca({
                         value: (Xe == null ? void 0 : Xe.id) ?? "",
                         disabled: V,
                         onChange: (t) => {
-                          pi(t.currentTarget.value), Zn(!1);
+                          hi(t.currentTarget.value), Zn(!1);
                         },
                         children: c.map((t) => /* @__PURE__ */ e.jsx("option", { value: t.id, children: t.label === t.id ? t.id : `${t.label} (${t.id})` }, t.id))
                       }
@@ -3685,7 +3681,7 @@ function ca({
                       type: "button",
                       className: "gl-btn-ghost",
                       disabled: V || !Xe || !Ct || Ye === 0 || !ae.canApply || g && !We,
-                      onClick: () => void Us(),
+                      onClick: () => void Vs(),
                       children: i("Use existing assay — no recomputation")
                     }
                   )
@@ -3699,7 +3695,7 @@ function ca({
           /* @__PURE__ */ e.jsx("span", { children: i("{count} off-diagonal coefficients are above 100%. Review the matrix source before applying it.", {
             count: vi.length
           }) }),
-          /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-mini-btn", onClick: () => ti((t) => ({ ...t, review: !0 })), children: i("Review details") })
+          /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-mini-btn", onClick: () => ni((t) => ({ ...t, review: !0 })), children: i("Review details") })
         ] }),
         _ && R.state === "stale" && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-warning", role: "status", children: i("This profile cannot be applied to the current sample context. Open the review queue for exact reasons.") }),
         u && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-workspace-tabs", role: "tablist", "aria-label": i("Compensation workspace"), children: [
@@ -3761,7 +3757,7 @@ function ca({
                     step: "1",
                     value: Je,
                     "aria-label": i("Compensation biplot density smoothing"),
-                    onChange: (t) => ps(Number(t.currentTarget.value))
+                    onChange: (t) => fs(Number(t.currentTarget.value))
                   }
                 ),
                 /* @__PURE__ */ e.jsx("output", { children: Je })
@@ -3784,7 +3780,7 @@ function ca({
                     step: "0.05",
                     value: Jn,
                     "aria-label": i("Compensation biplot point alpha"),
-                    onChange: (t) => fs(Number(t.currentTarget.value))
+                    onChange: (t) => xs(Number(t.currentTarget.value))
                   }
                 ),
                 /* @__PURE__ */ e.jsx("output", { children: Jn.toFixed(2) })
@@ -3792,10 +3788,10 @@ function ca({
             }
           ),
           /* @__PURE__ */ e.jsx(
-            rr,
+            or,
             {
               className: "gl-comp-density-colour",
-              value: q,
+              value: U,
               onChange: Z
             }
           ),
@@ -3822,7 +3818,7 @@ function ca({
                 type: "button",
                 className: "gl-btn",
                 disabled: V || le !== null || ve !== null || !o || (j == null ? void 0 : j.scientific.kind) === "cytof-spillover" && Ye === 0,
-                onClick: () => void Zs(),
+                onClick: () => void Ys(),
                 children: i("Apply revised matrix")
               }
             )
@@ -3862,7 +3858,7 @@ function ca({
                       {
                         type: "button",
                         className: "gl-mini-btn",
-                        onClick: () => li(!0),
+                        onClick: () => oi(!0),
                         children: i("Export CSV…")
                       }
                     )
@@ -3892,7 +3888,7 @@ function ca({
                               children: de.map((t, l) => /* @__PURE__ */ e.jsx(
                                 "div",
                                 {
-                                  className: (b == null ? void 0 : b.receiverIndex) === l ? "is-selected" : void 0,
+                                  className: (y == null ? void 0 : y.receiverIndex) === l ? "is-selected" : void 0,
                                   title: t.combined,
                                   children: /* @__PURE__ */ e.jsx("span", { children: t.combined })
                                 },
@@ -3911,7 +3907,7 @@ function ca({
                               children: oe.map((t, l) => /* @__PURE__ */ e.jsx(
                                 "div",
                                 {
-                                  className: (b == null ? void 0 : b.sourceIndex) === l ? "is-selected" : void 0,
+                                  className: (y == null ? void 0 : y.sourceIndex) === l ? "is-selected" : void 0,
                                   title: t.combined,
                                   children: t.combined
                                 },
@@ -3939,19 +3935,19 @@ function ca({
                                   className: "gl-comp-matrix-row",
                                   "aria-rowindex": l + 1,
                                   children: t.map((p, h) => {
-                                    const x = u.sourceAxisKeys[l], y = u.receiverAxisKeys[h], S = `${x}${Oe}${y}`, L = Y[S], U = L ?? p, z = x === y, G = (b == null ? void 0 : b.sourceIndex) === l && b.receiverIndex === h, ee = (b == null ? void 0 : b.sourceIndex) === l, Re = (b == null ? void 0 : b.receiverIndex) === h, ye = oe[l], Nn = de[h], Ve = u.kind === "cytof" ? Cn(x, y) : null, an = ar(
-                                      U,
+                                    const x = u.sourceAxisKeys[l], b = u.receiverAxisKeys[h], C = `${x}${Oe}${b}`, z = Y[C], q = z ?? p, L = x === b, G = (y == null ? void 0 : y.sourceIndex) === l && y.receiverIndex === h, ee = (y == null ? void 0 : y.sourceIndex) === l, Re = (y == null ? void 0 : y.receiverIndex) === h, ye = oe[l], Nn = de[h], Ve = u.kind === "cytof" ? Cn(x, b) : null, an = lr(
+                                      q,
                                       wi,
-                                      z
-                                    ), on = u.receiverAxisKeys.findIndex((pe) => pe !== x), ln = Se === S, B = Se === null && l === 0 && h === on, cn = Number.isFinite(U) ? U === 0 ? "" : (U * 100).toFixed(1) : String(U), Fi = Ve && Ve !== "other" && Ve !== "self" ? ` · ${Ve}` : "", Xs = ws[S] ?? ns(U);
-                                    return it && !z ? /* @__PURE__ */ e.jsx(
+                                      L
+                                    ), on = u.receiverAxisKeys.findIndex((pe) => pe !== x), ln = Se === C, B = Se === null && l === 0 && h === on, cn = Number.isFinite(q) ? q === 0 ? "" : (q * 100).toFixed(1) : String(q), Ii = Ve && Ve !== "other" && Ve !== "self" ? ` · ${Ve}` : "", Qs = Cs[C] ?? is(q);
+                                    return it && !L ? /* @__PURE__ */ e.jsx(
                                       Mn,
                                       {
                                         role: "gridcell",
-                                        className: `gl-comp-cell gl-comp-cell-input${G ? " selected" : ""}${ln ? " is-pinned" : ""}${L === void 0 ? "" : " is-staged"}${ee ? " is-selected-source" : ""}${Re ? " is-selected-receiver" : ""}`,
+                                        className: `gl-comp-cell gl-comp-cell-input${G ? " selected" : ""}${ln ? " is-pinned" : ""}${z === void 0 ? "" : " is-staged"}${ee ? " is-selected-source" : ""}${Re ? " is-selected-receiver" : ""}`,
                                         min: "0",
                                         step: "0.1",
-                                        value: Xs,
+                                        value: Qs,
                                         disabled: V,
                                         "data-source-index": l,
                                         "data-receiver-index": h,
@@ -3960,71 +3956,71 @@ function ca({
                                         "aria-label": i("{source} source to {receiver} receiver coefficient, percent{pending}", {
                                           source: ye.combined,
                                           receiver: Nn.combined,
-                                          pending: L === void 0 ? "" : i(", pending edit")
+                                          pending: z === void 0 ? "" : i(", pending edit")
                                         }),
                                         title: i("{source} → {receiver} · type or drag vertically to edit spillover percentage{pending}", {
                                           source: ye.combined,
                                           receiver: Nn.combined,
-                                          pending: L === void 0 ? "" : i(" · pending edit")
+                                          pending: z === void 0 ? "" : i(" · pending edit")
                                         }),
                                         style: an,
-                                        onFocus: () => je(S),
-                                        onMouseEnter: () => Te(S),
-                                        onMouseLeave: () => Te((pe) => pe === S ? null : pe),
-                                        onClick: () => je(S),
+                                        onFocus: () => je(C),
+                                        onMouseEnter: () => Te(C),
+                                        onMouseLeave: () => Te((pe) => pe === C ? null : pe),
+                                        onClick: () => je(C),
                                         onValueChange: (pe) => {
-                                          je(S), nn((Dn) => ({ ...Dn, [S]: pe })), pe.trim() !== "" && Number.isFinite(Number(pe)) && On(S, Number(pe) / 100);
+                                          je(C), nn((Dn) => ({ ...Dn, [C]: pe })), pe.trim() !== "" && Number.isFinite(Number(pe)) && On(C, Number(pe) / 100);
                                         },
                                         onBlur: (pe) => {
                                           const Dn = pe.currentTarget.value;
                                           if (Dn.trim() === "" || !Number.isFinite(Number(Dn))) {
-                                            nn((Ot) => {
-                                              const $i = { ...Ot };
-                                              return delete $i[S], $i;
+                                            nn((Rt) => {
+                                              const Pi = { ...Rt };
+                                              return delete Pi[C], Pi;
                                             });
                                             return;
                                           }
-                                          nn((Ot) => ({
-                                            ...Ot,
-                                            [S]: ns(Number(Dn) / 100)
+                                          nn((Rt) => ({
+                                            ...Rt,
+                                            [C]: is(Number(Dn) / 100)
                                           }));
                                         }
                                       },
-                                      y
+                                      b
                                     ) : /* @__PURE__ */ e.jsx(
                                       "button",
                                       {
                                         type: "button",
                                         role: "gridcell",
-                                        className: `gl-comp-cell${z ? " diagonal" : ""}${G ? " selected" : ""}${ln ? " is-pinned" : ""}${L === void 0 ? "" : " is-staged"}${ee ? " is-selected-source" : ""}${Re ? " is-selected-receiver" : ""}`,
-                                        disabled: z,
-                                        tabIndex: z ? -1 : G || B ? 0 : -1,
+                                        className: `gl-comp-cell${L ? " diagonal" : ""}${G ? " selected" : ""}${ln ? " is-pinned" : ""}${z === void 0 ? "" : " is-staged"}${ee ? " is-selected-source" : ""}${Re ? " is-selected-receiver" : ""}`,
+                                        disabled: L,
+                                        tabIndex: L ? -1 : G || B ? 0 : -1,
                                         "data-source-index": l,
                                         "data-receiver-index": h,
                                         "data-interaction": Ve ?? void 0,
                                         "aria-colindex": h + 1,
-                                        "aria-pressed": z ? void 0 : ln,
-                                        "aria-label": z ? i("{channel} diagonal: {value}", { channel: ye.combined, value: en(U) }) : i("{source} source to {receiver} receiver: {value}{pending}{interaction}", {
+                                        "aria-pressed": L ? void 0 : ln,
+                                        "aria-label": L ? i("{channel} diagonal: {value}", { channel: ye.combined, value: en(q) }) : i("{source} source to {receiver} receiver: {value}{pending}{interaction}", {
                                           source: ye.combined,
                                           receiver: Nn.combined,
-                                          value: en(U),
-                                          pending: L === void 0 ? "" : i(" (pending edit)"),
-                                          interaction: Fi
+                                          value: en(q),
+                                          pending: z === void 0 ? "" : i(" (pending edit)"),
+                                          interaction: Ii
                                         }),
-                                        title: z ? `${ye.combined} · self · ${en(U)}` : `${ye.combined} → ${Nn.combined} · ${en(U)}${L === void 0 ? "" : " · pending edit"}${Fi}`,
+                                        title: L ? `${ye.combined} · self · ${en(q)}` : `${ye.combined} → ${Nn.combined} · ${en(q)}${z === void 0 ? "" : " · pending edit"}${Ii}`,
                                         style: an,
                                         onFocus: () => {
-                                          z || je(S);
+                                          L || je(C);
                                         },
                                         onMouseEnter: () => {
-                                          z || Te(S);
+                                          L || Te(C);
                                         },
-                                        onMouseLeave: () => Te((pe) => pe === S ? null : pe),
-                                        onClick: () => je(S),
-                                        onKeyDown: (pe) => Vs(pe, l, h),
+                                        onMouseLeave: () => Te((pe) => pe === C ? null : pe),
+                                        onClick: () => je(C),
+                                        onKeyDown: (pe) => Gs(pe, l, h),
                                         children: /* @__PURE__ */ e.jsx("span", { children: cn })
                                       },
-                                      y
+                                      b
                                     );
                                   })
                                 },
@@ -4038,8 +4034,8 @@ function ca({
                   }
                 ) })
               ] }),
-              Kt(),
-              Rt()
+              Pt(),
+              Kt()
             ]
           }
         ) : u && Me === "global" ? /* @__PURE__ */ e.jsxs(
@@ -4052,7 +4048,7 @@ function ca({
             },
             children: [
               /* @__PURE__ */ e.jsx(
-                Wr,
+                Yr,
                 {
                   stateKey: D,
                   header: /* @__PURE__ */ e.jsxs(e.Fragment, { children: [
@@ -4090,7 +4086,7 @@ function ca({
                         "aria-label": i("Global compensation plot layout"),
                         title: i("Show one compressed gallery or organise channel pairs into labelled rows"),
                         value: $e,
-                        onChange: (t) => cs(t.currentTarget.value),
+                        onChange: (t) => us(t.currentTarget.value),
                         children: [
                           /* @__PURE__ */ e.jsx("option", { value: "compact", children: i("Compact gallery") }),
                           /* @__PURE__ */ e.jsx("option", { value: "source", children: i("Rows by source") }),
@@ -4106,7 +4102,7 @@ function ca({
                         value: kn,
                         placeholder: i("Find channel…"),
                         "aria-label": i("Search global compensation pairs"),
-                        onChange: (t) => si(t.currentTarget.value)
+                        onChange: (t) => ii(t.currentTarget.value)
                       }
                     ),
                     /* @__PURE__ */ e.jsxs("label", { className: "gl-comp-global-size", children: [
@@ -4118,21 +4114,21 @@ function ca({
                           min: "120",
                           max: "220",
                           step: "4",
-                          value: Tt,
+                          value: At,
                           "aria-label": i("Global compensation plot size"),
-                          onChange: (t) => us(Number(t.currentTarget.value))
+                          onChange: (t) => ps(Number(t.currentTarget.value))
                         }
                       ),
-                      /* @__PURE__ */ e.jsx("output", { children: i("{size}px", { size: Tt }) })
+                      /* @__PURE__ */ e.jsx("output", { children: i("{size}px", { size: At }) })
                     ] }),
                     /* @__PURE__ */ e.jsx(
                       "button",
                       {
                         type: "button",
                         className: "gl-mini-btn gl-comp-global-export",
-                        disabled: !(se != null && se.ready) || Ie.length === 0,
+                        disabled: !(se != null && se.ready) || Pe.length === 0,
                         title: i("Export the currently filtered pairs as locked Original and Compensated comparison pages"),
-                        onClick: () => ci(!0),
+                        onClick: () => li(!0),
                         children: i("Export…")
                       }
                     ),
@@ -4142,20 +4138,20 @@ function ca({
                         className: "gl-comp-global-count",
                         title: i("The Global gallery uses one fixed representative event set so every pair and both assay layers remain directly comparable."),
                         children: i("{pairs} pairs · {shown} / {total} events · {population}", {
-                          pairs: Ie.length.toLocaleString(),
-                          shown: Et.length.toLocaleString(),
+                          pairs: Pe.length.toLocaleString(),
+                          shown: Mt.length.toLocaleString(),
                           total: re.toLocaleString(),
                           population: (X == null ? void 0 : X.name) ?? i("All Events")
                         })
                       }
                     )
                   ] }),
-                  children: se ? se.ready ? Ie.length === 0 ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-empty", children: i("No pairs match the current filter. Choose another filter or clear the channel search.") }) : $e === "compact" ? /* @__PURE__ */ e.jsx(
+                  children: se ? se.ready ? Pe.length === 0 ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-empty", children: i("No pairs match the current filter. Choose another filter or clear the channel search.") }) : $e === "compact" ? /* @__PURE__ */ e.jsx(
                     "div",
                     {
                       className: "gl-comp-global-gallery",
                       "data-event-signature": se.dataset.eventSignature,
-                      children: Ie.map((t) => ki(t, se.dataset))
+                      children: Pe.map((t) => Ti(t, se.dataset))
                     }
                   ) : /* @__PURE__ */ e.jsx(
                     "div",
@@ -4163,21 +4159,21 @@ function ca({
                       className: "gl-comp-global-groups",
                       "data-event-signature": se.dataset.eventSignature,
                       "data-layout": $e,
-                      children: At.map((t) => /* @__PURE__ */ e.jsxs("section", { className: "gl-comp-global-group", children: [
+                      children: kt.map((t) => /* @__PURE__ */ e.jsxs("section", { className: "gl-comp-global-group", children: [
                         /* @__PURE__ */ e.jsxs("header", { children: [
                           /* @__PURE__ */ e.jsx("span", { children: i($e === "source" ? "Source channel" : "Receiver") }),
                           /* @__PURE__ */ e.jsx("strong", { title: t.channel.combined, children: t.channel.label }),
                           /* @__PURE__ */ e.jsx("small", { children: t.channel.pnn }),
                           /* @__PURE__ */ e.jsx("em", { children: i("{count} pairs", { count: t.pairs.length }) })
                         ] }),
-                        /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-group-plots", children: t.pairs.map((l) => ki(l, se.dataset)) })
+                        /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-group-plots", children: t.pairs.map((l) => Ti(l, se.dataset)) })
                       ] }, t.channel.key))
                     }
                   ) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-empty", children: i(se.reason) }) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-global-empty", children: i("No matrix is available for the global inspector.") })
                 }
               ),
-              An && Kt(),
-              An && Rt(() => gt(!1), !0)
+              An && Pt(),
+              An && Kt(() => gt(!1), !0)
             ]
           }
         ) : u ? /* @__PURE__ */ e.jsxs(
@@ -4203,17 +4199,17 @@ function ca({
                           value: bt,
                           disabled: le !== null || ve !== null,
                           onChange: (t) => yt(Number(t.currentTarget.value)),
-                          children: Array.from({ length: Qi }, (t, l) => l + 1).map((t) => /* @__PURE__ */ e.jsx("option", { value: t, children: t }, t))
+                          children: Array.from({ length: ns }, (t, l) => l + 1).map((t) => /* @__PURE__ */ e.jsx("option", { value: t, children: t }, t))
                         }
                       )
                     ] }),
-                    le ? /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-btn-ghost", onClick: Ws, children: i("Cancel sweep") }) : /* @__PURE__ */ e.jsx(
+                    le ? /* @__PURE__ */ e.jsx("button", { type: "button", className: "gl-btn-ghost", onClick: Hs, children: i("Cancel sweep") }) : /* @__PURE__ */ e.jsx(
                       "button",
                       {
                         type: "button",
                         className: "gl-btn",
-                        disabled: !j || !N || Ke.length === 0 || $t > 0 || V || ve !== null,
-                        onClick: () => void Gs(),
+                        disabled: !j || !N || Ke.length === 0 || Ft > 0 || V || ve !== null,
+                        onClick: () => void Zs(),
                         children: i("Run four-value sweeps ({count})", { count: Ke.length })
                       }
                     )
@@ -4222,7 +4218,7 @@ function ca({
                 /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-attention-scope", children: [
                   /* @__PURE__ */ e.jsx("span", { children: i("Suggestions computed for {population} from up to {count} frozen events.", {
                     population: (X == null ? void 0 : X.name) ?? i("All Events"),
-                    count: Math.min(re, Pn.length).toLocaleString()
+                    count: Math.min(re, In.length).toLocaleString()
                   }) }),
                   /* @__PURE__ */ e.jsxs("label", { className: "gl-comp-evidence-mode", children: [
                     /* @__PURE__ */ e.jsx("span", { children: i("Evidence mode") }),
@@ -4233,7 +4229,7 @@ function ca({
                         value: ze,
                         disabled: V || le !== null || ve !== null,
                         onChange: (t) => {
-                          vs(t.currentTarget.value), wt((l) => l + 1), Be({}), sn({}), xe(null);
+                          ys(t.currentTarget.value), wt((l) => l + 1), Be({}), sn({}), xe(null);
                         },
                         children: [
                           /* @__PURE__ */ e.jsx("option", { value: "biological", children: i("Biological sample (conservative)") }),
@@ -4273,7 +4269,7 @@ function ca({
                     workers: bt
                   }) })
                 ] }),
-                oi && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-warning", role: "status", children: i(oi) }),
+                ai && /* @__PURE__ */ e.jsx("div", { className: "gl-comp-warning", role: "status", children: i(ai) }),
                 j ? /* @__PURE__ */ e.jsxs(e.Fragment, { children: [
                   /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-manual-followup", role: "group", "aria-label": i("Add compensation pair for follow-up"), children: [
                     /* @__PURE__ */ e.jsx("strong", { children: i("Add a pair") }),
@@ -4286,7 +4282,7 @@ function ca({
                           value: Ee,
                           onChange: (t) => {
                             const l = t.currentTarget.value;
-                            ai(l), we === l && jt(u.receiverAxisKeys.find((p) => p !== l && ie.has(p)) ?? "");
+                            ri(l), we === l && jt(u.receiverAxisKeys.find((p) => p !== l && ie.has(p)) ?? "");
                           },
                           children: u.sourceAxisKeys.map((t, l) => ie.has(t) ? /* @__PURE__ */ e.jsx("option", { value: t, children: oe[l].combined }, t) : null)
                         }
@@ -4311,7 +4307,7 @@ function ca({
                         type: "button",
                         className: "gl-mini-btn",
                         disabled: !Ee || !we || Ee === we,
-                        onClick: Fs,
+                        onClick: Is,
                         children: i("Flag for follow-up")
                       }
                     )
@@ -4323,7 +4319,7 @@ function ca({
                         /* @__PURE__ */ e.jsx("span", { children: i("Only these pairs are included when you run sweeps.") })
                       ] }) }),
                       Ke.length === 0 ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-attention-empty", children: i("No pairs are flagged yet. Tick “Flag for follow-up” in the inspector, add a pair above, or accept a suggestion below.") }) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-sweep-list", children: Ke.map((t, l) => {
-                        const p = Ns[t.pairKey], h = Ss === t.pairKey, x = In(t.pairKey, t.coefficient), y = Ft(t.pairKey, t.coefficient);
+                        const p = Ss[t.pairKey], h = Es === t.pairKey, x = Pn(t.pairKey, t.coefficient), b = Tt(t.pairKey, t.coefficient);
                         return /* @__PURE__ */ e.jsxs("article", { className: `gl-comp-sweep-pair${Se === t.pairKey ? " is-selected" : ""}`, children: [
                           /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-sweep-pair-head-row", children: [
                             /* @__PURE__ */ e.jsxs(
@@ -4365,7 +4361,7 @@ function ca({
                                   source: t.source.label,
                                   receiver: t.receiver.label
                                 }),
-                                onChange: (S) => Kn(t.pairKey, S.currentTarget.checked)
+                                onChange: (C) => Kn(t.pairKey, C.currentTarget.checked)
                               }
                             ) })
                           ] }),
@@ -4374,26 +4370,26 @@ function ca({
                               /* @__PURE__ */ e.jsx("span", { children: i("Four values across") }),
                               /* @__PURE__ */ e.jsxs("label", { children: [
                                 i("Lower (%)"),
-                                /* @__PURE__ */ e.jsx(Mn, { step: "0.1", value: y.lowerPercent, disabled: V || le !== null || ve !== null, onValueChange: (S) => Qn(t.pairKey, t.coefficient, "lowerPercent", S) })
+                                /* @__PURE__ */ e.jsx(Mn, { step: "0.1", value: b.lowerPercent, disabled: V || le !== null || ve !== null, onValueChange: (C) => Qn(t.pairKey, t.coefficient, "lowerPercent", C) })
                               ] }),
                               /* @__PURE__ */ e.jsx("span", { children: i("to") }),
                               /* @__PURE__ */ e.jsxs("label", { children: [
                                 i("Upper (%)"),
-                                /* @__PURE__ */ e.jsx(Mn, { step: "0.1", value: y.upperPercent, disabled: V || le !== null || ve !== null, onValueChange: (S) => Qn(t.pairKey, t.coefficient, "upperPercent", S) })
+                                /* @__PURE__ */ e.jsx(Mn, { step: "0.1", value: b.upperPercent, disabled: V || le !== null || ve !== null, onValueChange: (C) => Qn(t.pairKey, t.coefficient, "upperPercent", C) })
                               ] }),
                               x.error && /* @__PURE__ */ e.jsx("small", { children: i(x.error) })
                             ] }),
-                            p ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-sweep-values", children: p.values.map((S) => /* @__PURE__ */ e.jsxs(
+                            p ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-sweep-values", children: p.values.map((C) => /* @__PURE__ */ e.jsxs(
                               "div",
                               {
-                                className: `gl-comp-sweep-value${S.isCurrent ? " is-current" : ""}${Y[t.pairKey] === S.value ? " is-staged" : ""}`,
+                                className: `gl-comp-sweep-value${C.isCurrent ? " is-current" : ""}${Y[t.pairKey] === C.value ? " is-staged" : ""}`,
                                 children: [
                                   /* @__PURE__ */ e.jsx(
                                     ht,
                                     {
-                                      title: `${S.isCurrent ? `${i("Current")} · ` : ""}${(S.value * 100).toFixed(2)}%`,
-                                      panel: S.preview.compensated,
-                                      preview: S.preview,
+                                      title: `${C.isCurrent ? `${i("Current")} · ` : ""}${(C.value * 100).toFixed(2)}%`,
+                                      panel: C.preview.compensated,
+                                      preview: C.preview,
                                       sourceLabel: t.source.label,
                                       receiverLabel: t.receiver.label,
                                       minimumSize: 150,
@@ -4404,16 +4400,16 @@ function ca({
                                   /* @__PURE__ */ e.jsxs("dl", { children: [
                                     /* @__PURE__ */ e.jsxs("div", { children: [
                                       /* @__PURE__ */ e.jsx("dt", { children: i("Shift") }),
-                                      /* @__PURE__ */ e.jsx("dd", { children: i("{value} MAD", { value: ne(S.preview.evidence.normalizedNegativeShift ?? 0, 3) }) })
+                                      /* @__PURE__ */ e.jsx("dd", { children: i("{value} MAD", { value: ne(C.preview.evidence.normalizedNegativeShift ?? 0, 3) }) })
                                     ] }),
                                     /* @__PURE__ */ e.jsxs("div", { children: [
                                       /* @__PURE__ */ e.jsx("dt", { children: i("Slope") }),
-                                      /* @__PURE__ */ e.jsx("dd", { children: ne(S.preview.evidence.residualSlope ?? 0, 4) })
+                                      /* @__PURE__ */ e.jsx("dd", { children: ne(C.preview.evidence.residualSlope ?? 0, 4) })
                                     ] }),
                                     u.kind === "cytof" && /* @__PURE__ */ e.jsxs("div", { children: [
                                       /* @__PURE__ */ e.jsx("dt", { children: i("Receiver zero") }),
                                       /* @__PURE__ */ e.jsxs("dd", { children: [
-                                        (S.preview.compensated.zeroPile.receiver / Math.max(1, S.preview.eventCount) * 100).toFixed(1),
+                                        (C.preview.compensated.zeroPile.receiver / Math.max(1, C.preview.eventCount) * 100).toFixed(1),
                                         "%"
                                       ] })
                                     ] })
@@ -4423,14 +4419,14 @@ function ca({
                                     {
                                       type: "button",
                                       className: "gl-mini-btn",
-                                      disabled: V || S.isCurrent,
-                                      onClick: () => On(t.pairKey, S.value),
-                                      children: i(S.isCurrent ? "Installed" : Y[t.pairKey] === S.value ? "Staged" : "Use this value")
+                                      disabled: V || C.isCurrent,
+                                      onClick: () => On(t.pairKey, C.value),
+                                      children: i(C.isCurrent ? "Installed" : Y[t.pairKey] === C.value ? "Staged" : "Use this value")
                                     }
                                   )
                                 ]
                               },
-                              `${t.pairKey}:${S.value}:${S.isCurrent}`
+                              `${t.pairKey}:${C.value}:${C.isCurrent}`
                             )) }) : /* @__PURE__ */ e.jsx("p", { children: i("Set or fast-preview the endpoints in the inspector, then run the four-value exact sweep. Panels use the same events and locked axes.") })
                           ] })
                         ] }, t.pairKey);
@@ -4451,7 +4447,7 @@ function ca({
                         }) })
                       ] }) }),
                       Ce.items.length === 0 ? /* @__PURE__ */ e.jsx("div", { className: "gl-comp-attention-empty", children: i("No pair met the residual-screen evidence requirements. Manual flagging remains available.") }) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-suggestion-list", children: Ce.items.map((t) => {
-                        const l = Wt(t, u.kind, ze);
+                        const l = Gt(t, u.kind, ze);
                         return /* @__PURE__ */ e.jsxs("article", { className: jn.has(t.pairKey) ? "is-flagged" : void 0, children: [
                           /* @__PURE__ */ e.jsxs(
                             "button",
@@ -4497,13 +4493,13 @@ function ca({
                   ] })
                 ] }) : /* @__PURE__ */ e.jsx("div", { className: "gl-comp-attention-empty", children: i("Install a profile-derived compensation layer before curating or sweeping pairs. The embedded FCS matrix remains inspectable in the Matrix view.") })
               ] }),
-              Kt(),
-              Rt()
+              Pt(),
+              Kt()
             ]
           }
         ) : /* @__PURE__ */ e.jsx("div", { className: "gl-tab-placeholder gl-comp-empty", children: /* @__PURE__ */ e.jsx("p", { children: i(_ ? "The compensated assay is installed, but its numerical profile record is unavailable for matrix inspection." : n.instrument === "cytof" ? "No CyTOF compensation profile is installed for this sample." : "This sample has no compatible embedded compensation matrix or imported profile.") }) }),
         (u || _) && /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-advanced", role: "group", "aria-label": i("Advanced compensation tools"), children: [
-          /* @__PURE__ */ e.jsx("div", { className: "gl-comp-drawer-buttons", children: Hr.map(({ id: t, label: l }) => /* @__PURE__ */ e.jsxs(
+          /* @__PURE__ */ e.jsx("div", { className: "gl-comp-drawer-buttons", children: Jr.map(({ id: t, label: l }) => /* @__PURE__ */ e.jsxs(
             "button",
             {
               type: "button",
@@ -4511,7 +4507,7 @@ function ca({
               className: "gl-comp-drawer-toggle",
               "aria-expanded": zn[t],
               "aria-controls": `comp-drawer-${t}`,
-              onClick: () => Rs(t),
+              onClick: () => Ds(t),
               children: [
                 /* @__PURE__ */ e.jsxs("span", { children: [
                   i(l),
@@ -4536,7 +4532,7 @@ function ca({
                 ] }),
                 /* @__PURE__ */ e.jsxs("div", { children: [
                   /* @__PURE__ */ e.jsx("dt", { children: i("Matrix source") }),
-                  /* @__PURE__ */ e.jsx("dd", { children: oa(j, i) })
+                  /* @__PURE__ */ e.jsx("dd", { children: da(j, i) })
                 ] }),
                 /* @__PURE__ */ e.jsxs("div", { children: [
                   /* @__PURE__ */ e.jsx("dt", { children: i("Orientation") }),
@@ -4572,11 +4568,11 @@ function ca({
                 ] }),
                 /* @__PURE__ */ e.jsxs("div", { children: [
                   /* @__PURE__ */ e.jsx("dt", { children: i("Provenance") }),
-                  /* @__PURE__ */ e.jsx("dd", { children: i(((Ai = j.provenance) == null ? void 0 : Ai.sourceDescription) ?? "No additional source note supplied") })
+                  /* @__PURE__ */ e.jsx("dd", { children: i(((Fi = j.provenance) == null ? void 0 : Fi.sourceDescription) ?? "No additional source note supplied") })
                 ] }),
                 /* @__PURE__ */ e.jsxs("div", { children: [
                   /* @__PURE__ */ e.jsx("dt", { children: i("Estimation") }),
-                  /* @__PURE__ */ e.jsx("dd", { children: i(((Ti = j.provenance) == null ? void 0 : Ti.estimationMethod) ?? "Imported coefficients preserved exactly") })
+                  /* @__PURE__ */ e.jsx("dd", { children: i((($i = j.provenance) == null ? void 0 : $i.estimationMethod) ?? "Imported coefficients preserved exactly") })
                 ] })
               ] }),
               /* @__PURE__ */ e.jsxs("div", { className: "gl-comp-method-card", "aria-label": i("Installed compensation method"), children: [
@@ -4639,7 +4635,7 @@ function ca({
               status: R.state
             }) }) : /* @__PURE__ */ e.jsx("p", { children: i("Embedded $SPILLOVER · {channels} matched channels · {warnings} coefficient warnings.", {
               channels: H.channels.length,
-              warnings: Pt.length || i("no")
+              warnings: $t.length || i("no")
             }) })
           ] }),
           zn.review && /* @__PURE__ */ e.jsxs("section", { id: "comp-drawer-review", role: "region", "aria-labelledby": "comp-drawer-review-button", className: "gl-comp-drawer-region", children: [
@@ -4660,7 +4656,7 @@ function ca({
                 "button",
                 {
                   type: "button",
-                  onClick: () => Si(t.sourceIndex, t.receiverIndex),
+                  onClick: () => Ei(t.sourceIndex, t.receiverIndex),
                   children: [
                     /* @__PURE__ */ e.jsxs("span", { children: [
                       /* @__PURE__ */ e.jsxs("strong", { children: [
@@ -4693,8 +4689,8 @@ function ca({
             ] })
           ] })
         ] }),
-        Ms && u && /* @__PURE__ */ e.jsx(
-          Ur,
+        ks && u && /* @__PURE__ */ e.jsx(
+          Br,
           {
             profileLabel: (j == null ? void 0 : j.name) ?? (ue ? "SCE_spillover" : "embedded_FCS"),
             installedLabel: i(
@@ -4705,20 +4701,20 @@ function ca({
               receiverChannels: u.receiverAxisKeys,
               matrix: u.matrix
             },
-            workingMatrix: $s,
+            workingMatrix: Ps,
             pendingEditCount: Object.keys(Y).length,
-            onClose: () => li(!1)
+            onClose: () => oi(!1)
           }
         ),
-        Es && /* @__PURE__ */ e.jsx(
-          Dr,
+        As && /* @__PURE__ */ e.jsx(
+          _r,
           {
             sampleName: s,
             populationName: (X == null ? void 0 : X.name) ?? i("All Events"),
             filterLabel: gi,
             pairCount: fi.length,
-            onExport: Ys,
-            onClose: () => ci(!1)
+            onExport: Js,
+            onClose: () => li(!1)
           }
         )
       ]
@@ -4733,11 +4729,11 @@ function ca({
     }
   );
 }
-function da(n, s) {
+function pa(n, s) {
   const r = n.visible !== !1, a = s.visible !== !1;
   return r || a ? !1 : n.sample === s.sample && n.stateKey === s.stateKey;
 }
-const pa = M.memo(ca, da);
+const ga = M.memo(ha, pa);
 export {
-  pa as CompensationTab
+  ga as CompensationTab
 };
