@@ -170,6 +170,18 @@
   workspace <- S4Vectors::metadata(sce)$gatelab_workspace
   record <- if (is.list(workspace)) workspace$memberships else NULL
   if (!is.list(record) || !identical(record$format, "gatelab-sce-memberships")) {
+    stale_core <- if (is.list(workspace)) workspace$explicit_without_memberships else NULL
+    if (!is.null(stale_core)) {
+      stop(
+        "No population memberships are stored in this SCE. The last \"Save to SCE\" ",
+        "(workspace revision ", stale_core, ") reached R without any, so the GateLab core ",
+        "that served that session predates them. Restart GateLabR from the updated package ",
+        "(devtools::load_all() or reinstall), open a fresh browser tab, and press ",
+        "\"Save to SCE\" again: the status line should then end with ",
+        "\"memberships for N populations\".",
+        call. = FALSE
+      )
+    }
     stop(
       "No population memberships are stored in this SCE. In GateLabR press ",
       "\"Save to SCE\": an explicit save stores every population of every hierarchy ",

@@ -1275,6 +1275,13 @@
   if (!is.null(stored_memberships)) {
     md$gatelab_workspace$memberships <- stored_memberships
   }
+  # An explicit save that brought no memberships came from a core that predates them. Recording
+  # the revision lets the accessors say so, instead of asking the user to press a button that
+  # will not help until the core is updated.
+  if (identical(reason, "explicit")) {
+    md$gatelab_workspace$explicit_without_memberships <-
+      if (is.null(memberships)) revision else NULL
+  }
   # Keep the established R/Shiny interface usable while the React migration is
   # in progress. The canonical JSON above remains authoritative.
   md$gating_workspace <- validated$legacy
