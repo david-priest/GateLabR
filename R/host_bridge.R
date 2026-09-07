@@ -1189,7 +1189,8 @@
     reason,
     workspace_json,
     writer_id = NULL,
-    sample_column = NULL) {
+    sample_column = NULL,
+    memberships = NULL) {
   expected_revision <- suppressWarnings(as.integer(expected_revision))
   client_revision <- suppressWarnings(as.integer(client_revision))
   if (length(expected_revision) != 1L || is.na(expected_revision) ||
@@ -1240,6 +1241,22 @@
     tz = "UTC"
   )
   md <- S4Vectors::metadata(sce)
+  # Memberships arrive with an explicit save and stay with the record through every autosave
+  # after it, which carries geometry only. Their own revision says which workspace they belong to.
+  previous <- md$gatelab_workspace
+  stored_memberships <- if (!is.null(memberships)) {
+    .gatelabr_pack_host_memberships(
+      sce,
+      memberships,
+      revision = revision,
+      saved_at = saved_at,
+      sample_column = sample_column
+    )
+  } else if (is.list(previous) && is.list(previous$memberships)) {
+    previous$memberships
+  } else {
+    NULL
+  }
   md$gatelab_workspace <- list(
     format = "gatelab-sce-workspace",
     version = 1L,
@@ -1254,18 +1271,25 @@
     event_count = ncol(sce),
     workspace_json = workspace_json
   )
+  if (!is.null(stored_memberships)) {
+    md$gatelab_workspace$memberships <- stored_memberships
+  }
   # Keep the established R/Shiny interface usable while the React migration is
   # in progress. The canonical JSON above remains authoritative.
   md$gating_workspace <- validated$legacy
   S4Vectors::metadata(sce) <- md
-  list(
-    sce = sce,
-    result = list(
-      revision = revision,
-      clientRevision = client_revision,
-      savedAt = saved_at
-    )
+  result <- list(
+    revision = revision,
+    clientRevision = client_revision,
+    savedAt = saved_at
   )
+  if (!is.null(memberships)) {
+    result$memberships <- list(
+      hierarchies = nrow(stored_memberships$hierarchies),
+      populations = nrow(stored_memberships$populations)
+    )
+  }
+  list(sce = sce, result = result)
 }
 
 .gatelabr_decode_membership_bits <- function(encoded, event_count) {
@@ -1295,6 +1319,54 @@
   }
   if (event_count == 0L) return(logical(0))
   as.logical(as.integer(rawToBits(raw)[seq_len(event_count)]))
+}
+
+# One full-length membership from per-sample packed masks, in original SCE event order.
+.gatelabr_assemble_membership <- function(
+    sample_masks,
+    partition,
+    expected_sample_ids,
+    population_name) {
+  if (!is.list(sample_masks) || length(sample_masks) != length(expected_sample_ids)) {
+    stop(
+      "Population '", population_name,
+      "' does not contain one membership mask per SCE sample.",
+      call. = FALSE
+    )
+  }
+  sample_ids <- vapply(sample_masks, function(mask) {
+    if (!is.list(mask) || !is.character(mask$sampleId) ||
+        length(mask$sampleId) != 1L) return("")
+    mask$sampleId
+  }, character(1))
+  if (anyDuplicated(sample_ids) || !setequal(sample_ids, expected_sample_ids)) {
+    stop(
+      "Population '", population_name,
+      "' has mismatched SCE sample identities.",
+      call. = FALSE
+    )
+  }
+  membership <- logical(sum(lengths(partition$event_indices)))
+  for (sample_index in seq_along(expected_sample_ids)) {
+    sample_id <- expected_sample_ids[[sample_index]]
+    mask <- sample_masks[[match(sample_id, sample_ids)]]
+    expected_events <- length(partition$event_indices[[sample_index]])
+    supplied_events <- suppressWarnings(as.integer(mask$eventCount))
+    if (length(supplied_events) != 1L || is.na(supplied_events) ||
+        supplied_events != expected_events) {
+      stop(
+        "Population '", population_name,
+        "' has the wrong event count for sample '", sample_id, "'.",
+        call. = FALSE
+      )
+    }
+    membership[partition$event_indices[[sample_index]]] <-
+      .gatelabr_decode_membership_bits(
+        mask$membershipBitsBase64,
+        expected_events
+      )
+  }
+  membership
 }
 
 .gatelabr_write_host_coldata <- function(
@@ -1358,46 +1430,12 @@
       )
     }
 
-    sample_masks <- column$sampleMasks
-    if (!is.list(sample_masks) || length(sample_masks) != length(expected_sample_ids)) {
-      stop(
-        "Population '", population_name,
-        "' does not contain one membership mask per SCE sample.",
-        call. = FALSE
-      )
-    }
-    sample_ids <- vapply(sample_masks, function(mask) {
-      if (!is.list(mask) || !is.character(mask$sampleId) ||
-          length(mask$sampleId) != 1L) return("")
-      mask$sampleId
-    }, character(1))
-    if (anyDuplicated(sample_ids) || !setequal(sample_ids, expected_sample_ids)) {
-      stop(
-        "Population '", population_name,
-        "' has mismatched SCE sample identities.",
-        call. = FALSE
-      )
-    }
-    membership <- logical(ncol(sce))
-    for (sample_index in seq_along(expected_sample_ids)) {
-      sample_id <- expected_sample_ids[[sample_index]]
-      mask <- sample_masks[[match(sample_id, sample_ids)]]
-      expected_events <- length(partition$event_indices[[sample_index]])
-      supplied_events <- suppressWarnings(as.integer(mask$eventCount))
-      if (length(supplied_events) != 1L || is.na(supplied_events) ||
-          supplied_events != expected_events) {
-        stop(
-          "Population '", population_name,
-          "' has the wrong event count for sample '", sample_id, "'.",
-          call. = FALSE
-        )
-      }
-      membership[partition$event_indices[[sample_index]]] <-
-        .gatelabr_decode_membership_bits(
-          mask$membershipBitsBase64,
-          expected_events
-        )
-    }
+    membership <- .gatelabr_assemble_membership(
+      column$sampleMasks,
+      partition,
+      expected_sample_ids,
+      population_name
+    )
     list(
       column_name = column_name,
       population_id = population_id,
@@ -1710,7 +1748,8 @@
       reason = payload$reason,
       workspace_json = payload$workspaceJson,
       writer_id = payload$writerId,
-      sample_column = sample_column
+      sample_column = sample_column,
+      memberships = payload$memberships
     ))
   }
   if (identical(request$operation, "write-coldata")) {

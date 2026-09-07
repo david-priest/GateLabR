@@ -178,7 +178,19 @@ point and starts the shared React interface. The three-column layout is:
 5. Export results for downstream work — populations as new `colData` columns
    on the SCE (`Export Population`, e.g. for `diffcyt`, `CATALYST`, or any
    SCE-aware analysis), or gated events back out as `.fcs`.
-6. Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is embedded
+6. Press `Save to SCE`. Besides the workspace this stores which events every
+   population holds, for every hierarchy, so the whole tree can be read in R:
+
+   ```r
+   gatelabHierarchy(sce)                    # one row per population: parent, depth, path, gates, count
+   members <- gatelabPopulations(sce)       # logical matrix, events × populations
+   sce$population <- gatelabLeafPopulation(sce)   # each event's deepest population, or "ungated"
+   ```
+
+   These refuse to read memberships that are behind the workspace (gates changed
+   after the last explicit save) unless `allow_stale = TRUE`; press `Save to SCE`
+   again to refresh them.
+7. Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is embedded
    in `metadata()` and reloaded next time.
 
 ## Data persistence
@@ -188,6 +200,10 @@ GateLabR stores its canonical workspace and host provenance inside the SCE:
 ```r
 metadata(sce)$gatelab_workspace
 #> revisioned GateLab workspace JSON (gates, populations, scales and settings)
+
+metadata(sce)$gatelab_workspace$memberships
+#> every population's membership as a packed bitset, with the hierarchy tables,
+#> written by "Save to SCE"; read with gatelabPopulations() and friends
 
 metadata(sce)$gatelabr_compensation
 #> compensation profiles, assay bindings, revisions and provenance
