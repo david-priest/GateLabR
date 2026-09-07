@@ -36,14 +36,10 @@ local({
     stop("Could not locate the GateLabR source clone.", call. = FALSE)
   }
   root <- roots[[1]]
-  for (file in c(
-    "workspace_validation.R",
-    "host_compensation.R",
-    "host_bridge.R",
-    "host_compensation_jobs.R",
-    "launch_react.R",
-    "launch.R"
-  )) {
+  # Every file under R/, so a function added in a new file (memberships.R, coldata_overlay.R)
+  # is defined here as it is in the installed package. The files only define functions, so
+  # the order does not matter; sorted keeps it deterministic.
+  for (file in sort(list.files(file.path(root, "R"), pattern = "\\.R$"))) {
     sys.source(file.path(root, "R", file), envir = target)
   }
 })
