@@ -640,6 +640,7 @@
     defaultAssayId = default_assay,
     samples = sample_partition$samples,
     colDataColumns = colnames(SummarizedExperiment::colData(sce)),
+    colDataCategorical = .gatelabr_categorical_coldata_columns(sce),
     rowDataRevision = .gatelabr_rowdata_revision(sce)
   )
 }
@@ -1274,6 +1275,13 @@
   if (!is.null(stored_memberships)) {
     md$gatelab_workspace$memberships <- stored_memberships
   }
+  # An explicit save that brought no memberships came from a core that predates them. Recording
+  # the revision lets the accessors say so, instead of asking the user to press a button that
+  # will not help until the core is updated.
+  if (identical(reason, "explicit")) {
+    md$gatelab_workspace$explicit_without_memberships <-
+      if (is.null(memberships)) revision else NULL
+  }
   # Keep the established R/Shiny interface usable while the React migration is
   # in progress. The canonical JSON above remains authoritative.
   md$gating_workspace <- validated$legacy
@@ -1764,6 +1772,18 @@
       workspace_revision = payload$workspaceRevision,
       columns = payload$columns,
       overwrite = payload$overwrite,
+      sample_column = sample_column
+    ))
+  }
+  if (identical(request$operation, "read-categorical-coldata")) {
+    contract_version <- suppressWarnings(as.integer(payload$contractVersion))
+    if (length(contract_version) != 1L || is.na(contract_version) ||
+        !identical(contract_version, .gatelabr_coldata_contract_version)) {
+      stop("GateLab supplied an incompatible colData contract.", call. = FALSE)
+    }
+    return(.gatelabr_read_host_categorical_coldata(
+      sce,
+      column_name = payload$columnName,
       sample_column = sample_column
     ))
   }

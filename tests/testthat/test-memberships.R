@@ -191,6 +191,30 @@ test_that("an autosave keeps the memberships but marks them stale until the next
   expect_silent(gatelabHierarchy(refreshed$sce))
 })
 
+test_that("an explicit save that brought no memberships is reported as a stale core", {
+  saved <- GateLabR:::.gatelabr_store_host_workspace(
+    make_memberships_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = memberships_workspace_json()
+  )
+  expect_identical(S4Vectors::metadata(saved$sce)$gatelab_workspace$explicit_without_memberships, 1L)
+  expect_error(gatelabPopulations(saved$sce), "revision 1\\) reached R without any")
+  refreshed <- GateLabR:::.gatelabr_store_host_workspace(
+    saved$sce,
+    dataset_id = "test-sce",
+    expected_revision = 1L,
+    client_revision = 2L,
+    reason = "explicit",
+    workspace_json = memberships_workspace_json(),
+    memberships = memberships_payload()
+  )
+  expect_null(S4Vectors::metadata(refreshed$sce)$gatelab_workspace$explicit_without_memberships)
+  expect_silent(gatelabHierarchy(refreshed$sce))
+})
+
 test_that("memberships are refused on an object they were not saved on", {
   expect_error(gatelabPopulations(make_memberships_sce()), "No population memberships")
   sce <- store_with_memberships()$sce

@@ -60,6 +60,12 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   `sample_id`.
 - **Sample filter and multi-sample overlay.** Filter by any `colData` column
   and overlay multiple samples with distinct colours.
+- **Colour by a `colData` column.** Any factor, character or logical column
+  with up to 254 levels (a FlowSOM or CATALYST merge level, say) appears under
+  "Colour by", so you can watch cluster composition change while you drag a
+  gate. Values are fetched only when a column is chosen. Set
+  `metadata(sce)$gatelab_palettes$<column>` to a named colour vector to make the
+  app use the same colours as your figures.
 - **Statistics tab.** Per-population, per-channel summary stats (count,
   % parent / total, median, mean, geometric mean, SD, CV) exportable to CSV.
 - **Cell-division profiler.** A CFSE / CellTrace dye-dilution tab: draggable
@@ -210,6 +216,9 @@ metadata(sce)$gatelabr_compensation
 
 rowData(sce)$gatelabr_label
 #> optional Panel-tab display-name overrides
+
+metadata(sce)$gatelab_palettes
+#> optional: a named colour vector per colData column, used by "Colour by"
 ```
 
 The established `metadata(sce)$gating_workspace` mirror remains available for
