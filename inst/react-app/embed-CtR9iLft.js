@@ -29584,7 +29584,7 @@ async function Wx(t, e, n = 300) {
       const M = w.getContext("2d");
       M.fillStyle = "#ffffff", M.fillRect(0, 0, w.width, w.height), M.scale(f, f), M.drawImage(b, 0, 0), URL.revokeObjectURL(c), m(w.toDataURL("image/png"));
     }, b.onerror = v, b.src = c;
-  }), { jsPDF: h } = await import("./jspdf.es.min-DyyjjHxp.js").then((m) => m.j), y = new h({ orientation: i >= s ? "landscape" : "portrait", unit: "pt", format: [i, s] });
+  }), { jsPDF: h } = await import("./jspdf.es.min-BF6JZg3W.js").then((m) => m.j), y = new h({ orientation: i >= s ? "landscape" : "portrait", unit: "pt", format: [i, s] });
   y.addImage(p, "PNG", 0, 0, i, s), y.save(e + ".pdf");
 }
 function Dv(t, e, n) {
@@ -33226,7 +33226,7 @@ function yN({
     }
   ) });
 }
-const vN = $.lazy(hN("CompensationTab", async () => ({ default: (await import("./CompensationTab-B-VXotsQ.js")).CompensationTab }))), hh = { "application/octet-stream": [".fcs"] }, xN = { "application/xml": [".xml", ".wsp"] }, bN = { "text/csv": [".csv", ".tsv", ".txt"] }, _N = 0, wN = 5, SN = (t) => {
+const vN = $.lazy(hN("CompensationTab", async () => ({ default: (await import("./CompensationTab-DwCy-1ZM.js")).CompensationTab }))), hh = { "application/octet-stream": [".fcs"] }, xN = { "application/xml": [".xml", ".wsp"] }, bN = { "text/csv": [".csv", ".tsv", ".txt"] }, _N = 0, wN = 5, SN = (t) => {
   const e = Math.pow(10, t), n = Math.pow(10, Math.floor(Math.log10(e)) - 2);
   return Math.max(1, Math.round(e / n) * n);
 }, kN = (t) => t >= 1e4 ? `${(t / 1e3).toFixed(0)}K` : t >= 1e3 ? `${(t / 1e3).toFixed(1)}K` : `${Math.round(t)}`, CN = 264, MN = 672;
@@ -36970,7 +36970,7 @@ function IN() {
                   gt.current
                 ).then(({ revision: x, memberships: E }) => {
                   it(
-                    `Saved GateLab workspace to SCE · revision ${x}` + (E ? ` · memberships for ${E.populations} population${E.populations === 1 ? "" : "s"} in ${E.hierarchies} hierarch${E.hierarchies === 1 ? "y" : "ies"}` : "")
+                    `Saved GateLab workspace to SCE · revision ${x}` + (E ? ` · memberships for ${E.populations} population${E.populations === 1 ? "" : "s"} in ${E.hierarchies} hierarch${E.hierarchies === 1 ? "y" : "ies"}` : " · no memberships stored: this GateLabR predates them, reload it")
                   );
                 }).catch((x) => {
                   De(x instanceof Error ? x.message : String(x));
