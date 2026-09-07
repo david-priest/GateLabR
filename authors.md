@@ -11,13 +11,13 @@ Source:
 [`DESCRIPTION`](https://github.com/david-priest/GateLabR/blob/main/DESCRIPTION)
 
 Priest D (2026). *GateLabR: Interactive Manual Gating for
-SingleCellExperiment Objects*. R package version 1.4.4,
+SingleCellExperiment Objects*. R package version 1.4.5,
 <https://david-priest.github.io/GateLabR>.
 
     @Manual{,
       title = {GateLabR: Interactive Manual Gating for SingleCellExperiment Objects},
       author = {David Priest},
       year = {2026},
-      note = {R package version 1.4.4},
+      note = {R package version 1.4.5},
       url = {https://david-priest.github.io/GateLabR},
     }

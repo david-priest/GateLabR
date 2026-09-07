@@ -1,5 +1,40 @@
 # Changelog
 
+## GateLabR 1.4.5
+
+- The embedded GateLab core is 0.7.5 (GateLab-dev master at c415f99), up
+  from 0.7.2. What that brings into the R host:
+- Several population hierarchies over one shared gate table. The menu at
+  the top of the populations list switches between them and can create
+  an empty one, duplicate the current one, rename it or delete it; the
+  gates stay when a hierarchy goes. Undo works across a switch. A
+  workspace saved into the SCE with several hierarchies now reloads with
+  all of them; the first build of this core restored only the active
+  one, which is fixed in the same commit.
+- A hierarchy you can write by hand. Import hierarchy CSV reads gate
+  lines and population lines, with parents and NOT references, and for a
+  CyTOF debarcoding scheme a sample table beneath them; Save hierarchy
+  CSV writes any workspace the same way. The barcode scheme import
+  builds a debarcoding strategy from the run’s sample table, with the QC
+  populations from a template or from the file, and can send a second
+  scheme into its own hierarchy while reusing the gates already present.
+- In the population tree the blue highlight is a selection: shift-click
+  a range, Cmd or Ctrl-click to add or remove a row, shift-drag to move
+  the highlighted rows together. The checkboxes keep their old role,
+  with All and None above the list.
+- Fixed: the four handles of an ellipse gate sit at the ellipse’s
+  on-screen vertices; before, two of them sat off the drawn shape
+  whenever the axes had different pixel scales.
+- Fixed: a workspace saved by 0.7.0 or later could not be reopened by
+  the file reader, which had not been told about two per-sample scale
+  lists.
+- Fixed: three FlowJo workspace conventions that imported wrong without
+  error: a parameter written with an underscore for its slash, Time
+  gates stored in seconds, and leaf names that recur under several
+  parents.
+- Every open, folder and save dialog starts in the folder the user last
+  opened or saved from.
+
 ## GateLabR 1.4.4
 
 - Fixed: an assay whose name says it is uncompensated could still be
