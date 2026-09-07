@@ -1,3 +1,8 @@
+# GateLabR 1.4.6
+
+- "Save to SCE" now stores which events every population holds, for every hierarchy, beside the workspace in `metadata(sce)$gatelab_workspace$memberships`, as one packed bitset per population. Four functions read it back without re-gating in R: `gatelabHierarchies()`, `gatelabHierarchy()` (one row per population with parent, depth, path, gates and count), `gatelabPopulations()` (a logical events-by-populations matrix) and `gatelabLeafPopulation()` (each event's deepest population as a factor, or "ungated"). The memberships remember the workspace revision they were computed at; after an autosave has moved the workspace on they are refused until the next explicit save, unless `allow_stale = TRUE`. Reading them on a subset SCE is refused, since the masks assume the original event order.
+- The embedded GateLab core is GateLab-dev master at f087981 (0.7.5 plus two changes), which sends the memberships with an explicit save and, when the plot pools several checked files, labels gate counts pooled over the same files.
+
 # GateLabR 1.4.5
 
 - The embedded GateLab core is 0.7.5 (GateLab-dev master at c415f99), up from 0.7.2. What that brings into the R host:
