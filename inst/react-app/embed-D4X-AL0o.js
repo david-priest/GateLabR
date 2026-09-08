@@ -5649,7 +5649,7 @@ function Zb() {
 var e_ = Zb();
 const t_ = /* @__PURE__ */ qb(e_);
 var L = Cm();
-const n_ = "0.7.6", eh = {
+const n_ = "0.7.7", eh = {
   version: n_
 }, Au = {};
 function An(t, e) {
@@ -29687,7 +29687,7 @@ async function tb(t, e, n = 300) {
       const k = w.getContext("2d");
       k.fillStyle = "#ffffff", k.fillRect(0, 0, w.width, w.height), k.scale(p, p), k.drawImage(b, 0, 0), URL.revokeObjectURL(c), m(w.toDataURL("image/png"));
     }, b.onerror = x, b.src = c;
-  }), { jsPDF: f } = await import("./jspdf.es.min-DNU3Ewgl.js").then((m) => m.j), y = new f({ orientation: i >= s ? "landscape" : "portrait", unit: "pt", format: [i, s] });
+  }), { jsPDF: f } = await import("./jspdf.es.min-zePAD3OY.js").then((m) => m.j), y = new f({ orientation: i >= s ? "landscape" : "portrait", unit: "pt", format: [i, s] });
   y.addImage(h, "PNG", 0, 0, i, s), y.save(e + ".pdf");
 }
 function Kv(t, e, n) {
@@ -33573,7 +33573,7 @@ function IE({
     }
   ) });
 }
-const FE = L.lazy(jE("CompensationTab", async () => ({ default: (await import("./CompensationTab-XSZciV70.js")).CompensationTab }))), $h = { "application/octet-stream": [".fcs"] }, LE = { "application/xml": [".xml", ".wsp"] }, $E = { "text/csv": [".csv", ".tsv", ".txt"] }, RE = 0, DE = 5, zE = (t) => {
+const FE = L.lazy(jE("CompensationTab", async () => ({ default: (await import("./CompensationTab-reCVsbW5.js")).CompensationTab }))), $h = { "application/octet-stream": [".fcs"] }, LE = { "application/xml": [".xml", ".wsp"] }, $E = { "text/csv": [".csv", ".tsv", ".txt"] }, RE = 0, DE = 5, zE = (t) => {
   const e = Math.pow(10, t), n = Math.pow(10, Math.floor(Math.log10(e)) - 2);
   return Math.max(1, Math.round(e / n) * n);
 }, OE = (t) => t >= 1e4 ? `${(t / 1e3).toFixed(0)}K` : t >= 1e3 ? `${(t / 1e3).toFixed(1)}K` : `${Math.round(t)}`, BE = 330, GE = 672;
