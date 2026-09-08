@@ -27,6 +27,15 @@ reference:
     contents:
       - launchGatingApp
       - launchReactGateLab
+  - title: Reading a saved workspace back in R
+    desc: >
+      "Save to SCE" stores which events every population holds, so a gating result
+      can be read back without re-gating. These four read that record.
+    contents:
+      - gatelabHierarchies
+      - gatelabHierarchy
+      - gatelabPopulations
+      - gatelabLeafPopulation
   - title: Retired
     desc: >
       Kept as an exported stub so existing scripts fail with an explanation
