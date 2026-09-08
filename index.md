@@ -67,6 +67,12 @@ return directly to `colData` for a Bioconductor pipeline.
   split by `sample_id`.
 - **Sample filter and multi-sample overlay.** Filter by any `colData`
   column and overlay multiple samples with distinct colours.
+- **Colour by a `colData` column.** Any factor, character or logical
+  column with up to 254 levels (a FlowSOM or CATALYST merge level, say)
+  appears under “Colour by”, so you can watch cluster composition change
+  while you drag a gate. Values are fetched only when a column is
+  chosen. Set `metadata(sce)$gatelab_palettes$<column>` to a named
+  colour vector to make the app use the same colours as your figures.
 - **Statistics tab.** Per-population, per-channel summary stats (count,
   % parent / total, median, mean, geometric mean, SD, CV) exportable to
   CSV.
@@ -191,21 +197,42 @@ three-column layout is:
 ### Typical workflow
 
 1.  Get your events into the app, either way:
+
     - Load an existing `SingleCellExperiment` — e.g. from CATALYST
       `prepData()` (CyTOF) or one you’ve built from `flowCore` / your
       own pipeline.
+
 2.  Call `launchGatingApp(sce)`, or call
     [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
     to use the first SCE already loaded in your global environment.
+
 3.  Draw gates on the central plot; the gate list and population tree
     update live.
+
 4.  Build populations by referencing one or more gates; multiple
     references use AND logic.
+
 5.  Export results for downstream work — populations as new `colData`
     columns on the SCE (`Export Population`, e.g. for `diffcyt`,
     `CATALYST`, or any SCE-aware analysis), or gated events back out as
     `.fcs`.
-6.  Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is
+
+6.  Press `Save to SCE`. Besides the workspace this stores which events
+    every population holds, for every hierarchy, so the whole tree can
+    be read in R:
+
+    ``` r
+
+    gatelabHierarchy(sce)                    # one row per population: parent, depth, path, gates, count
+    members <- gatelabPopulations(sce)       # logical matrix, events × populations
+    sce$population <- gatelabLeafPopulation(sce)   # each event's deepest population, or "ungated"
+    ```
+
+    These refuse to read memberships that are behind the workspace
+    (gates changed after the last explicit save) unless
+    `allow_stale = TRUE`; press `Save to SCE` again to refresh them.
+
+7.  Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is
     embedded in `metadata()` and reloaded next time.
 
 ## Data persistence
@@ -218,11 +245,18 @@ SCE:
 metadata(sce)$gatelab_workspace
 #> revisioned GateLab workspace JSON (gates, populations, scales and settings)
 
+metadata(sce)$gatelab_workspace$memberships
+#> every population's membership as a packed bitset, with the hierarchy tables,
+#> written by "Save to SCE"; read with gatelabPopulations() and friends
+
 metadata(sce)$gatelabr_compensation
 #> compensation profiles, assay bindings, revisions and provenance
 
 rowData(sce)$gatelabr_label
 #> optional Panel-tab display-name overrides
+
+metadata(sce)$gatelab_palettes
+#> optional: a named colour vector per colData column, used by "Colour by"
 ```
 
 The established `metadata(sce)$gating_workspace` mirror remains

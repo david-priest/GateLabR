@@ -1,5 +1,71 @@
 # Changelog
 
+## GateLabR 1.4.7
+
+- The embedded GateLab core is 0.7.7 (GateLab master at 7b99de0), up
+  from the 0.7.6 build. The change that matters for an SCE is that
+  samples can now be selected by their `colData`. GateLabR already
+  collapsed every column constant within a sample and sent one value per
+  sample; the samples panel now draws those as a row of value chips per
+  column, so a sixty-sample object is picked over by donor, condition or
+  batch rather than by hunting through sixty checkboxes.
+- A chip is a bulk checkbox over the checked set rather than a filter:
+  clicking one checks every sample carrying that value, or unchecks them
+  when they are all checked already, and a partly checked chip is filled
+  to the fraction that is checked. The sample list itself is never
+  narrowed.
+- Each chip row carries a padlock. Holding one row fixed bounds every
+  later chip click to the samples that row holds, so a cell type can be
+  held while the stimulation is switched — which the chips alone cannot
+  express, since a checked set does not record why the other files are
+  out. What is held is written on the row, because the checked set feeds
+  the pooled display, Statistics and Proportions.
+- A `colData` column without a value for every sample is not treated as
+  sample metadata. A gate written back into `colData` is per-event, so
+  it reaches the app only for samples whose events were entirely `TRUE`
+  or entirely `FALSE`; such a column is kept out of the automatic chip
+  rows and, where it is chosen by hand, marked with the number of
+  samples it actually reaches.
+- Also from the core: files can be assigned per hierarchy, marked by a
+  numbered colour badge, and a FlowJo workspace import now brings in
+  every tree rather than the first.
+
+## GateLabR 1.4.6
+
+- “Save to SCE” now stores which events every population holds, for
+  every hierarchy, beside the workspace in
+  `metadata(sce)$gatelab_workspace$memberships`, as one packed bitset
+  per population. Four functions read it back without re-gating in R:
+  [`gatelabHierarchies()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md),
+  [`gatelabHierarchy()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  (one row per population with parent, depth, path, gates and count),
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  (a logical events-by-populations matrix) and
+  [`gatelabLeafPopulation()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  (each event’s deepest population as a factor, or “ungated”). The
+  memberships remember the workspace revision they were computed at;
+  after an autosave has moved the workspace on they are refused until
+  the next explicit save, unless `allow_stale = TRUE`. Reading them on a
+  subset SCE is refused, since the masks assume the original event
+  order.
+- “Colour by” now offers the SCE’s categorical `colData` columns: any
+  factor, character or logical column with at most 254 levels, such as a
+  FlowSOM or CATALYST merge level, so cluster composition can be watched
+  while a gate is drawn. The dataset payload carries only the column
+  names and level counts; a column’s values are fetched when it is
+  chosen, once, in the per-sample coded form the categorical export
+  already uses. A named colour vector in
+  `metadata(sce)$gatelab_palettes[[column]]` fixes the colours so the
+  app matches the analysis figures.
+- Running from a clone with `source("launch.R")` now sources every file
+  under `R/`, so functions added in new files are defined the same way
+  as in the installed package.
+- The embedded GateLab core is GateLab-dev master at 7883c8a (0.7.5 plus
+  the pooled gate label, memberships on explicit save, and Colour by
+  colData), which sends the memberships with an explicit save and, when
+  the plot pools several checked files, labels gate counts pooled over
+  the same files.
+
 ## GateLabR 1.4.5
 
 - The embedded GateLab core is 0.7.5 (GateLab-dev master at c415f99), up

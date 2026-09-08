@@ -24,7 +24,7 @@
 
     <a class="navbar-brand me-2" href="index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.7</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -84,6 +84,8 @@
 <strong>FCS export.</strong> Export gated populations as FCS files, optionally split by <code>sample_id</code>.</li>
 <li>
 <strong>Sample filter and multi-sample overlay.</strong> Filter by any <code>colData</code> column and overlay multiple samples with distinct colours.</li>
+<li>
+<strong>Colour by a <code>colData</code> column.</strong> Any factor, character or logical column with up to 254 levels (a FlowSOM or CATALYST merge level, say) appears under “Colour by”, so you can watch cluster composition change while you drag a gate. Values are fetched only when a column is chosen. Set <code>metadata(sce)$gatelab_palettes$&lt;column&gt;</code> to a named colour vector to make the app use the same colours as your figures.</li>
 <li>
 <strong>Statistics tab.</strong> Per-population, per-channel summary stats (count, % parent / total, median, mean, geometric mean, SD, CV) exportable to CSV.</li>
 <li>
@@ -254,16 +256,25 @@
 <h3 id="typical-workflow">Typical workflow<a class="anchor" aria-label="anchor" href="#typical-workflow"></a>
 </h3>
 <ol style="list-style-type: decimal">
-<li>Get your events into the app, either way:
+<li>
+<p>Get your events into the app, either way:</p>
 <ul>
 <li>Load an existing <code>SingleCellExperiment</code> — e.g. from CATALYST <code>prepData()</code> (CyTOF) or one you’ve built from <code>flowCore</code> / your own pipeline.</li>
 </ul>
 </li>
-<li>Call <code>launchGatingApp(sce)</code>, or call <code><a href="reference/launchGatingApp.html">launchGatingApp()</a></code> to use the first SCE already loaded in your global environment.</li>
-<li>Draw gates on the central plot; the gate list and population tree update live.</li>
-<li>Build populations by referencing one or more gates; multiple references use AND logic.</li>
-<li>Export results for downstream work — populations as new <code>colData</code> columns on the SCE (<code>Export Population</code>, e.g. for <code>diffcyt</code>, <code>CATALYST</code>, or any SCE-aware analysis), or gated events back out as <code>.fcs</code>.</li>
-<li>Save the SCE (e.g. <code>saveRDS(sce, "gated.rds")</code>) — the workspace is embedded in <code>metadata()</code> and reloaded next time.</li>
+<li><p>Call <code>launchGatingApp(sce)</code>, or call <code><a href="reference/launchGatingApp.html">launchGatingApp()</a></code> to use the first SCE already loaded in your global environment.</p></li>
+<li><p>Draw gates on the central plot; the gate list and population tree update live.</p></li>
+<li><p>Build populations by referencing one or more gates; multiple references use AND logic.</p></li>
+<li><p>Export results for downstream work — populations as new <code>colData</code> columns on the SCE (<code>Export Population</code>, e.g. for <code>diffcyt</code>, <code>CATALYST</code>, or any SCE-aware analysis), or gated events back out as <code>.fcs</code>.</p></li>
+<li>
+<p>Press <code>Save to SCE</code>. Besides the workspace this stores which events every population holds, for every hierarchy, so the whole tree can be read in R:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/gatelabMemberships.html">gatelabHierarchy</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>                    <span class="co"># one row per population: parent, depth, path, gates, count</span></span>
+<span><span class="va">members</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gatelabMemberships.html">gatelabPopulations</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>       <span class="co"># logical matrix, events × populations</span></span>
+<span><span class="va">sce</span><span class="op">$</span><span class="va">population</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gatelabMemberships.html">gatelabLeafPopulation</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>   <span class="co"># each event's deepest population, or "ungated"</span></span></code></pre></div>
+<p>These refuse to read memberships that are behind the workspace (gates changed after the last explicit save) unless <code>allow_stale = TRUE</code>; press <code>Save to SCE</code> again to refresh them.</p>
+</li>
+<li><p>Save the SCE (e.g. <code>saveRDS(sce, "gated.rds")</code>) — the workspace is embedded in <code>metadata()</code> and reloaded next time.</p></li>
 </ol>
 </div>
 </div>
@@ -271,15 +282,22 @@
 <h2 id="data-persistence">Data persistence<a class="anchor" aria-label="anchor" href="#data-persistence"></a>
 </h2>
 <p>GateLabR stores its canonical workspace and host provenance inside the SCE:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">gatelab_workspace</span></span>
 <span><span class="co">#&gt; revisioned GateLab workspace JSON (gates, populations, scales and settings)</span></span>
+<span></span>
+<span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">gatelab_workspace</span><span class="op">$</span><span class="va">memberships</span></span>
+<span><span class="co">#&gt; every population's membership as a packed bitset, with the hierarchy tables,</span></span>
+<span><span class="co">#&gt; written by "Save to SCE"; read with gatelabPopulations() and friends</span></span>
 <span></span>
 <span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">gatelabr_compensation</span></span>
 <span><span class="co">#&gt; compensation profiles, assay bindings, revisions and provenance</span></span>
 <span></span>
 <span><span class="fu">rowData</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">gatelabr_label</span></span>
-<span><span class="co">#&gt; optional Panel-tab display-name overrides</span></span></code></pre></div>
+<span><span class="co">#&gt; optional Panel-tab display-name overrides</span></span>
+<span></span>
+<span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">gatelab_palettes</span></span>
+<span><span class="co">#&gt; optional: a named colour vector per colData column, used by "Colour by"</span></span></code></pre></div>
 <p>The established <code>metadata(sce)$gating_workspace</code> mirror remains available for compatibility with the previous GateLabR interface.</p>
 </div>
 <div class="section level2">
@@ -305,15 +323,15 @@
 <p>Priest, D. G. (2026). <em>GateLabR: Interactive manual gating for SingleCellExperiment objects.</em> Version 1.0.0. Zenodo. <a href="https://doi.org/10.5281/zenodo.20404387" class="external-link uri">https://doi.org/10.5281/zenodo.20404387</a></p>
 </blockquote>
 <p>BibTeX:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co">@software{priest_gatelabr_2026,</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">  author    = {Priest, David G.},</span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">  title     = {GateLabR: Interactive manual gating for SingleCellExperiment objects},</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">  year      = {2026},</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">  version   = {1.0.0},</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">  doi       = {10.5281/zenodo.20404387},</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">  url       = {https://github.com/david-priest/GateLabR},</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">  publisher = {Zenodo}</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">@software{priest_gatelabr_2026,</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">  author    = {Priest, David G.},</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">  title     = {GateLabR: Interactive manual gating for SingleCellExperiment objects},</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">  year      = {2026},</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">  version   = {1.0.0},</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">  doi       = {10.5281/zenodo.20404387},</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">  url       = {https://github.com/david-priest/GateLabR},</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">  publisher = {Zenodo}</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
 <p>GitHub’s “Cite this repository” button (powered by <a href="CITATION.cff"><code>CITATION.cff</code></a>) renders formatted citations in several styles.</p>
 </div>
 <div class="section level2">

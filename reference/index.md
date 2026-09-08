@@ -7,6 +7,17 @@
 - [`launchReactGateLab()`](https://david-priest.github.io/GateLabR/reference/launchReactGateLab.md)
   : Launch GateLabR with the canonical GateLab React interface
 
+## Reading a saved workspace back in R
+
+“Save to SCE” stores which events every population holds, so a gating
+result can be read back without re-gating. These four read that record.
+
+- [`gatelabHierarchies()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  [`gatelabHierarchy()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  [`gatelabLeafPopulation()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  : Population hierarchies stored in a gated SingleCellExperiment
+
 ## Retired
 
 Kept as an exported stub so existing scripts fail with an explanation
