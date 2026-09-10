@@ -1885,7 +1885,9 @@
     dataset_id = "gatelabr-sce",
     label = dataset_id,
     sample_column = NULL,
-    message_type = "gatelabr-host-manifest") {
+    message_type = "gatelabr-host-manifest",
+    catalogue_env = globalenv(),
+    active_name = NULL) {
   if (is.null(session) ||
       !is.function(session$registerDataObj) ||
       !is.function(session$sendCustomMessage)) {
@@ -1938,6 +1940,13 @@
   manifest <- list(
     contractVersion = .gatelabr_dataset_contract_version,
     datasets = list(descriptor),
+    # Every SCE the session could switch to, as names and dimensions only. Listing is cheap:
+    # the per-sample binary resources above are registered for the ACTIVE object alone, and a
+    # switch re-runs this function for the newly chosen one.
+    availableDatasets = .gatelabr_sce_catalogue(
+      catalogue_env,
+      active_name = if (is.null(active_name)) label else active_name
+    ),
     resources = resources,
     workspace = .gatelabr_host_workspace_envelope(
       sce,

@@ -144,14 +144,23 @@ launchReactGateLab <- function(
         )
       }
     })
-    shiny::observeEvent(input$gatelabr_react_ready, {
+    # Which object the picker should show as active. It changes on a switch, so it cannot be
+    # the launch-time sce_name.
+    active_name <- shiny::reactiveVal(sce_name)
+
+    send_manifest <- function() {
       .gatelabr_register_host_manifest(
         session,
         sce_state(),
         dataset_id = dataset_id,
-        label = sce_name,
-        sample_column = sample_column
+        label = active_name(),
+        sample_column = sample_column,
+        active_name = active_name()
       )
+    }
+
+    shiny::observeEvent(input$gatelabr_react_ready, {
+      send_manifest()
     }, once = TRUE, ignoreInit = TRUE)
     shiny::observeEvent(input$gatelabr_host_request, {
       request <- input$gatelabr_host_request
@@ -161,6 +170,33 @@ launchReactGateLab <- function(
         request$requestId
       } else {
         ""
+      }
+      # Switch the session to another SingleCellExperiment already in the environment.
+      #
+      # The app is required to have saved the current workspace before asking: the whole
+      # workspace -- gates, populations, scales, compensation provenance -- lives in
+      # metadata(sce), so switching without a save loses it. R cannot verify that, so the
+      # request carries an acknowledgement and is refused without it, which turns a silent
+      # loss into an error.
+      if (is.list(request) && identical(request$operation, "activate-dataset")) {
+        result <- tryCatch({
+          payload <- request$payload
+          if (!is.list(payload) || !isTRUE(payload$workspaceSaved)) {
+            stop("Refusing to switch before the current workspace has been saved.",
+                 call. = FALSE)
+          }
+          name <- payload$datasetId
+          replacement <- .gatelabr_sce_by_name(name, globalenv())
+          sce_state(replacement)
+          active_name(name)
+          send_manifest()
+          list(ok = TRUE, datasetId = name)
+        }, error = function(e) list(ok = FALSE, error = conditionMessage(e)))
+        session$sendCustomMessage(
+          "gatelabr-host-response",
+          list(requestId = request_id, operation = "activate-dataset", result = result)
+        )
+        return(invisible(NULL))
       }
       if (is.list(request) &&
           identical(request$operation, "cancel-compensation") &&
