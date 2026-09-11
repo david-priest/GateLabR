@@ -328,16 +328,20 @@ filter_flow_channels <- function(ff) {
   # rather than the detector — $PnN "FL1-A" with $PnS "FITC-A" — satisfies it on every
   # fluorescence channel while having no detectors at all, and filtering it drops the
   # height partners and any spelled-out width. Beckman CytoFLEX lost 5 of 14 channels
-  # this way and Xitogen XTG-1600 lost 14 of 32. So also require at least one channel
-  # the filter would actually drop: not scatter, not LightLoss/Autofluorescence/
-  # Extinction, not QC/timing, and carrying no marker of its own.
+  # this way and Xitogen XTG-1600 lost 14 of 32. So also require channels the filter
+  # would actually drop -- not scatter, not LightLoss/Autofluorescence/Extinction, not
+  # QC/timing, and carrying no marker of its own -- and more than one of them: a
+  # conventional file with a single unlabelled fluorescence channel (an unstained or
+  # spare detector) was taken for a spectral one, which dropped its height and width
+  # channels and changed every gate's channel identity between files of one panel. A
+  # spectral file carries dozens. GateLab's channels.ts applies the same rule.
   has_marker <- !is.na(pns) & nchar(trimws(pns)) > 0 & pns != pnn
   is_raw_detector <- !has_marker &
     !grepl("^(FSC|SSC)", pnn, ignore.case = TRUE) &
     !grepl("^(LightLoss|Autofluorescence|Extinction)", pnn, ignore.case = TRUE) &
     !grepl("^(Time|Event_length|Cell_length)$", pnn, ignore.case = TRUE)
 
-  if (sum(is_unmixed) < 2 || !any(is_raw_detector)) {
+  if (sum(is_unmixed) < 2 || sum(is_raw_detector) < 2) {
     display_name <- ifelse(is.na(pns) | nchar(trimws(pns)) == 0, pnn, pns)
     message("  Conventional flow: keeping all ", length(pnn), " channels")
     return(list(ff = ff, display_names = display_name,
@@ -382,9 +386,11 @@ filter_flow_channels <- function(ff) {
       next
     }
 
-    # Unmixed fluorophore channels: PnS != PnN AND PnS ends with "-A"
+    # Unmixed fluorophore channels: PnS != PnN AND PnS ends with "-A". Case-insensitive, as
+    # the detection above is: a marker written "-a" counted towards making the file unmixed
+    # and then fell through to the drop branch here, losing the channel.
     if (!is.na(desc) && nchar(trimws(desc)) > 0 &&
-        desc != ch && grepl("-A$", desc)) {
+        desc != ch && grepl("-A$", desc, ignore.case = TRUE)) {
       keep_idx[i] <- TRUE
       display_name[i] <- paste0(desc, " (", ch, ")")
       pnr_out[i] <- pnr[i]
