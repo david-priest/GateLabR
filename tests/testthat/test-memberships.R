@@ -219,6 +219,23 @@ test_that("memberships are refused on an object they were not saved on", {
   expect_error(gatelabPopulations(make_memberships_sce()), "No population memberships")
   sce <- store_with_memberships()$sce
   expect_error(gatelabPopulations(sce[, 1:2]), "cover 3 events but this SCE has 2 columns")
+  # Same column count, different order: the bitsets are positional, so this read the wrong
+  # events as members while the documentation said it would be refused. Now it is.
+  expect_error(gatelabPopulations(sce[, c(2, 1, 3)]), "different order")
+  # Same order, a different sample partition: masks packed per sample no longer line up.
+  moved <- sce
+  SummarizedExperiment::colData(moved)$sample_id[3] <- "Donor A"
+  expect_error(gatelabPopulations(moved), "different order")
+  # The object they were saved on still reads.
+  expect_identical(dim(gatelabPopulations(sce)), c(3L, 3L))
+})
+
+test_that("a record saved before the fingerprint existed still reads on its own object", {
+  sce <- store_with_memberships()$sce
+  workspace <- S4Vectors::metadata(sce)$gatelab_workspace
+  workspace$memberships$fingerprint <- NULL
+  S4Vectors::metadata(sce)$gatelab_workspace <- workspace
+  expect_identical(dim(gatelabPopulations(sce)), c(3L, 3L))
 })
 
 test_that("a malformed memberships payload is refused before anything is stored", {

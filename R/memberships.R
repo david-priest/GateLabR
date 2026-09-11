@@ -38,6 +38,18 @@
   paste(labels, collapse = if (identical(gate_logic, "or")) " or " else " and ")
 }
 
+# What the bitsets are positional against: the column names in order, and the sample partition
+# they were packed per sample with. A column count alone let an object with the same number of
+# events in a different order, or partitioned into different samples, read the wrong events as
+# members; the stored digests make the read refuse it, as the documentation always promised.
+.gatelabr_membership_fingerprint <- function(sce, partition) {
+  list(
+    sample_column = partition$column,
+    columns = digest::digest(colnames(sce), algo = "xxhash64"),
+    partition = digest::digest(partition$event_indices, algo = "xxhash64")
+  )
+}
+
 # Validate the payload an explicit save carries and pack it against this SCE's sample layout.
 .gatelabr_pack_host_memberships <- function(
     sce,
@@ -156,6 +168,7 @@
     revision = as.integer(revision),
     saved_at = saved_at,
     event_count = ncol(sce),
+    fingerprint = .gatelabr_membership_fingerprint(sce, partition),
     hierarchies = hierarchies,
     populations = populations,
     masks = masks
@@ -197,6 +210,29 @@
       "Press \"Save to SCE\" in GateLabR on this object.",
       call. = FALSE
     )
+  }
+  # Records written before the fingerprint existed carry none and keep the column-count check
+  # alone; a record that has one must match the object's event order and sample partition.
+  saved <- record$fingerprint
+  if (is.list(saved)) {
+    now <- tryCatch(
+      .gatelabr_membership_fingerprint(
+        sce,
+        .gatelabr_sample_partition(sce, saved$sample_column, include_metadata = FALSE)
+      ),
+      error = function(e) NULL
+    )
+    if (is.null(now) || !identical(now$columns, saved$columns) ||
+        !identical(now$partition, saved$partition)) {
+      stop(
+        "The stored population memberships were saved on an object whose events were in a ",
+        "different order or belonged to different samples: this SCE has the same number of ",
+        "columns, but its column names or its sample partition are not those the memberships ",
+        "were packed against (subsetting or reordering an SCE does not carry them). ",
+        "Press \"Save to SCE\" in GateLabR on this object.",
+        call. = FALSE
+      )
+    }
   }
   current <- .gatelabr_canonical_workspace_record(sce)
   current_revision <- if (is.null(current)) 0L else current$revision
