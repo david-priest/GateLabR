@@ -1945,7 +1945,8 @@
     # switch re-runs this function for the newly chosen one.
     availableDatasets = .gatelabr_sce_catalogue(
       catalogue_env,
-      active_name = if (is.null(active_name)) label else active_name
+      active_name = if (is.null(active_name)) label else active_name,
+      sample_column = sample_column
     ),
     resources = resources,
     workspace = .gatelabr_host_workspace_envelope(

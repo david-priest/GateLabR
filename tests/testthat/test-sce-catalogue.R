@@ -1,3 +1,52 @@
+test_that("the catalogue marks what cannot be switched to, and why", {
+  skip_if_not_installed("SingleCellExperiment")
+  env <- new.env(parent = emptyenv())
+  m <- matrix(seq_len(12), nrow = 3, dimnames = list(c("CD3", "CD4", "CD8"), NULL))
+  env$fine <- SingleCellExperiment::SingleCellExperiment(
+    list(counts = m),
+    colData = S4Vectors::DataFrame(sample_id = c("D1", "D1", "D2", "D2"))
+  )
+  env$no_assays <- SingleCellExperiment::SingleCellExperiment()
+  env$no_sample <- SingleCellExperiment::SingleCellExperiment(list(counts = m))
+
+  cat_ <- .gatelabr_sce_catalogue(env, active_name = "fine", sample_column = "sample_id")
+  by_id <- stats::setNames(cat_, vapply(cat_, function(e) e$id, character(1)))
+  expect_true(by_id$fine$loadable)
+  expect_null(by_id$fine$problem)
+  expect_false(by_id$no_assays$loadable)
+  expect_identical(by_id$no_assays$problem, "no assays")
+  expect_false(by_id$no_sample$loadable)
+  expect_identical(by_id$no_sample$problem, "no colData column 'sample_id'")
+  # Without a sample column the same object is fine: the partition falls back to one sample.
+  expect_true(.gatelabr_sce_catalogue(env, active_name = "fine")[[3]]$loadable)
+})
+
+test_that("a workspace saved in the older plain-JSON form still counts as a workspace", {
+  skip_if_not_installed("SingleCellExperiment")
+  env <- new.env(parent = emptyenv())
+  m <- matrix(seq_len(12), nrow = 3, dimnames = list(c("CD3", "CD4", "CD8"), NULL))
+  env$legacy <- SingleCellExperiment::SingleCellExperiment(list(counts = m))
+  S4Vectors::metadata(env$legacy)$gatelab_workspace <- '{"format":"gatelab-workspace","version":2}'
+  env$canonical <- SingleCellExperiment::SingleCellExperiment(list(counts = m))
+  S4Vectors::metadata(env$canonical)$gatelab_workspace <- list(
+    format = "gatelab-sce-workspace", version = 1L, revision = 2L,
+    workspace_json = '{"format":"gatelab-workspace","version":2}'
+  )
+  env$none <- SingleCellExperiment::SingleCellExperiment(list(counts = m))
+
+  cat_ <- .gatelabr_sce_catalogue(env, active_name = "none")
+  by_id <- stats::setNames(cat_, vapply(cat_, function(e) e$id, character(1)))
+  expect_true(by_id$legacy$hasWorkspace)
+  expect_true(by_id$canonical$hasWorkspace)
+  expect_false(by_id$none$hasWorkspace)
+})
+
+test_that("a dataset id is derived from the object's name, one per object", {
+  expect_identical(.gatelabr_dataset_id_for("sce_np4"), "sce-sce_np4")
+  expect_identical(.gatelabr_dataset_id_for("my sce (v2)"), "sce-my-sce--v2-")
+  expect_false(identical(.gatelabr_dataset_id_for("a"), .gatelabr_dataset_id_for("b")))
+})
+
 test_that("only SingleCellExperiments in the environment are listed", {
   skip_if_not_installed("SingleCellExperiment")
   env <- new.env(parent = emptyenv())

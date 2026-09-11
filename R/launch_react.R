@@ -89,16 +89,17 @@ launchReactGateLab <- function(
   shiny::addResourcePath(prefix, assets)
   on.exit(shiny::removeResourcePath(prefix), add = TRUE)
 
-  dataset_id <- paste0(
-    "sce-",
-    substr(gsub("[^A-Za-z0-9_-]", "-", sce_name), 1L, 48L)
-  )
+  dataset_id <- .gatelabr_dataset_id_for(sce_name)
   ui <- .gatelabr_react_ui(prefix)
   # This state belongs to the running app, not to an individual browser
   # connection. A page reload creates a new Shiny session; keeping the state
   # outside the session closure ensures that saved workspace/colData changes
   # are served back to the reconnecting browser.
   sce_state <- shiny::reactiveVal(sce)
+  # The name the loaded object has in the global environment, which every write goes back to.
+  # It changes when the session switches to another object, so it lives beside sce_state rather
+  # than in the session closure: a reload after a switch must still write to the switched name.
+  active_name <- shiny::reactiveVal(sce_name)
   compensation_backend <- .gatelabr_start_compensation_backend()
   on.exit(
     .gatelabr_stop_compensation_backend(compensation_backend),
@@ -108,7 +109,8 @@ launchReactGateLab <- function(
     sce_state = sce_state,
     sce_name = sce_name,
     dataset_id = dataset_id,
-    sample_column = sample_column
+    sample_column = sample_column,
+    active_name = active_name
   )
 
   message(
@@ -123,15 +125,33 @@ launchReactGateLab <- function(
   )
 }
 
+# The dataset id the host contract carries for an object of this name. One per object: a switch
+# gives the browser a new id, so its resource URLs, workspace record and compensation requests
+# cannot be mistaken for the previous object's.
+.gatelabr_dataset_id_for <- function(sce_name) {
+  paste0(
+    "sce-",
+    substr(gsub("[^A-Za-z0-9_-]", "-", sce_name), 1L, 48L)
+  )
+}
+
 .gatelabr_react_server <- function(
     sce_state,
     sce_name,
     dataset_id,
-    sample_column = NULL) {
+    sample_column = NULL,
+    active_name = NULL) {
   force(sce_state)
   force(sce_name)
   force(dataset_id)
   force(sample_column)
+  # Which object is loaded, by its name in the global environment. Shared by every session of
+  # the app, like sce_state, because a switch outlives the browser tab that asked for it.
+  if (is.null(active_name)) active_name <- shiny::reactiveVal(sce_name)
+  # The launch object keeps the id it was launched with; any other object gets its own.
+  current_dataset_id <- function() {
+    if (identical(active_name(), sce_name)) dataset_id else .gatelabr_dataset_id_for(active_name())
+  }
   compensation_jobs <- .gatelabr_new_host_compensation_jobs()
 
   function(input, output, session) {
@@ -144,18 +164,15 @@ launchReactGateLab <- function(
         )
       }
     })
-    # Which object the picker should show as active. It changes on a switch, so it cannot be
-    # the launch-time sce_name.
-    active_name <- shiny::reactiveVal(sce_name)
 
-    send_manifest <- function() {
+    send_manifest <- function(sce = sce_state(), name = active_name()) {
       .gatelabr_register_host_manifest(
         session,
-        sce_state(),
-        dataset_id = dataset_id,
-        label = active_name(),
+        sce,
+        dataset_id = if (identical(name, sce_name)) dataset_id else .gatelabr_dataset_id_for(name),
+        label = name,
         sample_column = sample_column,
-        active_name = active_name()
+        active_name = name
       )
     }
 
@@ -179,23 +196,38 @@ launchReactGateLab <- function(
       # request carries an acknowledgement and is refused without it, which turns a silent
       # loss into an error.
       if (is.list(request) && identical(request$operation, "activate-dataset")) {
-        result <- tryCatch({
+        response <- tryCatch({
           payload <- request$payload
           if (!is.list(payload) || !isTRUE(payload$workspaceSaved)) {
             stop("Refusing to switch before the current workspace has been saved.",
                  call. = FALSE)
           }
+          # A running Apply commits its matrix into whatever object is loaded when it finishes;
+          # switching underneath it would write one object's compensation into another.
+          if (!is.null(compensation_jobs$active)) {
+            stop("A compensation Apply is running. Wait for it to finish, or cancel it, before switching.",
+                 call. = FALSE)
+          }
           name <- payload$datasetId
           replacement <- .gatelabr_sce_by_name(name, globalenv())
+          # The manifest first, the swap after: building it is what can fail (an object the
+          # descriptor refuses, a sample column it lacks), and a failure must leave the session
+          # on the object it had.
+          send_manifest(replacement, name)
           sce_state(replacement)
           active_name(name)
-          send_manifest()
-          list(ok = TRUE, datasetId = name)
-        }, error = function(e) list(ok = FALSE, error = conditionMessage(e)))
-        session$sendCustomMessage(
-          "gatelabr-host-response",
-          list(requestId = request_id, operation = "activate-dataset", result = result)
-        )
+          message(
+            "GateLabR switched to `", name, "`: gates, populations and colData now save back to it."
+          )
+          note <- tryCatch(.gatelabr_precompensation_note(replacement), error = function(e) NULL)
+          if (!is.null(note)) message(note)
+          list(
+            requestId = request_id,
+            ok = TRUE,
+            result = list(datasetId = name, precompensationNote = note)
+          )
+        }, error = function(e) list(requestId = request_id, ok = FALSE, error = conditionMessage(e)))
+        session$sendCustomMessage("gatelabr-host-response", response)
         return(invisible(NULL))
       }
       if (is.list(request) &&
@@ -215,7 +247,7 @@ launchReactGateLab <- function(
           {
             if (!is.character(request_id) || length(request_id) != 1L ||
                 !nzchar(request_id) || !is.list(request$payload) ||
-                !identical(request$payload$datasetId, dataset_id)) {
+                !identical(request$payload$datasetId, current_dataset_id())) {
               stop(
                 "GateLab supplied a malformed host compensation request.",
                 call. = FALSE
@@ -250,9 +282,9 @@ launchReactGateLab <- function(
           .gatelabr_start_host_compensation_job(
             compensation_jobs,
             sce_state,
-            sce_name,
+            active_name(),
             request,
-            dataset_id,
+            current_dataset_id(),
             sample_column,
             session
           )
@@ -264,12 +296,14 @@ launchReactGateLab <- function(
           handled <- .gatelabr_handle_host_request(
             sce_state(),
             request,
-            dataset_id = dataset_id,
+            dataset_id = current_dataset_id(),
             sample_column = sample_column,
             session = session
           )
           sce_state(handled$sce)
-          assign(sce_name, handled$sce, envir = .GlobalEnv)
+          # Written back under the name of the object that is loaded NOW, not the one the app
+          # was launched with: after a switch the launch name is a different object.
+          assign(active_name(), handled$sce, envir = .GlobalEnv)
           list(
             requestId = request_id,
             ok = TRUE,
