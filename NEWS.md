@@ -1,3 +1,10 @@
+# GateLabR 1.4.8
+
+- The embedded GateLab core is 0.8.2 (GateLab-dev master at 6867e86), up from 0.7.7. The Layout tab arrives under the SCE host as in the browser app: a page editor where plots, gating-strategy strips, summary charts, Illustration figures and text are arranged on a page set in millimetres, drawn once per sample or per population in batch mode, titled by a template built from the object's `colData` columns with a chip builder, and exported as PDF, SVG or PNG. The Illustration tab sends a panel, a row, a column or a selection across with its arrangement and its headings.
+- The Gating tab gained the tools for gates that share a border: a vertex snaps to other gates and to the plot's edges, Close gaps puts the facing edges of neighbouring gates on one line, Extend to edges puts a gate's outward sides on the axis limits or the nearest gate, a right-click on a polygon's vertex or edge deletes or adds a vertex, Shift while dragging a vertex holds its edge horizontal, vertical or at 45 degrees, and undo and redo sit beside the draw tools. A gate label moved on any tab is moved on every tab.
+- Groups can be made from a metadata column, which under the SCE host is a `colData` column constant within each sample. Revert workspace, which the browser app offers from its local checkpoints, is not offered under the R host, where the object is the workspace and Save to SCE is the record.
+- The sync tool skips every path under GateLab's `public/` folder, subfolders included, so browser-check data staged there is never copied into the package.
+
 # GateLabR 1.4.7
 
 - The embedded GateLab core is 0.7.7 (GateLab master at 7b99de0), up from the 0.7.6 build. The change that matters for an SCE is that samples can now be selected by their `colData`. GateLabR already collapsed every column constant within a sample and sent one value per sample; the samples panel now draws those as a row of value chips per column, so a sixty-sample object is picked over by donor, condition or batch rather than by hunting through sixty checkboxes.
