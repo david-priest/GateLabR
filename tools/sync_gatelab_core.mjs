@@ -176,14 +176,12 @@ mkdirSync(dirname(staging), { recursive: true });
 // unverifiable on any other clone.
 //
 // Excluded on the path RELATIVE to the build root, not on basename, so nested build output such
-// as assets/compensation.worker-*.js — which the bundle genuinely loads — is untouched.
+// as assets/compensation.worker-*.js — which the bundle genuinely loads — is untouched. The walk
+// covers subfolders of publicDir too: browser-check data staged under public/<check>/ is copied
+// by Vite at the same relative path, and a top-level listing let three such folders through.
 const publicDir = join(options.source, "public");
 const passthrough = existsSync(publicDir)
-  ? new Set(
-      readdirSync(publicDir, { withFileTypes: true })
-        .filter((entry) => entry.isFile())
-        .map((entry) => entry.name),
-    )
+  ? new Set(artifactFiles(publicDir))
   : new Set();
 const excluded = [];
 cpSync(buildDir, staging, {
@@ -192,6 +190,9 @@ cpSync(buildDir, staging, {
   force: false,
   filter: (src) => {
     const rel = relative(buildDir, src).split(sep).join("/");
+    // A folder that exists under publicDir is a staged check folder: skip it whole, or the copy
+    // leaves it behind empty.
+    if (rel && statSync(src).isDirectory()) return !existsSync(join(publicDir, rel));
     if (!passthrough.has(rel)) return true;
     excluded.push(rel);
     return false;
