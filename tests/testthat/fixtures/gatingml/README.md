@@ -44,6 +44,7 @@ The second run writes six `-0.8.3` files, of which the two Cytobank-format ones 
 | `flowkit-not-or.xml` | A `gating:not`, a `gating:or` and a `use-as-complement` reference. |
 | `flowkit-cytof.xml` | Gates on mass cytometry channels in raw values (no transformation), under arcsinh(x / 5), under an arcsinh of another cofactor, and on Time. |
 | `flowkit-raw-channels.xml`, `flowkit-raw-channels-cytof.xml` | Gates on Time and Event_length, which GateLabR keeps in raw values, under `flin`, arcsinh (A other than 0) and logicle: rectangles, and polygons with slanted edges against a fluorescence or mass channel. |
+| `flowkit-far-vertex-cytof.xml`, `flowkit-far-vertex.xml` | Polygons far larger than the data: thin wedges in raw values out to a vertex at 1e7 on mass cytometry channels, and a logicle polygon reaching past the top of scale on flow data. |
 
 To regenerate, run from the root of this repository with a Python that has FlowKit (FlowKit 1.3.1 wrote these):
 

@@ -155,6 +155,28 @@ test_that("polygons with slanted edges on a logicle or arcsinh axis select the e
   expect_false(identical(straight, as.integer(unlist(gml_flowkit("slanted")[["/Slant_logicle"]]))))
 })
 
+test_that("a polygon with a vertex far beyond the data is followed as finely where the data are", {
+  # The slanted edges were followed to a fraction of the polygon's extent in the declared space
+  # only. A raw-value wedge out to 1e7 on mass cytometry data has an extent of 1e7 raw units, so
+  # near zero, where the data's arcsinh bends most, its edges were followed in chords about 10 raw
+  # units long, and 13 events were placed differently from FlowKit at cofactor 5, in a population
+  # of 42.
+  events <- as.matrix(utils::read.csv(gml_fixture("cytof-events.csv"), check.names = FALSE))
+  storage.mode(events) <- "double"
+  channels <- colnames(events)
+  for (cofactor in c(5, 15)) {
+    data <- transform_matrix_by_instrument(events, channels, "cytof", cofactor = cofactor)
+    parsed <- import_gatingml_from_cytobank(gml_fixture("flowkit-far-vertex-cytof.xml"), channels,
+                                            stats::setNames(as.list(channels), channels),
+                                            instrument = "cytof", cytof_cofactor = cofactor)
+    gml_expect_membership(gml_membership(parsed, data), gml_flowkit("far-vertex-cytof"))
+  }
+  # On flow data the declared logicle axis is the compressed one, and a polygon reaching past the
+  # top of scale is followed there.
+  parsed <- gml_import(gml_fixture("flowkit-far-vertex.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("far-vertex"))
+})
+
 test_that("a polygon GateLabR cannot follow on its axes is refused by name", {
   # A vertex beyond what its transformation can invert.
   beyond <- gml_variant("flowkit-slanted.xml", function(lines) {

@@ -249,5 +249,24 @@ gs.add_gate(G.PolygonGate("Length_by_Nd142", [dim("Event_length", "Asinh_A03"), 
 gs.add_gate(G.RectangleGate("Time_logicle", [dim("Time", "Time_logicle", lo=cut(tc, 0.1), hi=cut(tc, 0.6))]), ("root",))
 write("raw-channels-cytof", gs, cytof, [("Length_flin", ()), ("Length_by_Nd142", ()), ("Time_logicle", ())])
 
+# Polygons far larger than the data. On mass cytometry data held as arcsinh, thin wedges in raw
+# values from near zero out to a vertex at 1e7, whose long edges cross the dense range near zero,
+# where arcsinh bends most; on flow data, a logicle polygon reaching past the top of scale.
+gs = fk.GatingStrategy()
+gs.add_gate(G.PolygonGate("Far_wedge", [dim("Ce140Di"), dim("Nd142Di")], [
+    [0.5, 0.2], [1e7, 2.1e7], [0.2, 3.0],
+]), ("root",))
+gs.add_gate(G.PolygonGate("Far_wedge_flat", [dim("Sm147Di"), dim("Ce140Di")], [
+    [0.3, 0.1], [2e7, 1.1e7], [0.1, 2.0],
+]), ("root",))
+write("far-vertex-cytof", gs, cytof, [("Far_wedge", ()), ("Far_wedge_flat", ())])
+
+gs = fk.GatingStrategy()
+gs.add_transform("Logicle", logicle)
+gs.add_gate(G.PolygonGate("Far_logicle", [dim("FL1-A", "Logicle"), dim("FL2-A", "Logicle")], [
+    [0.05, 0.1], [1.6, 1.9], [0.08, 0.5],
+]), ("root",))
+write("far-vertex", gs, flow, [("Far_logicle", ())])
+
 with open(out_dir / "flowkit-membership.json", "w") as fh:
     json.dump(membership, fh, separators=(",", ":"))

@@ -1076,12 +1076,17 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 }
 
 # How finely a polygon's slanted edges are followed when an axis is curved (.gml_polygon_vertices):
-# the largest distance, as a fraction of the polygon's extent on each axis, between the declared
-# straight edge and GateLabR's stored edge mapped back into the declared space. Measured on the 40
-# polygons with slanted edges on logicle or arcsinh axes in GateLab's exports over four public flow
-# files and in the public PBMC library export (15,000 to 121,000 events), against an exact
-# evaluation of each declared polygon on its own axes: 15 events differed at 1e-5, 3 at 1e-6 and
-# none at 1e-7 or 1e-8, with 326, 1,038, 3,178 and 10,352 vertices per polygon on average.
+# the largest distance between the declared straight edge and GateLabR's stored edge, measured both
+# in the declared space, as a fraction of the polygon's extent there on each axis, and in the
+# stored values, as a fraction of its extent there. One of the two spaces is compressed (logicle
+# or arcsinh) and the other is not, and a vertex far beyond the data stretches the polygon's
+# extent in the uncompressed one, where a fraction of it can be wide on the data's scale: a raw
+# wedge out to 1e7 on mass cytometry data, measured in raw values only, was followed in chords
+# about 10 raw units long where arcsinh(x / 5) bends. Measured on the 40 polygons with slanted
+# edges on logicle or arcsinh axes in GateLab's exports over four public flow files and in its
+# example strategy for the public 17-colour PBMC demo (15,000 to 121,000 events), against an exact
+# evaluation of each declared polygon on its own axes, in the declared space alone: 15 events
+# differed at 1e-5, 3 at 1e-6 and none at 1e-7 or 1e-8.
 .GML_DENSIFY_TOLERANCE <- 1e-7
 # The most vertices a polygon may have after densifying; a polygon that needs more is refused.
 .GML_DENSIFY_MAX_VERTICES <- 200000L
@@ -1090,10 +1095,12 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # (x1, y1) is split so that GateLabR's straight pieces between the stored images of those points
 # stay within `tolerance` of the declared edge. Starting from the whole edge, pieces are halved
 # until every chord, mapped back into the declared space at each eighth of its length, is within
-# the tolerance, so a short edge on a gently curved stretch stays one piece. NULL when that takes
-# more than `max_pieces`, or when a point cannot be mapped.
+# the tolerance of the declared edge as a fraction of span_x and span_y, and the declared edge,
+# mapped into stored values at each eighth of the piece, is within the tolerance of the chord as a
+# fraction of stored_span_x and stored_span_y; so a short edge on a gently curved stretch stays one
+# piece. NULL when that takes more than `max_pieces`, or when a point cannot be mapped.
 .gml_edge_params <- function(x0, y0, x1, y1, map_x, map_y, span_x, span_y,
-                             tolerance, max_pieces) {
+                             stored_span_x, stored_span_y, tolerance, max_pieces) {
   ex <- (x1 - x0) / span_x
   ey <- (y1 - y0) / span_y
   norm <- sqrt(ex * ex + ey * ey)
@@ -1108,6 +1115,19 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       qx <- map_x$forward(sx[-(k + 1L)] + u * diff(sx))
       qy <- map_y$forward(sy[-(k + 1L)] + u * diff(sy))
       d <- abs(ex * (qy - y0) / span_y - ey * (qx - x0) / span_x) / norm
+      d[!is.finite(d)] <- Inf
+      deviation <- pmax(deviation, d)
+    }
+    # The same distance in stored values: the declared edge's points against each chord.
+    cx <- diff(sx) / stored_span_x
+    cy <- diff(sy) / stored_span_y
+    chord <- sqrt(cx * cx + cy * cy)
+    start <- t[-(k + 1L)]
+    for (u in (1:7) / 8) {
+      at <- start + u * diff(t)
+      px <- (map_x$inverse(x0 + at * (x1 - x0)) - sx[-(k + 1L)]) / stored_span_x
+      py <- (map_y$inverse(y0 + at * (y1 - y0)) - sy[-(k + 1L)]) / stored_span_y
+      d <- abs(cx * py - cy * px) / chord
       d[!is.finite(d)] <- Inf
       deviation <- pmax(deviation, d)
     }
@@ -1149,6 +1169,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   if (densify && curved) {
     span_x <- diff(range(xs))
     span_y <- diff(range(ys))
+    stored_span_x <- diff(range(map_x$inverse(xs)))
+    stored_span_y <- diff(range(map_y$inverse(ys)))
     px <- numeric(0)
     py <- numeric(0)
     for (i in seq_len(n)) {
@@ -1156,7 +1178,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       t <- 0
       if (xs[j] != xs[i] && ys[j] != ys[i]) {
         t <- .gml_edge_params(xs[i], ys[i], xs[j], ys[j], map_x, map_y, span_x, span_y,
-                              tolerance, max_vertices - length(px))
+                              stored_span_x, stored_span_y, tolerance, max_vertices - length(px))
         if (is.null(t)) {
           return(list(vertices = NULL, problem = paste0(
             "an edge cannot be followed on its declared axes within ", max_vertices, " vertices"
