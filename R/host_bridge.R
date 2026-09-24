@@ -944,6 +944,12 @@
     } else {
       normalized$vertices <- .gatelabr_json_vertices(gate$vertices, gate_id)
     }
+    # The space a gate's numbers live in, and the transforms it was drawn under, are part of the
+    # gate. Without them the core, reloading this mirror when the canonical record is gone, reads
+    # the gate in the workspace default below (raw values for flow): an ellipse, any gate drawn in
+    # display space and every FlowJo biex or log gate would select other events.
+    if (!is.null(gate$space)) normalized$space <- as.character(gate$space)
+    if (!is.null(gate$transforms)) normalized$transforms <- gate$transforms
     normalized
   })
   names(normalized_gates) <- gate_ids

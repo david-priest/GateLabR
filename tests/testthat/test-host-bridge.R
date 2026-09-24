@@ -801,6 +801,66 @@ test_that("the mirrored ellipse carries a boundary anything reading vertices can
   expect_equal(quadratic, rep(1, 64L), tolerance = 1e-9)
 })
 
+test_that("the legacy mirror keeps each gate's space and transforms", {
+  # An ellipse is always stored in display space, as is any gate drawn in display space and every
+  # FlowJo biex or log gate. The mirror dropped `space` and `transforms` and declared the whole
+  # workspace raw for a flow object, so a host reloading the mirror (no canonical record, e.g. the
+  # mirror copied onto a rebuilt SCE) read display-space coordinates as raw values.
+  sce <- make_host_bridge_sce()
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  S4Vectors::metadata(sce)$instrument_type_source <- "user"
+  workspace_json <- sub(
+    '"label_offset":null}}',
+    paste0(
+      '"label_offset":null,"space":"display","transforms":{',
+      '"CD3":{"kind":"logicle","T":262144,"W":0.5,"M":4.5,"A":0},',
+      '"CD19":{"kind":"asinh","cofactor":150}}}}'
+    ),
+    ellipse_host_workspace_json(),
+    fixed = TRUE
+  )
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = workspace_json
+  )
+  mirror <- S4Vectors::metadata(written$sce)$gating_workspace
+  expect_identical(mirror$gate_value_space, "raw")
+  expect_identical(mirror$gates[["gate-1"]]$space, "display")
+  expect_equal(
+    mirror$gates[["gate-1"]]$transforms,
+    list(
+      CD3 = list(kind = "logicle", T = 262144, W = 0.5, M = 4.5, A = 0),
+      CD19 = list(kind = "asinh", cofactor = 150)
+    )
+  )
+
+  # The host reads the mirror only when the canonical record is gone; the gate must arrive with
+  # its space, which the core's legacy reader honours per gate.
+  bare <- written$sce
+  S4Vectors::metadata(bare)$gatelab_workspace <- NULL
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(bare, dataset_id = "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelabr-legacy")
+  sent <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)$gates[["gate-1"]]
+  expect_identical(sent$space, "display")
+  expect_identical(sent$transforms$CD3$kind, "logicle")
+  expect_equal(sent$transforms$CD19$cofactor, 150)
+
+  # A gate that never had a space keeps none, and the workspace default still applies to it.
+  plain <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = canonical_host_workspace_json()
+  )
+  expect_null(S4Vectors::metadata(plain$sce)$gating_workspace$gates[["gate-1"]]$space)
+})
+
 test_that("a revision conflict carries the data a browser needs to resync", {
   # The browser learns the stored revision only from a successful write, so a write whose reply
   # is lost leaves it behind for good. Reported live as "expected revision 14 but the SCE is at

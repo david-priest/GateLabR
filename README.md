@@ -224,8 +224,7 @@ metadata(sce)$gatelab_palettes
 #> optional: a named colour vector per colData column, used by "Colour by"
 ```
 
-The established `metadata(sce)$gating_workspace` mirror remains available for
-compatibility with the previous GateLabR interface.
+The established `metadata(sce)$gating_workspace` mirror remains available for compatibility with the previous GateLabR interface. It carries each gate's coordinate space and transforms, and GateLabR reads it only when the canonical record above is absent.
 
 ## File formats supported
 
