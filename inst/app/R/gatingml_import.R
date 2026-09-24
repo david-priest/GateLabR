@@ -1843,6 +1843,11 @@ import_gatingml_from_cytobank <- function(file_path,
         my_prim <- bool_prim[[bid]] %||% character(0)
         parent_prim <- if (!is.null(parent_bid)) bool_prim[[parent_bid]] %||% character(0) else character(0)
         incr <- setdiff(my_prim, parent_prim)
+        # A population whose gates are all in its parent's chain (one that gates on its parent's
+        # gate again, say) selects exactly its parent's events. It keeps its own gates, which
+        # those events all pass, and its place in the tree; one with no gates of its own takes
+        # its parent's events. Dropping it left its children under an entry that was never made.
+        if (length(incr) == 0L) incr <- my_prim
 
         refs <- list()
         include_map <- bool_include[[bid]] %||% list()
@@ -1852,7 +1857,6 @@ import_gatingml_from_cytobank <- function(file_path,
           if (is.null(app_id) || identical(app_id, rid)) next
           refs[[length(refs) + 1L]] <- new_gate_ref(app_id, include = isTRUE(include_map[[rid]]))
         }
-        if (length(refs) == 0) next
 
         pop_name <- bool_names[[bid]] %||% "Population"
         pop <- list(

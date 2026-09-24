@@ -102,6 +102,21 @@ test_that("GateLab's Cytobank format places populations by the tree in its mark"
   expect_true(any(grepl("/Both_positive$", untreed_paths)))
 })
 
+test_that("a population whose gates are all in its parent's chain keeps its place and its subtree", {
+  # Cells_again gates on Cells's gate again and FL1_again on FL1_positive's, so in the Cytobank
+  # format each one's chain is its parent's.
+  expected <- gml_expected()$populations$repeated
+  for (name in c("repeated-standard.xml", "repeated-cytobank.xml")) {
+    parsed <- gml_import(gml_fixture(name))
+    gml_expect_membership(gml_membership(parsed), expected)
+    # Every entry is a named population reachable from the root, and nothing else.
+    expect_length(parsed$populations, length(expected) + 1L)
+    expect_true(all(vapply(parsed$populations, function(pop) {
+      is.character(pop$name) && length(pop$name) == 1L && nzchar(pop$name)
+    }, logical(1))), info = name)
+  }
+})
+
 test_that("flow fluorescence gates under arcsinh are inverted only when the caller says the data are flow", {
   # Cytobank has no logicle, so GateLab's Cytobank format writes flow fluorescence gates under
   # arcsinh. Without instrument = "flow" the importer inverts scatter only, as it always did,
