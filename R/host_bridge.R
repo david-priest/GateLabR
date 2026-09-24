@@ -1249,6 +1249,14 @@
     tz = "UTC"
   )
   md <- S4Vectors::metadata(sce)
+  # cbind() keeps every object's metadata, so a combined object can hold several records under
+  # each name, and `$` reaches only the first. The records written below are this object's; the
+  # others describe objects it no longer is. Left in place, a second memberships record kept a
+  # combined object refused even after the save the refusal asks for (memberships.R).
+  for (name in c("gatelab_workspace", "gating_workspace")) {
+    extra <- which(names(md) == name)[-1L]
+    if (length(extra) > 0L) md <- md[-extra]
+  }
   # Memberships arrive with an explicit save and stay with the record through every autosave
   # after it, which carries geometry only. Their own revision says which workspace they belong to.
   previous <- md$gatelab_workspace

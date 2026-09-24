@@ -296,6 +296,67 @@ test_that("cbind maps events of the saved object and refuses events from anywher
   expect_error(gatelabPopulations(combined), "3 of this SCE's 6 events are not among")
 })
 
+# The payload the browser sends for an object whose events are copies of the fixture's: `source`
+# names, for each event, the fixture event (1 to 3) it is, and the event keeps that one's
+# memberships.
+payload_for <- function(sce, source) {
+  partition <- GateLabR:::.gatelabr_sample_partition(sce, include_metadata = FALSE)
+  masks <- function(bits) lapply(seq_along(partition$samples), function(index) {
+    rows <- partition$event_indices[[index]]
+    list(
+      sampleId = partition$samples[[index]]$id,
+      eventCount = length(rows),
+      membershipBitsBase64 = base64enc::base64encode(GateLabR:::.gatelabr_pack_bits(bits[source][rows]))
+    )
+  })
+  fixture_bits <- list(
+    c(TRUE, TRUE, TRUE), saved_cd3, c(FALSE, FALSE, TRUE), c(TRUE, TRUE, TRUE), c(FALSE, TRUE, FALSE)
+  )
+  payload <- memberships_payload()
+  for (index in seq_along(payload$populations)) {
+    payload$populations[[index]]$sampleMasks <- masks(fixture_bits[[index]])
+  }
+  payload
+}
+
+test_that("Save to SCE on a combined object replaces the records cbind() brought with it", {
+  local_mocked_bindings(
+    .gatelabr_event_id_offset = local({
+      offsets <- c(1000, 5000, 9000)
+      calls <- 0L
+      function(...) {
+        calls <<- calls + 1L
+        offsets[[calls]]
+      }
+    }),
+    .package = "GateLabR"
+  )
+  cbind <- SingleCellExperiment::cbind
+  combined <- cbind(store_with_memberships()$sce, store_with_memberships()$sce)
+  expect_error(gatelabPopulations(combined), "saved separately")
+  # The refusal asks for "Save to SCE" on the combined object. That save rewrote only the first
+  # of the two records cbind() kept, so the second still stood and the refusal never cleared.
+  resaved <- GateLabR:::.gatelabr_store_host_workspace(
+    combined,
+    dataset_id = "test-sce",
+    expected_revision = 1L,
+    client_revision = 4L,
+    reason = "explicit",
+    workspace_json = memberships_workspace_json(),
+    memberships = payload_for(combined, rep(1:3, 2L))
+  )$sce
+  md <- S4Vectors::metadata(resaved)
+  expect_identical(sum(names(md) == "gatelab_workspace"), 1L)
+  expect_identical(sum(names(md) == "gating_workspace"), 1L)
+  expect_identical(resaved$gatelab_event_id, 9000 + 1:6)
+  expect_identical(unname(gatelabPopulations(resaved)[, "CD3+"]), rep(saved_cd3, 2L))
+  order <- c(6L, 1L, 4L, 3L, 5L, 2L)
+  expect_identical(
+    as.character(gatelabLeafPopulation(resaved[, order])),
+    rep(saved_leaf, 2L)[order]
+  )
+})
+
 test_that("an explicit save writes the event ids without touching the random number stream", {
   set.seed(20260924)
   seed_before <- .Random.seed
