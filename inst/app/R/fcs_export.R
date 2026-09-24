@@ -213,8 +213,10 @@ export_population_as_fcs <- function(sce,
   n <- ncol(mat)
   # The range column is not what reaches the file. flowCore::flowFrame() replaces it with
   # ceiling(max) + 1 per channel, and write.FCS writes that as $PnR, so values above 2^18 are
-  # declared in range and survive read.FCS at its default truncate_max_range = TRUE. Setting $PnR
-  # through the description instead would make 2^18 the written range and clip them.
+  # declared in range and survive read.FCS at its default truncate_max_range = TRUE. A $PnR of
+  # 2^18 forced through the keywords is written as such but still reads back unclipped, because
+  # this frame carries flowCore's `transformation = "applied"` keyword; with flowCore 2.16.0 the
+  # values were clipped at 2^18 only once that keyword was gone as well.
   params_df <- data.frame(
     name     = channel_names,
     desc     = channel_desc,
