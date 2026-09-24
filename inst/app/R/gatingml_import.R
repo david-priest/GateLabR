@@ -44,6 +44,89 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   "generic"
 }
 
+# Whether a file without a gatelab_format mark was written by GateLab or GateLabR. Any one of
+# three things marks it, and no other tool writes any of them: the root custom_info's
+# cytobank/about text "Gating-ML 2.0 export from GateLab (...)" or "... from GateLabR (...)",
+# which every GateLab and GateLabR export carries; a root custom_info gatelabr_scales element;
+# or a GatingHierarchy element, which is not a Gating-ML 2.0 element and which GateLabR, and
+# GateLab until 2026-09, write for the standard format. GateLab applies the same rule.
+.gml_written_by_gatelab <- function(root) {
+  ci <- .gml_first_child_local(root, "custom_info")
+  if (!is.null(ci)) {
+    if (!is.null(.gml_first_child_local(ci, "gatelabr_scales"))) return(TRUE)
+    about <- .gml_first_child_local(.gml_first_child_local(ci, "cytobank") %||% ci, "about")
+    if (!is.null(about) &&
+        grepl("^\\s*Gating-ML 2\\.0 export from GateLab", xml2::xml_text(about))) {
+      return(TRUE)
+    }
+  }
+  any(vapply(xml2::xml_children(root), function(el) {
+    identical(.gml_local_name(el), "GatingHierarchy")
+  }, logical(1)))
+}
+
+# The tree a GateLab Cytobank-format file lists in its format mark: each population's BooleanGate
+# id with its parent's (NULL at the root). NULL unless every entry is an object with a non-empty
+# string id and a parent that is null or a non-empty string.
+.gml_parse_format_tree <- function(value) {
+  if (!is.list(value) || !is.null(names(value))) return(NULL)
+  out <- vector("list", length(value))
+  for (i in seq_along(value)) {
+    entry <- value[[i]]
+    if (!is.list(entry) || is.null(names(entry)) || !"parent" %in% names(entry)) return(NULL)
+    id <- entry[["id"]]
+    parent <- entry[["parent"]]
+    if (!is.character(id) || length(id) != 1L || is.na(id) || !nzchar(id)) return(NULL)
+    if (!is.null(parent) &&
+        (!is.character(parent) || length(parent) != 1L || is.na(parent) || !nzchar(parent))) {
+      return(NULL)
+    }
+    out[[i]] <- list(id = id, parent = parent)
+  }
+  out
+}
+
+# How a file asks to be read where Gating-ML alone leaves room, from the gatelab_format element
+# GateLab writes in the root custom_info (a JSON object; a malformed one reads as no mark).
+#
+# logicle_unit: whether logicle coordinates are on Gating-ML 2.0's own scale, where the top of
+# scale T maps to 1 (specification section 6.4.1). flowCore's logicleTransform, which GateLabR
+# inverts with, maps T to M instead: its value is the Gating-ML value times M. GateLabR, and
+# GateLab until 2026-09, wrote logicle coordinates on flowCore's scale. So a mark saying
+# "gating-ml" or "flowcore" decides; otherwise a file GateLab or GateLabR wrote is on flowCore's
+# scale and any other file is on the standard's.
+#
+# parent_id_hierarchy: GateLab's standard format, where every BooleanGate not marked
+# gatelab_operand is a population placed by its gating:parent_id.
+#
+# tree: GateLab's Cytobank format, whose BooleanGates each AND their whole ancestor chain; the
+# list gives each population's parent. NULL when absent or malformed.
+.gml_parse_gatelab_format <- function(root) {
+  ci <- .gml_first_child_local(root, "custom_info")
+  tag <- if (!is.null(ci)) .gml_first_child_local(ci, "gatelab_format") else NULL
+  parsed <- list()
+  if (!is.null(tag)) {
+    value <- tryCatch(
+      jsonlite::fromJSON(xml2::xml_text(tag), simplifyVector = FALSE),
+      error = function(e) NULL
+    )
+    if (is.list(value) && !is.null(names(value))) parsed <- value
+  }
+  logicle <- parsed[["logicle"]]
+  hierarchy <- parsed[["hierarchy"]]
+  list(
+    logicle_unit = if (identical(logicle, "gating-ml")) {
+      TRUE
+    } else if (identical(logicle, "flowcore")) {
+      FALSE
+    } else {
+      !.gml_written_by_gatelab(root)
+    },
+    parent_id_hierarchy = identical(hierarchy, "parent_id"),
+    tree = if (identical(hierarchy, "tree")) .gml_parse_format_tree(parsed[["tree"]]) else NULL
+  )
+}
+
 .gml_num <- function(x) {
   suppressWarnings(as.numeric(x))
 }
@@ -333,9 +416,113 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   dims
 }
 
-.gml_parse_compensation_refs <- function(raw_gates) {
+# Every Gating-ML 2.0 spectrumMatrix at the top level of the file (specification section 7), by
+# id. A matrix is n fluorochromes (rows) by m detectors (columns), and GateLabR compensates with a
+# square spillover matrix whose i-th fluorochrome is the i-th detector compensated, as GateLab and
+# FlowKit read one. An unmixing matrix, an incomplete one, or one marked as already inverted that
+# cannot be inverted back is recorded as a problem, which stops the import only when a dimension
+# references that matrix: GateLab's Cytobank format carries a matrix no dimension references.
+.gml_parse_spectrum_matrices <- function(root_node) {
+  out <- list()
+  for (el in xml2::xml_children(root_node)) {
+    if (!identical(.gml_local_name(el), "spectrumMatrix")) next
+    id <- .gml_attr_local(el, "id")
+    if (is.null(id) || !nzchar(id)) next
+    names_in <- function(group) {
+      g <- .gml_first_child_local(el, group)
+      if (is.null(g)) return(character(0))
+      vapply(as.list(.gml_children_local(g, "fcs-dimension")), function(d) {
+        .gml_attr_local(d, "name") %||% ""
+      }, character(1))
+    }
+    fluorochromes <- names_in("fluorochromes")
+    detectors <- names_in("detectors")
+    rows <- lapply(as.list(.gml_children_local(el, "spectrum")), function(row) {
+      vapply(as.list(.gml_children_local(row, "coefficient")), function(coef) {
+        value <- .gml_num(.gml_attr_local(coef, "value"))
+        if (length(value) == 1L) value else NA_real_
+      }, numeric(1))
+    })
+    label <- ""
+    ci <- .gml_first_child_local(el, "custom_info")
+    cb <- if (!is.null(ci)) .gml_first_child_local(ci, "cytobank") else NULL
+    label_node <- if (!is.null(cb)) .gml_first_child_local(cb, "cytobank_compensation_name") else NULL
+    if (!is.null(label_node)) label <- trimws(xml2::xml_text(label_node))
+
+    n <- length(detectors)
+    matrix <- NULL
+    problem <- NULL
+    if (any(!nzchar(detectors))) {
+      problem <- paste0("Spillover matrix ", id, " has an unnamed detector.")
+    } else if (length(fluorochromes) != n) {
+      problem <- paste0(
+        "Spillover matrix ", id, " unmixes ", length(fluorochromes), " fluorochromes from ",
+        n, " detectors; GateLabR compensates with a square spillover matrix only."
+      )
+    } else if (n < 2L || length(rows) != n ||
+               any(vapply(rows, function(r) length(r) != n || any(!is.finite(r)), logical(1)))) {
+      problem <- paste0(
+        "Spillover matrix ", id, " is not a complete ", n, " by ", n, " matrix of numbers."
+      )
+    } else {
+      matrix <- do.call(rbind, rows)
+      inverted <- tolower(trimws(.gml_attr_local(el, "matrix-inverted-already") %||% "false"))
+      if (identical(inverted, "true")) {
+        # The file gives the compensation matrix itself; GateLabR holds the spillover.
+        matrix <- tryCatch(solve(matrix), error = function(e) NULL)
+        if (is.null(matrix) || any(!is.finite(matrix))) {
+          matrix <- NULL
+          problem <- paste0(
+            "Spillover matrix ", id,
+            " is marked as already inverted but cannot be inverted back."
+          )
+        }
+      }
+      if (!is.null(matrix)) dimnames(matrix) <- list(detectors, detectors)
+    }
+    out[[id]] <- list(
+      id = id,
+      name = if (nzchar(label)) label else id,
+      detectors = detectors,
+      fluorochromes = fluorochromes,
+      matrix = matrix,
+      problem = problem
+    )
+  }
+  out
+}
+
+# Name each dimension compensated by a matrix the file defines by its detector ($PnN), the name
+# GateLabR's channels answer to. Gating-ML names such a dimension by the matrix's fluorochrome
+# (section 4.2.2), and fluorochrome i is detector i compensated; GateLab writes them as
+# "Comp_<$PnN>". A detector name is taken as it is, as GateLab and FlowKit take it.
+.gml_resolve_spectrum_dimensions <- function(raw_gates, spectra) {
+  for (id in names(raw_gates)) {
+    g <- raw_gates[[id]]
+    if (identical(g$gate_type, "boolean") || length(g$dims %||% list()) == 0L) next
+    for (i in seq_along(g$dims)) {
+      d <- g$dims[[i]]
+      sp <- spectra[[trimws(d$compensation_ref %||% "")]]
+      if (is.null(sp) || !is.null(sp$problem) || d$channel %in% sp$detectors) next
+      hit <- match(d$channel, sp$fluorochromes)
+      if (!is.na(hit)) g$dims[[i]]$channel <- sp$detectors[[hit]]
+    }
+    g$x_channel <- g$dims[[1]]$channel
+    g$y_channel <- (if (length(g$dims) >= 2L) g$dims[[2]] else g$dims[[1]])$channel
+    g$channels <- c(g$x_channel, g$y_channel)
+    raw_gates[[id]] <- g
+  }
+  raw_gates
+}
+
+# What the gates' dimensions compensate with: "FCS", "uncompensated", or "matrix" for a
+# spectrumMatrix the file defines, which is returned as `spectrum`. GateLabR applies one matrix,
+# so dimensions that reference two matrices, or the FCS file's and one of the file's own, are
+# refused, as GateLab and FlowKit refuse them.
+.gml_dimension_compensation <- function(raw_gates, spectra = list()) {
   refs <- character(0)
   unsupported <- character(0)
+  used <- character(0)
   for (g in raw_gates) {
     if (identical(g$gate_type, "boolean")) next
     for (d in g$dims %||% list()) {
@@ -344,6 +531,10 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       lower <- tolower(value)
       if (identical(lower, "fcs")) refs <- c(refs, "FCS")
       else if (identical(lower, "uncompensated")) refs <- c(refs, "uncompensated")
+      else if (!is.null(spectra[[value]])) {
+        refs <- c(refs, "matrix")
+        used <- c(used, value)
+      }
       else unsupported <- c(unsupported, value)
     }
   }
@@ -352,10 +543,27 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     stop(
       "This Gating-ML file references unsupported compensation matrix ",
       paste(sprintf('"%s"', unsupported), collapse = ", "),
-      ". GateLabR can safely import FCS or uncompensated dimensions only."
+      ". GateLabR can safely import FCS or uncompensated dimensions, or dimensions compensated ",
+      "by a spillover matrix the file defines."
     )
   }
-  unique(refs)
+  used <- unique(used)
+  for (id in used) {
+    if (!is.null(spectra[[id]]$problem)) stop(spectra[[id]]$problem)
+  }
+  refs <- unique(refs)
+  if (length(used) > 1L || (length(used) == 1L && "FCS" %in% refs)) {
+    stop(
+      "This Gating-ML file compensates its gates with more than one spillover matrix (",
+      paste(c(if ("FCS" %in% refs) "FCS", used), collapse = ", "),
+      "); GateLabR applies one matrix."
+    )
+  }
+  list(refs = refs, spectrum = if (length(used) == 1L) spectra[[used]] else NULL)
+}
+
+.gml_parse_compensation_refs <- function(raw_gates, spectra = list()) {
+  .gml_dimension_compensation(raw_gates, spectra)$refs
 }
 
 .gml_compensation_matrices_match <- function(expected, actual, tolerance = 1e-8) {
@@ -372,15 +580,54 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   all(delta <= tolerance * scale)
 }
 
+# Whether the loaded data's spillover matrix is exactly the one a file's compensated dimensions
+# reference (spectrum_matrix as import_gatingml_from_cytobank returns it, over display channels).
+.gml_spectrum_matches_session <- function(spectrum_matrix, spillover_matrix) {
+  if (is.null(spectrum_matrix) || is.null(spillover_matrix)) return(FALSE)
+  channels <- spectrum_matrix$channels
+  if (anyNA(channels) || anyDuplicated(channels)) return(FALSE)
+  .gml_compensation_matrices_match(
+    list(channels = channels, matrix = spectrum_matrix$matrix),
+    spillover_matrix
+  )
+}
+
+.gml_stop_spectrum_mismatch <- function(spectrum_matrix, spillover_matrix) {
+  label <- spectrum_matrix$name %||% spectrum_matrix$id %||% "a spillover matrix"
+  missing <- spectrum_matrix$detectors[is.na(spectrum_matrix$channels)]
+  stop(
+    "This Gating-ML file compensates its gates with the spillover matrix it defines (",
+    .gml_quote_name(label), "), ",
+    if (length(missing) > 0L) {
+      paste0(
+        "whose detector(s) ", paste(vapply(missing, .gml_quote_name, character(1)), collapse = ", "),
+        " are not channels of the loaded data"
+      )
+    } else if (is.null(spillover_matrix)) {
+      "but the loaded data have no spillover matrix"
+    } else {
+      "which is not the loaded FCS file's spillover matrix"
+    },
+    ". GateLabR compensates with the FCS file's own matrix only, so import was stopped to ",
+    "prevent changed population membership.",
+    call. = FALSE
+  )
+}
+
 #' Resolve the compensation state required to preserve imported gate membership.
+#'
+#' `spectrum_matrix` is the matrix the file defines and its compensated dimensions reference
+#' (import_gatingml_from_cytobank()$spectrum_matrix). GateLabR can evaluate such gates only
+#' when the loaded data's own matrix is exactly that one.
 resolve_gatingml_compensation <- function(compensation, dimension_refs,
-                                          is_flow, spillover_matrix = NULL) {
+                                          is_flow, spillover_matrix = NULL,
+                                          spectrum_matrix = NULL) {
   none <- list(target = NULL, source = "none", requires_confirmation = FALSE)
   if (!isTRUE(is_flow)) return(none)
 
   if (!is.null(compensation)) {
     if (!isTRUE(compensation$enabled)) {
-      if ("FCS" %in% dimension_refs) {
+      if ("FCS" %in% dimension_refs || "matrix" %in% dimension_refs) {
         stop("The embedded GateLab compensation state contradicts the Gating-ML dimension references.")
       }
       return(list(target = FALSE, source = "embedded", requires_confirmation = FALSE))
@@ -391,7 +638,18 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     if (!.gml_compensation_matrices_match(compensation, spillover_matrix)) {
       stop("This gating strategy was created with a different FCS spillover matrix. Import was stopped to prevent changed population membership.")
     }
+    if ("matrix" %in% dimension_refs &&
+        !.gml_spectrum_matches_session(spectrum_matrix, spillover_matrix)) {
+      .gml_stop_spectrum_mismatch(spectrum_matrix, spillover_matrix)
+    }
     return(list(target = TRUE, source = "embedded", requires_confirmation = FALSE))
+  }
+
+  if ("matrix" %in% dimension_refs) {
+    if (!.gml_spectrum_matches_session(spectrum_matrix, spillover_matrix)) {
+      .gml_stop_spectrum_mismatch(spectrum_matrix, spillover_matrix)
+    }
+    return(list(target = TRUE, source = "matrix", requires_confirmation = FALSE))
   }
 
   if ("FCS" %in% dimension_refs) {
@@ -494,7 +752,12 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   NULL
 }
 
-.gml_make_inverter <- function(resolved_channel, trans_ref, transforms_map) {
+# logicle_unit: whether the file's logicle coordinates are on Gating-ML's [0, 1] scale rather than
+# flowCore's (see .gml_parse_gatelab_format). instrument: "flow" when the gates will be evaluated
+# on flow data, whose gates GateLabR stores in raw values; NULL keeps the behaviour this function
+# had before it was given one.
+.gml_make_inverter <- function(resolved_channel, trans_ref, transforms_map,
+                               logicle_unit = FALSE, instrument = NULL) {
   if (is.null(trans_ref) || !nzchar(trans_ref)) return(function(v) v)
   if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(function(v) v)
 
@@ -508,16 +771,20 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 
   # Logicle transform (from GateLabR flow export or FlowJo): apply logicle inverse
   # to convert vertices from logicle display space to raw space for evaluation.
+  # flowCore's logicle maps the top of scale T to M, and Gating-ML's maps it to 1: a flowCore
+  # value is the Gating-ML value times M, whatever A is. A file on Gating-ML's scale is
+  # rescaled before flowCore inverts it.
   if (is.list(tr_def) && identical(tr_def$type, "logicle")) {
     t_v <- tr_def$T;  w_v <- tr_def$W
     m_v <- tr_def$M %||% 4.5;  a_v <- tr_def$A %||% 0.0
     if (!is.finite(t_v) || !is.finite(w_v) || t_v <= 0 || w_v < 0) return(function(v) v)
+    to_flowcore <- if (isTRUE(logicle_unit)) m_v else 1
     return(function(v) {
       if (!requireNamespace("flowCore", quietly = TRUE)) return(v)
       tryCatch({
         lg     <- flowCore::logicleTransform("lg_fwd", w = w_v, t = t_v, m = m_v, a = a_v)
         inv_lg <- flowCore::inverseLogicleTransform(lg, transformationId = "lg_inv")
-        as.numeric(inv_lg(as.numeric(v)))
+        as.numeric(inv_lg(as.numeric(v) * to_flowcore))
       }, error = function(e) as.numeric(v))
     })
   }
@@ -540,10 +807,16 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   #     f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
   # Inverse:
   #     f^-1(y) = T/sinh(M*ln10) * sinh(y*(M+A)*ln10 + A*ln10)
+  #   • FLOW fluorescence under fasinh: stored raw like scatter, so inverted too. GateLab's
+  #     Cytobank format writes flow fluorescence gates this way, because Cytobank has no
+  #     logicle, and so do Cytobank's own flow exports. Only when the caller says the data are
+  #     flow (instrument = "flow"): the function cannot tell a flow file from a CyTOF one.
   if (is.list(tr_def) && identical(tr_def$type, "fasinh")) {
     is_scatter <- exists(".is_scatter_channel", mode = "function") &&
                   isTRUE(.is_scatter_channel(resolved_channel))
-    if (!is_scatter) return(function(v) v)
+    is_flow_signal <- identical(instrument, "flow") &&
+      !(exists(".is_qc_channel", mode = "function") && isTRUE(.is_qc_channel(resolved_channel)))
+    if (!is_scatter && !is_flow_signal) return(function(v) v)
 
     t_v <- suppressWarnings(as.numeric(tr_def$T))
     m_v <- suppressWarnings(as.numeric(tr_def$M %||% log10(exp(1))))
@@ -653,11 +926,16 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     for (r in .gml_children_local(op_el, "gateReference")) {
       rid <- .gml_attr_local(r, "ref")
       if (is.null(rid) || !nzchar(rid)) next
-      comp <- identical(tolower(.gml_attr_local(r, "complement") %||% "false"), "true")
+      # Gating-ML 2.0 spells it use-as-complement (an xs:boolean, so "true" or "1"). GateLab
+      # and GateLabR wrote `complement` until 2026-09; those files read as they always did.
+      neg <- .gml_attr_local(r, "use-as-complement") %||%
+        .gml_attr_local(r, "complement") %||% "false"
+      comp <- tolower(trimws(neg)) %in% c("true", "1")
       refs[[length(refs) + 1L]] <- list(gate_id = rid, complement = comp)
     }
 
     cb_ids <- .gml_parse_cytobank_ids(node)
+    ci <- .gml_first_child_local(node, "custom_info")
     return(list(
       gml_id = gml_id,
       name = nm,
@@ -666,7 +944,11 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       refs = refs,
       channels = character(0),
       pop_parent_indices = .gml_parse_pop_parent_indices(node),
-      gate_set_id = cb_ids$gate_set_id
+      gate_set_id = cb_ids$gate_set_id,
+      # GateLab's standard format writes an excluded reference among several as a reference to
+      # a BooleanGate of its own, the NOT of that gate, marked gatelab_operand. It is an
+      # operand, not a population.
+      operand_helper = !is.null(ci) && !is.null(.gml_first_child_local(ci, "gatelab_operand"))
     ))
   }
 
@@ -746,6 +1028,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 
   for (gate in raw_gates) {
     if (!identical(gate$gate_type, "boolean")) next
+    # A GateLab NOT operand is reported through the population that references it.
+    if (isTRUE(gate$operand_helper)) next
     pop_names <- names_by_gate[[gate$gml_id]] %||% gate$name
     if (identical(gate$operation, "or")) {
       for (name in pop_names) add_problem(name, "OR")
@@ -754,7 +1038,10 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     has_complement <- length(refs) > 0L && any(vapply(
       refs, function(ref) isTRUE(ref$complement), logical(1)
     ))
-    if (identical(gate$operation, "not") || has_complement) {
+    excludes_through_operand <- length(refs) > 0L && any(vapply(
+      refs, function(ref) isTRUE(raw_gates[[ref$gate_id]]$operand_helper), logical(1)
+    ))
+    if (identical(gate$operation, "not") || has_complement || excludes_through_operand) {
       for (name in pop_names) add_problem(name, "NOT")
     }
   }
@@ -815,15 +1102,118 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   c(0, (y_max - y_centroid) + max(0.15, gate_height * 0.08))
 }
 
+.gml_is_population_gate <- function(gate) {
+  !is.null(gate) && identical(gate$gate_type, "boolean") && !isTRUE(gate$operand_helper)
+}
+
+# A BooleanGate marked gatelab_operand must be what GateLab writes: the NOT of one geometric gate.
+.gml_operand_problems <- function(gate, raw_gates) {
+  refs <- gate$refs %||% list()
+  target <- if (length(refs) == 1L) raw_gates[[refs[[1]]$gate_id]] else NULL
+  if (identical(gate$operation, "not") && !is.null(target) &&
+      !identical(target$gate_type, "boolean")) {
+    return(character(0))
+  }
+  paste0(gate$gml_id, " is marked as an operand but is not the NOT of one gate.")
+}
+
+# A gate whose gating:parent_id chain returns to itself cannot be placed in a tree.
+.gml_parent_cycle_problems <- function(raw_gates) {
+  problems <- character(0)
+  for (gate in raw_gates) {
+    seen <- gate$gml_id
+    p <- gate$parent_id
+    while (!is.null(p) && !is.null(raw_gates[[p]])) {
+      if (p %in% seen) {
+        problems <- c(problems, paste0(gate$gml_id, " is its own ancestor through parent_id."))
+        break
+      }
+      seen <- c(seen, p)
+      p <- raw_gates[[p]]$parent_id
+    }
+  }
+  problems
+}
+
+# What a file placed by gating:parent_id must satisfy for GateLabR to reproduce it exactly. A
+# Gating-ML reader applies a gate only to its parent's events, so anything GateLabR would read
+# differently is refused, not guessed:
+#   - only a Boolean population carries parent_id, and its parent is another population. On a
+#     geometric gate, parent_id restricts that gate to its parent's events wherever it is used,
+#     which a GateLabR gate reference cannot express;
+#   - a population references geometric gates, or GateLab's operand NOT of one geometric gate
+#     (which GateLabR then refuses as NOT logic), never another population.
+# GateLab refuses the same files.
+.gml_parent_id_problems <- function(gate, raw_gates) {
+  problems <- character(0)
+  parent <- gate$parent_id
+  if (!is.null(parent) && !is.null(raw_gates[[parent]])) {
+    if (!.gml_is_population_gate(gate)) {
+      problems <- c(problems, paste0(
+        gate$gml_id, " has a parent_id; GateLabR places only Boolean populations by parent_id ",
+        "and cannot restrict a gate used in a population to another gate's events."
+      ))
+    } else if (!.gml_is_population_gate(raw_gates[[parent]])) {
+      problems <- c(problems, paste0(
+        gate$gml_id, " names ", parent, " as its parent, which is not a population."
+      ))
+    }
+  }
+  if (!identical(gate$gate_type, "boolean")) return(problems)
+  if (isTRUE(gate$operand_helper)) return(c(problems, .gml_operand_problems(gate, raw_gates)))
+  for (ref in gate$refs %||% list()) {
+    if (.gml_is_population_gate(raw_gates[[ref$gate_id]])) {
+      problems <- c(problems, paste0(
+        gate$gml_id, " contains a nested Boolean reference to ", ref$gate_id,
+        " that cannot be represented safely."
+      ))
+    }
+  }
+  problems
+}
+
+# What a GateLab Cytobank-format tree must satisfy to be taken as the file's tree: it lists every
+# BooleanGate in the file once, and each parent is a population listed before it. One that does
+# not describes some other file, so the import is refused rather than half-applied.
+.gml_tree_problems <- function(tree, raw_gates, bool_order) {
+  problems <- character(0)
+  listed <- character(0)
+  for (entry in tree) {
+    id <- entry$id
+    if (id %in% listed) {
+      problems <- c(problems, paste0("The file's GateLab tree lists ", id, " twice."))
+    } else if (!identical(raw_gates[[id]]$gate_type, "boolean")) {
+      problems <- c(problems, paste0(
+        "The file's GateLab tree lists ", id, ", which is not a Boolean gate in the file."
+      ))
+    }
+    if (!is.null(entry$parent) && !entry$parent %in% listed) {
+      problems <- c(problems, paste0(
+        "The file's GateLab tree places ", id, " under ", entry$parent,
+        ", which is not a population listed before it."
+      ))
+    }
+    listed <- c(listed, id)
+  }
+  for (bid in setdiff(bool_order, listed)) {
+    problems <- c(problems, paste0("The file's GateLab tree does not list the population ", bid, "."))
+  }
+  problems
+}
+
 #' Import Cytobank Gating-ML 2.0 into GateLabR gate/population structures
 #'
 #' @param file_path Path to Gating-ML XML file
 #' @param session_channels Character vector of available channel names in current SCE
 #' @param pnn_to_channel Optional named mapping of FCS $PnN -> display channel name
+#' @param instrument "flow" or "cytof": how the loaded data store gates. With "flow", gate
+#'   coordinates declared under arcsinh are inverted to raw values for fluorescence channels as
+#'   well as scatter. NULL inverts scatter only, as before this argument existed.
 #' @return List with gates, gate_order, populations, root_population_id and import stats
 import_gatingml_from_cytobank <- function(file_path,
                                           session_channels,
-                                          pnn_to_channel = NULL) {
+                                          pnn_to_channel = NULL,
+                                          instrument = NULL) {
   if (!requireNamespace("xml2", quietly = TRUE)) {
     stop("Package 'xml2' is required for Gating-ML import. Install with: install.packages('xml2')")
   }
@@ -839,6 +1229,7 @@ import_gatingml_from_cytobank <- function(file_path,
   top_nodes <- xml2::xml_children(root)
 
   transforms_map <- .gml_parse_transforms(root)
+  gatelab_format <- .gml_parse_gatelab_format(root)
 
   raw_gates <- list()
   bool_order <- character(0)
@@ -917,16 +1308,58 @@ import_gatingml_from_cytobank <- function(file_path,
       import_problems <- c(import_problems, paste0(.gml_gate_label(el), " could not be parsed."))
       next
     }
+    parent_ref <- .gml_attr_local(el, "parent_id")
+    if (!is.null(parent_ref) && nzchar(parent_ref)) g$parent_id <- parent_ref
     raw_gates[[g$gml_id]] <- g
     if (identical(g$gate_type, "boolean")) bool_order <- c(bool_order, g$gml_id)
   }
+  spectra <- .gml_parse_spectrum_matrices(root)
+  raw_gates <- .gml_resolve_spectrum_dimensions(raw_gates, spectra)
   import_problems <- c(
     import_problems,
     .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
     .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
   )
   gatelabr_state <- .gml_parse_gatelabr_state(root)
-  compensation_refs <- .gml_parse_compensation_refs(raw_gates)
+  dimension_compensation <- .gml_dimension_compensation(raw_gates, spectra)
+  compensation_refs <- dimension_compensation$refs
+
+  # How the file places its populations. A GatingHierarchy (GateLabR, and GateLab until 2026-09)
+  # takes precedence, as before. Otherwise gating:parent_id places them when GateLab's standard
+  # format says so, or when a file without GateLab's mark carries parent_id on its populations.
+  # GateLab's Cytobank format lists the tree in its mark. Anything else is Cytobank's flat
+  # convention, whose parents are inferred as before.
+  population_gates <- Filter(.gml_is_population_gate, raw_gates)
+  has_parent_ids <- any(vapply(raw_gates, function(g) !is.null(g$parent_id), logical(1)))
+  use_parent_ids <- is.null(hierarchy_node) && (
+    isTRUE(gatelab_format$parent_id_hierarchy) ||
+      (is.null(gatelab_format$tree) && has_parent_ids && length(population_gates) > 0L)
+  )
+  use_tree <- is.null(hierarchy_node) && !use_parent_ids && !is.null(gatelab_format$tree)
+  import_problems <- c(import_problems, .gml_parent_cycle_problems(raw_gates))
+  if (use_tree) {
+    import_problems <- c(import_problems, .gml_tree_problems(gatelab_format$tree, raw_gates, bool_order))
+  }
+  if (is.null(hierarchy_node) && !use_parent_ids) {
+    # Left: GateLab's Cytobank format, which places populations by its tree and writes no
+    # parent_id, and files whose only populations are their geometric gates, which may be
+    # placed under one another.
+    for (g in raw_gates) {
+      if (is.null(g$parent_id) || is.null(raw_gates[[g$parent_id]])) next
+      if (use_tree) {
+        import_problems <- c(import_problems, paste0(
+          g$gml_id, " has a parent_id, which GateLab's Cytobank format does not use; ",
+          "its tree places the populations."
+        ))
+      } else if (identical(g$gate_type, "boolean") ||
+                 identical(raw_gates[[g$parent_id]]$gate_type, "boolean")) {
+        import_problems <- c(import_problems, paste0(
+          g$gml_id, " names ", g$parent_id, " as its parent; GateLabR places a gate only under ",
+          "another geometric gate here."
+        ))
+      }
+    }
+  }
 
   for (g in raw_gates) {
     for (dim in g$dims %||% list()) {
@@ -938,6 +1371,17 @@ import_gatingml_from_cytobank <- function(file_path,
         )
       }
     }
+    if (!is.null(g$parent_id) && is.null(raw_gates[[g$parent_id]])) {
+      import_problems <- c(
+        import_problems,
+        paste0(g$gml_id, " references missing parent gate ", g$parent_id, ".")
+      )
+    }
+    if (use_parent_ids) {
+      import_problems <- c(import_problems, .gml_parent_id_problems(g, raw_gates))
+    } else if (isTRUE(g$operand_helper)) {
+      import_problems <- c(import_problems, .gml_operand_problems(g, raw_gates))
+    }
     if (identical(g$gate_type, "boolean")) {
       for (ref in g$refs %||% list()) {
         target <- raw_gates[[ref$gate_id]]
@@ -946,6 +1390,9 @@ import_gatingml_from_cytobank <- function(file_path,
             import_problems,
             paste0(g$gml_id, " references missing gate ", ref$gate_id, ".")
           )
+        } else if (use_parent_ids || isTRUE(target$operand_helper)) {
+          # .gml_parent_id_problems checks references between populations; a reference to a
+          # GateLab NOT operand is refused as NOT logic.
         } else if (identical(target$gate_type, "boolean")) {
           # Cytobank/GateLab flat exports encode ancestry as a Boolean reference
           # plus a matching pop_X parent in custom_info. That pattern maps safely
@@ -1016,8 +1463,10 @@ import_gatingml_from_cytobank <- function(file_path,
 
     x_tr <- if (length(g$dims) >= 1) g$dims[[1]]$transformation_ref %||% NULL else NULL
     y_tr <- if (length(g$dims) >= 2) g$dims[[2]]$transformation_ref %||% NULL else NULL
-    inv_x <- .gml_make_inverter(x_ch, x_tr, transforms_map)
-    inv_y <- .gml_make_inverter(y_ch, y_tr, transforms_map)
+    inv_x <- .gml_make_inverter(x_ch, x_tr, transforms_map,
+                                gatelab_format$logicle_unit, instrument)
+    inv_y <- .gml_make_inverter(y_ch, y_tr, transforms_map,
+                                gatelab_format$logicle_unit, instrument)
 
     verts <- lapply(g$vertices, function(v) c(inv_x(as.numeric(v[1])), inv_y(as.numeric(v[2]))))
     if (length(verts) < 3 && identical(g$gate_type, "polygon")) {
@@ -1130,6 +1579,41 @@ import_gatingml_from_cytobank <- function(file_path,
     for (top_pair in .gml_children_local(hierarchy_node, "PopulationGatePair")) {
       process_pair(top_pair, root_pop_id)
     }
+  } else if (use_parent_ids) {
+    # One population per BooleanGate that is not an operand, under the population its parent_id
+    # names (All Events when it has none), with the gates it references; a reference repeated to
+    # give and/or two operands is one reference. NOT and OR were refused above. GateLab lists
+    # parents before children, and each population is placed once its parent is, so siblings
+    # keep the file's order either way.
+    pop_ids <- list()
+    waiting <- Filter(function(bid) .gml_is_population_gate(raw_gates[[bid]]), bool_order)
+    while (length(waiting) > 0L) {
+      still_waiting <- character(0)
+      for (bid in waiting) {
+        g <- raw_gates[[bid]]
+        parent_pid <- if (is.null(g$parent_id)) root_pop_id else pop_ids[[g$parent_id]]
+        if (is.null(parent_pid)) {
+          still_waiting <- c(still_waiting, bid)
+          next
+        }
+        refs <- list()
+        seen <- character(0)
+        for (r in g$refs %||% list()) {
+          app_id <- gml_to_app[[r$gate_id]]
+          if (is.null(app_id) || identical(app_id, r$gate_id) || app_id %in% seen) next
+          seen <- c(seen, app_id)
+          refs[[length(refs) + 1L]] <- new_gate_ref(app_id, include = !isTRUE(r$complement))
+        }
+        pop <- new_population(g$name, gate_refs = refs, parent_id = parent_pid,
+                              gate_logic = if (identical(g$operation, "or")) "or" else "and")
+        populations[[pop$population_id]] <- pop
+        populations <- link_child_to_parent(populations, pop$population_id, parent_pid)
+        pop_ids[[bid]] <- pop$population_id
+      }
+      # .gml_parent_id_problems and .gml_parent_cycle_problems leave every parent placeable.
+      if (length(still_waiting) == length(waiting)) break
+      waiting <- still_waiting
+    }
   } else {
     bool_names <- list()
     bool_prim <- list()
@@ -1150,7 +1634,7 @@ import_gatingml_from_cytobank <- function(file_path,
 
     for (bid in bool_order) {
       g <- raw_gates[[bid]]
-      if (is.null(g) || !identical(g$gate_type, "boolean")) next
+      if (!.gml_is_population_gate(g)) next
       refs <- g$refs %||% list()
 
       prim <- character(0)
@@ -1178,17 +1662,46 @@ import_gatingml_from_cytobank <- function(file_path,
     }
 
     if (length(bool_names) == 0) {
-      for (gid in gate_order) {
-        g <- app_gates[[gid]]
-        pop <- new_population(g$name, gate_refs = list(new_gate_ref(gid, include = TRUE)), parent_id = root_pop_id)
-        pid <- pop$population_id
-        populations[[pid]] <- pop
-        populations <- link_child_to_parent(populations, pid, root_pop_id)
+      # Every gate is a population. Standard Gating-ML places a gate under another with
+      # gating:parent_id, and a gate is applied only to its parent's events, so a gate is placed
+      # under its parent's population once that exists; one without a parent_id sits under All
+      # Events, as every gate did before parent_id was read.
+      app_to_gml <- setNames(names(gml_to_app), vapply(gml_to_app, as.character, character(1)))
+      gate_pids <- list()
+      waiting <- gate_order
+      while (length(waiting) > 0L) {
+        still_waiting <- character(0)
+        for (gid in waiting) {
+          parent_gml <- raw_gates[[app_to_gml[[gid]]]]$parent_id
+          parent_app <- if (is.null(parent_gml)) NULL else gml_to_app[[parent_gml]]
+          parent_pid <- if (is.null(parent_gml)) {
+            root_pop_id
+          } else if (!is.null(parent_app)) {
+            gate_pids[[parent_app]]
+          }
+          if (is.null(parent_pid)) {
+            still_waiting <- c(still_waiting, gid)
+            next
+          }
+          g <- app_gates[[gid]]
+          pop <- new_population(g$name, gate_refs = list(new_gate_ref(gid, include = TRUE)), parent_id = parent_pid)
+          pid <- pop$population_id
+          populations[[pid]] <- pop
+          populations <- link_child_to_parent(populations, pid, parent_pid)
+          gate_pids[[gid]] <- pid
+        }
+        if (length(still_waiting) == length(waiting)) break
+        waiting <- still_waiting
       }
     } else {
       # ── Resolve parent for each boolean gate ────────────────────────────
+      # GateLab's Cytobank format lists each population's parent in its mark (validated by
+      # .gml_tree_problems); Cytobank's own files carry none, so their parents are inferred.
       parents <- list()
-      for (bid in names(bool_names)) {
+      if (use_tree) {
+        for (entry in gatelab_format$tree) parents[[entry$id]] <- entry$parent
+      }
+      for (bid in if (use_tree) character(0) else names(bool_names)) {
         pidx <- bool_pop_indices[[bid]] %||% integer(0)
         parent_bid <- NULL
 
@@ -1250,7 +1763,11 @@ import_gatingml_from_cytobank <- function(file_path,
       }
 
       ordered_bids <- names(bool_names)
-      if (length(ordered_bids) > 1) {
+      if (use_tree) {
+        # The tree lists parents first and siblings in GateLab's order.
+        tree_ids <- vapply(gatelab_format$tree, function(entry) entry$id, character(1))
+        ordered_bids <- tree_ids[tree_ids %in% ordered_bids]
+      } else if (length(ordered_bids) > 1) {
         ordered_bids <- ordered_bids[order(vapply(ordered_bids, get_depth, integer(1)))]
       }
 
@@ -1293,6 +1810,25 @@ import_gatingml_from_cytobank <- function(file_path,
     }
   }
 
+  # The matrix the compensated dimensions reference, over the loaded data's channels (NA where a
+  # detector is not one of them). resolve_gatingml_compensation() compares it with the data's own.
+  spectrum <- dimension_compensation$spectrum
+  spectrum_matrix <- NULL
+  if (!is.null(spectrum)) {
+    channels <- unname(vapply(spectrum$detectors, function(detector) {
+      .gml_resolve_channel(detector, session_channels, pnn_to_channel) %||% NA_character_
+    }, character(1)))
+    matrix <- spectrum$matrix
+    if (!anyNA(channels)) dimnames(matrix) <- list(channels, channels)
+    spectrum_matrix <- list(
+      id = spectrum$id,
+      name = spectrum$name,
+      detectors = spectrum$detectors,
+      channels = channels,
+      matrix = matrix
+    )
+  }
+
   list(
     gates = app_gates,
     gate_order = gate_order,
@@ -1306,6 +1842,7 @@ import_gatingml_from_cytobank <- function(file_path,
     scales = gatelabr_state$scales,
     cytof_cofactor = gatelabr_state$cytof_cofactor,
     compensation = gatelabr_state$compensation,
-    compensation_refs = compensation_refs
+    compensation_refs = compensation_refs,
+    spectrum_matrix = spectrum_matrix
   )
 }
