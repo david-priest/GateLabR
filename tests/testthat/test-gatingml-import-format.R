@@ -483,3 +483,32 @@ test_that("a GateLab format mark that is present but cannot be read refuses the 
   # GateLab's Cytobank format without its mark is the format GateLab wrote before the mark, whose
   # parents are inferred, and reads as it; see the Cytobank-format test above.
 })
+
+test_that("a PopulationGatePair written complement=\"1\" or \" true\" is refused as NOT logic", {
+  # complement is an xs:boolean, as use-as-complement on a gateReference is, so "1" and a value
+  # with surrounding space exclude too; read as an inclusion, FL1_positive would select the events
+  # it is meant to exclude.
+  for (value in c("1", " true", "TRUE ")) {
+    pair <- gml_variant("tree-standard-0.8.3.xml", function(lines) {
+      sub('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU.">',
+          sprintf('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU." gating:complement="%s">', value),
+          lines, fixed = TRUE)
+    })
+    expect_error(gml_import(pair), 'Population "FL1_positive" uses NOT logic', fixed = TRUE, info = value)
+    use_as <- gml_variant("tree-standard-0.8.3.xml", function(lines) {
+      sub('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU.">',
+          sprintf('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU." gating:use-as-complement="%s">', value),
+          lines, fixed = TRUE)
+    })
+    expect_error(gml_import(use_as), 'Population "FL1_positive" uses NOT logic', fixed = TRUE, info = value)
+  }
+  # "false" and "0" include, as before.
+  for (value in c("false", " 0")) {
+    pair <- gml_variant("tree-standard-0.8.3.xml", function(lines) {
+      sub('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU.">',
+          sprintf('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU." gating:complement="%s">', value),
+          lines, fixed = TRUE)
+    })
+    gml_expect_membership(gml_membership(gml_import(pair)), gml_expected("-0.8.3")$populations$tree)
+  }
+})

@@ -29,6 +29,14 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   kids[[1]]
 }
 
+# Whether a gateReference or a PopulationGatePair excludes its gate. Gating-ML 2.0 spells it
+# use-as-complement, an xs:boolean, so "true" or "1" with any surrounding space; GateLab and
+# GateLabR wrote `complement` until 2026-09, which is read the same way.
+.gml_is_complement <- function(node) {
+  value <- .gml_attr_local(node, "use-as-complement") %||% .gml_attr_local(node, "complement")
+  !is.null(value) && tolower(trimws(value)) %in% c("true", "1")
+}
+
 # Detect who wrote this Gating-ML so the importer can match channels + advise
 # correctly: "gatelabr" (channels are display/marker names — a skip means a truly
 # missing channel), "cytobank" (channels are FCS $PnN / metal — need the metal
@@ -1049,12 +1057,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     for (r in .gml_children_local(op_el, "gateReference")) {
       rid <- .gml_attr_local(r, "ref")
       if (is.null(rid) || !nzchar(rid)) next
-      # Gating-ML 2.0 spells it use-as-complement (an xs:boolean, so "true" or "1"). GateLab
-      # and GateLabR wrote `complement` until 2026-09; those files read as they always did.
-      neg <- .gml_attr_local(r, "use-as-complement") %||%
-        .gml_attr_local(r, "complement") %||% "false"
-      comp <- tolower(trimws(neg)) %in% c("true", "1")
-      refs[[length(refs) + 1L]] <- list(gate_id = rid, complement = comp)
+      refs[[length(refs) + 1L]] <- list(gate_id = rid, complement = .gml_is_complement(r))
     }
 
     cb_ids <- .gml_parse_cytobank_ids(node)
@@ -1170,11 +1173,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   }
 
   for (pair in pairs) {
-    complement <- identical(
-      tolower(.gml_attr_local(pair, "complement") %||% "false"),
-      "true"
-    )
-    if (complement) add_problem(.gml_pair_population_name(pair, raw_gates), "NOT")
+    if (.gml_is_complement(pair)) add_problem(.gml_pair_population_name(pair, raw_gates), "NOT")
   }
 
   unique(problems)
@@ -1712,7 +1711,7 @@ import_gatingml_from_cytobank <- function(file_path,
   if (!is.null(hierarchy_node)) {
     process_pair <- function(pair_node, parent_id) {
       gate_ref_gml <- .gml_attr_local(pair_node, "gate-ref")
-      complement <- identical(tolower(.gml_attr_local(pair_node, "complement") %||% "false"), "true")
+      complement <- .gml_is_complement(pair_node)
 
       name_node <- .gml_first_child_local(pair_node, "name")
       pop_name <- if (!is.null(name_node)) trimws(xml2::xml_text(name_node)) else ""
