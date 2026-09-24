@@ -211,6 +211,10 @@ export_population_as_fcs <- function(sce,
   mat_rng  <- apply(mat, 2, range, na.rm = TRUE)  # 2 × n matrix
 
   n <- ncol(mat)
+  # The range column is not what reaches the file. flowCore::flowFrame() replaces it with
+  # ceiling(max) + 1 per channel, and write.FCS writes that as $PnR, so values above 2^18 are
+  # declared in range and survive read.FCS at its default truncate_max_range = TRUE. Setting $PnR
+  # through the description instead would make 2^18 the written range and clip them.
   params_df <- data.frame(
     name     = channel_names,
     desc     = channel_desc,
