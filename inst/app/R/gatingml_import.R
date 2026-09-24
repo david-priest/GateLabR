@@ -65,6 +65,17 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   }, logical(1)))
 }
 
+# Whether GateLabR wrote the file: the root custom_info's cytobank/about text, which every
+# GateLabR export carries ("Gating-ML 2.0 export from GateLabR ..."; GateLab writes "from GateLab
+# (...)").
+.gml_written_by_gatelabr <- function(root) {
+  ci <- .gml_first_child_local(root, "custom_info")
+  if (is.null(ci)) return(FALSE)
+  about <- .gml_first_child_local(.gml_first_child_local(ci, "cytobank") %||% ci, "about")
+  !is.null(about) &&
+    grepl("^\\s*Gating-ML 2\\.0 export from GateLabR", xml2::xml_text(about))
+}
+
 # The tree a GateLab Cytobank-format file lists in its format mark: each population's BooleanGate
 # id with its parent's (NULL at the root). NULL unless every entry is an object with a non-empty
 # string id and a parent that is null or a non-empty string.
@@ -752,22 +763,27 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   NULL
 }
 
+# The inverter for a coordinate GateLabR takes as it is. .gml_make_inverter returns this one
+# function whenever it inverts nothing, so a caller can tell an axis it leaves alone from one it
+# transforms (see .gml_curved_polygon_problems).
+.gml_identity_inverter <- function(v) v
+
 # logicle_unit: whether the file's logicle coordinates are on Gating-ML's [0, 1] scale rather than
 # flowCore's (see .gml_parse_gatelab_format). instrument: "flow" when the gates will be evaluated
 # on flow data, whose gates GateLabR stores in raw values; NULL keeps the behaviour this function
 # had before it was given one.
 .gml_make_inverter <- function(resolved_channel, trans_ref, transforms_map,
                                logicle_unit = FALSE, instrument = NULL) {
-  if (is.null(trans_ref) || !nzchar(trans_ref)) return(function(v) v)
-  if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(function(v) v)
+  if (is.null(trans_ref) || !nzchar(trans_ref)) return(.gml_identity_inverter)
+  if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(.gml_identity_inverter)
 
   # QC / instrument channels: always raw space, no inversion.
   if (grepl("^(time|event_length|cell_length|barcode)$", resolved_channel, ignore.case = TRUE)) {
-    return(function(v) v)
+    return(.gml_identity_inverter)
   }
 
   tr_def <- transforms_map[[trans_ref]]
-  if (is.null(tr_def)) return(function(v) v)
+  if (is.null(tr_def)) return(.gml_identity_inverter)
 
   # Logicle transform (from GateLabR flow export or FlowJo): apply logicle inverse
   # to convert vertices from logicle display space to raw space for evaluation.
@@ -777,7 +793,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   if (is.list(tr_def) && identical(tr_def$type, "logicle")) {
     t_v <- tr_def$T;  w_v <- tr_def$W
     m_v <- tr_def$M %||% 4.5;  a_v <- tr_def$A %||% 0.0
-    if (!is.finite(t_v) || !is.finite(w_v) || t_v <= 0 || w_v < 0) return(function(v) v)
+    if (!is.finite(t_v) || !is.finite(w_v) || t_v <= 0 || w_v < 0) return(.gml_identity_inverter)
     to_flowcore <- if (isTRUE(logicle_unit)) m_v else 1
     return(function(v) {
       if (!requireNamespace("flowCore", quietly = TRUE)) return(v)
@@ -816,18 +832,18 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
                   isTRUE(.is_scatter_channel(resolved_channel))
     is_flow_signal <- identical(instrument, "flow") &&
       !(exists(".is_qc_channel", mode = "function") && isTRUE(.is_qc_channel(resolved_channel)))
-    if (!is_scatter && !is_flow_signal) return(function(v) v)
+    if (!is_scatter && !is_flow_signal) return(.gml_identity_inverter)
 
     t_v <- suppressWarnings(as.numeric(tr_def$T))
     m_v <- suppressWarnings(as.numeric(tr_def$M %||% log10(exp(1))))
     a_v <- suppressWarnings(as.numeric(tr_def$A %||% 0))
     if (!is.finite(t_v) || t_v <= 0 || !is.finite(m_v) || m_v <= 0) {
-      return(function(v) v)
+      return(.gml_identity_inverter)
     }
     if (!is.finite(a_v)) a_v <- 0
     ln10  <- log(10)
     denom <- sinh(m_v * ln10)
-    if (!is.finite(denom) || denom == 0) return(function(v) v)
+    if (!is.finite(denom) || denom == 0) return(.gml_identity_inverter)
     cf_eff <- t_v / denom
     k1 <- (m_v + a_v) * ln10
     k0 <- a_v * ln10
@@ -845,7 +861,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     # compute the effective cofactor = T / sinh(M * ln(10)) and invert.
     return(function(v) cf * sinh(v))
   }
-  function(v) v
+  .gml_identity_inverter
 }
 
 .gml_parse_gate_node <- function(node) {
@@ -1201,6 +1217,46 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   problems
 }
 
+# Gating-ML 2.0 makes a gate's transforms part of the gate (section 4.2.3): a polygon's edges are
+# straight in the space its dimensions declare, and GateLab evaluates it there. GateLabR inverts
+# each vertex into the values it gates in and joins the vertices with straight edges in those
+# values. The inversion acts on each axis separately, so an edge parallel to an axis stays the same
+# edge, as does any edge on axes the inversion leaves alone. A slanted edge on an axis it transforms
+# (logicle, or arcsinh on flow data) is a curve in those values, and the straight edge GateLabR
+# would join instead selects different events, so the polygon is refused by name rather than
+# imported changed. A file GateLabR wrote is the exception: GateLabR's polygons are straight in raw
+# values and it writes their vertices transformed, so it reads them back as they were.
+.gml_curved_polygon_problems <- function(raw_gates, session_channels, pnn_to_channel,
+                                         transforms_map, logicle_unit, instrument) {
+  problems <- character(0)
+  for (g in raw_gates) {
+    if (!identical(g$gate_type, "polygon")) next
+    x_ch <- .gml_resolve_channel(g$x_channel, session_channels, pnn_to_channel)
+    y_ch <- .gml_resolve_channel(g$y_channel, session_channels, pnn_to_channel)
+    if (is.null(x_ch) || is.null(y_ch)) next # refused as a missing channel
+    transformed <- c(
+      !identical(.gml_make_inverter(x_ch, g$dims[[1]]$transformation_ref, transforms_map,
+                                    logicle_unit, instrument), .gml_identity_inverter),
+      !identical(.gml_make_inverter(y_ch, g$dims[[2]]$transformation_ref, transforms_map,
+                                    logicle_unit, instrument), .gml_identity_inverter)
+    )
+    if (!any(transformed)) next
+    xs <- vapply(g$vertices, function(v) as.numeric(v[1]), numeric(1))
+    ys <- vapply(g$vertices, function(v) as.numeric(v[2]), numeric(1))
+    # The polygon closes from its last vertex back to its first.
+    slanted <- (c(xs[-1], xs[1]) != xs) & (c(ys[-1], ys[1]) != ys)
+    if (any(slanted)) {
+      problems <- c(problems, paste0(
+        "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") is a polygon with slanted edges on a ",
+        "logicle or arcsinh axis. Those edges are straight on that axis; GateLabR joins a ",
+        "polygon's vertices with straight edges in raw values, where these edges are curved, so ",
+        "the gate would select different events."
+      ))
+    }
+  }
+  problems
+}
+
 #' Import Cytobank Gating-ML 2.0 into GateLabR gate/population structures
 #'
 #' @param file_path Path to Gating-ML XML file
@@ -1320,6 +1376,12 @@ import_gatingml_from_cytobank <- function(file_path,
     .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
     .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
   )
+  if (!.gml_written_by_gatelabr(root)) {
+    import_problems <- c(import_problems, .gml_curved_polygon_problems(
+      raw_gates, session_channels, pnn_to_channel, transforms_map,
+      gatelab_format$logicle_unit, instrument
+    ))
+  }
   gatelabr_state <- .gml_parse_gatelabr_state(root)
   dimension_compensation <- .gml_dimension_compensation(raw_gates, spectra)
   compensation_refs <- dimension_compensation$refs

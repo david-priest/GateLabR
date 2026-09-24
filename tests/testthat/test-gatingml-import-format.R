@@ -114,6 +114,69 @@ test_that("flow fluorescence gates under arcsinh are inverted only when the call
   ))
 })
 
+test_that("polygons with slanted edges on a logicle or arcsinh axis are refused by name", {
+  # The file declares those edges straight on the axes they were drawn on, where GateLab evaluates
+  # them. GateLabR joins inverted vertices with straight edges in raw values, where they are
+  # curves, so it would select different events.
+  for (name in c("slanted-standard.xml", "slanted-cytobank.xml")) {
+    err <- tryCatch(gml_import(gml_fixture(name)), error = function(e) conditionMessage(e))
+    expect_type(err, "character")
+    expect_match(err, 'Gate "Slant_FL_gate" (', fixed = TRUE, info = name)
+    expect_match(err, 'Gate "Slant_scatter_gate" (', fixed = TRUE, info = name)
+    # Edges parallel to an axis, and a polygon in raw values, are the same gate in raw values.
+    expect_no_match(err, 'Gate "L_gate"', fixed = TRUE, info = name)
+    expect_no_match(err, 'Gate "Poly_gate"', fixed = TRUE, info = name)
+  }
+})
+
+test_that("an ellipse is refused in both formats, by name", {
+  expect_error(
+    gml_import(gml_fixture("ellipse-standard.xml")),
+    "EllipsoidGate [^ ]+ \\(Ellipse_gate\\) is not supported"
+  )
+  # The Cytobank format writes the ellipse as its boundary, a polygon on arcsinh axes.
+  expect_error(
+    gml_import(gml_fixture("ellipse-cytobank.xml")),
+    'Gate "Ellipse_gate" (', fixed = TRUE
+  )
+})
+
+test_that("GateLabR's own exports keep polygons straight in raw values, as GateLabR drew them", {
+  sys.source(file.path(app_r_dir, "gatingml_export.R"), envir = globalenv())
+  counts <- gml_events[, c("FSC-A", "SSC-A", "FL1-A", "FL2-A")]
+  channels <- colnames(counts)
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = t(counts), exprs = t(counts))
+  )
+  rownames(sce) <- channels
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  S4Vectors::metadata(sce)$channel_to_pnn <- stats::setNames(as.list(channels), channels)
+
+  # GateLabR stores flow gates in raw values and writes their vertices on the display axes.
+  slanted <- new_gate(
+    "Slanted", "polygon", "FL1-A", "FL2-A",
+    list(c(-400, 200), c(30000, -600), c(45000, 30000), c(1500, 20000))
+  )
+  root <- new_root_population(nrow(counts))
+  pop <- new_population("Slanted", list(new_gate_ref(slanted$gate_id)), root$population_id)
+  populations <- stats::setNames(list(root, pop), c(root$population_id, pop$population_id))
+  populations <- link_child_to_parent(populations, pop$population_id, root$population_id)
+  gates <- stats::setNames(list(slanted), slanted$gate_id)
+  drawn <- which(apply_gating_strategy(gates, populations, root$population_id, counts)$masks[[pop$population_id]])
+
+  for (format in c("standard", "cytobank")) {
+    out <- tempfile(fileext = ".xml")
+    suppressMessages(export_gatingml_to_cytobank(
+      gates, names(gates), populations, root$population_id, sce, out,
+      format = format, counts_mat = counts
+    ))
+    expect_true(any(grepl("transformation-ref", readLines(out, warn = FALSE))), info = format)
+    parsed <- import_gatingml_from_cytobank(out, channels, stats::setNames(as.list(channels), channels),
+                                            instrument = "flow")
+    expect_identical(gml_membership(parsed, counts)[["/Slanted"]], drawn, info = format)
+  }
+})
+
 test_that("exclusions are refused and name the populations, never read as inclusions", {
   for (name in c("exclusion-standard.xml", "exclusion-cytobank.xml",
                  "exclusion-standard-0.8.3.xml", "exclusion-cytobank-0.8.3.xml")) {
