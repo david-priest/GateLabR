@@ -875,34 +875,20 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # whenever it inverts nothing.
 .gml_identity_inverter <- function(v) v
 
-# How one dimension's coordinates, in the space the file declares for it, become the values
-# GateLabR stores for its channel, and back:
-#   inverse: declared coordinate -> stored value (what gate vertices are made of);
-#   forward: stored value -> declared coordinate;
-#   kind:    "identity" (coordinates are taken as they are), "affine" (a x + b, so a straight edge
-#            stays straight), or "curved" (a straight edge in the declared space is a curve in the
-#            stored values; see .gml_polygon_vertices).
-#
-# logicle_unit: whether the file's logicle coordinates are on Gating-ML's [0, 1] scale rather than
-# flowCore's (see .gml_parse_gatelab_format). instrument: "flow" when the gates will be evaluated
-# on flow data, whose gates GateLabR stores in raw values; NULL keeps the behaviour this function
-# had before it was given one.
-.gml_axis_map <- function(resolved_channel, trans_ref, transforms_map,
-                          logicle_unit = FALSE, instrument = NULL) {
-  identity_map <- list(inverse = .gml_identity_inverter, forward = .gml_identity_inverter,
-                       kind = "identity")
-  if (is.null(trans_ref) || !nzchar(trans_ref)) return(identity_map)
-  if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(identity_map)
+.gml_identity_map <- function() {
+  list(inverse = .gml_identity_inverter, forward = .gml_identity_inverter, kind = "identity")
+}
 
-  # QC / instrument channels: always raw space, no inversion.
-  if (grepl("^(time|event_length|cell_length|barcode)$", resolved_channel, ignore.case = TRUE)) {
-    return(identity_map)
-  }
-
-  tr_def <- transforms_map[[trans_ref]]
+# A transformation's own map between the coordinates it declares and raw values:
+#   inverse: declared coordinate -> raw value; forward: raw value -> declared coordinate;
+#   kind:    "identity", "affine" (a x + b, so a straight edge stays straight), or "curved" (a
+#            straight edge in the declared space is a curve in raw values).
+# No transformation (NULL) is raw values already.
+.gml_declared_map <- function(tr_def, logicle_unit = FALSE) {
+  identity_map <- .gml_identity_map()
   if (is.null(tr_def)) return(identity_map)
 
-  # flin: x = y (T + A) - A. GateLabR's values are raw on every axis a linear scale is used for.
+  # flin: x = y (T + A) - A.
   if (is.list(tr_def) && identical(tr_def$type, "flin")) {
     span <- tr_def$T + tr_def$A
     offset <- tr_def$A
@@ -939,35 +925,11 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     ))
   }
 
-  # fasinh / arcsinh: two distinct cases.
-  #
-  #   • CyTOF metal / Gaussian channels: rv$gates stores vertices in arcsinh
-  #     EXPRS space (display space), and the GatingML export wrote them out
-  #     in that same space.  Identity round-trip.
-  #
-  #   • FLOW scatter (FSC/SSC/...) channels: rv$gates stores vertices in RAW
-  #     counts space, but the GatingML export forward-transformed them to
-  #     arcsinh display space (so files are portable to Cytobank / FlowJo).
-  #     We must apply the fasinh inverse here to put vertices BACK into raw
-  #     counts space — otherwise an export+import roundtrip squashes flow
-  #     scatter gates down to a tiny region near zero (raw≈display values get
-  #     forward-transformed again at render time → asinh(raw/cf) ≈ 0).
-  #
   # Gating-ML 2.0 fasinh (section 6.3; flowutils and FlowKit compute the same):
   #     f(x) = (arcsinh(x*sinh(M*ln10)/T) + A*ln10) / ((M+A)*ln10)
   # Inverse:
   #     f^-1(y) = T/sinh(M*ln10) * sinh(y*(M+A)*ln10 - A*ln10)
-  #   • FLOW fluorescence under fasinh: stored raw like scatter, so inverted too. GateLab's
-  #     Cytobank format writes flow fluorescence gates this way, because Cytobank has no
-  #     logicle, and so do Cytobank's own flow exports. Only when the caller says the data are
-  #     flow (instrument = "flow"): the function cannot tell a flow file from a CyTOF one.
   if (is.list(tr_def) && identical(tr_def$type, "fasinh")) {
-    is_scatter <- exists(".is_scatter_channel", mode = "function") &&
-                  isTRUE(.is_scatter_channel(resolved_channel))
-    is_flow_signal <- identical(instrument, "flow") &&
-      !(exists(".is_qc_channel", mode = "function") && isTRUE(.is_qc_channel(resolved_channel)))
-    if (!is_scatter && !is_flow_signal) return(identity_map)
-
     t_v <- suppressWarnings(as.numeric(tr_def$T))
     m_v <- suppressWarnings(as.numeric(tr_def$M %||% log10(exp(1))))
     a_v <- suppressWarnings(as.numeric(tr_def$A %||% 0))
@@ -1003,10 +965,95 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   identity_map
 }
 
+# Whether a transformation is arcsinh(x / cofactor) exactly: fasinh with A = 0, (M + A) ln 10 = 1
+# and T / sinh(M ln 10) = cofactor, as GateLab, GateLabR and Cytobank write a mass cytometry
+# arcsinh.
+.gml_is_data_arcsinh <- function(tr_def, cofactor) {
+  if (!is.list(tr_def) || !identical(tr_def$type, "fasinh")) return(FALSE)
+  t_v <- suppressWarnings(as.numeric(tr_def$T))
+  m_v <- suppressWarnings(as.numeric(tr_def$M %||% log10(exp(1))))
+  a_v <- suppressWarnings(as.numeric(tr_def$A %||% 0))
+  if (!all(is.finite(c(t_v, m_v, a_v, cofactor))) || cofactor <= 0) return(FALSE)
+  abs(a_v) <= 1e-12 && abs(m_v * log(10) - 1) <= 1e-9 &&
+    abs(t_v / sinh(m_v * log(10)) / cofactor - 1) <= 1e-9
+}
+
+# Mass cytometry: GateLabR gates every channel on arcsinh(x / cofactor) except Time,
+# Event_length, Cell_length and file_number, which stay raw (transform_matrix_by_instrument).
+# A coordinate is taken from the space its dimension declares to raw values, then to the data's
+# arcsinh. A dimension already on the data's arcsinh is taken as it is; any other (raw values, an
+# arcsinh of another cofactor, logicle, flin) is curved, since arcsinh is.
+.gml_cytof_axis_map <- function(channel, tr_def, logicle_unit, cofactor) {
+  raw_channel <- if (exists(".is_cytof_raw_channel", mode = "function")) {
+    isTRUE(.is_cytof_raw_channel(channel))
+  } else {
+    grepl("^(time|event_length|cell_length|file_number)$", channel, ignore.case = TRUE)
+  }
+  declared <- .gml_declared_map(tr_def, logicle_unit)
+  if (raw_channel) return(declared)
+  if (.gml_is_data_arcsinh(tr_def, cofactor)) return(.gml_identity_map())
+  list(
+    inverse = function(v) asinh(declared$inverse(v) / cofactor),
+    forward = function(v) declared$forward(cofactor * sinh(as.numeric(v))),
+    kind = "curved"
+  )
+}
+
+# How one dimension's coordinates, in the space the file declares for it, become the values
+# GateLabR stores for its channel, and back: a list(inverse, forward, kind) as .gml_declared_map
+# gives, where "raw" is instead the values GateLabR gates on.
+#
+# logicle_unit: whether the file's logicle coordinates are on Gating-ML's [0, 1] scale rather than
+# flowCore's (see .gml_parse_gatelab_format). instrument: "flow" when the gates will be evaluated
+# on flow data, whose gates GateLabR stores in raw values; "cytof" when they will be evaluated on
+# mass cytometry data held as arcsinh(x / cytof_cofactor) (.gml_cytof_axis_map); NULL keeps the
+# behaviour this function had before it was given one.
+.gml_axis_map <- function(resolved_channel, trans_ref, transforms_map,
+                          logicle_unit = FALSE, instrument = NULL, cytof_cofactor = 5) {
+  identity_map <- .gml_identity_map()
+  if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(identity_map)
+
+  # QC / instrument channels: always raw space, no inversion.
+  if (grepl("^(time|event_length|cell_length|barcode)$", resolved_channel, ignore.case = TRUE)) {
+    return(identity_map)
+  }
+
+  tr_def <- if (!is.null(trans_ref) && nzchar(trans_ref)) transforms_map[[trans_ref]] else NULL
+  if (identical(instrument, "cytof")) {
+    return(.gml_cytof_axis_map(resolved_channel, tr_def, logicle_unit, cytof_cofactor))
+  }
+  if (is.null(tr_def)) return(identity_map)
+
+  # fasinh / arcsinh on flow data, or when the caller does not say which data:
+  #
+  #   • FLOW scatter (FSC/SSC/...) channels: rv$gates stores vertices in RAW
+  #     counts space, but the GatingML export forward-transformed them to
+  #     arcsinh display space (so files are portable to Cytobank / FlowJo).
+  #     We must apply the fasinh inverse here to put vertices BACK into raw
+  #     counts space — otherwise an export+import roundtrip squashes flow
+  #     scatter gates down to a tiny region near zero (raw≈display values get
+  #     forward-transformed again at render time → asinh(raw/cf) ≈ 0).
+  #   • FLOW fluorescence under fasinh: stored raw like scatter, so inverted too. GateLab's
+  #     Cytobank format writes flow fluorescence gates this way, because Cytobank has no
+  #     logicle, and so do Cytobank's own flow exports. Only when the caller says the data are
+  #     flow (instrument = "flow").
+  #   • Otherwise (instrument NULL) the coordinates are taken as they are, as for CyTOF metal
+  #     channels before the caller could say which data they are.
+  if (is.list(tr_def) && identical(tr_def$type, "fasinh")) {
+    is_scatter <- exists(".is_scatter_channel", mode = "function") &&
+                  isTRUE(.is_scatter_channel(resolved_channel))
+    is_flow_signal <- identical(instrument, "flow") &&
+      !(exists(".is_qc_channel", mode = "function") && isTRUE(.is_qc_channel(resolved_channel)))
+    if (!is_scatter && !is_flow_signal) return(identity_map)
+  }
+  .gml_declared_map(tr_def, logicle_unit)
+}
+
 # The declared-coordinate -> stored-value half of .gml_axis_map.
 .gml_make_inverter <- function(resolved_channel, trans_ref, transforms_map,
-                               logicle_unit = FALSE, instrument = NULL) {
-  .gml_axis_map(resolved_channel, trans_ref, transforms_map, logicle_unit, instrument)$inverse
+                               logicle_unit = FALSE, instrument = NULL, cytof_cofactor = 5) {
+  .gml_axis_map(resolved_channel, trans_ref, transforms_map, logicle_unit, instrument,
+                cytof_cofactor)$inverse
 }
 
 # How finely a polygon's slanted edges are followed when an axis is curved (.gml_polygon_vertices):
@@ -1471,12 +1518,18 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 #' @param pnn_to_channel Optional named mapping of FCS $PnN -> display channel name
 #' @param instrument "flow" or "cytof": how the loaded data store gates. With "flow", gate
 #'   coordinates declared under arcsinh are inverted to raw values for fluorescence channels as
-#'   well as scatter. NULL inverts scatter only, as before this argument existed.
+#'   well as scatter. With "cytof", every coordinate is converted to the data's
+#'   arcsinh(x / cofactor) except on the channels the data keep raw (Time, Event_length,
+#'   Cell_length, file_number). NULL inverts scatter only, as before this argument existed.
+#' @param cytof_cofactor The loaded mass cytometry data's arcsinh cofactor (with instrument
+#'   "cytof"). A file that records GateLab's own cofactor (gatelabr_scales) is read on that one
+#'   instead, since importing it re-transforms the data to it. Default 5.
 #' @return List with gates, gate_order, populations, root_population_id and import stats
 import_gatingml_from_cytobank <- function(file_path,
                                           session_channels,
                                           pnn_to_channel = NULL,
-                                          instrument = NULL) {
+                                          instrument = NULL,
+                                          cytof_cofactor = NULL) {
   if (!requireNamespace("xml2", quietly = TRUE)) {
     stop("Package 'xml2' is required for Gating-ML import. Install with: install.packages('xml2')")
   }
@@ -1707,6 +1760,13 @@ import_gatingml_from_cytobank <- function(file_path,
   polygon_problems <- character(0)
   # GateLabR's own polygons are straight in raw values, and it writes their vertices transformed.
   densify_polygons <- !.gml_written_by_gatelabr(root)
+  # The cofactor mass cytometry data will be on once the file is imported: the file's own when it
+  # records one (the app re-transforms the data to it), else the loaded data's.
+  data_cofactor <- gatelabr_state$cytof_cofactor %||% cytof_cofactor %||% 5
+  if (!is.numeric(data_cofactor) || length(data_cofactor) != 1L || !is.finite(data_cofactor) ||
+      data_cofactor <= 0) {
+    stop("cytof_cofactor must be one positive number.")
+  }
 
   for (gml_id in names(raw_gates)) {
     g <- raw_gates[[gml_id]]
@@ -1731,8 +1791,10 @@ import_gatingml_from_cytobank <- function(file_path,
 
     x_tr <- if (length(g$dims) >= 1) g$dims[[1]]$transformation_ref %||% NULL else NULL
     y_tr <- if (length(g$dims) >= 2) g$dims[[2]]$transformation_ref %||% NULL else NULL
-    map_x <- .gml_axis_map(x_ch, x_tr, transforms_map, gatelab_format$logicle_unit, instrument)
-    map_y <- .gml_axis_map(y_ch, y_tr, transforms_map, gatelab_format$logicle_unit, instrument)
+    map_x <- .gml_axis_map(x_ch, x_tr, transforms_map, gatelab_format$logicle_unit, instrument,
+                           data_cofactor)
+    map_y <- .gml_axis_map(y_ch, y_tr, transforms_map, gatelab_format$logicle_unit, instrument,
+                           data_cofactor)
 
     if (identical(g$gate_type, "polygon")) {
       mapped <- .gml_polygon_vertices(g$vertices, map_x, map_y, densify = densify_polygons)

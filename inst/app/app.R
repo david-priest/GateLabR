@@ -1514,7 +1514,7 @@ server <- function(input, output, session) {
   }
 
   import_gatingml_via_subprocess <- function(file_path, session_channels, pnn_to_channel = NULL,
-                                             instrument = NULL) {
+                                             instrument = NULL, cytof_cofactor = NULL) {
     in_rds <- tempfile("gml_in_", fileext = ".rds")
     out_rds <- tempfile("gml_out_", fileext = ".rds")
     script_path <- tempfile("gml_import_", fileext = ".R")
@@ -1525,6 +1525,7 @@ server <- function(input, output, session) {
       session_channels = as.character(session_channels),
       pnn_to_channel = pnn_to_channel %||% list(),
       instrument = instrument,
+      cytof_cofactor = cytof_cofactor,
       app_dir = app_dir
     )
     saveRDS(payload, in_rds)
@@ -1542,7 +1543,8 @@ server <- function(input, output, session) {
       "  file_path = x$file_path,",
       "  session_channels = x$session_channels,",
       "  pnn_to_channel = x$pnn_to_channel,",
-      "  instrument = x$instrument",
+      "  instrument = x$instrument,",
+      "  cytof_cofactor = x$cytof_cofactor",
       ")",
       "saveRDS(res, outp)"
     ), con = script_path)
@@ -9696,12 +9698,15 @@ server <- function(input, output, session) {
       has_native_pnn_map <- is.list(native_pnn_map) && length(native_pnn_map) > 0
       pnn_map <- build_gatingml_channel_map(rv$sce, rv$channels)
       gml_instrument <- if (is_flow_session(rv$sce)) "flow" else "cytof"
+      gml_cofactor <- suppressWarnings(as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5))
+      if (length(gml_cofactor) != 1L || !is.finite(gml_cofactor) || gml_cofactor <= 0) gml_cofactor <- 5
       parsed <- tryCatch(
         import_gatingml_from_cytobank(
           file_path = f$datapath,
           session_channels = rv$channels,
           pnn_to_channel = pnn_map,
-          instrument = gml_instrument
+          instrument = gml_instrument,
+          cytof_cofactor = gml_cofactor
         ),
         error = function(e) {
           msg <- conditionMessage(e)
@@ -9721,7 +9726,8 @@ server <- function(input, output, session) {
             file_path = f$datapath,
             session_channels = rv$channels,
             pnn_to_channel = pnn_map,
-            instrument = gml_instrument
+            instrument = gml_instrument,
+            cytof_cofactor = gml_cofactor
           )
         }
       )

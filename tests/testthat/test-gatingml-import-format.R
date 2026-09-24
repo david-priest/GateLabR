@@ -543,3 +543,35 @@ test_that("a PopulationGatePair written complement=\"1\" or \" true\" is refused
     gml_expect_membership(gml_membership(gml_import(pair)), gml_expected("-0.8.3")$populations$tree)
   }
 })
+
+test_that("mass cytometry gates in raw values, or under another arcsinh, are converted to the data's arcsinh", {
+  # GateLabR gates mass cytometry on arcsinh(x / cofactor), Time and the event geometry raw. A
+  # dimension with no transformation is raw values, and one under an arcsinh of another cofactor
+  # is on another scale; compared unconverted with the data, both selected other events.
+  events <- as.matrix(utils::read.csv(gml_fixture("cytof-events.csv"), check.names = FALSE))
+  storage.mode(events) <- "double"
+  channels <- colnames(events)
+  identity_map <- stats::setNames(as.list(channels), channels)
+  expected <- gml_flowkit("cytof")
+  for (cofactor in c(5, 15)) {
+    data <- transform_matrix_by_instrument(events, channels, "cytof", cofactor = cofactor)
+    parsed <- import_gatingml_from_cytobank(gml_fixture("flowkit-cytof.xml"), channels, identity_map,
+                                            instrument = "cytof", cytof_cofactor = cofactor)
+    gml_expect_membership(gml_membership(parsed, data), expected)
+    gates <- stats::setNames(parsed$gates, vapply(parsed$gates, `[[`, "", "name"))
+    # A raw rectangle's bounds convert exactly.
+    xml <- xml2::xml_root(xml2::read_xml(gml_fixture("flowkit-cytof.xml")))
+    box <- xml2::xml_find_first(xml, ".//*[local-name()='RectangleGate'][@*[local-name()='id']='Raw_box']/*[local-name()='dimension']")
+    bounds <- as.numeric(c(xml2::xml_attr(box, "min"), xml2::xml_attr(box, "max")))
+    expect_equal(range(vapply(gates$Raw_box$vertices, `[`, 0, 1)), asinh(bounds / cofactor), info = cofactor)
+    # A polygon in raw values is followed on the data's arcsinh; on the data's own arcsinh it is
+    # taken as it is; Time is raw.
+    expect_gt(length(gates$Raw_slant$vertices), 4L)
+    if (cofactor == 5) {
+      expect_length(gates$Arcsinh_slant$vertices, 4L)
+    } else {
+      expect_gt(length(gates$Arcsinh_slant$vertices), 4L)
+    }
+    expect_equal(range(vapply(gates$Time_window$vertices, `[`, 0, 1)), c(100.5, 450.5))
+  }
+})
