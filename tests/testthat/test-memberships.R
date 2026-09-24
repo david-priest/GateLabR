@@ -469,21 +469,25 @@ test_that("every id a save writes is odd, and every id that lost precision is ev
   # it to a multiple of ten. Both grids are even, and no save writes an even id.
   f32 <- function(x) readBin(writeBin(x, raw(), size = 4L), "double", size = 4L, n = length(x))
   for (event_count in c(1, 3, 1e5, 2^25 - 1, 2^25, 1e8)) {
+    odd <- in_range <- exact <- float32_even <- rounded_even <- logical(0)
     for (draw in 1:25) {
       offset <- GateLabR:::.gatelabr_event_id_offset(paste0("draw ", draw), draw, event_count)
       positions <- unique(round(c(1, 2, seq(1, event_count, length.out = 200), event_count - 1, event_count)))
       positions <- positions[positions >= 1 & positions <= event_count]
       ids <- offset + 2 * positions - 1
-      label <- paste("a save of", event_count, "events")
-      expect_true(all(ids %% 2 == 1), label = paste("ids of", label, "are odd"))
-      expect_true(all(ids > 2^48 & ids < 2^49), label = paste("ids of", label, "lie between 2^48 and 2^49"))
+      odd <- c(odd, ids %% 2 == 1)
+      in_range <- c(in_range, ids > 2^48 & ids < 2^49)
       # 15 significant digits, as write.csv() writes a double, carry every id exactly.
-      expect_true(all(as.numeric(format(ids, digits = 15)) == ids), label = paste("ids of", label, "in 15 digits"))
-      expect_true(all(f32(ids) %% 2 == 0), label = paste("float32 ids of", label, "are even"))
-      for (digits in 1:14) {
-        expect_true(all(signif(ids, digits) %% 2 == 0), label = paste(digits, "digit ids of", label, "are even"))
-      }
+      exact <- c(exact, as.numeric(format(ids, digits = 15)) == ids)
+      float32_even <- c(float32_even, f32(ids) %% 2 == 0)
+      rounded_even <- c(rounded_even, vapply(1:14, function(digits) all(signif(ids, digits) %% 2 == 0), logical(1)))
     }
+    label <- paste("a save of", event_count, "events")
+    expect_true(all(odd), label = paste("ids of", label, "are odd"))
+    expect_true(all(in_range), label = paste("ids of", label, "lie between 2^48 and 2^49"))
+    expect_true(all(exact), label = paste("ids of", label, "are exact in 15 digits"))
+    expect_true(all(float32_even), label = paste("float32-rounded ids of", label, "are even"))
+    expect_true(all(rounded_even), label = paste("ids of", label, "rounded to 1 to 14 digits are even"))
   }
 
   saved <- store_with_memberships()$sce
