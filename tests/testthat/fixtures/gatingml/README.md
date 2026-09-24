@@ -14,7 +14,7 @@ The XML files are GateLab's own exports of three strategies over those events, w
 | `matrix-standard.xml`, `matrix-cytobank.xml` | Gates on channels compensated by a matrix that is not the file's own: a `spectrumMatrix` (`Spill_1`) and `Comp_` dimensions in the standard format; the same matrix unreferenced, with FCS dimensions and GateLab's compensation record, in the Cytobank format. |
 | `*-0.8.3.xml` | The same strategies as GateLab 0.8.3 wrote them, before the format mark: a `GatingHierarchy`, logicle on flowCore's scale, `gating:complement`. |
 
-GateLab 0.8.3's Cytobank-format tree and matrix files are not kept: 0.8.3 wrote gates drawn on a logicle axis at the wrong coordinates in that format, which later GateLab versions fix, so no reader can recover GateLab's populations from them.
+GateLab 0.8.3's Cytobank-format tree and matrix files are not kept: 0.8.3 wrote gates drawn on a logicle axis at the wrong coordinates in that format, which later GateLab versions fix, so no reader can recover GateLab's populations from them. `exclusion-cytobank-0.8.3.xml` has the same fault but is kept, because the tests use it only for its `gating:complement` exclusions, which must be refused.
 
 To regenerate, build the script against a GateLab checkout with its `node_modules` installed and run it from the root of this repository:
 
