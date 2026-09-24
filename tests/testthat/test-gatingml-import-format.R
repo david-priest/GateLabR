@@ -656,6 +656,28 @@ test_that("a PopulationGatePair written complement=\"1\" or \" true\" is refused
   }
 })
 
+test_that("a complement value that is not an xs:boolean is refused, naming the population", {
+  # "yes", "no", "2" or an empty value is neither true nor false, and was read as an inclusion.
+  for (value in c("yes", "", "no", "2")) {
+    pair <- gml_variant("tree-standard-0.8.3.xml", function(lines) {
+      sub('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU.">',
+          sprintf('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU." gating:complement="%s">', value),
+          lines, fixed = TRUE)
+    })
+    expect_error(gml_import(pair), sprintf(
+      'Population "FL1_positive" gives its gate the complement value "%s", which is not an xs:boolean', value
+    ), fixed = TRUE, info = value)
+    reference <- gml_variant("flowkit-boolean.xml", function(lines) {
+      hit <- grep('<gating:gateReference gating:ref="FL3_pos"/>', lines, fixed = TRUE)[1]
+      lines[hit] <- sprintf('<gating:gateReference gating:ref="FL3_pos" gating:use-as-complement="%s"/>', value)
+      lines
+    })
+    expect_error(gml_import(reference), sprintf(
+      'Population "Both" gives its gate the complement value "%s", which is not an xs:boolean', value
+    ), fixed = TRUE, info = value)
+  }
+})
+
 test_that("mass cytometry gates in raw values, or under another arcsinh, are converted to the data's arcsinh", {
   # GateLabR gates mass cytometry on arcsinh(x / cofactor), Time and the event geometry raw. A
   # dimension with no transformation is raw values, and one under an arcsinh of another cofactor
