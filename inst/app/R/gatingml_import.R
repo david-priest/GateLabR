@@ -1630,6 +1630,20 @@ import_gatingml_from_cytobank <- function(file_path,
       next
     }
 
+    # A dimension that is not an FCS parameter (a ratio of two, or another derived new-dimension)
+    # is not read, and dropping it would leave a gate on its other dimensions only.
+    underived <- vapply(as.list(.gml_children_local(el, "dimension")), function(dim) {
+      !is.null(.gml_first_child_local(dim, "fcs-dimension")) ||
+        !is.null(.gml_first_child_local(dim, "parameter"))
+    }, logical(1))
+    if (!all(underived)) {
+      import_problems <- c(import_problems, paste0(
+        .gml_gate_label(el), " has a dimension that is not an FCS parameter (a ratio or another ",
+        "derived dimension), which GateLabR cannot gate on."
+      ))
+      next
+    }
+
     if (identical(loc, "RectangleGate")) {
       n_dims <- length(.gml_parse_dimensions(el))
       if (n_dims < 1 || n_dims > 2) {

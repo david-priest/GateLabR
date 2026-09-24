@@ -619,3 +619,28 @@ test_that("mass cytometry gates in raw values, or under another arcsinh, are con
     expect_equal(range(vapply(gates$Time_window$vertices, `[`, 0, 1)), c(100.5, 450.5))
   }
 })
+
+test_that("a gate on a derived dimension, such as a ratio, is refused by name", {
+  # As FlowKit writes a ratio of two parameters: a transforms:fratio and a data-type:new-dimension.
+  # The importer dropped that dimension, leaving a range gate on FSC-A alone.
+  ratio <- gml_write('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <transforms:transformation transforms:id="Area_to_height">
+    <transforms:fratio transforms:A="1.0" transforms:B="0.0" transforms:C="0.0">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+      <data-type:fcs-dimension data-type:name="SSC-A"/>
+    </transforms:fratio>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Singlets">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="20000" gating:max="200000">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.8" gating:max="1.4">
+      <data-type:new-dimension data-type:transformation-ref="Area_to_height"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>')
+  expect_error(gml_import(ratio), "RectangleGate Singlets has a dimension that is not an FCS parameter", fixed = TRUE)
+})
