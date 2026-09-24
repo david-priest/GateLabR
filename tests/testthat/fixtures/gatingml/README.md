@@ -2,7 +2,7 @@
 
 Everything here is synthetic: generic detector names (FSC-A, SSC-A, FL1-A, FL2-A, FL3-A, Time), no markers, made-up population names, and 600 events drawn from a seeded generator. `test-gatingml-import-format.R` uses them.
 
-The XML files are GateLab's own exports of three strategies over those events, written by `tools/gatingml-fixtures.ts` from GateLab's exporter. The same script records which events GateLab places in each population (`membership*.json`, 1-based event indices keyed by the population's name path), so the tests can check that GateLabR's importer selects the same events.
+The XML files are GateLab's own exports of six strategies over those events, written by `tools/gatingml-fixtures.ts` from GateLab's exporter. The same script records which events GateLab places in each population (`membership*.json`, 1-based event indices keyed by the population's name path), so the tests can check that GateLabR's importer selects the same events.
 
 | File | What it carries |
 |---|---|
@@ -12,7 +12,10 @@ The XML files are GateLab's own exports of three strategies over those events, w
 | `tree-cytobank.xml` | Cytobank format with the format mark: every population ANDs its ancestor chain, the tree is listed in the mark, fluorescence gates are under arcsinh. |
 | `exclusion-standard.xml`, `exclusion-cytobank.xml` | A population that excludes one gate among several and one that is a single exclusion: a `gatelab_operand` NOT gate and a `gating:not` in the standard format, `gating:use-as-complement` in the Cytobank format. |
 | `matrix-standard.xml`, `matrix-cytobank.xml` | Gates on channels compensated by a matrix that is not the file's own: a `spectrumMatrix` (`Spill_1`) and `Comp_` dimensions in the standard format; the same matrix unreferenced, with FCS dimensions and GateLab's compensation record, in the Cytobank format. |
-| `*-0.8.3.xml` | The same strategies as GateLab 0.8.3 wrote them, before the format mark: a `GatingHierarchy`, logicle on flowCore's scale, `gating:complement`. |
+| `slanted-standard.xml`, `slanted-cytobank.xml` | Polygons with slanted edges on logicle fluorescence and on arcsinh scatter, which are straight on those axes and curved in raw values, beside a polygon on logicle axes whose edges are all parallel to an axis and a polygon in raw values. |
+| `ellipse-standard.xml`, `ellipse-cytobank.xml` | An ellipse on logicle fluorescence: an `EllipsoidGate` in the standard format, a polygon on arcsinh axes in the Cytobank format. |
+| `repeated-standard.xml`, `repeated-cytobank.xml` | Populations that gate on a gate already in their parent's chain, each with children, so that in the Cytobank format each one's chain is its parent's. |
+| `*-0.8.3.xml` | The tree, exclusion and matrix strategies as GateLab 0.8.3 wrote them, before the format mark: a `GatingHierarchy`, logicle on flowCore's scale, `gating:complement`. |
 
 GateLab 0.8.3's Cytobank-format tree and matrix files are not kept: 0.8.3 wrote gates drawn on a logicle axis at the wrong coordinates in that format, which later GateLab versions fix, so no reader can recover GateLab's populations from them. `exclusion-cytobank-0.8.3.xml` has the same fault but is kept, because the tests use it only for its `gating:complement` exclusions, which must be refused.
 
@@ -26,4 +29,4 @@ node "$GL/node_modules/.cache/gatingml-fixtures.mjs" tests/testthat/fixtures/gat
 node "$GL/node_modules/.cache/gatingml-fixtures.mjs" tests/testthat/fixtures/gatingml -0.8.3   # from a 0.8.3 checkout
 ```
 
-The second run writes six `-0.8.3` files, of which the two Cytobank-format ones above are then removed.
+The second run writes six `-0.8.3` files, of which the two Cytobank-format ones above are then removed. The slanted, ellipse and repeated strategies are written by the first run only.

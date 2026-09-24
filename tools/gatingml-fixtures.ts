@@ -19,6 +19,7 @@
  * are GateLab's own for the gates as that version draws them, so they are written per suffix.
  */
 import { JSDOM } from "jsdom";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FcsFile } from "@gatelab/engine/fcs";
@@ -166,6 +167,45 @@ function gateSet(s: Sample) {
   };
 }
 
+/**
+ * Gates whose edges are straight on the axes they were drawn on and curved in raw values: polygons
+ * with slanted edges on logicle fluorescence and on arcsinh scatter, and an ellipse on logicle
+ * fluorescence, which the Cytobank format writes as a polygon on arcsinh axes. GateLab evaluates
+ * them in the space they were drawn in. They are kept out of gateSet so that the other strategies'
+ * files do not change.
+ */
+function curvedGates(s: Sample) {
+  const cf = (ch: string) => {
+    const spec = s.transformSpec(ch);
+    if (spec.kind !== "asinh") throw new Error(`${ch} is not on an arcsinh axis`);
+    return spec.cofactor;
+  };
+  const a = (v: number, ch: string) => Math.asinh(v / cf(ch));
+  const ellipse = {
+    gate_id: randomUUID(),
+    name: "Ellipse_gate",
+    gate_type: "ellipse",
+    x_channel: "FL1-A",
+    y_channel: "FL2-A",
+    mean: [0.75, 0.7],
+    covariance: [[0.03, 0.012], [0.012, 0.03]],
+    distance_square: 1,
+    color: "#e41a1c",
+    label_offset: null,
+  } as unknown as Gate;
+  return {
+    slantFluor: displayGate(s, newGate("Slant_FL_gate", "polygon", "FL1-A", "FL2-A",
+      [[0.35, 0.25], [0.8, 0.15], [0.95, 0.7], [0.45, 0.9]])),
+    slantScatter: displayGate(s, newGate("Slant_scatter_gate", "polygon", "FSC-A", "SSC-A", [
+      [a(35_000, "FSC-A"), a(45_000, "SSC-A")],
+      [a(140_000, "FSC-A"), a(25_000, "SSC-A")],
+      [a(195_000, "FSC-A"), a(140_000, "SSC-A")],
+      [a(70_000, "FSC-A"), a(165_000, "SSC-A")],
+    ])),
+    ellipse: displayGate(s, ellipse),
+  };
+}
+
 function build(
   gates: Record<string, Gate>,
   spec: { name: string; parent: string | null; refs: [string, boolean][] }[],
@@ -211,6 +251,49 @@ function exclusionStrategy(s: Sample): Tree {
   ]);
 }
 
+/**
+ * Polygons with slanted edges on transformed axes, under Cells on logicle fluorescence and at the
+ * top level on arcsinh scatter. L_subset's polygon has only edges parallel to an axis and
+ * Poly_subset's is in raw values, so each is the same gate in raw values as on its axes.
+ */
+function slantedStrategy(s: Sample): Tree {
+  const g = { ...gateSet(s), ...curvedGates(s) };
+  return build({ cells: g.cells, slantFluor: g.slantFluor, lshape: g.lshape, poly: g.poly, slantScatter: g.slantScatter }, [
+    { name: "Cells", parent: null, refs: [["cells", true]] },
+    { name: "Slant_FL", parent: "Cells", refs: [["slantFluor", true]] },
+    { name: "L_subset", parent: "Cells", refs: [["lshape", true]] },
+    { name: "Poly_subset", parent: "Cells", refs: [["poly", true]] },
+    { name: "Slant_scatter", parent: null, refs: [["slantScatter", true]] },
+  ]);
+}
+
+/** An ellipse on logicle fluorescence beside a rectangle. */
+function ellipseStrategy(s: Sample): Tree {
+  const g = { ...gateSet(s), ...curvedGates(s) };
+  return build({ cells: g.cells, ellipse: g.ellipse, fl1: g.fl1 }, [
+    { name: "Cells", parent: null, refs: [["cells", true]] },
+    { name: "Ellipse_pop", parent: "Cells", refs: [["ellipse", true]] },
+    { name: "FL1_positive", parent: "Cells", refs: [["fl1", true]] },
+  ]);
+}
+
+/**
+ * Populations that gate on a gate already in their parent's chain: Cells_again repeats Cells's
+ * gate and FL1_again repeats FL1_positive's, and each has children. In the Cytobank format each
+ * one's chain is its parent's.
+ */
+function repeatedStrategy(s: Sample): Tree {
+  const g = gateSet(s);
+  return build({ cells: g.cells, fl1: g.fl1, lshape: g.lshape, fl3: g.fl3 }, [
+    { name: "Cells", parent: null, refs: [["cells", true]] },
+    { name: "Cells_again", parent: "Cells", refs: [["cells", true]] },
+    { name: "FL1_positive", parent: "Cells_again", refs: [["fl1", true]] },
+    { name: "FL1_again", parent: "FL1_positive", refs: [["fl1", true]] },
+    { name: "L_subset", parent: "FL1_again", refs: [["lshape", true]] },
+    { name: "FL3_positive", parent: "Cells", refs: [["fl3", true]] },
+  ]);
+}
+
 /** Positive populations on channels compensated by a matrix that is not the file's own. */
 function matrixStrategy(s: Sample): Tree {
   const g = gateSet(s);
@@ -246,7 +329,15 @@ const TIMESTAMP = "2026-01-01T00:00:00";
 mkdirSync(outDir, { recursive: true });
 const memberships: Record<string, Record<string, number[]>> = {};
 
-const fixtures: { stem: string; tree: (s: Sample) => Tree; setup: (s: Sample) => void; withSpillover: boolean }[] = [
+// currentOnly: strategies the tests read only as the current exporter writes them, which a run with
+// a suffix does not write.
+const fixtures: {
+  stem: string;
+  tree: (s: Sample) => Tree;
+  setup: (s: Sample) => void;
+  withSpillover: boolean;
+  currentOnly?: boolean;
+}[] = [
   { stem: "tree", tree: treeStrategy, setup: () => {}, withSpillover: false },
   { stem: "exclusion", tree: exclusionStrategy, setup: () => {}, withSpillover: false },
   {
@@ -258,9 +349,13 @@ const fixtures: { stem: string; tree: (s: Sample) => Tree; setup: (s: Sample) =>
     },
     withSpillover: true,
   },
+  { stem: "slanted", tree: slantedStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
+  { stem: "ellipse", tree: ellipseStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
+  { stem: "repeated", tree: repeatedStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
 ];
 
 for (const f of fixtures) {
+  if (suffix && f.currentOnly) continue;
   const s = sample(f.withSpillover);
   f.setup(s);
   const t = f.tree(s);

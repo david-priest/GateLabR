@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xsi:schemaLocation="http://www.isac-net.org/std/Gating-ML/v2.0/gating http://flowcyt.sourceforge.net/gating/2.0/xsd/Gating-ML.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/transformations http://flowcyt.sourceforge.net/gating/2.0/xsd/Transformations.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/datatypes http://flowcyt.sourceforge.net/gating/2.0/xsd/DataTypes.v2.0.xsd">
+  <data-type:custom_info>
+    <cytobank>
+      <about>Gating-ML 2.0 export from GateLab (Cytobank-compatible)</about>
+      <cytobank_gating_version>2.0</cytobank_gating_version>
+      <export_timestamp>2026-01-01T00:00:00</export_timestamp>
+    </cytobank>
+    <gatelabr_scales>
+      <definition>{"version":3,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":0.902929},"FL2-A":{"w":0.895873},"FL3-A":{"w":0.881328}},"compensation":{"enabled":false,"reference":"uncompensated","channels":[]}}</definition>
+    </gatelabr_scales>
+    <gatelab_format>{"version":2,"logicle":"gating-ml","hierarchy":"tree","tree":[{"id":"GateSet_36000000","parent":null},{"id":"GateSet_36000001","parent":"GateSet_36000000"},{"id":"GateSet_36000002","parent":"GateSet_36000000"}]}</gatelab_format>
+  </data-type:custom_info>
+  <transforms:transformation transforms:id="Tr_Fasinh_150">
+    <transforms:fasinh transforms:T="176.28017904657" transforms:M="0.434294481903252" transforms:A="0" />
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Gate_180000001_Q2VsbHNfZ2F0ZQ..">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Cells_gate</name>
+        <id>180000001</id>
+        <gate_id>1</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396697,"max":8.13443450502118,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.00371336228892,"max":7.97353060594931,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.94002773483411,6.65603964916795],"rectangle":{"x1":5.99147079704939,"y1":5.5860135012032,"x2":7.88858467261883,"y2":7.72606579713271}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.99147079704939" gating:max="7.88858467261883" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FSC-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.5860135012032" gating:max="7.72606579713271" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="SSC-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:PolygonGate gating:id="Gate_180000002_RWxsaXBzZV9nYXRl">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Ellipse_gate</name>
+        <id>180000002</id>
+        <gate_id>2</gate_id>
+        <type>PolygonGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-3.34868470528393,"max":7.57676543549024,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-3.13459363430974,"max":7.37881383126284,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[5.62115511284877,5.12981343240404],"polygon":{"vertices":[[7.07557979746814,6.56233063860178],[6.97284006482783,6.65041547323964],[6.856848310442,6.72342070941559],[6.72877094630158,6.7806054589915],[6.58990103988745,6.8213910220173],[6.44164669685266,6.84536551464462],[6.2855179554521,6.85228715238343],[6.12311204753425,6.8420861747704],[5.9560968422776,6.81486540042441],[5.7861922808675,6.77089940892564],[5.61514965931911,6.7106323547111],[5.44472875057798,6.63467442502347],[5.27667299618161,6.54379695560047],[5.11268334162442,6.43892621082922],[4.95439170296247,6.32113581610308],[4.80333545772806,6.19163779620225],[4.6609346384015,6.05177212330423],[4.52847355113966,5.90299461357847],[4.40708826174887,5.74686293967715],[4.29776078131908,5.58502046347752],[4.20131994522922,5.41917756506551],[4.11844809661842,5.25109018594566],[4.04969197104465,5.08253545742314],[3.99547579546354,4.91528458267177],[3.95611461566672,4.75107359114865],[3.93182618367333,4.59157314746659],[3.92274021806414,4.43835917226894],[3.92890432981986,4.29288646211104],[3.9502862730253,4.15646760044575],[3.98677241611173,4.03025909841565],[4.0381625029418,3.91525587382106],[4.10416099006419,3.812294008232],[4.1843655866042,3.72206049182057],[4.27825408719906,3.64510770002794],[4.38517108152119,3.58186990323498],[4.50431648603679,3.53267927898801],[4.63473791396872,3.49777956359434],[4.77532858929692,3.47733638007788],[4.92483184981301,3.47144409778235],[5.08185241790639,3.48012956910562],[5.24487375444212,3.50335315892982],[5.41228014671593,3.54100721933113],[5.58238183493276,3.59291178995102],[5.75344146839588,3.65880709107734],[5.92370043052393,3.73834252565839],[6.09140396373984,3.83106247219833],[6.25482444445324,3.93639000715263],[6.41228251952936,4.05361057555238],[6.56216607578849,4.18185821732755],[6.70294716704012,4.32010701072198],[6.83319708635722,4.46716983806992],[6.95159977205406,4.62170553920004],[7.05696370128657,4.78223427385227],[7.1482323769137,4.94715979288222],[7.22449346563716,5.1147965733531],[7.28498660639405,5.2833995129638],[7.32910988062218,5.45119405932605],[7.35642492040792,5.61640512099645],[7.36666062509074,5.77728369109787],[7.35971545939308,5.93213066195059],[7.33565831420728,6.07931773133958],[7.2947279225514,6.21730556918454],[7.23733083579922,6.34465954202744],[7.1640379770621,6.4600633181458]]}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL1-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL2-A" />
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.07557979746814" />
+      <gating:coordinate data-type:value="6.56233063860178" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.97284006482783" />
+      <gating:coordinate data-type:value="6.65041547323964" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.856848310442" />
+      <gating:coordinate data-type:value="6.72342070941559" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.72877094630158" />
+      <gating:coordinate data-type:value="6.7806054589915" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.58990103988745" />
+      <gating:coordinate data-type:value="6.8213910220173" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.44164669685266" />
+      <gating:coordinate data-type:value="6.84536551464462" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.2855179554521" />
+      <gating:coordinate data-type:value="6.85228715238343" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.12311204753425" />
+      <gating:coordinate data-type:value="6.8420861747704" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.9560968422776" />
+      <gating:coordinate data-type:value="6.81486540042441" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.7861922808675" />
+      <gating:coordinate data-type:value="6.77089940892564" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.61514965931911" />
+      <gating:coordinate data-type:value="6.7106323547111" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.44472875057798" />
+      <gating:coordinate data-type:value="6.63467442502347" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.27667299618161" />
+      <gating:coordinate data-type:value="6.54379695560047" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.11268334162442" />
+      <gating:coordinate data-type:value="6.43892621082922" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.95439170296247" />
+      <gating:coordinate data-type:value="6.32113581610308" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.80333545772806" />
+      <gating:coordinate data-type:value="6.19163779620225" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.6609346384015" />
+      <gating:coordinate data-type:value="6.05177212330423" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.52847355113966" />
+      <gating:coordinate data-type:value="5.90299461357847" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.40708826174887" />
+      <gating:coordinate data-type:value="5.74686293967715" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.29776078131908" />
+      <gating:coordinate data-type:value="5.58502046347752" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.20131994522922" />
+      <gating:coordinate data-type:value="5.41917756506551" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.11844809661842" />
+      <gating:coordinate data-type:value="5.25109018594566" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.04969197104465" />
+      <gating:coordinate data-type:value="5.08253545742314" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.99547579546354" />
+      <gating:coordinate data-type:value="4.91528458267177" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.95611461566672" />
+      <gating:coordinate data-type:value="4.75107359114865" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.93182618367333" />
+      <gating:coordinate data-type:value="4.59157314746659" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.92274021806414" />
+      <gating:coordinate data-type:value="4.43835917226894" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.92890432981986" />
+      <gating:coordinate data-type:value="4.29288646211104" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.9502862730253" />
+      <gating:coordinate data-type:value="4.15646760044575" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="3.98677241611173" />
+      <gating:coordinate data-type:value="4.03025909841565" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.0381625029418" />
+      <gating:coordinate data-type:value="3.91525587382106" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.10416099006419" />
+      <gating:coordinate data-type:value="3.812294008232" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.1843655866042" />
+      <gating:coordinate data-type:value="3.72206049182057" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.27825408719906" />
+      <gating:coordinate data-type:value="3.64510770002794" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.38517108152119" />
+      <gating:coordinate data-type:value="3.58186990323498" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.50431648603679" />
+      <gating:coordinate data-type:value="3.53267927898801" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.63473791396872" />
+      <gating:coordinate data-type:value="3.49777956359434" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.77532858929692" />
+      <gating:coordinate data-type:value="3.47733638007788" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.92483184981301" />
+      <gating:coordinate data-type:value="3.47144409778235" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.08185241790639" />
+      <gating:coordinate data-type:value="3.48012956910562" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.24487375444212" />
+      <gating:coordinate data-type:value="3.50335315892982" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.41228014671593" />
+      <gating:coordinate data-type:value="3.54100721933113" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.58238183493276" />
+      <gating:coordinate data-type:value="3.59291178995102" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.75344146839588" />
+      <gating:coordinate data-type:value="3.65880709107734" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.92370043052393" />
+      <gating:coordinate data-type:value="3.73834252565839" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.09140396373984" />
+      <gating:coordinate data-type:value="3.83106247219833" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.25482444445324" />
+      <gating:coordinate data-type:value="3.93639000715263" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.41228251952936" />
+      <gating:coordinate data-type:value="4.05361057555238" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.56216607578849" />
+      <gating:coordinate data-type:value="4.18185821732755" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.70294716704012" />
+      <gating:coordinate data-type:value="4.32010701072198" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.83319708635722" />
+      <gating:coordinate data-type:value="4.46716983806992" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.95159977205406" />
+      <gating:coordinate data-type:value="4.62170553920004" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.05696370128657" />
+      <gating:coordinate data-type:value="4.78223427385227" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.1482323769137" />
+      <gating:coordinate data-type:value="4.94715979288222" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.22449346563716" />
+      <gating:coordinate data-type:value="5.1147965733531" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.28498660639405" />
+      <gating:coordinate data-type:value="5.2833995129638" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.32910988062218" />
+      <gating:coordinate data-type:value="5.45119405932605" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.35642492040792" />
+      <gating:coordinate data-type:value="5.61640512099645" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.36666062509074" />
+      <gating:coordinate data-type:value="5.77728369109787" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.35971545939308" />
+      <gating:coordinate data-type:value="5.93213066195059" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.33565831420728" />
+      <gating:coordinate data-type:value="6.07931773133958" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.2947279225514" />
+      <gating:coordinate data-type:value="6.21730556918454" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.23733083579922" />
+      <gating:coordinate data-type:value="6.34465954202744" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.1640379770621" />
+      <gating:coordinate data-type:value="6.4600633181458" />
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:RectangleGate gating:id="Gate_180000003_RkwxX2dhdGU.">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL1_gate</name>
+        <id>180000003</id>
+        <gate_id>3</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-3.36040280030571,"max":8.17438828160117,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-3.15011190568544,"max":8.17024567142319,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[5.81667302259265,2.97609498958574],"rectangle":{"x1":3.6807806690054,"y1":-2.00035650807655,"x2":7.95256537617989,"y2":7.95254648724802}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="3.6807806690054" gating:max="7.95256537617989" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL1-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="-2.00035650807655" gating:max="7.95254648724802" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL2-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="GateSet_36000000">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Cells</name>
+        <id>36000000</id>
+        <gate_set_id>1</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <!-- Single-gate population: ref twice (GatingML requires ≥2 args for "and") -->
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000001">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Ellipse_pop</name>
+        <id>36000001</id>
+        <gate_set_id>2</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1,2],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1 AND gate_2"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <gating:gateReference gating:ref="Gate_180000002_RWxsaXBzZV9nYXRl" />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000002">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL1_positive</name>
+        <id>36000002</id>
+        <gate_set_id>3</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1,3],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1 AND gate_3"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <gating:gateReference gating:ref="Gate_180000003_RkwxX2dhdGU." />
+    </gating:and>
+  </gating:BooleanGate>
+</gating:Gating-ML>
