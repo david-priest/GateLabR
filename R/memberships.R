@@ -257,6 +257,11 @@
     }
     if (is.numeric(offset) && length(offset) == 1L) offset else NA_real_
   }, numeric(1))
+  # A record without event ids (gated and autosaved but never saved with memberships, or saved
+  # before ids existed) covers no event, so it is not a second save. Its events carry no id of
+  # this save and are refused below, which leaves the saved events readable once the object is
+  # subset back to them.
+  offsets <- offsets[!is.na(offsets)]
   if (length(unique(offsets)) > 1L) {
     stop(
       "This SCE combines objects whose population memberships were saved separately ",

@@ -357,6 +357,40 @@ test_that("Save to SCE on a combined object replaces the records cbind() brought
   )
 })
 
+test_that("a record that carries no event ids does not block reading the saved events", {
+  cbind <- SingleCellExperiment::cbind
+  first <- store_with_memberships()$sce
+  # Gated in GateLabR and autosaved, but never saved with memberships: its record has no ids.
+  gated_only <- GateLabR:::.gatelabr_store_host_workspace(
+    make_memberships_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = memberships_workspace_json()
+  )$sce
+  gated_only$gatelab_event_id <- NA_real_
+  combined <- cbind(first, gated_only)
+  # Its events are the ones without memberships, and the refusal says so rather than calling the
+  # two objects separately saved.
+  expect_error(gatelabPopulations(combined), "3 of this SCE's 6 events are not among the 3 events")
+  back <- combined[, !is.na(combined$gatelab_event_id)]
+  expect_identical(unname(gatelabPopulations(back)[, "CD3+"]), saved_cd3)
+  expect_identical(as.character(gatelabLeafPopulation(back)), saved_leaf)
+
+  # The same for memberships saved before event ids existed.
+  legacy <- store_with_memberships()$sce
+  workspace <- S4Vectors::metadata(legacy)$gatelab_workspace
+  workspace$memberships$event_ids <- NULL
+  workspace$memberships$version <- 1L
+  S4Vectors::metadata(legacy)$gatelab_workspace <- workspace
+  legacy$gatelab_event_id <- NA_real_
+  expect_identical(
+    unname(gatelabPopulations(cbind(first, legacy)[, 1:3])[, "CD3+"]),
+    saved_cd3
+  )
+})
+
 test_that("an explicit save writes the event ids without touching the random number stream", {
   set.seed(20260924)
   seed_before <- .Random.seed
