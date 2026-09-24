@@ -455,3 +455,14 @@ test_that("an arcsinh with A other than 0 is inverted as Gating-ML defines it", 
                                 instrument = "flow")
   expect_equal(inverse(forward(c(-250, 0, 1000, 150000))), c(-250, 0, 1000, 150000))
 })
+
+test_that("flin, Gating-ML's linear scale, is read", {
+  # flin(x) = (x + A) / (T + A) is affine, so a polygon on it has the same straight edges in raw
+  # values and needs nothing more than its vertices inverted.
+  parsed <- gml_import(gml_fixture("flowkit-flin.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("flin"))
+  box <- parsed$gates[[which(vapply(parsed$gates, `[[`, "", "name") == "Lin_box")]]
+  lower <- as.numeric(sub('.*gating:min="([^"]+)".*', "\\1",
+                          grep('gating:min=', readLines(gml_fixture("flowkit-flin.xml")), value = TRUE)[1]))
+  expect_equal(box$vertices[[1]][1], lower * (262144 + 1000) - 1000)
+})

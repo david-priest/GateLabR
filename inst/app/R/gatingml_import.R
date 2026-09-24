@@ -404,6 +404,19 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
         M    = if (.gml_has_num(m_val)) m_val else log10(exp(1)),
         A    = if (.gml_has_num(a_val)) a_val else 0
       )
+      next
+    }
+
+    # flin, Gating-ML 2.0's linear scale (section 6.1): f(x) = (x + A) / (T + A), with T > 0 and
+    # 0 <= A <= T. Its inverse is affine, so a gate on it is the same shape in raw values.
+    flin_el <- .gml_first_child_local(el, "flin")
+    if (!is.null(flin_el)) {
+      t_v <- .gml_num(.gml_attr_local(flin_el, "T"))
+      a_v <- .gml_num(.gml_attr_local(flin_el, "A"))
+      if (!.gml_has_num(a_v)) a_v <- 0
+      if (.gml_has_num(t_v) && t_v > 0 && a_v >= 0 && a_v <= t_v) {
+        out[[tr_id]] <- list(type = "flin", T = t_v, A = a_v)
+      }
     }
   }
   out
@@ -801,6 +814,13 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 
   tr_def <- transforms_map[[trans_ref]]
   if (is.null(tr_def)) return(.gml_identity_inverter)
+
+  # flin: x = y (T + A) - A. GateLabR's values are raw on every axis a linear scale is used for.
+  if (is.list(tr_def) && identical(tr_def$type, "flin")) {
+    span <- tr_def$T + tr_def$A
+    offset <- tr_def$A
+    return(structure(function(v) as.numeric(v) * span - offset, affine = TRUE))
+  }
 
   # Logicle transform (from GateLabR flow export or FlowJo): apply logicle inverse
   # to convert vertices from logicle display space to raw space for evaluation.
@@ -1255,7 +1275,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # straight in the space its dimensions declare, and GateLab evaluates it there. GateLabR inverts
 # each vertex into the values it gates in and joins the vertices with straight edges in those
 # values. The inversion acts on each axis separately, so an edge parallel to an axis stays the same
-# edge, as does any edge on axes the inversion leaves alone. A slanted edge on an axis it transforms
+# edge, as does any edge on axes the inversion leaves alone or scales linearly (flin). A slanted edge
+# on an axis it transforms otherwise
 # (logicle, or arcsinh on flow data) is a curve in those values, and the straight edge GateLabR
 # would join instead selects different events, so the polygon is refused by name rather than
 # imported changed. A file GateLabR wrote is the exception: GateLabR's polygons are straight in raw
@@ -1268,11 +1289,15 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     x_ch <- .gml_resolve_channel(g$x_channel, session_channels, pnn_to_channel)
     y_ch <- .gml_resolve_channel(g$y_channel, session_channels, pnn_to_channel)
     if (is.null(x_ch) || is.null(y_ch)) next # refused as a missing channel
+    # An affine inversion (flin) keeps every edge straight.
+    curved <- function(inverter) {
+      !identical(inverter, .gml_identity_inverter) && !isTRUE(attr(inverter, "affine"))
+    }
     transformed <- c(
-      !identical(.gml_make_inverter(x_ch, g$dims[[1]]$transformation_ref, transforms_map,
-                                    logicle_unit, instrument), .gml_identity_inverter),
-      !identical(.gml_make_inverter(y_ch, g$dims[[2]]$transformation_ref, transforms_map,
-                                    logicle_unit, instrument), .gml_identity_inverter)
+      curved(.gml_make_inverter(x_ch, g$dims[[1]]$transformation_ref, transforms_map,
+                                logicle_unit, instrument)),
+      curved(.gml_make_inverter(y_ch, g$dims[[2]]$transformation_ref, transforms_map,
+                                logicle_unit, instrument))
     )
     if (!any(transformed)) next
     xs <- vapply(g$vertices, function(v) as.numeric(v[1]), numeric(1))
