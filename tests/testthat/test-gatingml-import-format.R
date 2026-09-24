@@ -172,6 +172,28 @@ test_that("a polygon GateLabR cannot follow on its axes is refused by name", {
   expect_null(.gml_polygon_vertices(square, map, map)$problem)
 })
 
+test_that("a slanted edge to a vertex that cannot be inverted is refused for the vertex", {
+  # A coordinate of 80 under an arcsinh with T = 262144, M = 4.5 and A = 1 is beyond the largest
+  # double in raw values. Both edges at that vertex are slanted, and the refusal names the vertex,
+  # not the limit on vertices that following those edges was said to exceed.
+  beyond <- gml_variant("flowkit-slanted.xml", function(lines) {
+    start <- grep('gating:id="Slant_asinh"', lines, fixed = TRUE)
+    hit <- start + grep("<gating:coordinate", lines[-seq_len(start)])[1]
+    lines[hit] <- sub('data-type:value="[^"]+"', 'data-type:value="80"', lines[hit])
+    lines
+  })
+  expect_error(gml_import(beyond), paste0(
+    'Gate "Slant_asinh" (Slant_asinh) is a polygon GateLabR cannot reproduce in the values it ',
+    "gates on: a vertex lies where its axis's transformation cannot be inverted."
+  ), fixed = TRUE)
+  xml <- xml2::xml_root(xml2::read_xml(gml_fixture("flowkit-slanted.xml")))
+  map <- .gml_axis_map("FSC-A", "Asinh_A1", .gml_parse_transforms(xml), TRUE, "flow")
+  expect_identical(map$kind, "curved")
+  square <- list(c(0.1, 0.2), c(80, 0.3), c(0.8, 0.9), c(0.2, 0.7))
+  expect_identical(.gml_polygon_vertices(square, map, map)$problem,
+                   "a vertex lies where its axis's transformation cannot be inverted")
+})
+
 test_that("an ellipse is read as its boundary, followed onto raw values, in both formats", {
   # The standard format writes an EllipsoidGate on logicle axes; its boundary becomes a polygon on
   # those axes, followed onto raw values like any other. The Cytobank format writes the ellipse as

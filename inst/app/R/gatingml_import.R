@@ -1137,6 +1137,13 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   xs <- vapply(vertices, function(v) as.numeric(v[1]), numeric(1))
   ys <- vapply(vertices, function(v) as.numeric(v[2]), numeric(1))
   n <- length(xs)
+  # The declared vertices are mapped before any edge is followed, so a polygon with a vertex that
+  # cannot be mapped is refused for that vertex, not for the slanted edges that end at it, which
+  # .gml_edge_params cannot follow either.
+  unmappable <- "a vertex lies where its axis's transformation cannot be inverted"
+  if (any(!is.finite(map_x$inverse(xs))) || any(!is.finite(map_y$inverse(ys)))) {
+    return(list(vertices = NULL, problem = unmappable))
+  }
   curved <- identical(map_x$kind, "curved") || identical(map_y$kind, "curved")
   if (densify && curved) {
     span_x <- diff(range(xs))
@@ -1164,7 +1171,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   sx <- map_x$inverse(xs)
   sy <- map_y$inverse(ys)
   if (any(!is.finite(sx)) || any(!is.finite(sy))) {
-    return(list(vertices = NULL, problem = "a vertex lies where its axis's transformation cannot be inverted"))
+    return(list(vertices = NULL, problem = unmappable))
   }
   list(vertices = Map(c, sx, sy, USE.NAMES = FALSE), problem = NULL)
 }
