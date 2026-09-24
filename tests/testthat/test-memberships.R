@@ -407,6 +407,33 @@ test_that("an explicit save writes the event ids without touching the random num
   expect_false("gatelab_event_id" %in% names(partition$samples[[2L]]$metadata))
 })
 
+test_that("an event id that lost precision through a 32-bit float is refused, not read as another event", {
+  # FCS stores every parameter as a 32-bit float, so an id exported as a channel and read back has
+  # 24 significant bits. Rounded onto a saved id, it silently took that event's membership: at
+  # 1e5 events, 7 of 20 saves read wrong with no error.
+  f32 <- function(x) readBin(writeBin(x, raw(), size = 4L), "double", size = 4L, n = length(x))
+  for (event_count in c(1, 3, 1e5, 2^25 - 1)) {
+    inside <- logical(0)
+    exact <- logical(0)
+    for (draw in 1:25) {
+      offset <- GateLabR:::.gatelabr_event_id_offset(paste0("draw ", draw), draw, event_count)
+      positions <- unique(round(c(1, 2, seq(1, event_count, length.out = 200), event_count - 1, event_count)))
+      positions <- positions[positions >= 1 & positions <= event_count]
+      ids <- offset + positions
+      rounded <- f32(ids) - offset
+      inside <- c(inside, any(rounded >= 1 & rounded <= event_count))
+      # 15 significant digits, as write.csv() writes a double, carry every id exactly.
+      exact <- c(exact, offset == round(offset), all(as.numeric(format(ids, digits = 15)) == ids))
+    }
+    expect_false(any(inside), label = paste("a float32-rounded id inside a save of", event_count, "events"))
+    expect_true(all(exact), label = paste("ids of a save of", event_count, "events are exact in 15 digits"))
+  }
+
+  saved <- store_with_memberships()$sce
+  saved$gatelab_event_id <- f32(saved$gatelab_event_id)
+  expect_error(gatelabPopulations(saved), "lost precision")
+})
+
 test_that("memberships whose events cannot be identified are refused, not read by position", {
   sce <- store_with_memberships()$sce
   dropped <- sce

@@ -47,16 +47,29 @@
 .gatelabr_event_id_column <- "gatelab_event_id"
 
 # The ids of one save are offset + 1..N. The offset is drawn per save, so events that reach one
-# object from two separate saves (cbind) do not share ids; below 2^44 it keeps every id an exact
-# integer that prints in full. It comes from a hash of the moment, not from R's random number
-# generator: pressing "Save to SCE" must not move the user's .Random.seed.
+# object from two separate saves (cbind) do not share ids. It comes from a hash of the moment, not
+# from R's random number generator: pressing "Save to SCE" must not move the user's .Random.seed.
+#
+# Every id lies between 2^48 and 2^49, so it is an exact integer that 15 significant digits (as
+# write.csv() writes a double) carry in full. Between 2^48 and 2^49 a 32-bit float can hold only
+# every 2^25-th integer, and the ids of one save sit strictly between two of those. An id that
+# passes through a 32-bit float (an FCS channel, a float32 array) therefore rounds to a multiple
+# of 2^25 outside the saved range, and the read refuses it instead of giving the event another
+# event's membership. A save of 2^25 events or more (33,554,432) cannot fit between two such
+# values and does not get this protection.
+.gatelabr_event_id_float32_step <- 2^25
+
 .gatelabr_event_id_offset <- function(saved_at, revision, event_count) {
   hex <- digest::digest(
     list(saved_at, revision, event_count, Sys.getpid(), as.numeric(Sys.time())),
     algo = "sha256"
   )
-  digits <- strtoi(strsplit(substr(hex, 1L, 11L), "")[[1]], 16L)
-  sum(digits * 16^(rev(seq_along(digits)) - 1L))
+  step <- .gatelabr_event_id_float32_step
+  # Which of the 2^23 float32 intervals between 2^48 and 2^49, and where in it the ids start.
+  interval <- strtoi(substr(hex, 1L, 6L), 16L) %% 2^23
+  room <- step - 1 - event_count
+  start <- if (room >= 0) strtoi(substr(hex, 7L, 13L), 16L) %% (room + 1) else 0
+  2^48 + interval * step + start
 }
 
 # Validate the payload an explicit save carries and pack it against this SCE's sample layout.
@@ -284,6 +297,22 @@
   positions <- if (is.numeric(ids)) ids - key$offset else rep(NA_real_, length(ids))
   known <- !is.na(positions) & positions >= 1 & positions <= saved_count &
     positions == round(positions)
+  # An id that passed through a 32-bit float is a multiple of 2^25, which no id of a save below
+  # 2^25 events is (see .gatelabr_event_id_offset).
+  rounded <- if (is.numeric(ids)) {
+    !known & is.finite(ids) & ids %% .gatelabr_event_id_float32_step == 0
+  } else {
+    FALSE
+  }
+  if (any(rounded)) {
+    stop(
+      sum(rounded), " of this SCE's ", length(known), " events have a `", key$column,
+      "` that lost precision, as an id does when stored as a 32-bit float (an FCS channel, a ",
+      "float32 array), so it no longer names its saved event and the event's memberships are ",
+      "unknown. Read them from an object whose ids were kept as doubles, or ", resave,
+      call. = FALSE
+    )
+  }
   if (!all(known)) {
     stop(
       sum(!known), " of this SCE's ", length(known), " events are not among the ",
