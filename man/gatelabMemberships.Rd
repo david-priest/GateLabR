@@ -73,8 +73,9 @@ SCE, or one that repeats saved events, reads every event's own membership. An ev
 not in the saved object, for example one added with \code{cbind()}, has no stored membership,
 and reading is refused rather than guessed; so is reading after the id column was removed, or
 memberships saved by an earlier version of GateLabR, which kept them by position only.
-Combining a saved SCE with an object that lacks the column needs the column dropped
-(\code{sce$gatelab_event_id <- NULL}) or added as \code{NA} first.
+\code{cbind()} needs the column on both objects: give the object that lacks it the column as
+\code{NA} (\code{other$gatelab_event_id <- NA_real_}) rather than dropping it from the saved
+one, and the saved events read again once the combined object is subset back to them.
 }
 \examples{
 \dontrun{

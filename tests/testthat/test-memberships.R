@@ -391,6 +391,35 @@ test_that("a record that carries no event ids does not block reading the saved e
   )
 })
 
+test_that("the documented way to cbind() a saved SCE keeps its memberships readable", {
+  cbind <- SingleCellExperiment::cbind
+  first <- store_with_memberships()$sce
+  # cbind() needs the id column on both objects. Given to the other object as NA, the saved events
+  # read again once the combined object is subset back to them.
+  other <- make_memberships_sce()
+  other$gatelab_event_id <- NA_real_
+  expect_identical(unname(gatelabPopulations(cbind(first, other)[, 1:3])[, "CD3+"]), saved_cd3)
+  # Dropped from the saved object instead, which the README advised, the memberships are lost.
+  dropped <- first
+  dropped$gatelab_event_id <- NULL
+  expect_error(
+    gatelabPopulations(cbind(dropped, make_memberships_sce())[, 1:3]),
+    "no `gatelab_event_id` column"
+  )
+
+  sources <- c(
+    README = testthat::test_path("..", "..", "README.md"),
+    Rd = testthat::test_path("..", "..", "man", "gatelabMemberships.Rd")
+  )
+  # R CMD check runs the tests against the installed package, which carries neither file.
+  testthat::skip_if_not(all(file.exists(sources)), "README.md and man/ are only in the source tree")
+  for (name in names(sources)) {
+    text <- paste(readLines(sources[[name]], warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+    expect_false(grepl("gatelab_event_id <- NULL", text, fixed = TRUE), label = paste(name, "advises dropping the column"))
+    expect_true(grepl("gatelab_event_id <- NA_real_", text, fixed = TRUE), label = paste(name, "advises NA on the other object"))
+  }
+})
+
 test_that("an explicit save writes the event ids without touching the random number stream", {
   set.seed(20260924)
   seed_before <- .Random.seed

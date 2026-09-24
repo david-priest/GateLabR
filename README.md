@@ -206,8 +206,9 @@ metadata(sce)$gatelab_workspace$memberships
 
 colData(sce)$gatelab_event_id
 #> each event's id, written by "Save to SCE"; it ties the stored memberships to their
-#> events. Drop it (sce$gatelab_event_id <- NULL) before cbind() with an object that
-#> lacks it.
+#> events. cbind() needs it on both objects: give the other object the column as NA
+#> (other$gatelab_event_id <- NA_real_) rather than dropping it from the saved one,
+#> and the saved events read again once the combined object is subset back to them.
 
 metadata(sce)$gatelabr_compensation
 #> compensation profiles, assay bindings, revisions and provenance
