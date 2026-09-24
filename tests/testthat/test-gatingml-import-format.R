@@ -587,6 +587,12 @@ test_that("a GateLab format mark that is present but cannot be read refuses the 
     expect_error(gml_import(mark_as(name, "[2]")), "is not a JSON object", info = name)
     expect_error(gml_import(mark_as(name, "")), "gatelab_format) is empty", fixed = TRUE, info = name)
     expect_error(gml_import(mark_as(name, "  ")), "gatelab_format) is empty", fixed = TRUE, info = name)
+    # jsonlite reads JSON behind a byte order mark, with a warning; GateLab's JSON.parse does not.
+    behind_bom <- gml_variant(name, function(lines) {
+      sub("<gatelab_format>", "<gatelab_format>\ufeff", lines, fixed = TRUE)
+    })
+    expect_error(gml_import(behind_bom), "gatelab_format) begins with a byte order mark", fixed = TRUE,
+                 info = name)
     expect_error(gml_import(mark_as(name, '{"version":2,"logicle":"gating-ml","hierarchy":"nested"}')),
                  "gives no hierarchy GateLabR knows", info = name)
     expect_error(gml_import(mark_as(name, '{"version":2,"logicle":"flowCore","hierarchy":"parent_id"}')),
