@@ -125,31 +125,62 @@ test_that("flow fluorescence gates under arcsinh are inverted only when the call
   ))
 })
 
-test_that("polygons with slanted edges on a logicle or arcsinh axis are refused by name", {
-  # The file declares those edges straight on the axes they were drawn on, where GateLab evaluates
-  # them. GateLabR joins inverted vertices with straight edges in raw values, where they are
-  # curves, so it would select different events.
+test_that("polygons with slanted edges on a logicle or arcsinh axis select the events of the declared polygon", {
+  # The file declares those edges straight on the axes they were drawn on, where GateLab and
+  # FlowKit evaluate them; in raw values, where GateLabR gates flow data, they are curves. Each
+  # slanted edge is split finely enough on its own axes that GateLabR's straight pieces follow it.
+  expected <- gml_expected()$populations$slanted
   for (name in c("slanted-standard.xml", "slanted-cytobank.xml")) {
-    err <- tryCatch(gml_import(gml_fixture(name)), error = function(e) conditionMessage(e))
-    expect_type(err, "character")
-    expect_match(err, 'Gate "Slant_FL_gate" (', fixed = TRUE, info = name)
-    expect_match(err, 'Gate "Slant_scatter_gate" (', fixed = TRUE, info = name)
-    # Edges parallel to an axis, and a polygon in raw values, are the same gate in raw values.
-    expect_no_match(err, 'Gate "L_gate"', fixed = TRUE, info = name)
-    expect_no_match(err, 'Gate "Poly_gate"', fixed = TRUE, info = name)
+    parsed <- gml_import(gml_fixture(name))
+    gml_expect_membership(gml_membership(parsed), expected)
+    vertices <- vapply(parsed$gates, function(g) length(g$vertices), integer(1))
+    names(vertices) <- vapply(parsed$gates, `[[`, "", "name")
+    # Edges parallel to an axis, and a polygon in raw values, stay as they were drawn.
+    expect_identical(vertices[["Poly_gate"]], 4L, info = name)
+    expect_identical(vertices[["L_gate"]], if (name == "slanted-standard.xml") 6L else 7L, info = name)
+    expect_gt(vertices[["Slant_FL_gate"]], 25L)
   }
+  parsed <- gml_import(gml_fixture("flowkit-slanted.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("slanted"))
+
+  # Joining the inverted vertices with straight edges, as the importer did before it refused
+  # these polygons, selects different events.
+  xml <- xml2::xml_root(xml2::read_xml(gml_fixture("flowkit-slanted.xml")))
+  corners <- xml2::xml_find_all(xml, "(.//*[local-name()='PolygonGate'])[1]/*[local-name()='vertex']")
+  declared <- lapply(corners, function(v) as.numeric(xml2::xml_attr(xml2::xml_children(v), "value")))
+  expect_length(declared, 4L)
+  map <- .gml_axis_map("FL1-A", "Logicle", .gml_parse_transforms(xml), TRUE, "flow")
+  chords <- lapply(declared, function(v) c(map$inverse(v[1]), map$inverse(v[2])))
+  straight <- which(gate_mask_polygon(gml_events[, "FL1-A"], gml_events[, "FL2-A"], chords))
+  expect_false(identical(straight, as.integer(unlist(gml_flowkit("slanted")[["/Slant_logicle"]]))))
 })
 
-test_that("an ellipse is refused in both formats, by name", {
+test_that("a polygon GateLabR cannot follow on its axes is refused by name", {
+  # A vertex beyond what its transformation can invert.
+  beyond <- gml_variant("flowkit-slanted.xml", function(lines) {
+    hit <- grep("<gating:coordinate", lines)[1]
+    lines[hit] <- sub('data-type:value="[^"]+"', 'data-type:value="1e308"', lines[hit])
+    lines
+  })
+  expect_error(gml_import(beyond), 'Gate "Slant_logicle" (Slant_logicle) is a polygon GateLabR cannot reproduce',
+               fixed = TRUE)
+  # An edge that cannot be followed within the limit on vertices.
+  xml <- xml2::xml_root(xml2::read_xml(gml_fixture("flowkit-slanted.xml")))
+  map <- .gml_axis_map("FL1-A", "Logicle", .gml_parse_transforms(xml), TRUE, "flow")
+  square <- list(c(0.1, 0.2), c(0.9, 0.3), c(0.8, 0.9), c(0.2, 0.7))
+  expect_match(.gml_polygon_vertices(square, map, map, max_vertices = 20L)$problem, "within 20 vertices")
+  expect_null(.gml_polygon_vertices(square, map, map)$problem)
+})
+
+test_that("an ellipse is refused in the standard format and read as its boundary in the Cytobank format", {
   expect_error(
     gml_import(gml_fixture("ellipse-standard.xml")),
     "EllipsoidGate [^ ]+ \\(Ellipse_gate\\) is not supported"
   )
-  # The Cytobank format writes the ellipse as its boundary, a polygon on arcsinh axes.
-  expect_error(
-    gml_import(gml_fixture("ellipse-cytobank.xml")),
-    'Gate "Ellipse_gate" (', fixed = TRUE
-  )
+  # The Cytobank format writes the ellipse as its boundary, a polygon on arcsinh axes, which GateLab
+  # reads as that polygon.
+  parsed <- gml_import(gml_fixture("ellipse-cytobank.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_expected()$populations$ellipse)
 })
 
 test_that("GateLabR's own exports keep polygons straight in raw values, as GateLabR drew them", {
