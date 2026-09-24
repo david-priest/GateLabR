@@ -19,6 +19,11 @@ gml_expected <- function(version = "") {
   jsonlite::fromJSON(gml_fixture(paste0("membership", version, ".json")), simplifyVector = FALSE)
 }
 
+# FlowKit's populations for its own files (fixtures/gatingml/flowkit-*.xml), by strategy.
+gml_flowkit <- function(strategy) {
+  jsonlite::fromJSON(gml_fixture("flowkit-membership.json"), simplifyVector = FALSE)[[strategy]]
+}
+
 gml_spillover <- function(entry) {
   m <- do.call(rbind, lapply(entry$matrix, as.numeric))
   channels <- unlist(entry$channels)
@@ -436,4 +441,17 @@ test_that("a format mark of a version GateLabR does not read is refused", {
     sub('{"version":2,', "{", lines, fixed = TRUE)
   })
   expect_error(gml_import(unversioned), "format mark has no version;", fixed = TRUE)
+})
+
+test_that("an arcsinh with A other than 0 is inverted as Gating-ML defines it", {
+  # fasinh(x) = (asinh(x sinh(M ln 10) / T) + A ln 10) / ((M + A) ln 10). With the sign of the A
+  # term reversed, FlowKit's rectangles (A = 1) sat a factor of 10^(2A) too high in raw values.
+  parsed <- gml_import(gml_fixture("flowkit-fasinh.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("fasinh"))
+  # The inversion itself, against the forward transform at A = 1.
+  forward <- function(x) (asinh(x * sinh(4.5 * log(10)) / 262144) + log(10)) / (5.5 * log(10))
+  inverse <- .gml_make_inverter("FL1-A", "Asinh_A1",
+                                list(Asinh_A1 = list(type = "fasinh", T = 262144, M = 4.5, A = 1)),
+                                instrument = "flow")
+  expect_equal(inverse(forward(c(-250, 0, 1000, 150000))), c(-250, 0, 1000, 150000))
 })

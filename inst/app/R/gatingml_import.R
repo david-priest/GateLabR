@@ -386,7 +386,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     }
 
     # fasinh / arcsinh — store full {type, T, M, A} for correct inversion.
-    # Gating-ML 2.0: f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
+    # Gating-ML 2.0: f(x) = (arcsinh(x*sinh(M*ln10)/T) + A*ln10) / ((M+A)*ln10)
     fasinh_el  <- .gml_first_child_local(el, "fasinh")
     arcsinh_el <- .gml_first_child_local(el, "arcsinh")
     src_el <- fasinh_el %||% arcsinh_el
@@ -836,10 +836,10 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   #     scatter gates down to a tiny region near zero (raw≈display values get
   #     forward-transformed again at render time → asinh(raw/cf) ≈ 0).
   #
-  # Gating-ML 2.0 fasinh:
-  #     f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
+  # Gating-ML 2.0 fasinh (section 6.3; flowutils and FlowKit compute the same):
+  #     f(x) = (arcsinh(x*sinh(M*ln10)/T) + A*ln10) / ((M+A)*ln10)
   # Inverse:
-  #     f^-1(y) = T/sinh(M*ln10) * sinh(y*(M+A)*ln10 + A*ln10)
+  #     f^-1(y) = T/sinh(M*ln10) * sinh(y*(M+A)*ln10 - A*ln10)
   #   • FLOW fluorescence under fasinh: stored raw like scatter, so inverted too. GateLab's
   #     Cytobank format writes flow fluorescence gates this way, because Cytobank has no
   #     logicle, and so do Cytobank's own flow exports. Only when the caller says the data are
@@ -866,7 +866,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     k0 <- a_v * ln10
     return(function(v) {
       vv <- as.numeric(v)
-      cf_eff * sinh(vv * k1 + k0)
+      cf_eff * sinh(vv * k1 - k0)
     })
   }
 
