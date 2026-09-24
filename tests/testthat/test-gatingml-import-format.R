@@ -397,14 +397,58 @@ test_that("geometric gates are placed under the gate their parent_id names", {
   )
 })
 
-test_that("a population cannot reference a gate that parent_id restricts", {
+test_that("in GateLab's standard format a population cannot reference a gate that parent_id restricts", {
+  # GateLab's model makes only BooleanGates populations and never writes parent_id on a geometric
+  # gate, so a marked file that does is refused; Gating-ML's own model reads it (below).
   population <- '  <gating:BooleanGate gating:id="P1" gating:name="Pop">
     <gating:and><gating:gateReference gating:ref="Inner"/><gating:gateReference gating:ref="Inner"/></gating:and>
   </gating:BooleanGate>'
+  mark <- '<data-type:custom_info><gatelab_format>{"version":2,"logicle":"gating-ml","hierarchy":"parent_id"}</gatelab_format></data-type:custom_info>'
   expect_error(
-    gml_import(gml_write(gml_doc(gml_rect("Outer", 0, 50000), gml_rect("Inner", 1000, 1e6, parent = "Outer"), population))),
+    gml_import(gml_write(gml_doc(mark, gml_rect("Outer", 0, 50000), gml_rect("Inner", 1000, 1e6, parent = "Outer"), population))),
     "Inner has a parent_id; GateLabR places only Boolean populations by parent_id"
   )
+})
+
+test_that("Gating-ML's own model: every gate is a population placed by parent_id, a BooleanGate's operands keep their parents", {
+  # FlowKit's file: geometric gates and AND BooleanGates, each placed by parent_id, one BooleanGate
+  # nested in another and one at the root whose operands have a parent of their own.
+  parsed <- gml_import(gml_fixture("flowkit-boolean.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("boolean"))
+  pops <- stats::setNames(parsed$populations, vapply(parsed$populations, `[[`, "", "name"))
+  gate_names <- function(pop) {
+    vapply(pop$gate_refs, function(ref) parsed$gates[[ref$gate_id]]$name, "")
+  }
+  # Both_anywhere sits at the root and takes its operands' parent, Cells, with them; Deep, under
+  # Both, adds only what Both does not already apply.
+  expect_setequal(gate_names(pops$Both_anywhere), c("Cells", "FL1_pos", "FL3_pos"))
+  expect_setequal(gate_names(pops$Deep), "FL2_box")
+  expect_length(parsed$gates, 5L)
+
+  # The same file, hand-written: a BooleanGate referencing a gate that parent_id restricts.
+  population <- '  <gating:BooleanGate gating:id="P1" gating:name="Pop">
+    <gating:and><gating:gateReference gating:ref="Inner"/><gating:gateReference gating:ref="Inner"/></gating:and>
+  </gating:BooleanGate>'
+  parsed <- gml_import(gml_write(gml_doc(gml_rect("Outer", 0, 50000), gml_rect("Inner", 1000, 1e6, parent = "Outer"), population)))
+  membership <- gml_membership(parsed)
+  expect_identical(names(membership), c("/Outer", "/Outer/Inner", "/Pop"))
+  fl1 <- gml_events[, "FL1-A"]
+  expect_identical(membership[["/Pop"]], which(fl1 >= 1000 & fl1 <= 50000))
+
+  # BooleanGates that reference each other have no population.
+  loop <- '  <gating:BooleanGate gating:id="A1"><gating:and><gating:gateReference gating:ref="Outer"/><gating:gateReference gating:ref="B1"/></gating:and></gating:BooleanGate>
+  <gating:BooleanGate gating:id="B1"><gating:and><gating:gateReference gating:ref="A1"/></gating:and></gating:BooleanGate>'
+  expect_error(gml_import(gml_write(gml_doc(gml_rect("Outer", 0, 50000), loop))),
+               "its own ancestor or operand through parent_id and BooleanGate references")
+})
+
+test_that("Gating-ML's own model refuses NOT and OR by name", {
+  err <- tryCatch(gml_import(gml_fixture("flowkit-not-or.xml")), error = function(e) conditionMessage(e))
+  expect_type(err, "character")
+  expect_match(err, 'Population "FL1_neg" uses NOT logic', fixed = TRUE)
+  expect_match(err, 'Population "Either" uses OR logic', fixed = TRUE)
+  expect_match(err, 'Population "FL1_not_FL3" uses NOT logic', fixed = TRUE)
+  expect_no_match(err, 'Population "FL1_pos"', fixed = TRUE)
 })
 
 test_that("a GateLab Cytobank-format tree that does not describe the file is refused", {

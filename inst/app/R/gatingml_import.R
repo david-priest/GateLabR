@@ -1465,6 +1465,60 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   problems
 }
 
+# Whether any gate carries Cytobank's own custom_info (custom_info/cytobank), as every gate in a
+# file Cytobank exports does, and GateLab's and GateLabR's Cytobank format imitate.
+.gml_has_cytobank_gate_info <- function(root) {
+  any(vapply(xml2::xml_children(root), function(el) {
+    if (!endsWith(.gml_local_name(el), "Gate")) return(FALSE)
+    ci <- .gml_first_child_local(el, "custom_info")
+    !is.null(ci) && !is.null(.gml_first_child_local(ci, "cytobank"))
+  }, logical(1)))
+}
+
+# Gating-ML 2.0's own model of a gating hierarchy: every gate is a population, applied only to the
+# events of the population its gating:parent_id names, and a BooleanGate combines the populations
+# of the gates it references, each with its own parents. With AND and positive references only,
+# which is all GateLabR's model holds, each population is the intersection of a set of geometric
+# gates: a geometric gate's set is its parent's and itself, a BooleanGate's its parent's and each
+# operand's. Returns each gate's set (NA for a gate whose population GateLabR cannot hold: NOT, OR
+# or a complemented reference, which .gml_positive_and_logic_problems names, or a gate reached
+# again through its own parents and operands) and the problems found.
+.gml_standard_chains <- function(raw_gates) {
+  chains <- list()
+  problems <- character(0)
+  visiting <- character(0)
+  resolve <- function(id) {
+    if (!is.null(chains[[id]])) return(chains[[id]])
+    g <- raw_gates[[id]]
+    if (is.null(g)) return(NA_character_) # a missing gate is refused elsewhere
+    if (id %in% visiting) {
+      problems <<- c(problems, paste0(
+        id, " is its own ancestor or operand through parent_id and BooleanGate references."
+      ))
+      return(NA_character_)
+    }
+    visiting <<- c(visiting, id)
+    chain <- if (!is.null(g$parent_id)) resolve(g$parent_id) else character(0)
+    if (identical(g$gate_type, "boolean")) {
+      holdable <- identical(g$operation, "and") &&
+        !any(vapply(g$refs %||% list(), function(r) isTRUE(r$complement), logical(1)))
+      if (!holdable) chain <- NA_character_
+      for (r in g$refs %||% list()) {
+        if (anyNA(chain)) break
+        operand <- resolve(r$gate_id)
+        chain <- if (anyNA(operand)) NA_character_ else union(chain, operand)
+      }
+    } else if (!anyNA(chain)) {
+      chain <- union(chain, id)
+    }
+    visiting <<- setdiff(visiting, id)
+    chains[[id]] <<- chain
+    chain
+  }
+  for (id in names(raw_gates)) resolve(id)
+  list(chains = chains, problems = unique(problems))
+}
+
 # What a GateLab Cytobank-format tree must satisfy to be taken as the file's tree: it lists every
 # BooleanGate in the file once, each parent is a population listed before it, and each
 # population's BooleanGate includes every gate of its parent's, as a BooleanGate that ANDs its
@@ -1643,25 +1697,31 @@ import_gatingml_from_cytobank <- function(file_path,
   compensation_refs <- dimension_compensation$refs
 
   # How the file places its populations. A GatingHierarchy (GateLabR, and GateLab until 2026-09)
-  # takes precedence, as before. Otherwise gating:parent_id places them when GateLab's standard
-  # format says so, or when a file without GateLab's mark carries parent_id on its populations.
-  # GateLab's Cytobank format lists the tree in its mark. Anything else is Cytobank's flat
-  # convention, whose parents are inferred as before.
+  # takes precedence, as before. GateLab's mark says how its own formats place them: by
+  # gating:parent_id, every BooleanGate a population (standard format), or by the tree in the mark
+  # (Cytobank format). A file without the mark whose gates carry Cytobank's custom_info, or that
+  # GateLab or GateLabR wrote (their Cytobank format before the mark), and that has no parent_id,
+  # follows Cytobank's flat convention, whose parents are inferred as before. Any other file is
+  # read by Gating-ML's own model (.gml_standard_chains).
   population_gates <- Filter(.gml_is_population_gate, raw_gates)
   has_parent_ids <- any(vapply(raw_gates, function(g) !is.null(g$parent_id), logical(1)))
-  use_parent_ids <- is.null(hierarchy_node) && (
-    isTRUE(gatelab_format$parent_id_hierarchy) ||
-      (is.null(gatelab_format$tree) && has_parent_ids && length(population_gates) > 0L)
-  )
+  use_parent_ids <- is.null(hierarchy_node) && isTRUE(gatelab_format$parent_id_hierarchy)
   use_tree <- is.null(hierarchy_node) && !use_parent_ids && !is.null(gatelab_format$tree)
-  import_problems <- c(import_problems, .gml_parent_cycle_problems(raw_gates))
+  use_standard <- is.null(hierarchy_node) && !isTRUE(gatelab_format$marked) && (
+    has_parent_ids || !(.gml_written_by_gatelab(root) || .gml_has_cytobank_gate_info(root))
+  )
+  parent_cycle_problems <- .gml_parent_cycle_problems(raw_gates)
+  standard <- if (use_standard) .gml_standard_chains(raw_gates) else NULL
+  if (use_standard && length(parent_cycle_problems) == 0L) {
+    import_problems <- c(import_problems, standard$problems)
+  }
+  import_problems <- c(import_problems, parent_cycle_problems)
   if (use_tree) {
     import_problems <- c(import_problems, .gml_tree_problems(gatelab_format$tree, raw_gates, bool_order))
   }
-  if (is.null(hierarchy_node) && !use_parent_ids) {
+  if (is.null(hierarchy_node) && !use_parent_ids && !use_standard) {
     # Left: GateLab's Cytobank format, which places populations by its tree and writes no
-    # parent_id, and files whose only populations are their geometric gates, which may be
-    # placed under one another.
+    # parent_id, and Cytobank's flat convention.
     for (g in raw_gates) {
       if (is.null(g$parent_id) || is.null(raw_gates[[g$parent_id]])) next
       if (use_tree) {
@@ -1708,9 +1768,10 @@ import_gatingml_from_cytobank <- function(file_path,
             import_problems,
             paste0(g$gml_id, " references missing gate ", ref$gate_id, ".")
           )
-        } else if (use_parent_ids || isTRUE(target$operand_helper)) {
-          # .gml_parent_id_problems checks references between populations; a reference to a
-          # GateLab NOT operand is refused as NOT logic.
+        } else if (use_parent_ids || use_standard || isTRUE(target$operand_helper)) {
+          # .gml_parent_id_problems checks references between populations, and Gating-ML's own
+          # model combines them (.gml_standard_chains); a reference to a GateLab NOT operand is
+          # refused as NOT logic.
         } else if (identical(target$gate_type, "boolean")) {
           # Cytobank/GateLab flat exports encode ancestry as a Boolean reference
           # plus a matching pop_X parent in custom_info. That pattern maps safely
@@ -1922,6 +1983,35 @@ import_gatingml_from_cytobank <- function(file_path,
 
     for (top_pair in .gml_children_local(hierarchy_node, "PopulationGatePair")) {
       process_pair(top_pair, root_pop_id)
+    }
+  } else if (use_standard) {
+    # Every gate is a population, under the population its parent_id names (All Events when it has
+    # none), with the geometric gates its set adds to its parent's (.gml_standard_chains); one that
+    # adds none takes its parent's events. Parents are placed first; siblings keep the file's
+    # order.
+    pop_ids <- list()
+    waiting <- names(raw_gates)
+    while (length(waiting) > 0L) {
+      still_waiting <- character(0)
+      for (gid in waiting) {
+        g <- raw_gates[[gid]]
+        parent_pid <- if (is.null(g$parent_id)) root_pop_id else pop_ids[[g$parent_id]]
+        if (is.null(parent_pid)) {
+          still_waiting <- c(still_waiting, gid)
+          next
+        }
+        parent_chain <- if (is.null(g$parent_id)) character(0) else standard$chains[[g$parent_id]]
+        refs <- lapply(setdiff(standard$chains[[gid]], parent_chain), function(geometric) {
+          new_gate_ref(gml_to_app[[geometric]], include = TRUE)
+        })
+        pop <- new_population(g$name, gate_refs = refs, parent_id = parent_pid)
+        populations[[pop$population_id]] <- pop
+        populations <- link_child_to_parent(populations, pop$population_id, parent_pid)
+        pop_ids[[gid]] <- pop$population_id
+      }
+      # The problems checked above leave every parent placeable.
+      if (length(still_waiting) == length(waiting)) break
+      waiting <- still_waiting
     }
   } else if (use_parent_ids) {
     # One population per BooleanGate that is not an operand, under the population its parent_id
