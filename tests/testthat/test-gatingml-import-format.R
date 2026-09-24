@@ -499,6 +499,26 @@ test_that("Gating-ML's own model refuses NOT and OR by name", {
   expect_match(err, 'Population "Either" uses OR logic', fixed = TRUE)
   expect_match(err, 'Population "FL1_not_FL3" uses NOT logic', fixed = TRUE)
   expect_no_match(err, 'Population "FL1_pos"', fixed = TRUE)
+
+  # A population that ANDs a NOT or an OR population is named too, with the operand it uses them
+  # through; only the operand had been named.
+  nested <- gml_variant("flowkit-not-or.xml", function(lines) {
+    and_gate <- function(id, a, b) c(
+      sprintf('  <gating:BooleanGate gating:id="%s" gating:parent_id="Cells">', id), "    <gating:and>",
+      sprintf('      <gating:gateReference gating:ref="%s"/>', c(a, b)), "    </gating:and>",
+      "  </gating:BooleanGate>"
+    )
+    end <- grep("</gating:Gating-ML>", lines, fixed = TRUE)
+    c(lines[seq_len(end - 1L)], and_gate("FL3_and_neg", "FL3_pos", "FL1_neg"),
+      and_gate("FL3_and_either", "FL3_pos", "Either"), and_gate("Deeper", "FL1_pos", "FL3_and_neg"),
+      lines[end:length(lines)])
+  })
+  err <- tryCatch(gml_import(nested), error = function(e) conditionMessage(e))
+  expect_type(err, "character")
+  expect_match(err, 'Population "FL3_and_neg" uses NOT logic through "FL1_neg"', fixed = TRUE)
+  expect_match(err, 'Population "FL3_and_either" uses OR logic through "Either"', fixed = TRUE)
+  expect_match(err, 'Population "Deeper" uses NOT logic through "FL3_and_neg"', fixed = TRUE)
+  expect_match(err, 'Population "FL1_neg" uses NOT logic;', fixed = TRUE)
 })
 
 test_that("a GateLab Cytobank-format tree that does not describe the file is refused", {

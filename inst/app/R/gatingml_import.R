@@ -1442,14 +1442,32 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     ))
   }
 
-  add_problem <- function(name, operation) {
+  add_problem <- function(name, operation, through = NULL) {
     problems <<- c(
       problems,
       paste0(
-        "Population ", .gml_quote_name(name), " uses ", operation, " logic; ",
+        "Population ", .gml_quote_name(name), " uses ", operation, " logic",
+        if (!is.null(through)) paste0(" through ", .gml_quote_name(through)), "; ",
         "GateLabR currently imports positive AND populations only."
       )
     )
+  }
+  # The OR and NOT logic a BooleanGate applies, itself or through a BooleanGate it references (in
+  # Gating-ML's own model an operand is a population with logic of its own). A GateLab NOT operand
+  # counts as the NOT it is.
+  logic_seen <- new.env(parent = emptyenv())
+  applied_logic <- function(id, visiting = character(0)) {
+    if (!is.null(logic_seen[[id]])) return(logic_seen[[id]])
+    gate <- raw_gates[[id]]
+    logic <- c(or = FALSE, not = FALSE)
+    if (is.null(gate) || !identical(gate$gate_type, "boolean") || id %in% visiting) return(logic)
+    refs <- gate$refs %||% list()
+    logic[["or"]] <- identical(gate$operation, "or")
+    logic[["not"]] <- identical(gate$operation, "not") || isTRUE(gate$operand_helper) ||
+      any(vapply(refs, function(ref) isTRUE(ref$complement), logical(1)))
+    for (ref in refs) logic <- logic | applied_logic(ref$gate_id, c(visiting, id))
+    logic_seen[[id]] <- logic
+    logic
   }
   # A complement value that is not an xs:boolean ("yes", or empty) says neither that the gate is
   # excluded nor that it is included.
@@ -1481,6 +1499,15 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     ))
     if (identical(gate$operation, "not") || has_complement || excludes_through_operand) {
       for (name in pop_names) add_problem(name, "NOT")
+    }
+    # A population that ANDs one that uses OR or NOT uses it too, and is named with it.
+    for (ref in refs) {
+      target <- raw_gates[[ref$gate_id]]
+      if (is.null(target) || !identical(target$gate_type, "boolean") || isTRUE(target$operand_helper)) next
+      through <- applied_logic(ref$gate_id)
+      target_name <- (names_by_gate[[ref$gate_id]] %||% target$name)[[1]]
+      if (through[["or"]]) for (name in pop_names) add_problem(name, "OR", target_name)
+      if (through[["not"]]) for (name in pop_names) add_problem(name, "NOT", target_name)
     }
   }
 
