@@ -2,7 +2,7 @@
 
 Everything here is synthetic: generic detector names (FSC-A, SSC-A, FL1-A, FL2-A, FL3-A, Time), no markers, made-up population names, and 600 events drawn from a seeded generator. `test-gatingml-import-format.R` uses them.
 
-The XML files are GateLab's own exports of six strategies over those events, written by `tools/gatingml-fixtures.ts` from GateLab's exporter. The same script records which events GateLab places in each population (`membership*.json`, 1-based event indices keyed by the population's name path), so the tests can check that GateLabR's importer selects the same events.
+The XML files other than `flowkit-*.xml` (see below) are GateLab's own exports of six strategies over those events, written by `tools/gatingml-fixtures.ts` from GateLab's exporter. The same script records which events GateLab places in each population (`membership*.json`, 1-based event indices keyed by the population's name path), so the tests can check that GateLabR's importer selects the same events.
 
 | File | What it carries |
 |---|---|
@@ -30,3 +30,22 @@ node "$GL/node_modules/.cache/gatingml-fixtures.mjs" tests/testthat/fixtures/gat
 ```
 
 The second run writes six `-0.8.3` files, of which the two Cytobank-format ones above are then removed. The slanted, ellipse and repeated strategies are written by the first run only.
+
+## FlowKit's files
+
+`flowkit-*.xml` are Gating-ML files from another writer: FlowKit's `export_gatingml`, written by `tools/gatingml-flowkit-fixtures.py` over the same flow events and over 600 synthetic mass cytometry events (`cytof-events.csv`, drawn by that script from a seeded generator, with generic isotope channel names). FlowKit evaluates each gate on the axes its dimensions declare, as Gating-ML 2.0 defines, and the script records the events it places in each population in `flowkit-membership.json` (1-based event indices keyed by the population's name path).
+
+| File | What it carries |
+|---|---|
+| `flowkit-fasinh.xml` | Rectangles under an arcsinh with A = 1 (T 262144, M 4.5), on fluorescence and on scatter. |
+| `flowkit-flin.xml` | A rectangle and a polygon with slanted edges under `flin` (T 262144, A 1000). |
+| `flowkit-slanted.xml` | Polygons with slanted edges on logicle axes (Gating-ML's scale) and on arcsinh axes with A = 1. |
+| `flowkit-boolean.xml` | The standard model: every gate is a population placed by `gating:parent_id`, including BooleanGates that AND gates with parents of their own, one nested in another, one at the root, and a gate at the root that no BooleanGate uses. |
+| `flowkit-not-or.xml` | A `gating:not`, a `gating:or` and a `use-as-complement` reference. |
+| `flowkit-cytof.xml` | Gates on mass cytometry channels in raw values (no transformation), under arcsinh(x / 5), under an arcsinh of another cofactor, and on Time. |
+
+To regenerate, run from the root of this repository with a Python that has FlowKit (FlowKit 1.3.1 wrote these):
+
+```sh
+python tools/gatingml-flowkit-fixtures.py tests/testthat/fixtures/gatingml
+```
