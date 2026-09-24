@@ -1061,30 +1061,31 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # straight edge and GateLabR's stored edge mapped back into the declared space. Measured on the 40
 # polygons with slanted edges on logicle or arcsinh axes in GateLab's exports over four public flow
 # files and in the public PBMC library export (15,000 to 121,000 events), against an exact
-# evaluation of each declared polygon on its own axes: 129 events differed at 1e-4, 14 at 1e-5,
-# 3 at 1e-6 and none at 1e-7, with 154, 345, 1,042 and 3,179 vertices per polygon on average.
+# evaluation of each declared polygon on its own axes: 15 events differed at 1e-5, 3 at 1e-6 and
+# none at 1e-7 or 1e-8, with 326, 1,038, 3,178 and 10,352 vertices per polygon on average.
 .GML_DENSIFY_TOLERANCE <- 1e-7
 # The most vertices a polygon may have after densifying; a polygon that needs more is refused.
 .GML_DENSIFY_MAX_VERTICES <- 200000L
 
 # The parameters (in [0, 1), from the edge's start) at which one slanted edge from (x0, y0) to
 # (x1, y1) is split so that GateLabR's straight pieces between the stored images of those points
-# stay within `tolerance` of the declared edge. Pieces are halved until every chord, mapped back
-# into the declared space at a quarter, a half and three quarters of its length, is within the
-# tolerance. NULL when that takes more than `max_pieces`, or when a point cannot be mapped.
+# stay within `tolerance` of the declared edge. Starting from the whole edge, pieces are halved
+# until every chord, mapped back into the declared space at each eighth of its length, is within
+# the tolerance, so a short edge on a gently curved stretch stays one piece. NULL when that takes
+# more than `max_pieces`, or when a point cannot be mapped.
 .gml_edge_params <- function(x0, y0, x1, y1, map_x, map_y, span_x, span_y,
                              tolerance, max_pieces) {
   ex <- (x1 - x0) / span_x
   ey <- (y1 - y0) / span_y
   norm <- sqrt(ex * ex + ey * ey)
-  t <- seq(0, 1, length.out = 9L)
+  t <- c(0, 1)
   repeat {
     sx <- map_x$inverse(x0 + t * (x1 - x0))
     sy <- map_y$inverse(y0 + t * (y1 - y0))
     if (any(!is.finite(sx)) || any(!is.finite(sy))) return(NULL)
     k <- length(t) - 1L
     deviation <- numeric(k)
-    for (u in c(0.25, 0.5, 0.75)) {
+    for (u in (1:7) / 8) {
       qx <- map_x$forward(sx[-(k + 1L)] + u * diff(sx))
       qy <- map_y$forward(sy[-(k + 1L)] + u * diff(sy))
       d <- abs(ex * (qy - y0) / span_y - ey * (qx - x0) / span_x) / norm
