@@ -38,6 +38,43 @@
   paste(labels, collapse = if (identical(gate_logic, "or")) " or " else " and ")
 }
 
+# The bitsets are positional against the object as it was when saved. Positions do not survive
+# a reorder, a subset or a cbind, and neither the column count nor a digest of column names and
+# sample partition can tell: CATALYST::prepData() builds its SCE with no column names, so two
+# events of one sample can swap places unseen. An explicit save therefore writes each event's own
+# id to colData, where it travels with the event, and the read maps every event back to its saved
+# position through it.
+.gatelabr_event_id_column <- "gatelab_event_id"
+
+# The ids of one save are offset + 1, offset + 3, ..., offset + 2N - 1. The offset is drawn per
+# save, so events that reach one object from two separate saves (cbind) do not share ids. It comes
+# from a hash of the moment, not from R's random number generator: pressing "Save to SCE" must not
+# move the user's .Random.seed.
+#
+# Every id is an odd integer between 2^48 and 2^49, so a double holds it exactly and 15
+# significant digits (as write.csv() writes a double) carry it in full. An id that loses precision
+# lands on a coarser grid, and every such grid is even: through a 32-bit float (an FCS channel, a
+# float32 array) it becomes a multiple of 2^25, and rounded to 14 significant digits or fewer a
+# multiple of ten. Consecutive ids put such a rounded id on another event of the same save, which
+# then lent it its membership with no error. No save writes an even id, so the read refuses one.
+.gatelabr_event_id_stride <- 2
+
+.gatelabr_event_id_offset <- function(saved_at, revision, event_count) {
+  hex <- digest::digest(
+    list(saved_at, revision, event_count, Sys.getpid(), as.numeric(Sys.time())),
+    algo = "sha256"
+  )
+  # 48 bits of the hash, in two halves because strtoi() stops at 31 bits.
+  draw <- strtoi(substr(hex, 1L, 6L), 16L) * 2^24 + strtoi(substr(hex, 7L, 12L), 16L)
+  # Even, and low enough that the last id, offset + 2N - 1, stays below 2^49.
+  2^48 + 2 * (draw %% (2^47 - event_count))
+}
+
+# The id of each event of the object being saved, in its order.
+.gatelabr_event_ids <- function(event_ids, event_count) {
+  event_ids$offset + event_ids$stride * seq_len(event_count) - (event_ids$stride - 1)
+}
+
 # Validate the payload an explicit save carries and pack it against this SCE's sample layout.
 .gatelabr_pack_host_memberships <- function(
     sce,
@@ -152,10 +189,16 @@
 
   list(
     format = "gatelab-sce-memberships",
-    version = 1L,
+    # Version 2 carries event_ids; a version 1 record, from before they existed, has none.
+    version = 2L,
     revision = as.integer(revision),
     saved_at = saved_at,
     event_count = ncol(sce),
+    event_ids = list(
+      column = .gatelabr_event_id_column,
+      offset = .gatelabr_event_id_offset(saved_at, revision, ncol(sce)),
+      stride = .gatelabr_event_id_stride
+    ),
     hierarchies = hierarchies,
     populations = populations,
     masks = masks
@@ -167,9 +210,15 @@
   if (!methods::is(sce, "SingleCellExperiment")) {
     stop("sce must be a SingleCellExperiment.", call. = FALSE)
   }
-  workspace <- S4Vectors::metadata(sce)$gatelab_workspace
-  record <- if (is.list(workspace)) workspace$memberships else NULL
-  if (!is.list(record) || !identical(record$format, "gatelab-sce-memberships")) {
+  md <- S4Vectors::metadata(sce)
+  # cbind() keeps every object's metadata, so a combined object carries one workspace record per
+  # object, and `$` reaches only the first. The memberships can be stored in any of them.
+  saves <- Filter(function(workspace) {
+    is.list(workspace) && is.list(workspace$memberships) &&
+      identical(workspace$memberships$format, "gatelab-sce-memberships")
+  }, unname(md[names(md) %in% "gatelab_workspace"]))
+  if (length(saves) == 0L) {
+    workspace <- md$gatelab_workspace
     stale_core <- if (is.list(workspace)) workspace$explicit_without_memberships else NULL
     if (!is.null(stale_core)) {
       stop(
@@ -189,17 +238,15 @@
       call. = FALSE
     )
   }
-  if (!identical(as.integer(record$event_count), ncol(sce))) {
-    stop(
-      "The stored population memberships cover ", record$event_count,
-      " events but this SCE has ", ncol(sce), " columns; they were saved on a ",
-      "different object (subsetting or reordering an SCE does not carry them). ",
-      "Press \"Save to SCE\" in GateLabR on this object.",
-      call. = FALSE
-    )
+  workspace <- .gatelabr_memberships_save(sce, saves)
+  record <- workspace$memberships
+  record$positions <- .gatelabr_membership_positions(sce, record)
+  # Stale against the workspace the memberships were saved with, which on a combined object need
+  # not be the first record.
+  current_revision <- suppressWarnings(as.integer(workspace$revision))
+  if (length(current_revision) != 1L || is.na(current_revision) || current_revision < 0L) {
+    current_revision <- 0L
   }
-  current <- .gatelabr_canonical_workspace_record(sce)
-  current_revision <- if (is.null(current)) 0L else current$revision
   if (!identical(as.integer(record$revision), current_revision) && !isTRUE(allow_stale)) {
     stop(
       "Population memberships were saved at workspace revision ", record$revision,
@@ -210,6 +257,116 @@
     )
   }
   record
+}
+
+# Which of the stored saves this object's events are read from. A record without event ids (saved
+# before ids existed) covers no event by id, so it is not a second save; where it is the only one,
+# the read refuses it. Of several saves, the one that holds every event is read, as the object
+# would have been before it was combined.
+.gatelabr_memberships_save <- function(sce, saves) {
+  offsets <- vapply(saves, function(workspace) {
+    offset <- workspace$memberships$event_ids$offset
+    if (is.numeric(offset) && length(offset) == 1L) offset else NA_real_
+  }, numeric(1))
+  distinct <- which(!is.na(offsets) & !duplicated(offsets))
+  if (length(distinct) == 0L) return(saves[[1L]])
+  if (length(distinct) == 1L) return(saves[[distinct]])
+  for (index in distinct) {
+    record <- saves[[index]]$memberships
+    ids <- SummarizedExperiment::colData(sce)[[record$event_ids$column]]
+    positions <- .gatelabr_saved_positions(ids, record$event_ids, as.numeric(record$event_count))
+    if (!anyNA(positions)) return(saves[[index]])
+  }
+  stop(
+    "This SCE combines events from objects whose population memberships were saved separately ",
+    "(cbind() keeps each object's metadata), and no one save holds all of them. Subset it to ",
+    "the events of one save, or press \"Save to SCE\" in GateLabR on this object to store ",
+    "them again.",
+    call. = FALSE
+  )
+}
+
+# Each event's position in the object a save was made on, or NA where its id is none of that
+# save's.
+.gatelabr_saved_positions <- function(ids, key, saved_count) {
+  if (!is.numeric(ids)) return(rep(NA_real_, length(ids)))
+  stride <- .gatelabr_event_id_stride
+  positions <- (ids - key$offset + stride - 1) / stride
+  known <- !is.na(positions) & positions >= 1 & positions <= saved_count &
+    positions == round(positions)
+  positions[!known] <- NA_real_
+  positions
+}
+
+# Each event's position in the object the memberships were saved on, found through its event id,
+# so that a reordered, subset or combined object reads every event's own membership. Anything that
+# cannot be traced to a saved event stops the read: a positional guess is what misassigned events.
+.gatelabr_membership_positions <- function(sce, record) {
+  resave <- "press \"Save to SCE\" in GateLabR on this object to store them again."
+  key <- record$event_ids
+  if (!is.list(key)) {
+    stop(
+      "These population memberships were saved by an earlier version of GateLabR, which kept ",
+      "them by event position only, so they cannot be matched to this object's events: on a ",
+      "reordered or subset object a positional read gives events each other's memberships. ",
+      "To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  if (!is.character(key$column) || length(key$column) != 1L ||
+      !is.numeric(key$offset) || length(key$offset) != 1L || !is.finite(key$offset) ||
+      !identical(key$stride, .gatelabr_event_id_stride)) {
+    stop(
+      "These population memberships carry event ids in a form this version of GateLabR does ",
+      "not read, so they cannot be matched to this object's events. To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  cd <- SummarizedExperiment::colData(sce)
+  if (!key$column %in% colnames(cd)) {
+    stop(
+      "This SCE has no `", key$column, "` column in colData. \"Save to SCE\" writes it to tie ",
+      "each stored population membership to its event, and without it the memberships cannot ",
+      "be matched to this object's events. To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  ids <- cd[[key$column]]
+  saved_count <- as.numeric(record$event_count)
+  positions <- .gatelabr_saved_positions(ids, key, saved_count)
+  known <- !is.na(positions)
+  # An id that lost precision is even, and no save writes one (see .gatelabr_event_id_offset).
+  rounded <- if (is.numeric(ids)) {
+    !known & is.finite(ids) & ids >= 2^48 & ids <= 2^49 & ids %% 2 == 0
+  } else {
+    FALSE
+  }
+  if (any(rounded)) {
+    stop(
+      sum(rounded), " of this SCE's ", length(known), " events have a `", key$column,
+      "` that lost precision, as an id does when stored as a 32-bit float (an FCS channel, a ",
+      "float32 array) or written with fewer than 15 significant digits, so it no longer names ",
+      "its saved event and the event's memberships are unknown. Read them from an object whose ",
+      "ids were kept in full, or ", resave,
+      call. = FALSE
+    )
+  }
+  if (!all(known)) {
+    stop(
+      sum(!known), " of this SCE's ", length(known), " events are not among the ",
+      saved_count, " events the population memberships were saved on, so their memberships ",
+      "are unknown: they came from another object, for example through cbind(). Subset this ",
+      "SCE to the saved events, or ", resave,
+      call. = FALSE
+    )
+  }
+  as.integer(positions)
+}
+
+# One population's membership for every event of this object, in this object's order.
+.gatelabr_population_membership <- function(record, key) {
+  saved <- .gatelabr_unpack_bits(record$masks[[key]], as.integer(record$event_count))
+  saved[record$positions]
 }
 
 .gatelabr_resolve_hierarchy <- function(record, hierarchy = NULL) {
@@ -239,9 +396,17 @@
 #'
 #' Memberships are tied to the workspace revision they were computed at. If gates or populations
 #' changed since (an autosave moved the revision on), reading them is refused unless
-#' \code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them. They are also
-#' refused on an object with a different number of columns, since a subset SCE keeps the metadata
-#' but not the event order the masks assume.
+#' \code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them.
+#'
+#' Memberships follow the events, not their positions. The save writes each event's id to
+#' \code{colData(sce)$gatelab_event_id}, which travels with the event, so a reordered or subset
+#' SCE, or one that repeats saved events, reads every event's own membership. An event that was
+#' not in the saved object, for example one added with \code{cbind()}, has no stored membership,
+#' and reading is refused rather than guessed; so is reading after the id column was removed, or
+#' memberships saved by an earlier version of GateLabR, which kept them by position only.
+#' \code{cbind()} needs the column on both objects: give the object that lacks it the column as
+#' \code{NA} (\code{other$gatelab_event_id <- NA_real_}) rather than dropping it from the saved
+#' one, and the saved events read again once the combined object is subset back to them.
 #'
 #' @param sce A \code{SingleCellExperiment} gated with GateLabR and saved with
 #'   \dQuote{Save to SCE}.
@@ -258,7 +423,8 @@
 #'   \code{gatelabHierarchy}: a data frame with one row per population of one hierarchy, parents
 #'   before children: \code{population_id}, \code{population}, \code{parent}, \code{depth},
 #'   \code{path} (names from the root joined by \code{" > "}), \code{gates} (the gate names the
-#'   population is defined by, \code{not} marking an excluded gate), and \code{event_count}.
+#'   population is defined by, \code{not} marking an excluded gate), and \code{event_count}, the
+#'   number of this object's events the population holds.
 #'
 #'   \code{gatelabPopulations}: a logical matrix with one row per SCE column (event) and one
 #'   column per population, named by population; a name shared by two populations of the
@@ -300,6 +466,15 @@ gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
+  # The stored counts are the saved object's; a reordered object has the same ones.
+  if (!identical(record$positions, seq_len(as.integer(record$event_count)))) {
+    rows$event_count <- vapply(
+      paste0(rows$hierarchy_id, "/", rows$population_id),
+      function(key) sum(.gatelabr_population_membership(record, key)),
+      integer(1),
+      USE.NAMES = FALSE
+    )
+  }
   out <- rows[, c(
     "population_id", "population", "parent", "depth", "path", "gates", "event_count"
   )]
@@ -354,7 +529,7 @@ gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_
   colnames(out) <- labels
   for (index in seq_len(nrow(rows))) {
     key <- paste0(rows$hierarchy_id[[index]], "/", rows$population_id[[index]])
-    out[, index] <- .gatelabr_unpack_bits(record$masks[[key]], event_count)
+    out[, index] <- .gatelabr_population_membership(record, key)
   }
   out
 }
@@ -379,7 +554,7 @@ gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", al
   best_depth <- rep(0L, event_count)
   for (index in seq_len(nrow(below_root))) {
     key <- paste0(below_root$hierarchy_id[[index]], "/", below_root$population_id[[index]])
-    inside <- .gatelabr_unpack_bits(record$masks[[key]], event_count)
+    inside <- .gatelabr_population_membership(record, key)
     deeper <- inside & below_root$depth[[index]] > best_depth
     leaf[deeper] <- index
     best_depth[deeper] <- below_root$depth[[index]]

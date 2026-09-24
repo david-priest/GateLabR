@@ -134,9 +134,8 @@ Both export to **SVG** (vector, Illustrator-friendly) and **PNG**.
 - **Populations → `colData`** (`Export Population`) for downstream `diffcyt`,
   `CATALYST`, or any SCE-aware analysis.
 - **FCS export** of gated events (defaults to the raw counts assay).
-- **GatingML 2.0** import/export to round-trip gates with Cytobank / FlowJo.
-- **Workspace** is embedded in `metadata(sce)$gating_workspace`; `saveRDS()` the
-  object (or export a portable `.rds`) and re-loading restores everything.
+- **Gating-ML 2.0** import/export to exchange gates with Cytobank. FlowJo does not read Gating-ML; it uses its own `.wsp` format.
+- **Workspace** is embedded in `metadata(sce)$gatelab_workspace`, with a `metadata(sce)$gating_workspace` mirror kept for the previous interface; `saveRDS()` the object (or export a portable `.rds`) and re-loading restores everything.
 
 ```r
 saveRDS(sce, "gated.rds")   # gates, populations, scales — all preserved

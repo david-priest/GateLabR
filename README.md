@@ -35,9 +35,7 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
 - **Draw and edit gates interactively.** Polygon, rectangle and quadrant gates
   on any pair of channels, with click-and-drag vertex editing, undo / redo, and
   per-gate colour and label.
-- **Positive AND population trees.** Build hierarchies of populations from gate
-  references — each population is the intersection (AND) of its gates within its
-  parent; counts and percentages update live.
+- **Population trees.** Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent, and a population may exclude a gate (NOT); counts and percentages update live.
 - **Flow and CyTOF modes.** Auto-detects the instrument type from channel
   names. Flow uses per-channel logicle for fluorescence and arcsinh for
   FSC / SSC scatter, with editable W and cofactor; CyTOF channels use arcsinh
@@ -47,12 +45,7 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   R, installs a revisioned full-size SCE assay atomically, preserves the
   original assay, and restores saved compensated assays without recomputation.
   Existing compensated SCE assays can be adopted directly.
-- **Cytobank-compatible Gating-ML 2.0 import / export.** Round-trip supported gates
-  and positive AND population trees through Cytobank and other ISAC Gating-ML
-  2.0-compliant tools. Files containing NOT or OR populations, or gates whose
-  channels cannot be matched to the loaded data, are rejected before import rather
-  than being partially or silently altered. (FlowJo uses its own `.wsp` format and
-  does not round-trip Gating-ML.)
+- **Cytobank-compatible Gating-ML 2.0 import / export.** Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, AND populations, and the Boolean NOT of a gate. An AND population that excludes a gate is read back as GateLab and GateLabR write it, with `gating:complement="true"` on the excluded gate's reference, an attribute outside the Gating-ML 2.0 schema. The schema's own `gating:use-as-complement="true"` is not yet read, and such a gate is imported as an included gate, with no warning. Files containing OR populations, other gate types, or gates whose channels cannot be matched to the loaded data are refused before import. (FlowJo uses its own `.wsp` format and does not round-trip Gating-ML.)
 - **Workspace persistence.** Gates, populations, scales, active assay,
   compensation provenance and illustration settings are saved inside the SCE
   and re-loaded automatically.
@@ -95,10 +88,10 @@ instead of replacing it — while keeping full R access to the same object.
 | Cost / licence | Free, MIT, open source | Commercial | Commercial | Free, open source |
 | Flow / CyTOF | Both (auto-detected) | Flow-focused | Both | Flow-focused |
 | Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
-| **Gating-ML 2.0 exchange** | **Yes (positive AND populations)** | **No** | **Yes** | Partial |
+| **Gating-ML 2.0 exchange** | **Yes (AND populations)** | **No** | **Yes** | Partial |
 | Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
 
-Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR speaks Cytobank-compatible Gating-ML, so supported gate geometry and positive AND population trees move losslessly between GateLabR and Cytobank. Broader Boolean logic may be considered in a future update if there is user demand.
+Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank. A population that excludes a gate is written with GateLab's own `gating:complement` attribute rather than the schema's `gating:use-as-complement`, so it round-trips between GateLab and GateLabR but has not been shown to cross to Cytobank. OR populations are not supported.
 
 FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent
 project and is not affiliated with or endorsed by BD or FlowJo.
@@ -193,9 +186,7 @@ point and starts the shared React interface. The three-column layout is:
    sce$population <- gatelabLeafPopulation(sce)   # each event's deepest population, or "ungated"
    ```
 
-   These refuse to read memberships that are behind the workspace (gates changed
-   after the last explicit save) unless `allow_stale = TRUE`; press `Save to SCE`
-   again to refresh them.
+   These refuse to read memberships that are behind the workspace (gates changed after the last explicit save) unless `allow_stale = TRUE`; press `Save to SCE` again to refresh them. The save also gives every event an id in `colData(sce)$gatelab_event_id`, and the memberships are read back through it, so they follow the events through a reorder or a subset. Events the saved object did not hold, such as those added by `cbind()`, have no membership, and reading is refused rather than guessed.
 7. Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is embedded
    in `metadata()` and reloaded next time.
 
@@ -211,6 +202,12 @@ metadata(sce)$gatelab_workspace$memberships
 #> every population's membership as a packed bitset, with the hierarchy tables,
 #> written by "Save to SCE"; read with gatelabPopulations() and friends
 
+colData(sce)$gatelab_event_id
+#> each event's id, written by "Save to SCE"; it ties the stored memberships to their
+#> events. cbind() needs it on both objects: give the other object the column as NA
+#> (other$gatelab_event_id <- NA_real_) rather than dropping it from the saved one,
+#> and the saved events read again once the combined object is subset back to them.
+
 metadata(sce)$gatelabr_compensation
 #> compensation profiles, assay bindings, revisions and provenance
 
@@ -221,8 +218,7 @@ metadata(sce)$gatelab_palettes
 #> optional: a named colour vector per colData column, used by "Colour by"
 ```
 
-The established `metadata(sce)$gating_workspace` mirror remains available for
-compatibility with the previous GateLabR interface.
+The established `metadata(sce)$gating_workspace` mirror remains available for compatibility with the previous GateLabR interface. It carries each gate's coordinate space and transforms, and GateLabR reads it only when the canonical record above is absent.
 
 ## File formats supported
 

@@ -437,7 +437,8 @@
     rows <- event_indices[[level_index]]
     metadata <- list()
     if (include_metadata && ncol(metadata_cd) > 0L) {
-      for (field in colnames(metadata_cd)) {
+      # An event id is unique to its event, never a sample attribute, even in a one-event sample.
+      for (field in setdiff(colnames(metadata_cd), .gatelabr_event_id_column)) {
         values <- metadata_cd[[field]][rows]
         comparable <- as.character(values)
         comparable <- comparable[!is.na(comparable)]
@@ -943,6 +944,12 @@
     } else {
       normalized$vertices <- .gatelabr_json_vertices(gate$vertices, gate_id)
     }
+    # The space a gate's numbers live in, and the transforms it was drawn under, are part of the
+    # gate. Without them the core, reloading this mirror when the canonical record is gone, reads
+    # the gate in the workspace default below (raw values for flow): an ellipse, any gate drawn in
+    # display space and every FlowJo biex or log gate would select other events.
+    if (!is.null(gate$space)) normalized$space <- as.character(gate$space)
+    if (!is.null(gate$transforms)) normalized$transforms <- gate$transforms
     normalized
   })
   names(normalized_gates) <- gate_ids
@@ -1016,11 +1023,17 @@
       label = "global scale range"
     )
   }
-  gate_value_space <- if (identical(.gatelabr_sce_instrument(sce), "flow")) {
-    "raw"
-  } else {
-    "display"
-  }
+  # The space the core converts every gate from when it reloads this mirror, towards the space it
+  # gates the sample in. Where R cannot tell the instrument the core decides for itself (flow when
+  # nothing says otherwise), and a stamp of either space made it convert gates whose own `space`
+  # already said where they live: display rectangles and polygons then selected no events. With
+  # no stamp the core converts nothing, as it does for the canonical record in that case.
+  gate_value_space <- switch(
+    .gatelabr_sce_instrument(sce),
+    flow = "raw",
+    cytof = "display",
+    NULL
+  )
   workspace <- list(
     gates = normalized_gates,
     gate_order = .gatelabr_json_character_vector(gating$gate_order, "gate_order"),
@@ -1242,6 +1255,14 @@
     tz = "UTC"
   )
   md <- S4Vectors::metadata(sce)
+  # cbind() keeps every object's metadata, so a combined object can hold several records under
+  # each name, and `$` reaches only the first. The records written below are this object's; the
+  # others describe objects it no longer is. Left in place, a second memberships record kept a
+  # combined object refused even after the save the refusal asks for (memberships.R).
+  for (name in c("gatelab_workspace", "gating_workspace")) {
+    extra <- which(names(md) == name)[-1L]
+    if (length(extra) > 0L) md <- md[-extra]
+  }
   # Memberships arrive with an explicit save and stay with the record through every autosave
   # after it, which carries geometry only. Their own revision says which workspace they belong to.
   previous <- md$gatelab_workspace
@@ -1274,6 +1295,13 @@
   )
   if (!is.null(stored_memberships)) {
     md$gatelab_workspace$memberships <- stored_memberships
+  }
+  # A save that brought memberships gives every event the id they are read back through, so they
+  # follow the events through a reorder, a subset or a cbind (memberships.R).
+  if (!is.null(memberships)) {
+    event_ids <- stored_memberships$event_ids
+    SummarizedExperiment::colData(sce)[[event_ids$column]] <-
+      .gatelabr_event_ids(event_ids, ncol(sce))
   }
   # An explicit save that brought no memberships came from a core that predates them. Recording
   # the revision lets the accessors say so, instead of asking the user to press a button that
