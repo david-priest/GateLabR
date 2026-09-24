@@ -690,3 +690,34 @@ test_that("a gate on a derived dimension, such as a ratio, is refused by name", 
 </gating:Gating-ML>')
   expect_error(gml_import(ratio), "RectangleGate Singlets has a dimension that is not an FCS parameter", fixed = TRUE)
 })
+
+test_that("a transformation declared on Time or Event_length is inverted to their raw values", {
+  # GateLabR keeps Time, Event_length and Cell_length raw on every instrument, and took a gate on
+  # them as raw values whatever its dimension declared: FlowKit's gates on flin, arcsinh and
+  # logicle Time and Event_length selected no events.
+  parsed <- gml_import(gml_fixture("flowkit-raw-channels.xml"))
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("raw-channels"))
+  # These channels are raw whichever the data, so without the instrument argument too.
+  parsed <- import_gatingml_from_cytobank(gml_fixture("flowkit-raw-channels.xml"), gml_channels, gml_identity_map)
+  gml_expect_membership(gml_membership(parsed), gml_flowkit("raw-channels"))
+
+  events <- as.matrix(utils::read.csv(gml_fixture("cytof-events.csv"), check.names = FALSE))
+  storage.mode(events) <- "double"
+  channels <- colnames(events)
+  for (cofactor in c(5, 15)) {
+    data <- transform_matrix_by_instrument(events, channels, "cytof", cofactor = cofactor)
+    parsed <- import_gatingml_from_cytobank(gml_fixture("flowkit-raw-channels-cytof.xml"), channels,
+                                            stats::setNames(as.list(channels), channels),
+                                            instrument = "cytof", cytof_cofactor = cofactor)
+    gml_expect_membership(gml_membership(parsed, data), gml_flowkit("raw-channels-cytof"))
+  }
+
+  # Flow data hold every channel raw, so an arcsinh on a QC channel such as Width is inverted
+  # like one on scatter or fluorescence; file_number is raw on every instrument, like Time.
+  asinh <- list(Asinh = list(type = "fasinh", T = 1000, M = 4, A = 0.5))
+  forward <- function(x) (asinh(x * sinh(4 * log(10)) / 1000) + 0.5 * log(10)) / (4.5 * log(10))
+  width <- .gml_axis_map("Width", "Asinh", asinh, instrument = "flow")
+  expect_equal(width$inverse(forward(c(10, 200, 900))), c(10, 200, 900))
+  file_number <- .gml_axis_map("file_number", "Asinh", asinh)
+  expect_equal(file_number$inverse(forward(c(1, 2, 7))), c(1, 2, 7))
+})

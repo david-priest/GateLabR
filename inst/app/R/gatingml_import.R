@@ -1031,8 +1031,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   identity_map <- .gml_identity_map()
   if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(identity_map)
 
-  # QC / instrument channels: always raw space, no inversion.
-  if (grepl("^(time|event_length|cell_length|barcode)$", resolved_channel, ignore.case = TRUE)) {
+  # A barcode channel: taken as it is.
+  if (grepl("^barcode$", resolved_channel, ignore.case = TRUE)) {
     return(identity_map)
   }
 
@@ -1051,18 +1051,22 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   #     counts space — otherwise an export+import roundtrip squashes flow
   #     scatter gates down to a tiny region near zero (raw≈display values get
   #     forward-transformed again at render time → asinh(raw/cf) ≈ 0).
-  #   • FLOW fluorescence under fasinh: stored raw like scatter, so inverted too. GateLab's
-  #     Cytobank format writes flow fluorescence gates this way, because Cytobank has no
-  #     logicle, and so do Cytobank's own flow exports. Only when the caller says the data are
-  #     flow (instrument = "flow").
+  #   • FLOW fluorescence and QC channels under fasinh: stored raw like scatter, so inverted
+  #     too. GateLab's Cytobank format writes flow fluorescence gates this way, because Cytobank
+  #     has no logicle, and so do Cytobank's own flow exports. Only when the caller says the data
+  #     are flow (instrument = "flow").
+  #   • Time, Event_length, Cell_length and file_number are raw in every dataset GateLabR loads,
+  #     flow or mass cytometry, so a transformation declared on them is inverted whatever the
+  #     caller says; taken as raw values, a gate on arcsinh, logicle or flin Time selected other
+  #     events.
   #   • Otherwise (instrument NULL) the coordinates are taken as they are, as for CyTOF metal
   #     channels before the caller could say which data they are.
   if (is.list(tr_def) && identical(tr_def$type, "fasinh")) {
     is_scatter <- exists(".is_scatter_channel", mode = "function") &&
                   isTRUE(.is_scatter_channel(resolved_channel))
-    is_flow_signal <- identical(instrument, "flow") &&
-      !(exists(".is_qc_channel", mode = "function") && isTRUE(.is_qc_channel(resolved_channel)))
-    if (!is_scatter && !is_flow_signal) return(identity_map)
+    always_raw <- grepl("^(time|event_length|cell_length|file_number)$", resolved_channel,
+                        ignore.case = TRUE)
+    if (!is_scatter && !always_raw && !identical(instrument, "flow")) return(identity_map)
   }
   .gml_declared_map(tr_def, logicle_unit)
 }
@@ -1659,10 +1663,12 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 #' @param session_channels Character vector of available channel names in current SCE
 #' @param pnn_to_channel Optional named mapping of FCS $PnN -> display channel name
 #' @param instrument "flow" or "cytof": how the loaded data store gates. With "flow", gate
-#'   coordinates declared under arcsinh are inverted to raw values for fluorescence channels as
-#'   well as scatter. With "cytof", every coordinate is converted to the data's
-#'   arcsinh(x / cofactor) except on the channels the data keep raw (Time, Event_length,
-#'   Cell_length, file_number). NULL inverts scatter only, as before this argument existed.
+#'   coordinates declared under arcsinh are inverted to raw values on every channel, not only
+#'   scatter. With "cytof", every coordinate is converted to the data's arcsinh(x / cofactor)
+#'   except on the channels the data keep raw (Time, Event_length, Cell_length, file_number),
+#'   where it is inverted to raw values. NULL inverts arcsinh on scatter, Time, Event_length,
+#'   Cell_length and file_number only. With "flow" or NULL, logicle and flin are inverted on every
+#'   channel.
 #' @param cytof_cofactor The loaded mass cytometry data's arcsinh cofactor (with instrument
 #'   "cytof"). A file that records GateLab's own cofactor (gatelabr_scales) is read on that one
 #'   instead, since importing it re-transforms the data to it. Default 5.

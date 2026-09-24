@@ -212,5 +212,42 @@ write("cytof", gs, cytof, [
     ("Raw_box", ()), ("Raw_slant", ()), ("Arcsinh_slant", ()), ("Other_range", ()), ("Time_window", ()),
 ])
 
+# Transformations on Time and Event_length, which GateLabR keeps in raw values on every
+# instrument. A gate's coordinates on them are still on the scale its dimension declares.
+time_lin = T.LinearTransform(1000, 100)
+time_asinh = T.AsinhTransform(1000, 4, 0.5)
+time_logicle = T.LogicleTransform(1000, 0.5, 4.5, 0)
+gs = fk.GatingStrategy()
+gs.add_transform("Time_lin", time_lin)
+gs.add_transform("Time_asinh", time_asinh)
+gs.add_transform("Time_logicle", time_logicle)
+gs.add_transform("Logicle", logicle)
+tl, ta, tg = (applied(tr, flow["Time"]) for tr in (time_lin, time_asinh, time_logicle))
+gs.add_gate(G.RectangleGate("Time_flin", [dim("Time", "Time_lin", lo=cut(tl, 0.2), hi=cut(tl, 0.7))]), ("root",))
+gs.add_gate(G.RectangleGate("Time_fasinh", [dim("Time", "Time_asinh", lo=cut(ta, 0.3), hi=cut(ta, 0.9))]), ("root",))
+gs.add_gate(G.PolygonGate("Time_by_FL1", [dim("Time", "Time_logicle"), dim("FL1-A", "Logicle")], [
+    [cut(tg, 0.05), cut(g1, 0.3)], [cut(tg, 0.6), cut(g1, 0.02)],
+    [cut(tg, 0.98), cut(g1, 0.7)], [cut(tg, 0.35), cut(g1, 0.97)],
+]), ("root",))
+write("raw-channels", gs, flow, [("Time_flin", ()), ("Time_fasinh", ()), ("Time_by_FL1", ())])
+
+length_lin = T.LinearTransform(50, 5)
+length_asinh = T.AsinhTransform(1000, 4.5, 0.3)
+gs = fk.GatingStrategy()
+gs.add_transform("Length_lin", length_lin)
+gs.add_transform("Asinh_A03", length_asinh)
+gs.add_transform("Time_logicle", time_logicle)
+ll = applied(length_lin, cytof["Event_length"])
+la, na = applied(length_asinh, cytof["Event_length"]), applied(length_asinh, c2)
+tc = applied(time_logicle, cytof["Time"])
+gs.add_gate(G.RectangleGate("Length_flin", [dim("Event_length", "Length_lin", lo=cut(ll, 0.3), hi=cut(ll, 0.8))]),
+            ("root",))
+gs.add_gate(G.PolygonGate("Length_by_Nd142", [dim("Event_length", "Asinh_A03"), dim("Nd142Di", "Asinh_A03")], [
+    [cut(la, 0.05), cut(na, 0.4)], [cut(la, 0.55), cut(na, 0.02)],
+    [cut(la, 0.97), cut(na, 0.6)], [cut(la, 0.35), cut(na, 0.98)],
+]), ("root",))
+gs.add_gate(G.RectangleGate("Time_logicle", [dim("Time", "Time_logicle", lo=cut(tc, 0.1), hi=cut(tc, 0.6))]), ("root",))
+write("raw-channels-cytof", gs, cytof, [("Length_flin", ()), ("Length_by_Nd142", ()), ("Time_logicle", ())])
+
 with open(out_dir / "flowkit-membership.json", "w") as fh:
     json.dump(membership, fh, separators=(",", ":"))
