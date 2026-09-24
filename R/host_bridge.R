@@ -1023,11 +1023,17 @@
       label = "global scale range"
     )
   }
-  gate_value_space <- if (identical(.gatelabr_sce_instrument(sce), "flow")) {
-    "raw"
-  } else {
-    "display"
-  }
+  # The space the core converts every gate from when it reloads this mirror, towards the space it
+  # gates the sample in. Where R cannot tell the instrument the core decides for itself (flow when
+  # nothing says otherwise), and a stamp of either space made it convert gates whose own `space`
+  # already said where they live: display rectangles and polygons then selected no events. With
+  # no stamp the core converts nothing, as it does for the canonical record in that case.
+  gate_value_space <- switch(
+    .gatelabr_sce_instrument(sce),
+    flow = "raw",
+    cytof = "display",
+    NULL
+  )
   workspace <- list(
     gates = normalized_gates,
     gate_order = .gatelabr_json_character_vector(gating$gate_order, "gate_order"),
