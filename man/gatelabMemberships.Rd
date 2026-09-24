@@ -47,7 +47,8 @@ the hierarchy, root included.}
   \code{gatelabHierarchy}: a data frame with one row per population of one hierarchy, parents
   before children: \code{population_id}, \code{population}, \code{parent}, \code{depth},
   \code{path} (names from the root joined by \code{" > "}), \code{gates} (the gate names the
-  population is defined by, \code{not} marking an excluded gate), and \code{event_count}.
+  population is defined by, \code{not} marking an excluded gate), and \code{event_count}, the
+  number of this object's events the population holds.
 
   \code{gatelabPopulations}: a logical matrix with one row per SCE column (event) and one
   column per population, named by population; a name shared by two populations of the
@@ -64,9 +65,16 @@ population holds, for every hierarchy. These functions read that back without re
 \details{
 Memberships are tied to the workspace revision they were computed at. If gates or populations
 changed since (an autosave moved the revision on), reading them is refused unless
-\code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them. They are also
-refused on an object with a different number of columns, since a subset SCE keeps the metadata
-but not the event order the masks assume.
+\code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them.
+
+Memberships follow the events, not their positions. The save writes each event's id to
+\code{colData(sce)$gatelab_event_id}, which travels with the event, so a reordered or subset
+SCE, or one that repeats saved events, reads every event's own membership. An event that was
+not in the saved object, for example one added with \code{cbind()}, has no stored membership,
+and reading is refused rather than guessed; so is reading after the id column was removed, or
+memberships saved by an earlier version of GateLabR, which kept them by position only.
+Combining a saved SCE with an object that lacks the column needs the column dropped
+(\code{sce$gatelab_event_id <- NULL}) or added as \code{NA} first.
 }
 \examples{
 \dontrun{

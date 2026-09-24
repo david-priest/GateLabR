@@ -437,7 +437,8 @@
     rows <- event_indices[[level_index]]
     metadata <- list()
     if (include_metadata && ncol(metadata_cd) > 0L) {
-      for (field in colnames(metadata_cd)) {
+      # An event id is unique to its event, never a sample attribute, even in a one-event sample.
+      for (field in setdiff(colnames(metadata_cd), .gatelabr_event_id_column)) {
         values <- metadata_cd[[field]][rows]
         comparable <- as.character(values)
         comparable <- comparable[!is.na(comparable)]
@@ -1274,6 +1275,13 @@
   )
   if (!is.null(stored_memberships)) {
     md$gatelab_workspace$memberships <- stored_memberships
+  }
+  # A save that brought memberships gives every event the id they are read back through, so they
+  # follow the events through a reorder, a subset or a cbind (memberships.R).
+  if (!is.null(memberships)) {
+    event_ids <- stored_memberships$event_ids
+    SummarizedExperiment::colData(sce)[[event_ids$column]] <-
+      event_ids$offset + seq_len(ncol(sce))
   }
   # An explicit save that brought no memberships came from a core that predates them. Recording
   # the revision lets the accessors say so, instead of asking the user to press a button that

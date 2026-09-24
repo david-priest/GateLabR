@@ -215,10 +215,117 @@ test_that("an explicit save that brought no memberships is reported as a stale c
   expect_silent(gatelabHierarchy(refreshed$sce))
 })
 
-test_that("memberships are refused on an object they were not saved on", {
+test_that("memberships are refused on an object that never had them", {
   expect_error(gatelabPopulations(make_memberships_sce()), "No population memberships")
+})
+
+# Saved memberships: events 1 and 3 are CD3+, event 3 alone is CD3+CD19-, event 2 is Sample 01.
+saved_cd3 <- c(TRUE, FALSE, TRUE)
+saved_leaf <- c("CD3+", "ungated", "CD3+CD19-")
+
+test_that("memberships follow the events through a reorder, not their positions", {
   sce <- store_with_memberships()$sce
-  expect_error(gatelabPopulations(sce[, 1:2]), "cover 3 events but this SCE has 2 columns")
+  order <- c(3L, 1L, 2L)
+  reordered <- sce[, order]
+  # The bitsets were positional and only the column count was compared, so this read each
+  # position's bit: event 3 was given event 1's membership, and so on.
+  expect_identical(unname(gatelabPopulations(reordered)[, "CD3+"]), saved_cd3[order])
+  expect_identical(rownames(gatelabPopulations(reordered)), paste0("event", order))
+  expect_identical(as.character(gatelabLeafPopulation(reordered)), saved_leaf[order])
+  expect_identical(
+    unname(gatelabPopulations(reordered, hierarchy = "Barcodes")[, "Sample 01"]),
+    c(FALSE, FALSE, TRUE)
+  )
+})
+
+test_that("a shuffle within one sample is followed when the SCE has no column names", {
+  # CATALYST::prepData() builds its SCE without column names, and a digest of names and of the
+  # sample partition does not change when two events of one sample swap places.
+  unnamed <- make_memberships_sce()
+  colnames(unnamed) <- NULL
+  sce <- store_with_memberships(unnamed)$sce
+  swapped <- sce[, c(2L, 1L, 3L)]
+  expect_identical(swapped$sample_id, sce$sample_id)
+  expect_identical(unname(gatelabPopulations(swapped)[, "CD3+"]), c(FALSE, TRUE, TRUE))
+  expect_identical(as.character(gatelabLeafPopulation(swapped)), saved_leaf[c(2L, 1L, 3L)])
+})
+
+test_that("a subset reads the memberships of the events it kept", {
+  sce <- store_with_memberships()$sce
+  kept <- sce[, c(3L, 1L)]
+  expect_identical(unname(gatelabPopulations(kept)[, "CD3+"]), c(TRUE, TRUE))
+  expect_identical(as.character(gatelabLeafPopulation(kept)), c("CD3+CD19-", "CD3+"))
+  # The hierarchy table counts the events of this object, not of the one that was saved.
+  expect_identical(gatelabHierarchy(kept)$event_count, c(2L, 2L, 1L))
+  expect_identical(gatelabHierarchy(sce)$event_count, c(3L, 2L, 1L))
+})
+
+test_that("cbind maps events of the saved object and refuses events from anywhere else", {
+  offsets <- c(1000, 5000)
+  calls <- 0L
+  local_mocked_bindings(
+    .gatelabr_event_id_offset = function(...) {
+      calls <<- calls + 1L
+      offsets[[calls]]
+    },
+    .package = "GateLabR"
+  )
+  first <- store_with_memberships()$sce
+  second <- store_with_memberships()$sce
+  expect_identical(first$gatelab_event_id, c(1001, 1002, 1003))
+
+  # base::cbind() does not reach the SCE method unless SingleCellExperiment is attached.
+  cbind <- SingleCellExperiment::cbind
+  # The saved object's own events, repeated, map to their own memberships.
+  doubled <- cbind(first, first[, 3L])
+  expect_identical(unname(gatelabPopulations(doubled)[, "CD3+CD19-"]), c(FALSE, FALSE, TRUE, TRUE))
+
+  # Events from an object with no memberships: cbind() needs the column, and an NA is refused.
+  other <- make_memberships_sce()
+  other$gatelab_event_id <- NA_real_
+  expect_error(
+    gatelabPopulations(cbind(first, other)),
+    "3 of this SCE's 6 events are not among the 3 events"
+  )
+
+  # Two objects saved separately: cbind() keeps both records, and neither covers every event.
+  expect_error(gatelabPopulations(cbind(first, second)), "saved separately")
+  # With only the first object's metadata left, the second's events are still recognised as foreign.
+  combined <- cbind(first, second)
+  S4Vectors::metadata(combined) <- S4Vectors::metadata(first)
+  expect_error(gatelabPopulations(combined), "3 of this SCE's 6 events are not among")
+})
+
+test_that("an explicit save writes the event ids without touching the random number stream", {
+  set.seed(20260924)
+  seed_before <- .Random.seed
+  saved <- store_with_memberships()$sce
+  expect_identical(.Random.seed, seed_before)
+  ids <- saved$gatelab_event_id
+  expect_true(is.double(ids))
+  expect_identical(diff(ids), c(1, 1))
+  record <- S4Vectors::metadata(saved)$gatelab_workspace$memberships
+  expect_identical(record$event_ids$column, "gatelab_event_id")
+  expect_identical(ids - record$event_ids$offset, c(1, 2, 3))
+  # A per-event id is not a sample attribute: a one-event sample must not offer it as a chip.
+  partition <- GateLabR:::.gatelabr_sample_partition(saved)
+  expect_false("gatelab_event_id" %in% names(partition$samples[[2L]]$metadata))
+})
+
+test_that("memberships whose events cannot be identified are refused, not read by position", {
+  sce <- store_with_memberships()$sce
+  dropped <- sce
+  dropped$gatelab_event_id <- NULL
+  expect_error(gatelabPopulations(dropped), "no `gatelab_event_id` column")
+
+  # A record written before event ids existed (GateLabR 1.4.6 and 1.4.7) carries none.
+  legacy <- sce
+  workspace <- S4Vectors::metadata(legacy)$gatelab_workspace
+  workspace$memberships$event_ids <- NULL
+  workspace$memberships$version <- 1L
+  S4Vectors::metadata(legacy)$gatelab_workspace <- workspace
+  expect_error(gatelabPopulations(legacy), "saved by an earlier version of GateLabR")
+  expect_error(gatelabLeafPopulation(legacy), "saved by an earlier version of GateLabR")
 })
 
 test_that("a malformed memberships payload is refused before anything is stored", {

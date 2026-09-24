@@ -193,9 +193,7 @@ point and starts the shared React interface. The three-column layout is:
    sce$population <- gatelabLeafPopulation(sce)   # each event's deepest population, or "ungated"
    ```
 
-   These refuse to read memberships that are behind the workspace (gates changed
-   after the last explicit save) unless `allow_stale = TRUE`; press `Save to SCE`
-   again to refresh them.
+   These refuse to read memberships that are behind the workspace (gates changed after the last explicit save) unless `allow_stale = TRUE`; press `Save to SCE` again to refresh them. The save also gives every event an id in `colData(sce)$gatelab_event_id`, and the memberships are read back through it, so they follow the events through a reorder or a subset. Events the saved object did not hold, such as those added by `cbind()`, have no membership, and reading is refused rather than guessed.
 7. Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is embedded
    in `metadata()` and reloaded next time.
 
@@ -210,6 +208,11 @@ metadata(sce)$gatelab_workspace
 metadata(sce)$gatelab_workspace$memberships
 #> every population's membership as a packed bitset, with the hierarchy tables,
 #> written by "Save to SCE"; read with gatelabPopulations() and friends
+
+colData(sce)$gatelab_event_id
+#> each event's id, written by "Save to SCE"; it ties the stored memberships to their
+#> events. Drop it (sce$gatelab_event_id <- NULL) before cbind() with an object that
+#> lacks it.
 
 metadata(sce)$gatelabr_compensation
 #> compensation profiles, assay bindings, revisions and provenance
