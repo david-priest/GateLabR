@@ -721,3 +721,51 @@ test_that("a transformation declared on Time or Event_length is inverted to thei
   file_number <- .gml_axis_map("file_number", "Asinh", asinh)
   expect_equal(file_number$inverse(forward(c(1, 2, 7))), c(1, 2, 7))
 })
+
+test_that("a gate on a barcode channel is converted like one on any other channel", {
+  # A barcode channel was taken as it is, whatever the data held and whatever its dimension
+  # declared. Mass cytometry data hold it as arcsinh(x / cofactor), so a raw-value range of 100 to
+  # 1000 selected nothing there, and flow data hold it in raw values, so a flin or logicle range
+  # was compared with raw values.
+  barcode <- gml_write('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <transforms:transformation transforms:id="Lin">
+    <transforms:flin transforms:T="1000" transforms:A="0"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Raw_range">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="100" gating:max="1000">
+      <data-type:fcs-dimension data-type:name="barcode"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="Lin_range">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Lin"
+      gating:min="0.1" gating:max="0.9">
+      <data-type:fcs-dimension data-type:name="barcode"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>')
+  channels <- c("barcode", "Nd142Di")
+  map <- stats::setNames(as.list(channels), channels)
+  bounds <- function(parsed, name) {
+    gate <- Filter(function(g) identical(g$name, name), parsed$gates)[[1]]
+    range(vapply(gate$vertices, `[`, 0, 1))
+  }
+  for (cofactor in c(5, 15)) {
+    parsed <- import_gatingml_from_cytobank(barcode, channels, map, instrument = "cytof",
+                                            cytof_cofactor = cofactor)
+    info <- paste("cofactor", cofactor)
+    expect_equal(bounds(parsed, "Raw_range"), asinh(c(100, 1000) / cofactor), info = info)
+    expect_equal(bounds(parsed, "Lin_range"), asinh(c(100, 900) / cofactor), info = info)
+  }
+  for (instrument in list("flow", NULL)) {
+    parsed <- import_gatingml_from_cytobank(barcode, channels, map, instrument = instrument)
+    expect_equal(bounds(parsed, "Raw_range"), c(100, 1000))
+    expect_equal(bounds(parsed, "Lin_range"), c(100, 900))
+  }
+  logicle <- list(Logicle = list(type = "logicle", T = 262144, W = 0.5, M = 4.5, A = 0))
+  axis <- .gml_axis_map("barcode", "Logicle", logicle, logicle_unit = TRUE, instrument = "flow")
+  expect_identical(axis$kind, "curved")
+  expect_equal(axis$inverse(axis$forward(c(-50, 10, 5000))), c(-50, 10, 5000))
+})

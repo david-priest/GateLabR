@@ -1031,11 +1031,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   identity_map <- .gml_identity_map()
   if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(identity_map)
 
-  # A barcode channel: taken as it is.
-  if (grepl("^barcode$", resolved_channel, ignore.case = TRUE)) {
-    return(identity_map)
-  }
-
+  # A barcode channel is read like any other: mass cytometry data hold it as arcsinh(x / cofactor)
+  # and flow data in raw values, like the channels around it.
   tr_def <- if (!is.null(trans_ref) && nzchar(trans_ref)) transforms_map[[trans_ref]] else NULL
   if (identical(instrument, "cytof")) {
     return(.gml_cytof_axis_map(resolved_channel, tr_def, logicle_unit, cytof_cofactor))
