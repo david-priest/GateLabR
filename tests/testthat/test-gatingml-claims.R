@@ -59,11 +59,31 @@ test_that("the README's Gating-ML claims describe the importer launchGatingApp()
   # "NOT or OR populations ... are rejected" was the retired R importer's rule.
   expect_false(grepl("NOT or OR populations", feature, fixed = TRUE))
   expect_match(feature, "OR populations", fixed = TRUE)
-  expect_match(feature, "exclude a gate (NOT)", fixed = TRUE)
   expect_match(feature, "ellipse", fixed = TRUE)
   table_row <- grep("Gating-ML 2.0 exchange", readme, fixed = TRUE, value = TRUE)
   expect_length(table_row, 1L)
   expect_false(grepl("positive AND", table_row, fixed = TRUE))
+})
+
+test_that("the README says which form of an excluded gate the embedded importer reads", {
+  # The core writes an excluded gate as gating:complement="true", which is not in the Gating-ML 2.0
+  # schema, and reads that back. The schema's own attribute, gating:use-as-complement="true", is
+  # not read: A AND NOT B imports as A AND B, with no warning. The README said such populations
+  # "can move between GateLabR and Cytobank", which nothing has shown. When a core sync brings an
+  # importer that reads the schema's attribute, this test fails until the README follows.
+  core <- embedded_core_source()
+  expect_true(grepl('gating:complement="true"', core, fixed = TRUE))
+  expect_false(grepl("use-as-complement", core, fixed = TRUE))
+
+  readme <- package_readme()
+  feature <- readme_gatingml_feature(readme)
+  expect_match(feature, "gating:use-as-complement", fixed = TRUE)
+  expect_match(feature, "imported as an included gate", fixed = TRUE)
+  expect_false(grepl("AND populations in which a population may exclude a gate", feature, fixed = TRUE))
+  whole <- paste(readme, collapse = " ")
+  expect_false(grepl("including populations that exclude a gate, can move between", whole, fixed = TRUE))
+  table_row <- grep("Gating-ML 2.0 exchange", readme, fixed = TRUE, value = TRUE)
+  expect_false(grepl("excluded gates", table_row, fixed = TRUE))
 })
 
 test_that("the README and DESCRIPTION describe populations that may exclude a gate", {

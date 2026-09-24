@@ -45,7 +45,7 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   R, installs a revisioned full-size SCE assay atomically, preserves the
   original assay, and restores saved compensated assays without recomputation.
   Existing compensated SCE assays can be adopted directly.
-- **Cytobank-compatible Gating-ML 2.0 import / export.** Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, and AND populations in which a population may exclude a gate (NOT). Files containing OR populations, other gate types, or gates whose channels cannot be matched to the loaded data are refused before import. (FlowJo uses its own `.wsp` format and does not round-trip Gating-ML.)
+- **Cytobank-compatible Gating-ML 2.0 import / export.** Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, AND populations, and the Boolean NOT of a gate. An AND population that excludes a gate is read back as GateLab and GateLabR write it, with `gating:complement="true"` on the excluded gate's reference, an attribute outside the Gating-ML 2.0 schema. The schema's own `gating:use-as-complement="true"` is not yet read, and such a gate is imported as an included gate, with no warning. Files containing OR populations, other gate types, or gates whose channels cannot be matched to the loaded data are refused before import. (FlowJo uses its own `.wsp` format and does not round-trip Gating-ML.)
 - **Workspace persistence.** Gates, populations, scales, active assay,
   compensation provenance and illustration settings are saved inside the SCE
   and re-loaded automatically.
@@ -88,10 +88,10 @@ instead of replacing it — while keeping full R access to the same object.
 | Cost / licence | Free, MIT, open source | Commercial | Commercial | Free, open source |
 | Flow / CyTOF | Both (auto-detected) | Flow-focused | Both | Flow-focused |
 | Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
-| **Gating-ML 2.0 exchange** | **Yes (AND populations, with excluded gates)** | **No** | **Yes** | Partial |
+| **Gating-ML 2.0 exchange** | **Yes (AND populations)** | **No** | **Yes** | Partial |
 | Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
 
-Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees, including populations that exclude a gate, can move between GateLabR and Cytobank. OR populations are not supported.
+Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank. A population that excludes a gate is written with GateLab's own `gating:complement` attribute rather than the schema's `gating:use-as-complement`, so it round-trips between GateLab and GateLabR but has not been shown to cross to Cytobank. OR populations are not supported.
 
 FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent
 project and is not affiliated with or endorsed by BD or FlowJo.
