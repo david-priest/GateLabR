@@ -272,7 +272,7 @@ test_that("cbind maps events of the saved object and refuses events from anywher
   )
   first <- store_with_memberships()$sce
   second <- store_with_memberships()$sce
-  expect_identical(first$gatelab_event_id, c(1001, 1002, 1003))
+  expect_identical(first$gatelab_event_id, c(1001, 1003, 1005))
 
   # base::cbind() does not reach the SCE method unless SingleCellExperiment is attached.
   cbind <- SingleCellExperiment::cbind
@@ -348,7 +348,7 @@ test_that("Save to SCE on a combined object replaces the records cbind() brought
   md <- S4Vectors::metadata(resaved)
   expect_identical(sum(names(md) == "gatelab_workspace"), 1L)
   expect_identical(sum(names(md) == "gating_workspace"), 1L)
-  expect_identical(resaved$gatelab_event_id, 9000 + 1:6)
+  expect_identical(resaved$gatelab_event_id, 9000 + c(1, 3, 5, 7, 9, 11))
   expect_identical(unname(gatelabPopulations(resaved)[, "CD3+"]), rep(saved_cd3, 2L))
   order <- c(6L, 1L, 4L, 3L, 5L, 2L)
   expect_identical(
@@ -427,40 +427,71 @@ test_that("an explicit save writes the event ids without touching the random num
   expect_identical(.Random.seed, seed_before)
   ids <- saved$gatelab_event_id
   expect_true(is.double(ids))
-  expect_identical(diff(ids), c(1, 1))
+  expect_identical(diff(ids), c(2, 2))
   record <- S4Vectors::metadata(saved)$gatelab_workspace$memberships
   expect_identical(record$event_ids$column, "gatelab_event_id")
-  expect_identical(ids - record$event_ids$offset, c(1, 2, 3))
+  expect_identical(record$event_ids$stride, 2)
+  expect_identical(ids - record$event_ids$offset, c(1, 3, 5))
   # A per-event id is not a sample attribute: a one-event sample must not offer it as a chip.
   partition <- GateLabR:::.gatelabr_sample_partition(saved)
   expect_false("gatelab_event_id" %in% names(partition$samples[[2L]]$metadata))
 })
 
-test_that("an event id that lost precision through a 32-bit float is refused, not read as another event", {
+test_that("every id a save writes is odd, and every id that lost precision is even", {
   # FCS stores every parameter as a 32-bit float, so an id exported as a channel and read back has
-  # 24 significant bits. Rounded onto a saved id, it silently took that event's membership: at
-  # 1e5 events, 7 of 20 saves read wrong with no error.
+  # 24 significant bits; a table printed or written with fewer than 15 significant digits rounds
+  # it to a multiple of ten. Both grids are even, and no save writes an even id.
   f32 <- function(x) readBin(writeBin(x, raw(), size = 4L), "double", size = 4L, n = length(x))
-  for (event_count in c(1, 3, 1e5, 2^25 - 1)) {
-    inside <- logical(0)
-    exact <- logical(0)
+  for (event_count in c(1, 3, 1e5, 2^25 - 1, 2^25, 1e8)) {
     for (draw in 1:25) {
       offset <- GateLabR:::.gatelabr_event_id_offset(paste0("draw ", draw), draw, event_count)
       positions <- unique(round(c(1, 2, seq(1, event_count, length.out = 200), event_count - 1, event_count)))
       positions <- positions[positions >= 1 & positions <= event_count]
-      ids <- offset + positions
-      rounded <- f32(ids) - offset
-      inside <- c(inside, any(rounded >= 1 & rounded <= event_count))
+      ids <- offset + 2 * positions - 1
+      label <- paste("a save of", event_count, "events")
+      expect_true(all(ids %% 2 == 1), label = paste("ids of", label, "are odd"))
+      expect_true(all(ids > 2^48 & ids < 2^49), label = paste("ids of", label, "lie between 2^48 and 2^49"))
       # 15 significant digits, as write.csv() writes a double, carry every id exactly.
-      exact <- c(exact, offset == round(offset), all(as.numeric(format(ids, digits = 15)) == ids))
+      expect_true(all(as.numeric(format(ids, digits = 15)) == ids), label = paste("ids of", label, "in 15 digits"))
+      expect_true(all(f32(ids) %% 2 == 0), label = paste("float32 ids of", label, "are even"))
+      for (digits in 1:14) {
+        expect_true(all(signif(ids, digits) %% 2 == 0), label = paste(digits, "digit ids of", label, "are even"))
+      }
     }
-    expect_false(any(inside), label = paste("a float32-rounded id inside a save of", event_count, "events"))
-    expect_true(all(exact), label = paste("ids of a save of", event_count, "events are exact in 15 digits"))
   }
 
   saved <- store_with_memberships()$sce
   saved$gatelab_event_id <- f32(saved$gatelab_event_id)
   expect_error(gatelabPopulations(saved), "lost precision")
+})
+
+test_that("an id rounded to fewer significant digits is refused, not read as another event", {
+  # Consecutive ids put an id rounded to 14 significant digits (a multiple of ten) on another event
+  # of the same save, and away from the ends of the saved range nothing noticed: the event read
+  # that one's memberships with no error.
+  source <- rep(1:3, 20L)
+  sce <- make_memberships_sce()[, source]
+  colnames(sce) <- paste0("event", seq_along(source))
+  saved <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 3L,
+    reason = "explicit",
+    workspace_json = memberships_workspace_json(),
+    memberships = payload_for(sce, source)
+  )$sce
+  middle <- saved[, 11:50]
+  expect_identical(unname(gatelabPopulations(middle)[, "CD3+"]), saved_cd3[source[11:50]])
+  for (digits in c(14, 13, 12)) {
+    rounded <- middle
+    rounded$gatelab_event_id <- signif(rounded$gatelab_event_id, digits)
+    expect_error(gatelabPopulations(rounded), "lost precision", label = paste(digits, "significant digits"))
+  }
+  # A whole-number round trip through text keeps every id.
+  exact <- middle
+  exact$gatelab_event_id <- as.numeric(format(exact$gatelab_event_id, digits = 15))
+  expect_identical(unname(gatelabPopulations(exact)[, "CD3+"]), saved_cd3[source[11:50]])
 })
 
 test_that("memberships whose events cannot be identified are refused, not read by position", {
@@ -477,6 +508,13 @@ test_that("memberships whose events cannot be identified are refused, not read b
   S4Vectors::metadata(legacy)$gatelab_workspace <- workspace
   expect_error(gatelabPopulations(legacy), "saved by an earlier version of GateLabR")
   expect_error(gatelabLeafPopulation(legacy), "saved by an earlier version of GateLabR")
+
+  # Consecutive ids, as a development build of 1.4.8 wrote them, are not read by an odd-id rule.
+  consecutive <- sce
+  workspace <- S4Vectors::metadata(consecutive)$gatelab_workspace
+  workspace$memberships$event_ids$stride <- NULL
+  S4Vectors::metadata(consecutive)$gatelab_workspace <- workspace
+  expect_error(gatelabPopulations(consecutive), "event ids in a form this version of GateLabR does not read")
 })
 
 test_that("a malformed memberships payload is refused before anything is stored", {

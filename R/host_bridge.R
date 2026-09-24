@@ -1301,7 +1301,7 @@
   if (!is.null(memberships)) {
     event_ids <- stored_memberships$event_ids
     SummarizedExperiment::colData(sce)[[event_ids$column]] <-
-      event_ids$offset + seq_len(ncol(sce))
+      .gatelabr_event_ids(event_ids, ncol(sce))
   }
   # An explicit save that brought no memberships came from a core that predates them. Recording
   # the revision lets the accessors say so, instead of asking the user to press a button that

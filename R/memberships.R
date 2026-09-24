@@ -46,30 +46,33 @@
 # position through it.
 .gatelabr_event_id_column <- "gatelab_event_id"
 
-# The ids of one save are offset + 1..N. The offset is drawn per save, so events that reach one
-# object from two separate saves (cbind) do not share ids. It comes from a hash of the moment, not
-# from R's random number generator: pressing "Save to SCE" must not move the user's .Random.seed.
+# The ids of one save are offset + 1, offset + 3, ..., offset + 2N - 1. The offset is drawn per
+# save, so events that reach one object from two separate saves (cbind) do not share ids. It comes
+# from a hash of the moment, not from R's random number generator: pressing "Save to SCE" must not
+# move the user's .Random.seed.
 #
-# Every id lies between 2^48 and 2^49, so it is an exact integer that 15 significant digits (as
-# write.csv() writes a double) carry in full. Between 2^48 and 2^49 a 32-bit float can hold only
-# every 2^25-th integer, and the ids of one save sit strictly between two of those. An id that
-# passes through a 32-bit float (an FCS channel, a float32 array) therefore rounds to a multiple
-# of 2^25 outside the saved range, and the read refuses it instead of giving the event another
-# event's membership. A save of 2^25 events or more (33,554,432) cannot fit between two such
-# values and does not get this protection.
-.gatelabr_event_id_float32_step <- 2^25
+# Every id is an odd integer between 2^48 and 2^49, so a double holds it exactly and 15
+# significant digits (as write.csv() writes a double) carry it in full. An id that loses precision
+# lands on a coarser grid, and every such grid is even: through a 32-bit float (an FCS channel, a
+# float32 array) it becomes a multiple of 2^25, and rounded to 14 significant digits or fewer a
+# multiple of ten. Consecutive ids put such a rounded id on another event of the same save, which
+# then lent it its membership with no error. No save writes an even id, so the read refuses one.
+.gatelabr_event_id_stride <- 2
 
 .gatelabr_event_id_offset <- function(saved_at, revision, event_count) {
   hex <- digest::digest(
     list(saved_at, revision, event_count, Sys.getpid(), as.numeric(Sys.time())),
     algo = "sha256"
   )
-  step <- .gatelabr_event_id_float32_step
-  # Which of the 2^23 float32 intervals between 2^48 and 2^49, and where in it the ids start.
-  interval <- strtoi(substr(hex, 1L, 6L), 16L) %% 2^23
-  room <- step - 1 - event_count
-  start <- if (room >= 0) strtoi(substr(hex, 7L, 13L), 16L) %% (room + 1) else 0
-  2^48 + interval * step + start
+  # 48 bits of the hash, in two halves because strtoi() stops at 31 bits.
+  draw <- strtoi(substr(hex, 1L, 6L), 16L) * 2^24 + strtoi(substr(hex, 7L, 12L), 16L)
+  # Even, and low enough that the last id, offset + 2N - 1, stays below 2^49.
+  2^48 + 2 * (draw %% (2^47 - event_count))
+}
+
+# The id of each event of the object being saved, in its order.
+.gatelabr_event_ids <- function(event_ids, event_count) {
+  event_ids$offset + event_ids$stride * seq_len(event_count) - (event_ids$stride - 1)
 }
 
 # Validate the payload an explicit save carries and pack it against this SCE's sample layout.
@@ -193,7 +196,8 @@
     event_count = ncol(sce),
     event_ids = list(
       column = .gatelabr_event_id_column,
-      offset = .gatelabr_event_id_offset(saved_at, revision, ncol(sce))
+      offset = .gatelabr_event_id_offset(saved_at, revision, ncol(sce)),
+      stride = .gatelabr_event_id_stride
     ),
     hierarchies = hierarchies,
     populations = populations,
@@ -249,13 +253,21 @@
 .gatelabr_membership_positions <- function(sce, record) {
   resave <- "press \"Save to SCE\" in GateLabR on this object to store them again."
   key <- record$event_ids
-  if (!is.list(key) || !is.character(key$column) || length(key$column) != 1L ||
-      !is.numeric(key$offset) || length(key$offset) != 1L || !is.finite(key$offset)) {
+  if (!is.list(key)) {
     stop(
       "These population memberships were saved by an earlier version of GateLabR, which kept ",
       "them by event position only, so they cannot be matched to this object's events: on a ",
       "reordered or subset object a positional read gives events each other's memberships. ",
       "To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  if (!is.character(key$column) || length(key$column) != 1L ||
+      !is.numeric(key$offset) || length(key$offset) != 1L || !is.finite(key$offset) ||
+      !identical(key$stride, .gatelabr_event_id_stride)) {
+    stop(
+      "These population memberships carry event ids in a form this version of GateLabR does ",
+      "not read, so they cannot be matched to this object's events. To read them, ", resave,
       call. = FALSE
     )
   }
@@ -294,13 +306,17 @@
   }
   ids <- cd[[key$column]]
   saved_count <- as.numeric(record$event_count)
-  positions <- if (is.numeric(ids)) ids - key$offset else rep(NA_real_, length(ids))
+  stride <- .gatelabr_event_id_stride
+  positions <- if (is.numeric(ids)) {
+    (ids - key$offset + stride - 1) / stride
+  } else {
+    rep(NA_real_, length(ids))
+  }
   known <- !is.na(positions) & positions >= 1 & positions <= saved_count &
     positions == round(positions)
-  # An id that passed through a 32-bit float is a multiple of 2^25, which no id of a save below
-  # 2^25 events is (see .gatelabr_event_id_offset).
+  # An id that lost precision is even, and no save writes one (see .gatelabr_event_id_offset).
   rounded <- if (is.numeric(ids)) {
-    !known & is.finite(ids) & ids %% .gatelabr_event_id_float32_step == 0
+    !known & is.finite(ids) & ids >= 2^48 & ids <= 2^49 & ids %% 2 == 0
   } else {
     FALSE
   }
@@ -308,8 +324,9 @@
     stop(
       sum(rounded), " of this SCE's ", length(known), " events have a `", key$column,
       "` that lost precision, as an id does when stored as a 32-bit float (an FCS channel, a ",
-      "float32 array), so it no longer names its saved event and the event's memberships are ",
-      "unknown. Read them from an object whose ids were kept as doubles, or ", resave,
+      "float32 array) or written with fewer than 15 significant digits, so it no longer names ",
+      "its saved event and the event's memberships are unknown. Read them from an object whose ",
+      "ids were kept in full, or ", resave,
       call. = FALSE
     )
   }
