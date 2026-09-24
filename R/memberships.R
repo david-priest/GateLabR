@@ -210,9 +210,15 @@
   if (!methods::is(sce, "SingleCellExperiment")) {
     stop("sce must be a SingleCellExperiment.", call. = FALSE)
   }
-  workspace <- S4Vectors::metadata(sce)$gatelab_workspace
-  record <- if (is.list(workspace)) workspace$memberships else NULL
-  if (!is.list(record) || !identical(record$format, "gatelab-sce-memberships")) {
+  md <- S4Vectors::metadata(sce)
+  # cbind() keeps every object's metadata, so a combined object carries one workspace record per
+  # object, and `$` reaches only the first. The memberships can be stored in any of them.
+  saves <- Filter(function(workspace) {
+    is.list(workspace) && is.list(workspace$memberships) &&
+      identical(workspace$memberships$format, "gatelab-sce-memberships")
+  }, unname(md[names(md) %in% "gatelab_workspace"]))
+  if (length(saves) == 0L) {
+    workspace <- md$gatelab_workspace
     stale_core <- if (is.list(workspace)) workspace$explicit_without_memberships else NULL
     if (!is.null(stale_core)) {
       stop(
@@ -232,9 +238,15 @@
       call. = FALSE
     )
   }
+  workspace <- .gatelabr_memberships_save(sce, saves)
+  record <- workspace$memberships
   record$positions <- .gatelabr_membership_positions(sce, record)
-  current <- .gatelabr_canonical_workspace_record(sce)
-  current_revision <- if (is.null(current)) 0L else current$revision
+  # Stale against the workspace the memberships were saved with, which on a combined object need
+  # not be the first record.
+  current_revision <- suppressWarnings(as.integer(workspace$revision))
+  if (length(current_revision) != 1L || is.na(current_revision) || current_revision < 0L) {
+    current_revision <- 0L
+  }
   if (!identical(as.integer(record$revision), current_revision) && !isTRUE(allow_stale)) {
     stop(
       "Population memberships were saved at workspace revision ", record$revision,
@@ -245,6 +257,45 @@
     )
   }
   record
+}
+
+# Which of the stored saves this object's events are read from. A record without event ids (saved
+# before ids existed) covers no event by id, so it is not a second save; where it is the only one,
+# the read refuses it. Of several saves, the one that holds every event is read, as the object
+# would have been before it was combined.
+.gatelabr_memberships_save <- function(sce, saves) {
+  offsets <- vapply(saves, function(workspace) {
+    offset <- workspace$memberships$event_ids$offset
+    if (is.numeric(offset) && length(offset) == 1L) offset else NA_real_
+  }, numeric(1))
+  distinct <- which(!is.na(offsets) & !duplicated(offsets))
+  if (length(distinct) == 0L) return(saves[[1L]])
+  if (length(distinct) == 1L) return(saves[[distinct]])
+  for (index in distinct) {
+    record <- saves[[index]]$memberships
+    ids <- SummarizedExperiment::colData(sce)[[record$event_ids$column]]
+    positions <- .gatelabr_saved_positions(ids, record$event_ids, as.numeric(record$event_count))
+    if (!anyNA(positions)) return(saves[[index]])
+  }
+  stop(
+    "This SCE combines events from objects whose population memberships were saved separately ",
+    "(cbind() keeps each object's metadata), and no one save holds all of them. Subset it to ",
+    "the events of one save, or press \"Save to SCE\" in GateLabR on this object to store ",
+    "them again.",
+    call. = FALSE
+  )
+}
+
+# Each event's position in the object a save was made on, or NA where its id is none of that
+# save's.
+.gatelabr_saved_positions <- function(ids, key, saved_count) {
+  if (!is.numeric(ids)) return(rep(NA_real_, length(ids)))
+  stride <- .gatelabr_event_id_stride
+  positions <- (ids - key$offset + stride - 1) / stride
+  known <- !is.na(positions) & positions >= 1 & positions <= saved_count &
+    positions == round(positions)
+  positions[!known] <- NA_real_
+  positions
 }
 
 # Each event's position in the object the memberships were saved on, found through its event id,
@@ -271,30 +322,6 @@
       call. = FALSE
     )
   }
-  # cbind() keeps every object's metadata, so a combined object carries one record per save.
-  md <- S4Vectors::metadata(sce)
-  offsets <- vapply(md[names(md) %in% "gatelab_workspace"], function(workspace) {
-    offset <- if (is.list(workspace) && is.list(workspace$memberships) &&
-                  is.list(workspace$memberships$event_ids)) {
-      workspace$memberships$event_ids$offset
-    } else {
-      NULL
-    }
-    if (is.numeric(offset) && length(offset) == 1L) offset else NA_real_
-  }, numeric(1))
-  # A record without event ids (gated and autosaved but never saved with memberships, or saved
-  # before ids existed) covers no event, so it is not a second save. Its events carry no id of
-  # this save and are refused below, which leaves the saved events readable once the object is
-  # subset back to them.
-  offsets <- offsets[!is.na(offsets)]
-  if (length(unique(offsets)) > 1L) {
-    stop(
-      "This SCE combines objects whose population memberships were saved separately ",
-      "(cbind() keeps each object's metadata), and the memberships stored first cover only ",
-      "their own events. Read them from each object before combining, or ", resave,
-      call. = FALSE
-    )
-  }
   cd <- SummarizedExperiment::colData(sce)
   if (!key$column %in% colnames(cd)) {
     stop(
@@ -306,14 +333,8 @@
   }
   ids <- cd[[key$column]]
   saved_count <- as.numeric(record$event_count)
-  stride <- .gatelabr_event_id_stride
-  positions <- if (is.numeric(ids)) {
-    (ids - key$offset + stride - 1) / stride
-  } else {
-    rep(NA_real_, length(ids))
-  }
-  known <- !is.na(positions) & positions >= 1 & positions <= saved_count &
-    positions == round(positions)
+  positions <- .gatelabr_saved_positions(ids, key, saved_count)
+  known <- !is.na(positions)
   # An id that lost precision is even, and no save writes one (see .gatelabr_event_id_offset).
   rounded <- if (is.numeric(ids)) {
     !known & is.finite(ids) & ids >= 2^48 & ids <= 2^49 & ids %% 2 == 0

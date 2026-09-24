@@ -290,6 +290,13 @@ test_that("cbind maps events of the saved object and refuses events from anywher
 
   # Two objects saved separately: cbind() keeps both records, and neither covers every event.
   expect_error(gatelabPopulations(cbind(first, second)), "saved separately")
+  # Subset back to the events of one save, each reads that save's memberships, as it did before
+  # the objects were combined.
+  expect_identical(unname(gatelabPopulations(cbind(first, second)[, 1:3])[, "CD3+"]), saved_cd3)
+  expect_identical(
+    as.character(gatelabLeafPopulation(cbind(first, second)[, c(6L, 4L)])),
+    saved_leaf[c(3L, 1L)]
+  )
   # With only the first object's metadata left, the second's events are still recognised as foreign.
   combined <- cbind(first, second)
   S4Vectors::metadata(combined) <- S4Vectors::metadata(first)
@@ -377,6 +384,21 @@ test_that("a record that carries no event ids does not block reading the saved e
   back <- combined[, !is.na(combined$gatelab_event_id)]
   expect_identical(unname(gatelabPopulations(back)[, "CD3+"]), saved_cd3)
   expect_identical(as.character(gatelabLeafPopulation(back)), saved_leaf)
+  # The other order: the record `$` reaches first is the one without memberships, and the object
+  # was refused as though none were stored. Autosaved once more, its workspace is at revision 2,
+  # which says nothing about memberships saved with another object's workspace at revision 1.
+  gated_twice <- GateLabR:::.gatelabr_store_host_workspace(
+    gated_only,
+    dataset_id = "test-sce",
+    expected_revision = 1L,
+    client_revision = 2L,
+    reason = "autosave",
+    workspace_json = memberships_workspace_json()
+  )$sce
+  reversed <- cbind(gated_twice, first)
+  expect_error(gatelabPopulations(reversed), "3 of this SCE's 6 events are not among the 3 events")
+  expect_identical(unname(gatelabPopulations(reversed[, 4:6])[, "CD3+"]), saved_cd3)
+  expect_identical(gatelabHierarchy(reversed[, 6:4])$event_count, c(3L, 2L, 1L))
 
   # The same for memberships saved before event ids existed.
   legacy <- store_with_memberships()$sce
@@ -387,6 +409,10 @@ test_that("a record that carries no event ids does not block reading the saved e
   legacy$gatelab_event_id <- NA_real_
   expect_identical(
     unname(gatelabPopulations(cbind(first, legacy)[, 1:3])[, "CD3+"]),
+    saved_cd3
+  )
+  expect_identical(
+    unname(gatelabPopulations(cbind(legacy, first)[, 4:6])[, "CD3+"]),
     saved_cd3
   )
 })
