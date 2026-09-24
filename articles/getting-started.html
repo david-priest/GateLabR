@@ -257,13 +257,15 @@ add <code>man/figures/ridgeline.png</code></p>
 <strong>FCS export</strong> of gated events (defaults to the raw
 counts assay).</li>
 <li>
-<strong>GatingML 2.0</strong> import/export to round-trip gates with
-Cytobank / FlowJo.</li>
+<strong>Gating-ML 2.0</strong> import/export to exchange gates with
+Cytobank. FlowJo does not read Gating-ML; it uses its own
+<code>.wsp</code> format.</li>
 <li>
 <strong>Workspace</strong> is embedded in
-<code>metadata(sce)$gating_workspace</code>; <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> the
-object (or export a portable <code>.rds</code>) and re-loading restores
-everything.</li>
+<code>metadata(sce)$gatelab_workspace</code>, with a
+<code>metadata(sce)$gating_workspace</code> mirror kept for the previous
+interface; <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> the object (or export a portable
+<code>.rds</code>) and re-loading restores everything.</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">sce</span>, <span class="st">"gated.rds"</span><span class="op">)</span>   <span class="co"># gates, populations, scales — all preserved</span></span></code></pre></div>

@@ -61,7 +61,8 @@ gatelabLeafPopulation(
 hierarchy, parents before children: `population_id`, `population`,
 `parent`, `depth`, `path` (names from the root joined by `" > "`),
 `gates` (the gate names the population is defined by, `not` marking an
-excluded gate), and `event_count`.
+excluded gate), and `event_count`, the number of this object's events
+the population holds.
 
 `gatelabPopulations`: a logical matrix with one row per SCE column
 (event) and one column per population, named by population; a name
@@ -78,9 +79,22 @@ one earlier in the tree wins.
 Memberships are tied to the workspace revision they were computed at. If
 gates or populations changed since (an autosave moved the revision on),
 reading them is refused unless `allow_stale = TRUE`; press “Save to SCE”
-again to refresh them. They are also refused on an object with a
-different number of columns, since a subset SCE keeps the metadata but
-not the event order the masks assume.
+again to refresh them.
+
+Memberships follow the events, not their positions. The save writes each
+event's id to `colData(sce)$gatelab_event_id`, which travels with the
+event, so a reordered or subset SCE, or one that repeats saved events,
+reads every event's own membership. An event that was not in the saved
+object, for example one added with
+[`cbind()`](https://rdrr.io/r/base/cbind.html), has no stored
+membership, and reading is refused rather than guessed; so is reading
+after the id column was removed, or memberships saved by an earlier
+version of GateLabR, which kept them by position only.
+[`cbind()`](https://rdrr.io/r/base/cbind.html) needs the column on both
+objects: give the object that lacks it the column as `NA`
+(`other$gatelab_event_id <- NA_real_`) rather than dropping it from the
+saved one, and the saved events read again once the combined object is
+subset back to them.
 
 ## Examples
 

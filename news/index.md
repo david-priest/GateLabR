@@ -1,5 +1,67 @@
 # Changelog
 
+## GateLabR 1.4.8
+
+- Population memberships follow the events, not their positions. “Save
+  to SCE” now writes each event’s id to `colData(sce)$gatelab_event_id`,
+  and
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md),
+  [`gatelabLeafPopulation()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  and
+  [`gatelabHierarchy()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  find every event’s saved membership through it. The stored bitsets
+  used to be read by position, with only the column count compared, so a
+  reordered SCE read other events’ memberships with no error; so did two
+  events of one sample swapping places in an object without column
+  names, which is how CATALYST’s `prepData()` builds one. A subset now
+  reads the memberships of the events it kept, and an object that
+  repeats saved events reads each copy’s own.
+- An event that cannot be traced to the save is refused rather than
+  guessed: one added by [`cbind()`](https://rdrr.io/r/base/cbind.html)
+  from another object, one in an object whose `gatelab_event_id` column
+  was removed, or one whose id lost precision, by passing through a
+  32-bit float as an FCS channel does or by being written with fewer
+  than 15 significant digits. Every id a save writes is odd, and an id
+  that loses precision becomes even, so it is never read as another
+  event’s id.
+- [`cbind()`](https://rdrr.io/r/base/cbind.html) needs
+  `gatelab_event_id` on both objects. Give the object that lacks it the
+  column as `NA` (`other$gatelab_event_id <- NA_real_`) rather than
+  dropping it from the saved one; the saved events then read again once
+  the combined object is subset back to them. A cbind of two separately
+  saved SCEs is refused until it is subset back to the events of one
+  save, which then read that save’s memberships, or until “Save to SCE”
+  is pressed on the combined object; that save now replaces the records
+  [`cbind()`](https://rdrr.io/r/base/cbind.html) kept from both. The
+  memberships are read from whichever record
+  [`cbind()`](https://rdrr.io/r/base/cbind.html) kept them in, so a
+  saved object combined after one that was never saved with memberships
+  reads as it does in the other order, where it had been refused as
+  holding none.
+- Memberships saved by 1.4.6 or 1.4.7 carry no event ids and are refused
+  until “Save to SCE” is pressed again.
+- The `metadata(sce)$gating_workspace` mirror now keeps each gate’s
+  coordinate space and transforms. On a flow object, a workspace
+  reloaded from the mirror alone, with no canonical record, read an
+  ellipse, a gate drawn in display space and a FlowJo biex or log gate
+  as raw values, so the gate selected other events. The mirror of an
+  object whose instrument GateLabR cannot tell from its channels or
+  metadata no longer declares one space for all its gates: the core,
+  which gates such an object as flow unless its channels say otherwise,
+  took that declaration as a reason to convert every gate, including
+  those whose own space it had just been given, so display-space
+  rectangles and polygons reloaded from the mirror selected no events.
+- The README now describes the Gating-ML importer that
+  [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+  runs, which is the embedded GateLab core’s and not the retired R one:
+  it reads rectangle, range, polygon and ellipse gates and AND
+  populations, and refuses OR populations. It reads a population’s
+  excluded gate only in the form GateLab writes,
+  `gating:complement="true"`, which is outside the Gating-ML 2.0 schema;
+  a reference carrying the schema’s `gating:use-as-complement="true"` is
+  imported as an included gate, with no warning, so a population that
+  excludes a gate is not claimed to cross to Cytobank.
+
 ## GateLabR 1.4.7
 
 - The embedded GateLab core is 0.7.7 (GateLab master at 7b99de0), up

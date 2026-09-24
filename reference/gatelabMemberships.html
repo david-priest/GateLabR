@@ -99,7 +99,8 @@ the hierarchy, root included.</p></dd>
 <p><code>gatelabHierarchy</code>: a data frame with one row per population of one hierarchy, parents
   before children: <code>population_id</code>, <code>population</code>, <code>parent</code>, <code>depth</code>,
   <code>path</code> (names from the root joined by <code>" &gt; "</code>), <code>gates</code> (the gate names the
-  population is defined by, <code>not</code> marking an excluded gate), and <code>event_count</code>.</p>
+  population is defined by, <code>not</code> marking an excluded gate), and <code>event_count</code>, the
+  number of this object's events the population holds.</p>
 <p><code>gatelabPopulations</code>: a logical matrix with one row per SCE column (event) and one
   column per population, named by population; a name shared by two populations of the
   hierarchy is suffixed with the population id.</p>
@@ -111,9 +112,16 @@ the hierarchy, root included.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Memberships are tied to the workspace revision they were computed at. If gates or populations
 changed since (an autosave moved the revision on), reading them is refused unless
-<code>allow_stale = TRUE</code>; press “Save to SCE” again to refresh them. They are also
-refused on an object with a different number of columns, since a subset SCE keeps the metadata
-but not the event order the masks assume.</p>
+<code>allow_stale = TRUE</code>; press “Save to SCE” again to refresh them.</p>
+<p>Memberships follow the events, not their positions. The save writes each event's id to
+<code>colData(sce)$gatelab_event_id</code>, which travels with the event, so a reordered or subset
+SCE, or one that repeats saved events, reads every event's own membership. An event that was
+not in the saved object, for example one added with <code><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind()</a></code>, has no stored membership,
+and reading is refused rather than guessed; so is reading after the id column was removed, or
+memberships saved by an earlier version of GateLabR, which kept them by position only.
+<code><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind()</a></code> needs the column on both objects: give the object that lacks it the column as
+<code>NA</code> (<code>other$gatelab_event_id &lt;- NA_real_</code>) rather than dropping it from the saved
+one, and the saved events read again once the combined object is subset back to them.</p>
     </div>
 
     <div class="section level2">
