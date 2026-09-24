@@ -565,6 +565,24 @@ test_that("a GateLab format mark that is present but cannot be read refuses the 
   # parents are inferred, and reads as it; see the Cytobank-format test above.
 })
 
+test_that("a GateLab format mark that names a key twice refuses the file", {
+  # JSON leaves a repeated key to the reader: jsonlite keeps the first value and GateLab's
+  # JSON.parse the last, so the two would read the file on different logicle scales, or place its
+  # populations under different parents. GateLab never writes a key twice.
+  for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
+    twice <- gml_variant(name, function(lines) {
+      sub('{"version":2,', '{"version":2,"logicle":"flowcore",', lines, fixed = TRUE)
+    })
+    expect_error(gml_import(twice), 'gatelab_format) names the key "logicle" more than once', fixed = TRUE,
+                 info = name)
+  }
+  reparented <- gml_variant("tree-cytobank.xml", function(lines) {
+    sub('{"id":"GateSet_36000003","parent":"GateSet_36000000"}',
+        '{"id":"GateSet_36000003","parent":"GateSet_36000001","parent":"GateSet_36000000"}', lines, fixed = TRUE)
+  })
+  expect_error(gml_import(reparented), 'gatelab_format) names the key "parent" more than once', fixed = TRUE)
+})
+
 test_that("a PopulationGatePair written complement=\"1\" or \" true\" is refused as NOT logic", {
   # complement is an xs:boolean, as use-as-complement on a gateReference is, so "1" and a value
   # with surrounding space exclude too; read as an inclusion, FL1_positive would select the events

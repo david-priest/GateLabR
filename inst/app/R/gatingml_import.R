@@ -105,12 +105,27 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   out
 }
 
+# The first key that one object of a parsed JSON value (jsonlite, simplifyVector = FALSE) names
+# more than once, looking at each object before the values inside it; NULL when there is none.
+.gml_json_repeated_key <- function(value) {
+  if (!is.list(value)) return(NULL)
+  keys <- names(value)
+  if (!is.null(keys) && anyDuplicated(keys) > 0L) return(keys[[anyDuplicated(keys)]])
+  for (item in value) {
+    repeated <- .gml_json_repeated_key(item)
+    if (!is.null(repeated)) return(repeated)
+  }
+  NULL
+}
+
 # How a file asks to be read where Gating-ML alone leaves room, from the gatelab_format element
 # GateLab writes in the root custom_info: a JSON object {"version": 2, "logicle": ..., "hierarchy":
 # ...}, with "tree" when the hierarchy is "tree". A mark that is present but cannot be read in full
-# (empty, not JSON, not an object, another version, or a field GateLabR does not know) is recorded
-# in `problems`, which refuse the file: read as no mark, it would put the file's logicle
-# coordinates on the wrong scale and its populations in the wrong places.
+# (empty, not JSON, not an object, a key named twice in one object, another version, or a field
+# GateLabR does not know) is recorded in `problems`, which refuse the file: read as no mark, it
+# would put the file's logicle coordinates on the wrong scale and its populations in the wrong
+# places. JSON leaves a repeated key to the reader, and jsonlite keeps the first value where
+# GateLab's JSON.parse keeps the last, so a mark with one could be read two ways.
 #
 # marked: whether the file carries the element at all.
 #
@@ -145,12 +160,15 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     } else {
       NULL
     }
+    repeated <- .gml_json_repeated_key(value)
     if (!nzchar(text)) {
       problems <- unreadable("is empty")
-    } else if (is.list(value) && !is.null(names(value))) {
-      parsed <- value
-    } else {
+    } else if (!(is.list(value) && !is.null(names(value)))) {
       problems <- unreadable("is not a JSON object")
+    } else if (!is.null(repeated)) {
+      problems <- unreadable(paste("names the key", encodeString(repeated, quote = '"'), "more than once"))
+    } else {
+      parsed <- value
     }
   }
   # GateLab writes version 2. Another version may place populations or scale logicle coordinates
