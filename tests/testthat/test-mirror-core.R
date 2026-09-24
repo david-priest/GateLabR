@@ -50,6 +50,8 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
   }
   gates <- c(
     rawRect = gate("rawRect", "rectangle", '"vertices":[[1000,-1000],[262144,1000]]', "raw"),
+    # No space field, as a gate from before the field existed: read in the workspace's space.
+    noSpaceRect = gate("noSpaceRect", "rectangle", '"vertices":[[1000,1000],[262144,262144]]'),
     dispRect = gate("dispRect", "rectangle", '"vertices":[[0.62,0.0],[1.0,0.45]]', "display"),
     dispPoly = gate(
       "dispPoly", "polygon",
