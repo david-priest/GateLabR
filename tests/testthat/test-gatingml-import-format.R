@@ -172,15 +172,21 @@ test_that("a polygon GateLabR cannot follow on its axes is refused by name", {
   expect_null(.gml_polygon_vertices(square, map, map)$problem)
 })
 
-test_that("an ellipse is refused in the standard format and read as its boundary in the Cytobank format", {
-  expect_error(
-    gml_import(gml_fixture("ellipse-standard.xml")),
-    "EllipsoidGate [^ ]+ \\(Ellipse_gate\\) is not supported"
-  )
-  # The Cytobank format writes the ellipse as its boundary, a polygon on arcsinh axes, which GateLab
-  # reads as that polygon.
-  parsed <- gml_import(gml_fixture("ellipse-cytobank.xml"))
-  gml_expect_membership(gml_membership(parsed), gml_expected()$populations$ellipse)
+test_that("an ellipse is read as its boundary, followed onto raw values, in both formats", {
+  # The standard format writes an EllipsoidGate on logicle axes; its boundary becomes a polygon on
+  # those axes, followed onto raw values like any other. The Cytobank format writes the ellipse as
+  # a polygon on arcsinh axes already, which GateLab reads as that polygon.
+  for (name in c("ellipse-standard.xml", "ellipse-cytobank.xml")) {
+    parsed <- gml_import(gml_fixture(name))
+    gml_expect_membership(gml_membership(parsed), gml_expected()$populations$ellipse)
+  }
+  # An EllipsoidGate GateLabR cannot read is refused by name.
+  singular <- gml_variant("ellipse-standard.xml", function(lines) {
+    lines <- sub('data-type:value="0.012"', 'data-type:value="0.03"', lines, fixed = TRUE)
+    lines
+  })
+  expect_error(gml_import(singular), "(Ellipse_gate) is not an ellipse GateLabR can read: its covariance matrix is not positive definite",
+               fixed = TRUE)
 })
 
 test_that("GateLabR's own exports keep polygons straight in raw values, as GateLabR drew them", {

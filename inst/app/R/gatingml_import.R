@@ -1151,6 +1151,50 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   list(vertices = Map(c, sx, sy, USE.NAMES = FALSE), problem = NULL)
 }
 
+# A Gating-ML EllipsoidGate in two dimensions (section 5.3.3): its mean, covariance matrix and
+# distanceSquare, the events x with (x - mean)' inverse(covariance) (x - mean) <= distanceSquare in
+# the declared space. NULL, with `problem` saying why, unless the mean has two numbers, the
+# covariance is a symmetric positive-definite 2 by 2 matrix and distanceSquare is positive.
+.gml_parse_ellipse <- function(node) {
+  numbers <- function(el, child) {
+    if (is.null(el)) return(numeric(0))
+    vapply(as.list(.gml_children_local(el, child)), function(k) {
+      value <- .gml_num(.gml_attr_local(k, "value"))
+      if (length(value) == 1L) value else NA_real_
+    }, numeric(1))
+  }
+  mean <- numbers(.gml_first_child_local(node, "mean"), "coordinate")
+  cov_el <- .gml_first_child_local(node, "covarianceMatrix")
+  rows <- if (is.null(cov_el)) list() else lapply(as.list(.gml_children_local(cov_el, "row")), numbers, child = "entry")
+  d2_el <- .gml_first_child_local(node, "distanceSquare")
+  d2 <- if (is.null(d2_el)) NA_real_ else .gml_num(.gml_attr_local(d2_el, "value"))
+  fail <- function(why) list(problem = why)
+  if (length(mean) != 2L || any(!is.finite(mean))) return(fail("its mean is not two numbers"))
+  if (length(rows) != 2L || any(vapply(rows, length, integer(1)) != 2L) ||
+      any(!is.finite(unlist(rows)))) {
+    return(fail("its covariance matrix is not 2 by 2 numbers"))
+  }
+  cov <- do.call(rbind, rows)
+  if (abs(cov[1, 2] - cov[2, 1]) > 1e-12 * max(abs(cov))) return(fail("its covariance matrix is not symmetric"))
+  if (!(cov[1, 1] > 0 && det(cov) > 0)) return(fail("its covariance matrix is not positive definite"))
+  if (length(d2) != 1L || !is.finite(d2) || d2 <= 0) return(fail("its distanceSquare is not a positive number"))
+  list(mean = mean, covariance = cov, distance_square = d2, problem = NULL)
+}
+
+# The boundary of an ellipse (.gml_parse_ellipse) as a polygon in its declared space, with enough
+# vertices that every edge lies within `tolerance` of the ellipse as a fraction of its extent on
+# each axis, the same measure .gml_polygon_vertices follows edges to.
+.gml_ellipse_boundary <- function(ellipse, tolerance = .GML_DENSIFY_TOLERANCE) {
+  a <- sqrt(ellipse$distance_square) * t(chol(ellipse$covariance))
+  extent <- 2 * sqrt(ellipse$distance_square * diag(ellipse$covariance))
+  stretch <- max(svd(diag(1 / extent) %*% a)$d)
+  step <- 2 * acos(1 - min(1, tolerance / stretch))
+  n <- max(16L, as.integer(ceiling(2 * pi / step)))
+  theta <- (seq_len(n) - 1L) * 2 * pi / n
+  points <- a %*% rbind(cos(theta), sin(theta)) + ellipse$mean
+  Map(c, points[1, ], points[2, ], USE.NAMES = FALSE)
+}
+
 .gml_parse_gate_node <- function(node) {
   loc <- .gml_local_name(node)
   gml_id <- .gml_attr_local(node, "id")
@@ -1207,6 +1251,24 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       x_channel = dims[[1]]$channel,
       y_channel = dims[[2]]$channel,
       vertices = verts,
+      channels = c(dims[[1]]$channel, dims[[2]]$channel),
+      dims = dims
+    ))
+  }
+
+  # An ellipse becomes its boundary, a polygon in the declared space, and is followed onto
+  # GateLabR's values like any other polygon.
+  if (identical(loc, "EllipsoidGate")) {
+    dims <- .gml_parse_dimensions(node)
+    ellipse <- .gml_parse_ellipse(node)
+    if (length(dims) != 2 || !is.null(ellipse$problem)) return(NULL)
+    return(list(
+      gml_id = gml_id,
+      name = nm,
+      gate_type = "polygon",
+      x_channel = dims[[1]]$channel,
+      y_channel = dims[[2]]$channel,
+      vertices = .gml_ellipse_boundary(ellipse),
       channels = c(dims[[1]]$channel, dims[[2]]$channel),
       dims = dims
     ))
@@ -1606,7 +1668,7 @@ import_gatingml_from_cytobank <- function(file_path,
   bool_order <- character(0)
   hierarchy_node <- NULL
   import_problems <- character(0)
-  supported_gate_types <- c("RectangleGate", "PolygonGate", "BooleanGate")
+  supported_gate_types <- c("RectangleGate", "PolygonGate", "EllipsoidGate", "BooleanGate")
 
   for (el in top_nodes) {
     loc <- .gml_local_name(el)
@@ -1663,6 +1725,17 @@ import_gatingml_from_cytobank <- function(file_path,
           import_problems,
           paste0(.gml_gate_label(el), " must contain exactly 2 dimensions and at least 3 vertices.")
         )
+        next
+      }
+    } else if (identical(loc, "EllipsoidGate")) {
+      n_dims <- length(.gml_parse_dimensions(el))
+      ellipse <- .gml_parse_ellipse(el)
+      if (n_dims != 2 || !is.null(ellipse$problem)) {
+        import_problems <- c(import_problems, paste0(
+          .gml_gate_label(el), " is not an ellipse GateLabR can read: ",
+          if (n_dims != 2) sprintf("it has %d dimensions, and GateLabR reads two", n_dims) else ellipse$problem,
+          "."
+        ))
         next
       }
     } else if (identical(loc, "BooleanGate")) {
