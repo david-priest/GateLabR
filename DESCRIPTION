@@ -11,10 +11,11 @@ Description: An interactive application for manual gating of
     interface is hosted by a thin R adapter that streams SCE assays, performs
     R-native compensation, and writes panel labels and event annotations back
     to rowData and colData. Supports polygon, rectangle and quadrant gates,
-    positive-AND population hierarchies, explicit linear and transformed assay
-    spaces, GatingML 2.0 exchange, FCS export, publication-style figures, and a
-    cell-division profiler. Gates, populations, scales, assay bindings and
-    settings persist inside the object's metadata.
+    AND population hierarchies in which a population may exclude a gate,
+    explicit linear and transformed assay spaces, GatingML 2.0 exchange, FCS
+    export, publication-style figures, and a cell-division profiler. Gates,
+    populations, scales, assay bindings and settings persist inside the
+    object's metadata.
 License: MIT + file LICENSE
 Encoding: UTF-8
 URL: https://david-priest.github.io/GateLabR, https://github.com/david-priest/GateLabR

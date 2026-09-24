@@ -65,3 +65,33 @@ test_that("the README's Gating-ML claims describe the importer launchGatingApp()
   expect_length(table_row, 1L)
   expect_false(grepl("positive AND", table_row, fixed = TRUE))
 })
+
+test_that("the README and DESCRIPTION describe populations that may exclude a gate", {
+  # The core writes a population's excluded gate as a complemented gate reference, and reads one
+  # back as an excluded gate, so "positive AND" undersells what a population can be.
+  core <- embedded_core_source()
+  expect_true(grepl('gating:complement="true"', core, fixed = TRUE))
+
+  readme <- package_readme()
+  expect_false(any(grepl("Positive AND", readme, fixed = TRUE)))
+  start <- grep("^- \\*\\*Population trees\\.\\*\\*", readme)
+  expect_length(start, 1L)
+  expect_match(readme[[start]], "exclude a gate (NOT)", fixed = TRUE)
+
+  description <- read.dcf(system.file("DESCRIPTION", package = "GateLabR"), fields = "Description")
+  description <- gsub("\\s+", " ", description[[1]])
+  expect_false(grepl("positive-AND", description, fixed = TRUE))
+  expect_match(description, "may exclude a gate", fixed = TRUE)
+})
+
+test_that("the vignette describes Gating-ML exchange and the workspace record as the README does", {
+  path <- testthat::test_path("..", "..", "vignettes", "getting-started.Rmd")
+  testthat::skip_if_not(file.exists(path), "the vignette source is only in the source tree")
+  vignette <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = " ")
+  # FlowJo does not read Gating-ML; the README says so.
+  expect_false(grepl("round-trip gates with Cytobank / FlowJo", vignette, fixed = TRUE))
+  expect_match(vignette, "FlowJo does not read Gating-ML", fixed = TRUE)
+  # The workspace GateLabR reloads is metadata(sce)$gatelab_workspace; gating_workspace is the
+  # mirror kept for the previous interface.
+  expect_match(vignette, "Workspace** is embedded in `metadata(sce)$gatelab_workspace`", fixed = TRUE)
+})

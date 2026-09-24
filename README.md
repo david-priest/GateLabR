@@ -35,9 +35,7 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
 - **Draw and edit gates interactively.** Polygon, rectangle and quadrant gates
   on any pair of channels, with click-and-drag vertex editing, undo / redo, and
   per-gate colour and label.
-- **Positive AND population trees.** Build hierarchies of populations from gate
-  references — each population is the intersection (AND) of its gates within its
-  parent; counts and percentages update live.
+- **Population trees.** Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent, and a population may exclude a gate (NOT); counts and percentages update live.
 - **Flow and CyTOF modes.** Auto-detects the instrument type from channel
   names. Flow uses per-channel logicle for fluorescence and arcsinh for
   FSC / SSC scatter, with editable W and cofactor; CyTOF channels use arcsinh
