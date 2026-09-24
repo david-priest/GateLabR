@@ -81,15 +81,6 @@ test_that("GateLab's standard format places populations by parent_id, with logic
   expect_identical(parsed$compensation_refs, "uncompensated")
   expect_null(parsed$spectrum_matrix)
 
-  # The format mark decides the logicle scale: without it the file is recognised as GateLab's
-  # and read on flowCore's scale, which is not what it was written on.
-  unmarked <- gml_import(gml_variant("tree-standard.xml", function(lines) {
-    lines[!grepl("<gatelab_format>", lines, fixed = TRUE)]
-  }))
-  expect_false(identical(
-    gml_membership(unmarked)[["/Cells/FL1_positive"]],
-    as.integer(unlist(expected[["/Cells/FL1_positive"]]))
-  ))
 })
 
 test_that("GateLab's Cytobank format places populations by the tree in its mark", {
@@ -328,23 +319,14 @@ test_that("logicle is on Gating-ML's scale unless the file says otherwise or Gat
 
   # Another writer, no mark: the standard's scale.
   expect_equal(lower_bound(gml_import(gml_logicle_file(0.4))), expected)
-  # A mark that cannot be read is no mark.
-  expect_equal(
-    lower_bound(gml_import(gml_logicle_file(0.4, "<data-type:custom_info><gatelab_format>{not json</gatelab_format></data-type:custom_info>"))),
-    expected
-  )
-  expect_equal(
-    lower_bound(gml_import(gml_logicle_file(0.4, '<data-type:custom_info><gatelab_format>["gating-ml"]</gatelab_format></data-type:custom_info>'))),
-    expected
-  )
   # GateLab or GateLabR wrote it, no mark: flowCore's scale.
   about <- "<data-type:custom_info><cytobank><about>Gating-ML 2.0 export from GateLabR (standard / re-importable)</about></cytobank></data-type:custom_info>"
   expect_equal(lower_bound(gml_import(gml_logicle_file(0.4 * 4.5, about))), expected)
   # The mark decides either way.
-  flowcore <- '<data-type:custom_info><gatelab_format>{"version":2,"logicle":"flowcore"}</gatelab_format></data-type:custom_info>'
+  flowcore <- '<data-type:custom_info><gatelab_format>{"version":2,"logicle":"flowcore","hierarchy":"parent_id"}</gatelab_format></data-type:custom_info>'
   expect_equal(lower_bound(gml_import(gml_logicle_file(0.4 * 4.5, flowcore))), expected)
   gating_ml <- sub("<about>", '<about>', about, fixed = TRUE)
-  gating_ml <- sub("</cytobank>", '</cytobank><gatelab_format>{"version":2,"logicle":"gating-ml"}</gatelab_format>', gating_ml, fixed = TRUE)
+  gating_ml <- sub("</cytobank>", '</cytobank><gatelab_format>{"version":2,"logicle":"gating-ml","hierarchy":"parent_id"}</gatelab_format>', gating_ml, fixed = TRUE)
   expect_equal(lower_bound(gml_import(gml_logicle_file(0.4, gating_ml))), expected)
 })
 
@@ -465,4 +447,39 @@ test_that("flin, Gating-ML's linear scale, is read", {
   lower <- as.numeric(sub('.*gating:min="([^"]+)".*', "\\1",
                           grep('gating:min=', readLines(gml_fixture("flowkit-flin.xml")), value = TRUE)[1]))
   expect_equal(box$vertices[[1]][1], lower * (262144 + 1000) - 1000)
+})
+
+test_that("a GateLab format mark that is present but cannot be read refuses the file", {
+  # Read as no mark, GateLab's standard file would have its logicle coordinates put on flowCore's
+  # scale, 4.5 times too high.
+  mark_as <- function(name, text) {
+    gml_variant(name, function(lines) {
+      sub("<gatelab_format>[^<]*</gatelab_format>", paste0("<gatelab_format>", text, "</gatelab_format>"), lines)
+    })
+  }
+  for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
+    expect_error(gml_import(mark_as(name, '{"version":2,"logicle":"gating-ml",')), "is not a JSON object", info = name)
+    expect_error(gml_import(mark_as(name, "[2]")), "is not a JSON object", info = name)
+    expect_error(gml_import(mark_as(name, "")), "gatelab_format) is empty", fixed = TRUE, info = name)
+    expect_error(gml_import(mark_as(name, "  ")), "gatelab_format) is empty", fixed = TRUE, info = name)
+    expect_error(gml_import(mark_as(name, '{"version":2,"logicle":"gating-ml","hierarchy":"nested"}')),
+                 "gives no hierarchy GateLabR knows", info = name)
+    expect_error(gml_import(mark_as(name, '{"version":2,"logicle":"flowCore","hierarchy":"parent_id"}')),
+                 "gives no logicle scale GateLabR knows", info = name)
+  }
+  expect_error(
+    gml_import(gml_variant("tree-cytobank.xml", function(lines) {
+      sub('{"id":"GateSet_36000003","parent":"GateSet_36000000"}', '{"id":"GateSet_36000003"}', lines, fixed = TRUE)
+    })),
+    "lists a tree that is not a list of populations"
+  )
+
+  # The mark removed from GateLab's standard format, which it has written with the mark and without
+  # a GatingHierarchy since 2026-09: its parent_id and BooleanGates say it is that format.
+  removed <- gml_variant("tree-standard.xml", function(lines) {
+    lines[!grepl("<gatelab_format>", lines, fixed = TRUE)]
+  })
+  expect_error(gml_import(removed), "carries its marked format's structures (gating:parent_id", fixed = TRUE)
+  # GateLab's Cytobank format without its mark is the format GateLab wrote before the mark, whose
+  # parents are inferred, and reads as it; see the Cytobank-format test above.
 })

@@ -98,7 +98,13 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 }
 
 # How a file asks to be read where Gating-ML alone leaves room, from the gatelab_format element
-# GateLab writes in the root custom_info (a JSON object; a malformed one reads as no mark).
+# GateLab writes in the root custom_info: a JSON object {"version": 2, "logicle": ..., "hierarchy":
+# ...}, with "tree" when the hierarchy is "tree". A mark that is present but cannot be read in full
+# (empty, not JSON, not an object, another version, or a field GateLabR does not know) is recorded
+# in `problems`, which refuse the file: read as no mark, it would put the file's logicle
+# coordinates on the wrong scale and its populations in the wrong places.
+#
+# marked: whether the file carries the element at all.
 #
 # logicle_unit: whether logicle coordinates are on Gating-ML 2.0's own scale, where the top of
 # scale T maps to 1 (specification section 6.4.1). flowCore's logicleTransform, which GateLabR
@@ -111,38 +117,59 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # gatelab_operand is a population placed by its gating:parent_id.
 #
 # tree: GateLab's Cytobank format, whose BooleanGates each AND their whole ancestor chain; the
-# list gives each population's parent. NULL when absent or malformed.
+# list gives each population's parent.
 .gml_parse_gatelab_format <- function(root) {
   ci <- .gml_first_child_local(root, "custom_info")
   tag <- if (!is.null(ci)) .gml_first_child_local(ci, "gatelab_format") else NULL
+  marked <- !is.null(tag)
   parsed <- list()
-  marked <- FALSE
-  if (!is.null(tag)) {
-    value <- tryCatch(
-      jsonlite::fromJSON(xml2::xml_text(tag), simplifyVector = FALSE),
-      error = function(e) NULL
+  problems <- character(0)
+  unreadable <- function(what) {
+    paste0(
+      "The file's GateLab format mark (gatelab_format) ", what, ", so GateLabR cannot tell how ",
+      "the file places its populations or scales its logicle coordinates."
     )
-    if (is.list(value) && !is.null(names(value))) {
+  }
+  if (marked) {
+    text <- trimws(xml2::xml_text(tag))
+    value <- if (nzchar(text)) {
+      tryCatch(jsonlite::fromJSON(text, simplifyVector = FALSE), error = function(e) NULL)
+    } else {
+      NULL
+    }
+    if (!nzchar(text)) {
+      problems <- unreadable("is empty")
+    } else if (is.list(value) && !is.null(names(value))) {
       parsed <- value
-      marked <- TRUE
+    } else {
+      problems <- unreadable("is not a JSON object")
     }
   }
   # GateLab writes version 2. Another version may place populations or scale logicle coordinates
   # by rules GateLabR does not know, so it is refused rather than read as version 2.
   version <- parsed[["version"]]
-  problems <- character(0)
-  if (marked && !(is.numeric(version) && length(version) == 1L && isTRUE(version == 2))) {
-    problems <- paste0(
-      "The file's GateLab format mark has ",
-      if (is.null(version)) "no version" else paste("version", jsonlite::toJSON(version, auto_unbox = TRUE)),
-      "; GateLabR reads version 2 only, so it cannot tell how the file places its populations ",
-      "or scales its logicle coordinates."
-    )
-  }
   logicle <- parsed[["logicle"]]
   hierarchy <- parsed[["hierarchy"]]
+  tree <- if (identical(hierarchy, "tree")) .gml_parse_format_tree(parsed[["tree"]]) else NULL
+  if (marked && length(problems) == 0L) {
+    if (!(is.numeric(version) && length(version) == 1L && isTRUE(version == 2))) {
+      problems <- paste0(
+        "The file's GateLab format mark has ",
+        if (is.null(version)) "no version" else paste("version", jsonlite::toJSON(version, auto_unbox = TRUE)),
+        "; GateLabR reads version 2 only, so it cannot tell how the file places its populations ",
+        "or scales its logicle coordinates."
+      )
+    } else if (!(identical(logicle, "gating-ml") || identical(logicle, "flowcore"))) {
+      problems <- unreadable('gives no logicle scale GateLabR knows ("gating-ml" or "flowcore")')
+    } else if (!(identical(hierarchy, "parent_id") || identical(hierarchy, "tree"))) {
+      problems <- unreadable('gives no hierarchy GateLabR knows ("parent_id" or "tree")')
+    } else if (identical(hierarchy, "tree") && is.null(tree)) {
+      problems <- unreadable("lists a tree that is not a list of populations, each with an id and a parent")
+    }
+  }
   list(
     problems = problems,
+    marked = marked,
     logicle_unit = if (identical(logicle, "gating-ml")) {
       TRUE
     } else if (identical(logicle, "flowcore")) {
@@ -151,7 +178,50 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       !.gml_written_by_gatelab(root)
     },
     parent_id_hierarchy = identical(hierarchy, "parent_id"),
-    tree = if (identical(hierarchy, "tree")) .gml_parse_format_tree(parsed[["tree"]]) else NULL
+    tree = tree
+  )
+}
+
+# GateLab has written its format mark into every file since it stopped writing a GatingHierarchy
+# for the standard format (2026-09). A file GateLab or GateLabR wrote that has neither, but
+# carries what only the marked format writes, has lost its mark; read by the older rules it would
+# have logicle coordinates on flowCore's scale and inferred parents, which is not how it was
+# written. What only the marked format writes: gating:parent_id, a gatelab_operand NOT gate,
+# gating:use-as-complement, a dimension compensated by a spectrumMatrix of the file, or BooleanGates
+# in the standard format with no GatingHierarchy (GateLab's standard format wrote one whenever it
+# had a population).
+.gml_lost_mark_problems <- function(root, raw_gates, spectra, hierarchy_node, gatelab_format) {
+  if (isTRUE(gatelab_format$marked) || !is.null(hierarchy_node) || !.gml_written_by_gatelab(root)) {
+    return(character(0))
+  }
+  ci <- .gml_first_child_local(root, "custom_info")
+  about <- if (!is.null(ci)) .gml_first_child_local(.gml_first_child_local(ci, "cytobank") %||% ci, "about") else NULL
+  standard <- !is.null(about) && grepl("\\(standard", xml2::xml_text(about))
+  found <- character(0)
+  if (any(vapply(raw_gates, function(g) !is.null(g$parent_id), logical(1)))) {
+    found <- c(found, "gating:parent_id")
+  }
+  if (any(vapply(raw_gates, function(g) isTRUE(g$operand_helper), logical(1)))) {
+    found <- c(found, "a gatelab_operand NOT gate")
+  }
+  complement_refs <- xml2::xml_find_all(
+    root, ".//*[local-name()='gateReference'][@*[local-name()='use-as-complement']]"
+  )
+  if (length(complement_refs) > 0L) found <- c(found, "gating:use-as-complement")
+  spectrum_refs <- unlist(lapply(raw_gates, function(g) {
+    vapply(g$dims %||% list(), function(d) trimws(d$compensation_ref %||% ""), character(1))
+  }))
+  if (any(spectrum_refs %in% names(spectra))) {
+    found <- c(found, "dimensions compensated by a spectrumMatrix of the file")
+  }
+  if (standard && any(vapply(raw_gates, function(g) identical(g$gate_type, "boolean"), logical(1)))) {
+    found <- c(found, "standard-format BooleanGates without a GatingHierarchy")
+  }
+  if (length(found) == 0L) return(character(0))
+  paste0(
+    "The file was written by GateLab and carries its marked format's structures (",
+    paste(found, collapse = ", "), ") but no GateLab format mark (gatelab_format), so GateLabR ",
+    "cannot tell how it places its populations or scales its logicle coordinates."
   )
 }
 
@@ -1433,6 +1503,7 @@ import_gatingml_from_cytobank <- function(file_path,
   import_problems <- c(
     import_problems,
     gatelab_format$problems,
+    .gml_lost_mark_problems(root, raw_gates, spectra, hierarchy_node, gatelab_format),
     .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
     .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
   )
