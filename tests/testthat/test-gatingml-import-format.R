@@ -400,3 +400,40 @@ test_that("a GateLab Cytobank-format tree that does not describe the file is ref
   })
   expect_error(gml_import(out_of_order), "which is not a population listed before it")
 })
+
+test_that("a GateLab tree that contradicts the file's BooleanGates is refused, naming the population", {
+  # A hand edit places Poly_subset, whose BooleanGate ANDs Cells_gate, FL1_gate and Poly_gate,
+  # under FL3_positive, whose BooleanGate ANDs Cells_gate and FL3_gate.
+  moved <- gml_variant("tree-cytobank.xml", function(lines) {
+    sub('{"id":"GateSet_36000004","parent":"GateSet_36000003"}',
+        '{"id":"GateSet_36000004","parent":"GateSet_36000001"}', lines, fixed = TRUE)
+  })
+  expect_error(
+    gml_import(moved),
+    'places the population "Poly_subset" (GateSet_36000004) under "FL3_positive" (GateSet_36000001)',
+    fixed = TRUE
+  )
+
+  # A tree the BooleanGates allow is read. Both_positive's BooleanGate includes FL1_positive's
+  # gates, so under FL1_positive it selects the same events as under Cells.
+  expected <- gml_expected()$populations$tree
+  nested <- gml_variant("tree-cytobank.xml", function(lines) {
+    sub('{"id":"GateSet_36000005","parent":"GateSet_36000000"}',
+        '{"id":"GateSet_36000005","parent":"GateSet_36000003"}', lines, fixed = TRUE)
+  })
+  expect_identical(
+    gml_membership(gml_import(nested))[["/Cells/FL1_positive/Both_positive"]],
+    as.integer(unlist(expected[["/Cells/Both_positive"]]))
+  )
+})
+
+test_that("a format mark of a version GateLabR does not read is refused", {
+  for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
+    later <- gml_variant(name, function(lines) sub('{"version":2,', '{"version":3,', lines, fixed = TRUE))
+    expect_error(gml_import(later), "format mark has version 3;", fixed = TRUE, info = name)
+  }
+  unversioned <- gml_variant("tree-standard.xml", function(lines) {
+    sub('{"version":2,', "{", lines, fixed = TRUE)
+  })
+  expect_error(gml_import(unversioned), "format mark has no version;", fixed = TRUE)
+})

@@ -116,16 +116,33 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   ci <- .gml_first_child_local(root, "custom_info")
   tag <- if (!is.null(ci)) .gml_first_child_local(ci, "gatelab_format") else NULL
   parsed <- list()
+  marked <- FALSE
   if (!is.null(tag)) {
     value <- tryCatch(
       jsonlite::fromJSON(xml2::xml_text(tag), simplifyVector = FALSE),
       error = function(e) NULL
     )
-    if (is.list(value) && !is.null(names(value))) parsed <- value
+    if (is.list(value) && !is.null(names(value))) {
+      parsed <- value
+      marked <- TRUE
+    }
+  }
+  # GateLab writes version 2. Another version may place populations or scale logicle coordinates
+  # by rules GateLabR does not know, so it is refused rather than read as version 2.
+  version <- parsed[["version"]]
+  problems <- character(0)
+  if (marked && !(is.numeric(version) && length(version) == 1L && isTRUE(version == 2))) {
+    problems <- paste0(
+      "The file's GateLab format mark has ",
+      if (is.null(version)) "no version" else paste("version", jsonlite::toJSON(version, auto_unbox = TRUE)),
+      "; GateLabR reads version 2 only, so it cannot tell how the file places its populations ",
+      "or scales its logicle coordinates."
+    )
   }
   logicle <- parsed[["logicle"]]
   hierarchy <- parsed[["hierarchy"]]
   list(
+    problems = problems,
     logicle_unit = if (identical(logicle, "gating-ml")) {
       TRUE
     } else if (identical(logicle, "flowcore")) {
@@ -1189,11 +1206,20 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 }
 
 # What a GateLab Cytobank-format tree must satisfy to be taken as the file's tree: it lists every
-# BooleanGate in the file once, and each parent is a population listed before it. One that does
-# not describes some other file, so the import is refused rather than half-applied.
+# BooleanGate in the file once, each parent is a population listed before it, and each
+# population's BooleanGate includes every gate of its parent's, as a BooleanGate that ANDs its
+# whole ancestor chain does. GateLabR reads a population within the parent the tree names, so a
+# tree that names a parent whose gates the population's BooleanGate does not all include would
+# change its events. One that fails describes some other file, so the import is refused rather
+# than half-applied.
 .gml_tree_problems <- function(tree, raw_gates, bool_order) {
   problems <- character(0)
   listed <- character(0)
+  ref_keys <- function(id) {
+    unique(vapply(raw_gates[[id]]$refs %||% list(), function(ref) {
+      paste0(if (isTRUE(ref$complement)) "!" else "", ref$gate_id)
+    }, character(1)))
+  }
   for (entry in tree) {
     id <- entry$id
     if (id %in% listed) {
@@ -1207,6 +1233,14 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       problems <- c(problems, paste0(
         "The file's GateLab tree places ", id, " under ", entry$parent,
         ", which is not a population listed before it."
+      ))
+    } else if (!is.null(entry$parent) && identical(raw_gates[[id]]$gate_type, "boolean") &&
+               length(setdiff(ref_keys(entry$parent), ref_keys(id))) > 0L) {
+      problems <- c(problems, paste0(
+        "The file's GateLab tree places the population ", .gml_quote_name(raw_gates[[id]]$name),
+        " (", id, ") under ", .gml_quote_name(raw_gates[[entry$parent]]$name), " (",
+        entry$parent, "), but its BooleanGate does not include every gate of that population's; ",
+        "the tree contradicts the file."
       ))
     }
     listed <- c(listed, id)
@@ -1373,6 +1407,7 @@ import_gatingml_from_cytobank <- function(file_path,
   raw_gates <- .gml_resolve_spectrum_dimensions(raw_gates, spectra)
   import_problems <- c(
     import_problems,
+    gatelab_format$problems,
     .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
     .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
   )
