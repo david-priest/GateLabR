@@ -1189,6 +1189,74 @@ test_that("gains are read by the channel they name, through pnn_to_channel, and 
   )
 })
 
+test_that("a channel the data lack is refused by name, not read as another channel with a like name", {
+  # A name with no metal in it was reduced without its upper-case letters, so FL1-H, BL1-A and FL1-A
+  # all became "1", and PE-A and APC both "". A gate or a gain on FL1-H, over data with FL1-A and no
+  # FL1-H, was read on FL1-A without a word; one on PE-A stopped with "subscript out of bounds".
+  on <- function(name) gml_variant("tree-standard.xml", function(lines) {
+    gsub('data-type:name="FL1-A"', sprintf('data-type:name="%s"', name), lines, fixed = TRUE)
+  })
+  for (name in c("FL1-H", "BL1-A", "PE-A", "APC")) {
+    for (instrument in list("flow", "cytof", NULL)) {
+      expect_error(
+        import_gatingml_from_cytobank(on(name), gml_channels, gml_identity_map, instrument = instrument),
+        sprintf('references channel(s) not present in the loaded data: "%s".', name),
+        fixed = TRUE, info = paste(name, instrument %||% "NULL")
+      )
+    }
+  }
+  info <- gml_expected()
+  for (name in c("FL1-H", "PE-A", "APC")) {
+    expect_error(
+      import_gatingml_from_cytobank(
+        gml_fixture("timegain-standard.xml"), gml_channels, gml_identity_map, instrument = "flow",
+        timestep = info$timestep, gains = stats::setNames(c(0.5, 2), c(name, "FL2-A"))
+      ),
+      sprintf('gains names a channel the loaded data do not have: "%s".', name),
+      fixed = TRUE, info = name
+    )
+  }
+
+  # The spellings GateLab's importer also takes still find their channel: a session channel or a
+  # $PnN with case or punctuation ignored.
+  expected <- info$populations$tree
+  for (name in c("fl1-a", "FL1_A", "FL1A")) {
+    gml_expect_membership(gml_membership(gml_import(on(name))), expected)
+  }
+  labels <- c(`FSC-A` = "FSC-A", `SSC-A` = "SSC-A", `FL1-A` = "CD3 label", `FL2-A` = "CD19 label",
+              `FL3-A` = "CD4 label", Time = "Time")
+  events <- gml_events
+  colnames(events) <- labels[colnames(events)]
+  by_pnn <- import_gatingml_from_cytobank(on("fl1_a"), unname(labels), as.list(labels), instrument = "flow")
+  gml_expect_membership(gml_membership(by_pnn, events), expected)
+
+  # A metal ("141Pr" for "Pr141Di") is taken on mass cytometry data only, and only where it finds one
+  # channel. On a flow detector it keeps the first letters and number alone: BV421-H became BV421-A.
+  range_on <- function(name) gml_write(sprintf('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <gating:RectangleGate gating:id="R1" gating:name="Range">
+    <gating:dimension gating:min="10" gating:max="1000">
+      <data-type:fcs-dimension data-type:name="%s"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>', name))
+  channel_of <- function(name, channels, instrument) {
+    parsed <- import_gatingml_from_cytobank(range_on(name), channels, NULL, instrument = instrument)
+    parsed$gates[[1]]$x_channel
+  }
+  expect_identical(channel_of("Pr141Di", c("141Pr", "Time"), "cytof"), "141Pr")
+  expect_identical(channel_of("Y89Di", c("CD3 (Y89Di)", "Time"), "cytof"), "CD3 (Y89Di)")
+  for (instrument in list("flow", NULL)) {
+    expect_error(channel_of("Pr141Di", c("141Pr", "Time"), instrument),
+                 'not present in the loaded data: "Pr141Di".', fixed = TRUE)
+  }
+  expect_error(channel_of("Y89Di", c("89Y", "CD3 (Y89Di)", "Time"), "cytof"),
+               'not present in the loaded data: "Y89Di".', fixed = TRUE)
+  expect_error(channel_of("BV421-H", c("BV421-A", "Time"), "flow"),
+               'not present in the loaded data: "BV421-H".', fixed = TRUE)
+})
+
 test_that("Gating-ML's flog is read, with an event at zero only in a range with no lower bound", {
   # flog(x) = log10(x / T) / M + 1 is -Inf at zero and undefined below; FlowKit and flowCore do not
   # test an absent bound, so a range open below holds an event at zero and none below it.

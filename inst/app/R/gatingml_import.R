@@ -1195,6 +1195,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   none
 }
 
+# A mass cytometry channel name reduced to its metal, e.g. "CD3 (Y89Di)" -> "y89" and "140Ce_Beads"
+# -> "ce140"; a name with no metal in it, case-folded with its punctuation removed.
 .gml_normalize_channel <- function(ch) {
   s <- trimws(ch)
   s <- gsub("[()]", "", s)
@@ -1225,7 +1227,16 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   p2 <- regmatches(compact, m2)[[1]]
   if (length(p2) >= 3) return(paste0(tolower(p2[3]), p2[2]))
 
-  tolower(gsub("[^a-z0-9]", "", ch))
+  .gml_punctuation_insensitive(ch)
+}
+
+# A channel name case-folded, with its punctuation removed and every letter and digit kept. FlowJo
+# writes a detector as "v-FLT525_30-E-A" where the FCS file calls it "v-FLT525/30-E-A", and the
+# separator is all the two disagree about; "b-FLT525/30-B-A" stays another name. The case is folded
+# first: removing the punctuation first removed every upper-case letter too, so FL1-H, FL1-A and
+# BL1-A all became "1", and PE-A and APC both "".
+.gml_punctuation_insensitive <- function(ch) {
+  gsub("[^a-z0-9]", "", tolower(ch))
 }
 
 .gml_guess_pnn_map_from_channels <- function(session_channels) {
@@ -1248,39 +1259,66 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   out[!duplicated(names(out))]
 }
 
-.gml_resolve_channel <- function(ch, session_channels, pnn_to_channel = NULL) {
+# The session channel a name in the file refers to, or NULL when it refers to none. A name is taken
+# as GateLab's importer takes it, in this order: a session channel exactly; a $PnN that
+# pnn_to_channel maps to a session channel, exactly, then with case and punctuation ignored
+# (.gml_punctuation_insensitive); a session channel with case ignored, then with case and
+# punctuation ignored; and, on mass cytometry data only (instrument "cytof"), the one channel whose
+# metal is the name's (.gml_normalize_channel), such as "141Pr" for "Pr141Di". A name found none of
+# these ways is not a channel of the loaded data, and its gate is refused by name.
+#
+# The metal was tried on every instrument and in any case, and a name with no metal in it was
+# reduced without its upper-case letters: a gate on FL1-H, over data with FL1-A and no FL1-H, was
+# read as a gate on FL1-A without a word, and a gate on PE-A over data without it stopped with
+# "subscript out of bounds". On a flow detector the metal keeps only the first letters and number,
+# so BV421-H would be read as BV421-A; that is why it is left to mass cytometry, and to a name that
+# finds one channel.
+.gml_resolve_channel <- function(ch, session_channels, pnn_to_channel = NULL, instrument = NULL) {
+  if (is.null(ch) || length(ch) != 1L || is.na(ch) || !nzchar(ch)) return(NULL)
   if (ch %in% session_channels) return(ch)
 
-  if ((is.list(pnn_to_channel) || is.vector(pnn_to_channel)) && length(pnn_to_channel)) {
-    # exact $PnN key match
-    if (!is.null(names(pnn_to_channel)) && ch %in% names(pnn_to_channel)) {
-      mapped <- unname(pnn_to_channel[[ch]])
-      if (!is.null(mapped) && mapped %in% session_channels) return(mapped)
-    }
-    # normalized key match: tolerate metal-name format variants between the
-    # GatingML $PnN (e.g. "Pr141Di") and the map keys (e.g. "141Pr").
-    nn_ch <- .gml_normalize_channel(ch)
-    if (nzchar(nn_ch) && !is.null(names(pnn_to_channel))) {
-      knorm <- vapply(names(pnn_to_channel), .gml_normalize_channel, character(1))
-      hit <- which(knorm == nn_ch)
-      for (h in hit) {
-        mapped <- unname(pnn_to_channel[[h]])
-        if (!is.null(mapped) && mapped %in% session_channels) return(mapped)
-      }
+  keys <- if ((is.list(pnn_to_channel) || is.vector(pnn_to_channel)) && length(pnn_to_channel)) {
+    names(pnn_to_channel)
+  }
+  keys <- if (is.null(keys)) character(0) else as.character(keys)
+  # The session channel the i-th $PnN maps to, or NULL.
+  via_pnn <- function(i) {
+    mapped <- pnn_to_channel[[i]]
+    if (length(mapped) == 1L && !is.na(mapped) && mapped %in% session_channels) {
+      unname(as.character(mapped))
     }
   }
+  first_via_pnn <- function(hits) {
+    for (i in hits) {
+      mapped <- via_pnn(i)
+      if (!is.null(mapped)) return(mapped)
+    }
+    NULL
+  }
 
-  low_map <- setNames(session_channels, tolower(session_channels))
-  key_ci <- tolower(ch)
-  ci <- if (key_ci %in% names(low_map)) unname(low_map[[key_ci]]) else NULL
-  if (!is.null(ci) && nzchar(ci)) return(ci)
+  hit <- first_via_pnn(which(keys == ch))
+  if (!is.null(hit)) return(hit)
+  punct <- .gml_punctuation_insensitive(ch)
+  if (nzchar(punct)) {
+    hit <- first_via_pnn(which(.gml_punctuation_insensitive(keys) == punct))
+    if (!is.null(hit)) return(hit)
+  }
 
-  norm_map <- setNames(session_channels, vapply(session_channels, .gml_normalize_channel, character(1)))
-  nn <- .gml_normalize_channel(ch)
-  nm <- if (nn %in% names(norm_map)) unname(norm_map[[nn]]) else NULL
-  if (!is.null(nm) && nzchar(nm)) return(nm)
+  same_case <- session_channels[tolower(session_channels) == tolower(ch)]
+  if (length(same_case)) return(same_case[[1]])
+  if (nzchar(punct)) {
+    same_punct <- session_channels[.gml_punctuation_insensitive(session_channels) == punct]
+    if (length(same_punct)) return(same_punct[[1]])
+  }
 
-  NULL
+  if (!identical(instrument, "cytof")) return(NULL)
+  metal <- .gml_normalize_channel(ch)
+  if (!nzchar(metal)) return(NULL)
+  metal_of <- function(labels) vapply(labels, .gml_normalize_channel, character(1), USE.NAMES = FALSE)
+  by_pnn <- unique(unlist(lapply(which(metal_of(keys) == metal), via_pnn)))
+  if (length(by_pnn)) return(if (length(by_pnn) == 1L) by_pnn else NULL)
+  by_session <- session_channels[metal_of(session_channels) == metal]
+  if (length(by_session) == 1L) by_session else NULL
 }
 
 # The inverter for a coordinate GateLabR takes as it is. .gml_axis_map returns this one function
@@ -2065,14 +2103,14 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   unique(problems)
 }
 
-.gml_missing_channel_problems <- function(raw_gates, session_channels, pnn_to_channel) {
+.gml_missing_channel_problems <- function(raw_gates, session_channels, pnn_to_channel, instrument = NULL) {
   problems <- character(0)
   for (gate in raw_gates) {
     if (identical(gate$gate_type, "boolean")) next
     channels <- unique(gate$channels %||% character(0))
     missing <- channels[vapply(
       channels,
-      function(channel) is.null(.gml_resolve_channel(channel, session_channels, pnn_to_channel)),
+      function(channel) is.null(.gml_resolve_channel(channel, session_channels, pnn_to_channel, instrument)),
       logical(1)
     )]
     if (length(missing) > 0L) {
@@ -2284,7 +2322,10 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 #'
 #' @param file_path Path to Gating-ML XML file
 #' @param session_channels Character vector of available channel names in current SCE
-#' @param pnn_to_channel Optional named mapping of FCS $PnN -> display channel name
+#' @param pnn_to_channel Optional named mapping of FCS $PnN -> display channel name. A channel the
+#'   file names is found as a session channel or a $PnN mapped to one, exactly, then with case and
+#'   punctuation ignored; with instrument "cytof", also by its metal ("141Pr" for "Pr141Di") when
+#'   that finds one channel. A gate on a name found none of these ways is refused by name.
 #' @param instrument "flow" or "cytof": how the loaded data store gates. With "flow", gate
 #'   coordinates declared under arcsinh are inverted to raw values on every channel, not only
 #'   scatter. With "cytof", every coordinate is converted to the data's arcsinh(x / cofactor)
@@ -2338,7 +2379,7 @@ import_gatingml_from_cytobank <- function(file_path,
     # meant for was read at a gain of 1 with no word; it is refused, as a Time gate without
     # timestep is.
     gain_channels <- vapply(names(gains), function(name) {
-      .gml_resolve_channel(name, session_channels, pnn_to_channel) %||% NA_character_
+      .gml_resolve_channel(name, session_channels, pnn_to_channel, instrument) %||% NA_character_
     }, character(1), USE.NAMES = FALSE)
     unknown <- names(gains)[is.na(gain_channels)]
     if (length(unknown)) {
@@ -2503,7 +2544,7 @@ import_gatingml_from_cytobank <- function(file_path,
     lost_mark_problems,
     adopted$problems,
     .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
-    .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
+    .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel, instrument)
   )
   gatelabr_state <- .gml_parse_gatelabr_state(root)
   dimension_compensation <- .gml_dimension_compensation(raw_gates, spectra)
@@ -2687,7 +2728,7 @@ import_gatingml_from_cytobank <- function(file_path,
     if (identical(g$gate_type, "boolean")) next
 
     channels <- unique(g$channels)
-    resolved <- lapply(channels, function(ch) .gml_resolve_channel(ch, session_channels, pnn_to_channel))
+    resolved <- lapply(channels, function(ch) .gml_resolve_channel(ch, session_channels, pnn_to_channel, instrument))
     names(resolved) <- channels
     if (any(vapply(resolved, is.null, logical(1)))) {
       unresolved_channels <- c(unresolved_channels,
@@ -3143,7 +3184,7 @@ import_gatingml_from_cytobank <- function(file_path,
   spectrum_matrix <- NULL
   if (!is.null(spectrum)) {
     channels <- unname(vapply(spectrum$detectors, function(detector) {
-      .gml_resolve_channel(detector, session_channels, pnn_to_channel) %||% NA_character_
+      .gml_resolve_channel(detector, session_channels, pnn_to_channel, instrument) %||% NA_character_
     }, character(1)))
     matrix <- spectrum$matrix
     if (!anyNA(channels)) dimnames(matrix) <- list(channels, channels)
