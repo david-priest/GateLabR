@@ -1266,3 +1266,24 @@ test_that("a polygon of one vertex given three times holds nothing, not the even
   )))
   expect_identical(gml_membership(gml_import(point))[["/Point"]], integer(0))
 })
+
+test_that("numbers are read to the double they name, so an edge on an event's own value keeps it", {
+  # GateLab writes each number as the shortest decimal that reads back as the same double, and puts
+  # a rectangle's edge on an event's own float32 value where one lies there. R's as.numeric reads
+  # about 2% of such decimals one unit in the last place off: "-10.920000076293945", the float32
+  # nearest -10.92, came back below it, and the event on the edge fell outside.
+  on_edge <- readBin(writeBin(-10.92, raw(), size = 4), "double", size = 4)
+  expect_identical(.gml_num("-10.920000076293945"), on_edge)
+  events <- cbind(`FL1-A` = c(on_edge, 0, -20), `FL2-A` = c(0, 0, 0))
+  edge <- gml_write(gml_doc(
+    '  <gating:RectangleGate gating:id="Above" gating:name="Above"><gating:dimension gating:min="-10.920000076293945"><data-type:fcs-dimension data-type:name="FL1-A"/></gating:dimension></gating:RectangleGate>'
+  ))
+  expect_identical(gml_membership(gml_import(edge), events)[["/Above"]], 1:2)
+  # Every float32 value's shortest decimal reads back to it.
+  set.seed(20260925)
+  values <- readBin(writeBin(stats::rnorm(20000, sd = 1e5), raw(), size = 4), "double", n = 20000, size = 4)
+  expect_identical(.gml_num(sprintf("%.17g", values)), values)
+  # xs:double's other spellings read as before.
+  expect_identical(.gml_num(c("+1.5", ".5", "5.", "1e3", "INF", "-INF")), c(1.5, 0.5, 5, 1000, Inf, -Inf))
+  expect_true(is.nan(.gml_num("NaN")))
+})

@@ -370,8 +370,35 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   )
 }
 
+# Numbers as the file writes them, read to the double they name. GateLab writes each number as the
+# shortest decimal that reads back as the same double, and R's own reader (as.numeric, scan) does
+# not always read such a decimal back: "-10.920000076293945", a float32 event's own value, which
+# GateLab writes as a rectangle's edge on it, comes back one unit in the last place below, and the
+# event falls outside (57 events of one public file, 2% of 17-digit decimals). A number in
+# xs:double's decimal form is read by jsonlite's C parser instead, which rounds correctly; anything
+# else (INF, NaN, or text that is no number) is left to as.numeric, as before.
 .gml_num <- function(x) {
-  suppressWarnings(as.numeric(x))
+  if (is.null(x) || length(x) == 0L) return(suppressWarnings(as.numeric(x)))
+  x <- as.character(x)
+  out <- suppressWarnings(as.numeric(x))
+  text <- trimws(x)
+  decimal <- !is.na(text) & grepl("^[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?$", text)
+  if (any(decimal)) {
+    t <- text[decimal]
+    negative <- startsWith(t, "-")
+    t <- sub("^[+-]", "", t)
+    # JSON's form of the same number: a digit before and after the point, no leading zeros.
+    t <- sub("^\\.", "0.", t)
+    t <- sub("\\.([eE]|$)", ".0\\1", t)
+    t <- sub("^0+([0-9])", "\\1", t)
+    t <- ifelse(negative, paste0("-", t), t)
+    exact <- tryCatch(
+      as.numeric(jsonlite::parse_json(paste0("[", paste(t, collapse = ","), "]"), simplifyVector = TRUE)),
+      error = function(e) NULL
+    )
+    if (length(exact) == length(t)) out[decimal] <- exact
+  }
+  out
 }
 
 .gml_has_num <- function(x) {
@@ -1724,12 +1751,20 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     dims <- .gml_parse_dimensions(node)
     if (length(dims) < 2) return(NULL)
 
-    verts <- list()
-    for (v in .gml_children_local(node, "vertex")) {
+    # Every vertex's first two coordinates, read in one pass (.gml_num): a polygon GateLab
+    # writes can carry thousands of vertices.
+    pairs <- lapply(.gml_children_local(node, "vertex"), function(v) {
       coords <- .gml_children_local(v, "coordinate")
-      if (length(coords) < 2) next
-      xv <- .gml_num(.gml_attr_local(coords[[1]], "value"))
-      yv <- .gml_num(.gml_attr_local(coords[[2]], "value"))
+      if (length(coords) < 2) return(NULL)
+      c(.gml_attr_local(coords[[1]], "value") %||% NA_character_,
+        .gml_attr_local(coords[[2]], "value") %||% NA_character_)
+    })
+    pairs <- Filter(Negate(is.null), pairs)
+    values <- .gml_num(unlist(pairs))
+    verts <- list()
+    for (i in seq_along(pairs)) {
+      xv <- values[[2L * i - 1L]]
+      yv <- values[[2L * i]]
       if (.gml_has_num(xv) && .gml_has_num(yv)) {
         verts[[length(verts) + 1L]] <- c(xv, yv)
       }
