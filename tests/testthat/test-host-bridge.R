@@ -666,6 +666,67 @@ test_that("packed browser population masks write back in original SCE event orde
   )
 })
 
+test_that("sample metadata keeps colData names exactly as GateLab writes them", {
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 2L,
+    reason = "explicit",
+    workspace_json = canonical_host_workspace_json()
+  )
+  # Population names become colData names verbatim. Both of these are one sample's value
+  # throughout, so both are sample metadata; make.names() would turn them into
+  # CD4.CD8..T.cells and CD4.CD8..T.cells.1.
+  population_column <- function(name, first, second) {
+    list(
+      populationId = name,
+      populationName = name,
+      columnName = name,
+      inLabel = "in",
+      outLabel = "out",
+      sampleMasks = list(
+        list(
+          sampleId = "sample-0",
+          eventCount = 2L,
+          membershipBitsBase64 = base64enc::base64encode(as.raw(first))
+        ),
+        list(
+          sampleId = "sample-1",
+          eventCount = 1L,
+          membershipBitsBase64 = base64enc::base64encode(as.raw(second))
+        )
+      )
+    )
+  }
+  written <- GateLabR:::.gatelabr_write_host_coldata(
+    stored$sce,
+    dataset_id = "test-sce",
+    workspace_revision = 1L,
+    columns = list(
+      population_column("CD4-CD8+ T cells", 3L, 0L),
+      population_column("CD4+CD8- T cells", 0L, 1L)
+    )
+  )
+
+  partition <- GateLabR:::.gatelabr_sample_partition(written$sce)
+  metadata <- partition$samples[[1]]$metadata
+  expect_identical(
+    names(metadata),
+    c("sample_id", "batch", "CD4-CD8+ T cells", "CD4+CD8- T cells")
+  )
+  expect_identical(metadata[["CD4-CD8+ T cells"]], "in")
+  expect_identical(metadata[["CD4+CD8- T cells"]], "out")
+  expect_identical(partition$samples[[2]]$metadata[["CD4+CD8- T cells"]], "in")
+
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(
+    written$sce,
+    dataset_id = "test-sce",
+    sample_partition = partition
+  )
+  expect_true(all(names(metadata) %in% descriptor$colDataColumns))
+})
+
 test_that("categorical sample and event annotations write atomically in SCE event order", {
   sce <- make_host_bridge_sce()
   column <- list(

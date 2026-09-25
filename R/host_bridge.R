@@ -408,7 +408,10 @@
   cd <- SummarizedExperiment::colData(sce)
   candidates <- c("sample_id", "sample", "file_name", "filename", "fcs_file")
   include_metadata <- isTRUE(include_metadata)
-  metadata_cd <- if (include_metadata) as.data.frame(cd) else NULL
+  # optional = TRUE keeps every name as colData has it. The default runs make.names(), which
+  # turned a population column such as "CD4-CD8+ T cells" into "CD4.CD8..T.cells" and so sent
+  # the browser a metadata field no colData column has.
+  metadata_cd <- if (include_metadata) as.data.frame(cd, optional = TRUE) else NULL
 
   if (!is.null(sample_column)) {
     if (length(sample_column) != 1L || !sample_column %in% colnames(cd)) {
