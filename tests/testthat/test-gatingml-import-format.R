@@ -1408,6 +1408,52 @@ test_that("a name that differs from a channel only in a sign is refused, not rea
   expect_identical(channel_of("Pr141Di", mass, NULL, "cytof"), "141Pr")
 })
 
+test_that("a minus sign written as U+2212 is a sign, as \"-\" is", {
+  # U+2212 was removed with the punctuation, so over data with CD8 and no CD8-, a gate on CD8 with
+  # that minus sign was read on CD8 without a word, and it did not find a channel named CD8-. It is
+  # now read as "-" when case and punctuation are ignored. The character is built from its code
+  # point, so the test means the same in any locale.
+  minus <- intToUtf8(0x2212)
+  cd8_minus <- paste0("CD8", minus)
+  maps_of <- function(loaded) {
+    list(session = stats::setNames(as.list(unname(loaded)), unname(loaded)), pnn = as.list(loaded))
+  }
+  for (other in c("CD8", "CD8+")) {
+    loaded <- c(`FL1-A` = other, `FL2-A` = "FITC-A", Time = "Time")
+    maps <- maps_of(loaded)
+    for (map in names(maps)) for (instrument in c("flow", "cytof")) {
+      expect_error(
+        import_gatingml_from_cytobank(gml_range_on(cd8_minus), unname(loaded), maps[[map]], instrument = instrument),
+        paste0("references channel(s) not present in the loaded data: ", encodeString(cd8_minus, quote = '"'), "."),
+        fixed = TRUE, info = paste(other, map, instrument)
+      )
+    }
+    expect_error(
+      import_gatingml_from_cytobank(gml_range_on("FITC-A"), unname(loaded), maps$pnn, instrument = "flow",
+                                    gains = stats::setNames(2, cd8_minus)),
+      paste0('gains names a channel the loaded data do not have: "', cd8_minus, '".'),
+      fixed = TRUE, info = other
+    )
+  }
+
+  # It still finds a channel named with it or with "-", either way round, and between two letters
+  # or digits it is a separator, as "-" is.
+  channel_of <- function(name, loaded, map) {
+    parsed <- import_gatingml_from_cytobank(gml_range_on(name), unname(loaded), map, instrument = "flow")
+    parsed$gates[[1]]$x_channel
+  }
+  for (channel in c(cd8_minus, "CD8-")) {
+    loaded <- c(`FL1-A` = channel, `FL2-A` = "CD8", Time = "Time")
+    for (map in maps_of(loaded)) {
+      expect_identical(channel_of(cd8_minus, loaded, map), channel, info = channel)
+      expect_identical(channel_of(tolower(cd8_minus), loaded, map), channel, info = channel)
+      expect_identical(channel_of("cd8-", loaded, map), channel, info = channel)
+    }
+  }
+  loaded <- c(`FL1-A` = "FITC-A", Time = "Time")
+  expect_identical(channel_of(paste0("FITC", minus, "A"), loaded, maps_of(loaded)$pnn), "FITC-A")
+})
+
 test_that("on mass cytometry data a name reads on another channel only through a metal both spell", {
   # The last step reduced any name to its first letters and number, so on mass cytometry data a
   # gate on CD11c, which the data lack, was read on CD11b and one on CD62L on CD62P; through the

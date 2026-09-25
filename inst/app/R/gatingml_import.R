@@ -1268,9 +1268,13 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # a-z and 0-9 alone removed every other letter, so TCR gamma-delta became "tcr", as TCR alpha-beta
 # did, and a gate on one was read on the other. A sign is kept too: every "+", and every "-" but one
 # between two letters or digits, which is a separator, as in FITC-A. With them removed, a gate on
-# CD3- or on CD3, over data with CD3+ and neither of them, was read on CD3+.
+# CD3- or on CD3, over data with CD3+ and neither of them, was read on CD3+. The minus sign U+2212
+# is read as "-" first: removed as punctuation, it read a gate on CD8 with that sign, over data with
+# CD8 and no CD8-, on CD8, and did not find a channel named CD8-. It is built from its code point,
+# as the character itself, written into this file, was not read as UTF-8 in the C locale.
 .gml_punctuation_insensitive <- function(ch) {
-  gsub("[^\\p{L}\\p{N}+-]|(?<=[\\p{L}\\p{N}])-(?=[\\p{L}\\p{N}])", "", tolower(ch), perl = TRUE)
+  folded <- gsub(intToUtf8(0x2212), "-", tolower(ch), fixed = TRUE)
+  gsub("[^\\p{L}\\p{N}+-]|(?<=[\\p{L}\\p{N}])-(?=[\\p{L}\\p{N}])", "", folded, perl = TRUE)
 }
 
 # A $PnN map guessed from the session channels' names, which the Shiny app adds after the maps the
