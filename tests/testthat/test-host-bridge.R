@@ -992,6 +992,131 @@ test_that("the legacy mirror keeps each gate's space and transforms", {
   expect_null(S4Vectors::metadata(plain$sce)$gating_workspace$gates[["gate-1"]]$space)
 })
 
+# A workspace of the version 2 layout that needs features an older GateLab would misread, as
+# GateLab writes it for a hosted save: version 4, the features listed, a half-open rectangle, a
+# polygon on FlowJo's grid with the vertices FlowJo saved, a FlowJo rectangle with the axes and
+# the bound its rule opened, a biex axis on FlowJo's table, a standard flog with bounds, and a
+# file compensated with a matrix a workspace supplied.
+version_four_host_workspace_json <- function(dataset_id = "test-sce") {
+  gates <- paste0(
+    '"gates":{',
+    '"gate-1":{"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle",',
+    '"x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,2],[3,4],[1,4]],',
+    '"bounds":"half-open","color":"#e41a1c","label_offset":null},',
+    '"gate-2":{"gate_id":"gate-2","name":"Grid","gate_type":"polygon",',
+    '"x_channel":"CD3","y_channel":"CD19","vertices":[[10,20],[200,40],[180,150],[40,90]],',
+    '"space":"display","transforms":{',
+    '"CD3":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"linear","minRange":0,"maxRange":262144}},',
+    '"CD19":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"biex","maxValue":262144,',
+    '"pos":4.41854,"neg":0,"widthBasis":-10,"channelRange":256}}},',
+    '"flowjo_vertices":[[20000,-150],[200000,40],[180000,150000],[40000,90000]],',
+    '"flowjo_polygon":{"quadId":-1,"gateResolution":256},',
+    '"color":"#377eb8","label_offset":null},',
+    '"gate-3":{"gate_id":"gate-3","name":"FlowJo box","gate_type":"rectangle",',
+    '"x_channel":"CD3","y_channel":"CD19","vertices":[[-1e+308,2],[5,2],[5,8],[-1e+308,8]],',
+    '"space":"display","transforms":{',
+    '"CD3":{"kind":"biex","maxValue":262144,"pos":4.41854,"neg":0,"widthBasis":-10,',
+    '"channelRange":256,"tableChannels":4096},',
+    '"CD19":{"kind":"flog","T":262144,"M":5,"standard":true,"bounds":{"min":0.1}}},',
+    '"flowjo_axes":{"CD3":{"kind":"wsplog","offset":3,"decades":5},',
+    '"CD19":{"kind":"linear","minRange":0,"maxRange":262144}},',
+    '"flowjo_bounds":{"CD3":[3,null],"CD19":[null,null]},',
+    '"color":"#4daf4a","label_offset":null}}'
+  )
+  json <- sub(
+    '"gates":{"gate-1":{"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle","x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,4]],"color":"#e41a1c","label_offset":null}}',
+    gates,
+    canonical_host_workspace_json(dataset_id),
+    fixed = TRUE
+  )
+  json <- sub('"gate_order":["gate-1"]', '"gate_order":["gate-1","gate-2","gate-3"]', json, fixed = TRUE)
+  json <- sub(
+    '"version":2,',
+    paste0(
+      '"version":4,"requiredFeatures":["flowjo-grid","flowjo-biex-table",',
+      '"external-spillover","half-open-rectangle"],'
+    ),
+    json,
+    fixed = TRUE
+  )
+  sub(
+    '"labels":{},"metadata":{}},',
+    paste0(
+      '"labels":{},"metadata":{},"externalSpillover":{"matrix":{"channels":["CD3","CD19"],',
+      '"matrix":[[1,0.1],[0.02,1]]},"label":"Synthetic matrix"}},'
+    ),
+    json,
+    fixed = TRUE
+  )
+}
+
+test_that("a version 4 workspace is stored as GateLab wrote it, and its mirror keeps every gate field", {
+  # GateLab writes a hosted workspace as version 4, the version 2 layout with requiredFeatures,
+  # whenever it holds a grid gate, FlowJo's biex table, a matrix a workspace supplied or a
+  # half-open rectangle. GateLabR stored versions 2 and 3 only, so every such save was refused.
+  sce <- make_host_bridge_sce()
+  workspace_json <- version_four_host_workspace_json()
+  sent <- jsonlite::fromJSON(workspace_json, simplifyVector = FALSE)
+  expect_identical(sent$version, 4L)
+
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = workspace_json
+  )
+  expect_identical(written$result$revision, 1L)
+  # The canonical record is the JSON as written, requiredFeatures and externalSpillover included.
+  canonical <- S4Vectors::metadata(written$sce)$gatelab_workspace
+  expect_identical(canonical$workspace_json, workspace_json)
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(written$sce, dataset_id = "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelab-workspace")
+  expect_identical(envelope$workspaceJson, workspace_json)
+
+  # The mirror keeps each gate's edge rule, transforms and FlowJo fields exactly.
+  mirror <- S4Vectors::metadata(written$sce)$gating_workspace
+  expect_silent(validate_workspace_graph(mirror))
+  fields <- c("space", "transforms", "bounds", "flowjo_vertices", "flowjo_axes", "flowjo_bounds",
+              "flowjo_polygon")
+  for (gate_id in c("gate-1", "gate-2", "gate-3")) {
+    for (field in fields) {
+      expect_identical(mirror$gates[[gate_id]][[field]], sent$gating$gates[[gate_id]][[field]],
+                       info = paste(gate_id, field))
+    }
+  }
+  expect_identical(mirror$gates[["gate-1"]]$bounds, "half-open")
+
+  # And a host reloading the mirror, with the canonical record gone, sends them back unchanged.
+  bare <- written$sce
+  S4Vectors::metadata(bare)$gatelab_workspace <- NULL
+  legacy <- GateLabR:::.gatelabr_host_workspace_envelope(bare, dataset_id = "test-sce")
+  expect_identical(legacy$sourceFormat, "gatelabr-legacy")
+  reloaded <- jsonlite::fromJSON(legacy$workspaceJson, simplifyVector = FALSE)$gates
+  for (gate_id in c("gate-1", "gate-2", "gate-3")) {
+    for (field in setdiff(fields, "space")) {
+      expect_equal(reloaded[[gate_id]][[field]], sent$gating$gates[[gate_id]][[field]],
+                   info = paste(gate_id, field))
+    }
+  }
+
+  # A version GateLabR does not know is still refused.
+  later <- sub('"version":4,', '"version":5,', workspace_json, fixed = TRUE)
+  expect_error(
+    GateLabR:::.gatelabr_store_host_workspace(
+      sce,
+      dataset_id = "test-sce",
+      expected_revision = 0L,
+      client_revision = 1L,
+      reason = "explicit",
+      workspace_json = later
+    ),
+    "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
+    fixed = TRUE
+  )
+})
+
 test_that("a revision conflict carries the data a browser needs to resync", {
   # The browser learns the stored revision only from a successful write, so a write whose reply
   # is lost leaves it behind for good. Reported live as "expected revision 14 but the SCE is at

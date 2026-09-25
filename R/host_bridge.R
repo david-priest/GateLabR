@@ -955,6 +955,14 @@
     # display space and every FlowJo biex or log gate would select other events.
     if (!is.null(gate$space)) normalized$space <- as.character(gate$space)
     if (!is.null(gate$transforms)) normalized$transforms <- gate$transforms
+    # A rectangle's edge rule, and what a gate imported from FlowJo carries of FlowJo's own
+    # definition, are part of the gate too: without `bounds` a half-open rectangle reloaded from
+    # the mirror counts an event on its max, and without the FlowJo fields a grid polygon loses
+    # the vertices FlowJo saved and a FlowJo rectangle the bounds FlowJo's rule opened. Each is
+    # carried as GateLab wrote it.
+    for (field in c("bounds", "flowjo_vertices", "flowjo_axes", "flowjo_bounds", "flowjo_polygon")) {
+      if (!is.null(gate[[field]])) normalized[[field]] <- gate[[field]]
+    }
     normalized
   })
   names(normalized_gates) <- gate_ids
@@ -1075,11 +1083,16 @@
   if (!is.list(parsed) || !identical(parsed$format, "gatelab-workspace")) {
     stop("GateLab supplied an unsupported workspace format.", call. = FALSE)
   }
+  # Version 4 is the version 2 layout of a workspace that needs a feature an older GateLab would
+  # misread (a grid gate, FlowJo's biex table, a half-open rectangle, a matrix a workspace
+  # supplied), listed in requiredFeatures. GateLab writes it for a hosted save as for a file, so
+  # that a GateLab predating the feature refuses the SCE's copy by its version. The JSON is stored
+  # as written, and the mirror below is built from the version 2 layout it shares.
   version <- suppressWarnings(as.integer(parsed$version))
   if (length(version) != 1L || is.na(version) ||
-      !version %in% c(2L, 3L)) {
+      !version %in% c(2L, 3L, 4L)) {
     stop(
-      "GateLabR can store GateLab workspace versions 2 and 3 only.",
+      "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
       call. = FALSE
     )
   }
