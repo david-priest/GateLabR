@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xsi:schemaLocation="http://www.isac-net.org/std/Gating-ML/v2.0/gating http://flowcyt.sourceforge.net/gating/2.0/xsd/Gating-ML.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/transformations http://flowcyt.sourceforge.net/gating/2.0/xsd/Transformations.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/datatypes http://flowcyt.sourceforge.net/gating/2.0/xsd/DataTypes.v2.0.xsd">
+  <data-type:custom_info>
+    <cytobank>
+      <about>Gating-ML 2.0 export from GateLab (Cytobank-compatible)</about>
+      <cytobank_gating_version>2.0</cytobank_gating_version>
+      <export_timestamp>2026-01-01T00:00:00</export_timestamp>
+    </cytobank>
+    <gatelab_edge_rule>half-open</gatelab_edge_rule>
+    <gatelab_rectangles>
+      <definition>{"version":1,"rectangles":{"Gate_180000001_Q2VsbHNfZ2F0ZQ..":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"asinh","cofactor":150},"y":{"kind":"asinh","cofactor":150}},"x":[5.991470797049389,7.888584672618833],"y":[5.586013501203196,7.726065797132709],"written":["5.991470797049389|7.888584672619622","5.586013501203196|7.726065797133482"]},"Gate_180000002_RkwxX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":0.9029294218957991,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":0.8958733628756148,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.05,0.98],"written":["3.680780509630903|7.952565265387895","-2.0003565175880262|7.952546376444899"],"placedFrom":["3.6807806690054043|7.952565376180899","-2.00035650807655|7.952546487249035"]},"Gate_180000004_RkwzX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":0.881328037029516,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":0.881328037029516,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.55,0.98],"written":["3.667839475456224|7.952509014905055"],"placedFrom":["3.667839636318155|7.952509125731212"]}}}</definition>
+    </gatelab_rectangles>
+    <gatelabr_scales>
+      <definition>{"version":4,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":0.902929},"FL2-A":{"w":0.895873},"FL3-A":{"w":0.881328}},"compensation":{"enabled":false,"reference":"dimensions","channels":[]}}</definition>
+    </gatelabr_scales>
+    <gatelab_format>{"version":3,"logicle":"gating-ml","hierarchy":"tree","time":"ticks","tree":[{"id":"GateSet_36000000","parent":null},{"id":"GateSet_36000001","parent":"GateSet_36000000"},{"id":"GateSet_36000002","parent":"GateSet_36000001"},{"id":"GateSet_36000003","parent":"GateSet_36000002"},{"id":"GateSet_36000004","parent":"GateSet_36000003"},{"id":"GateSet_36000005","parent":"GateSet_36000000"}]}</gatelab_format>
+  </data-type:custom_info>
+  <transforms:transformation transforms:id="Tr_Fasinh_150">
+    <transforms:fasinh transforms:T="176.2801790465702" transforms:M="0.4342944819032518" transforms:A="0" />
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Gate_180000001_Q2VsbHNfZ2F0ZQ..">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Cells_gate</name>
+        <id>180000001</id>
+        <gate_id>1</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396696985,"max":8.134434505021183,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.003713362288923,"max":7.973530605949307,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.940027734834505,6.6560396491683385],"rectangle":{"x1":5.991470797049389,"y1":5.586013501203196,"x2":7.888584672619622,"y2":7.726065797133482}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.991470797049389" gating:max="7.888584672619622" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FSC-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.586013501203196" gating:max="7.726065797133482" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="SSC-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="Gate_180000002_RkwxX2dhdGU.">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL1_gate</name>
+        <id>180000002</id>
+        <gate_id>2</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-3.360402798089869,"max":8.17438816859334,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-3.150111903469373,"max":8.170245558404002,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[5.816672887509399,2.9760949294284362],"rectangle":{"x1":3.680780509630903,"y1":-2.0003565175880262,"x2":7.952565265387895,"y2":7.952546376444899}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="3.680780509630903" gating:max="7.952565265387895" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL1-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="-2.0003565175880262" gating:max="7.952546376444899" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL2-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:PolygonGate gating:id="Gate_180000003_TF9nYXRl">
+    <data-type:custom_info>
+      <cytobank>
+        <name>L_gate</name>
+        <id>180000003</id>
+        <gate_id>3</gate_id>
+        <type>PolygonGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-3.1345936343097422,"max":7.378813831262843,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-3.2924335404740246,"max":7.399743493781738,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[3.884366966639458,3.6219465892213676],"polygon":{"vertices":[[1.5558136249320242,1.5469525156402664],[7.12774088090599,1.5469525156402664],[7.12774088090599,3.2289262331683433],[4.1338230649340755,3.2289262331683433],[4.1338230649340755,7.127458055646044],[1.5558136249320242,7.127458055646044],[1.5558136249320242,1.5469525156402664]]}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL2-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL3-A" />
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="1.5558136249320242" />
+      <gating:coordinate data-type:value="1.5469525156402664" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.12774088090599" />
+      <gating:coordinate data-type:value="1.5469525156402664" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="7.12774088090599" />
+      <gating:coordinate data-type:value="3.2289262331683433" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.1338230649340755" />
+      <gating:coordinate data-type:value="3.2289262331683433" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="4.1338230649340755" />
+      <gating:coordinate data-type:value="7.127458055646044" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="1.5558136249320242" />
+      <gating:coordinate data-type:value="7.127458055646044" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="1.5558136249320242" />
+      <gating:coordinate data-type:value="1.5469525156402664" />
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:RectangleGate gating:id="Gate_180000004_RkwzX2dhdGU.">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL3_gate</name>
+        <id>180000004</id>
+        <gate_id>4</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-3.307601226678897,"max":8.173295490230231,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-3.307601226678897,"max":8.173295490230231,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[5.810174245180639,5.810174245180639],"rectangle":{"x1":3.667839475456224,"y1":3.667839475456224,"x2":7.952509014905055,"y2":7.952509014905055}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="3.667839475456224" gating:max="7.952509014905055" gating:transformation-ref="Tr_Fasinh_150">
+      <data-type:fcs-dimension data-type:name="FL3-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="GateSet_36000000">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Cells</name>
+        <id>36000000</id>
+        <gate_set_id>1</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <!-- Single-gate population: ref twice (GatingML requires ≥2 args for "and") -->
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000001">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Cells_again</name>
+        <id>36000001</id>
+        <gate_set_id>2</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <!-- Single-gate population: ref twice (GatingML requires ≥2 args for "and") -->
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000002">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL1_positive</name>
+        <id>36000002</id>
+        <gate_set_id>3</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1,2],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1 AND gate_2"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <gating:gateReference gating:ref="Gate_180000002_RkwxX2dhdGU." />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000003">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL1_again</name>
+        <id>36000003</id>
+        <gate_set_id>4</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1,2],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1 AND gate_2"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <gating:gateReference gating:ref="Gate_180000002_RkwxX2dhdGU." />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000004">
+    <data-type:custom_info>
+      <cytobank>
+        <name>L_subset</name>
+        <id>36000004</id>
+        <gate_set_id>5</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1,2,3],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1 AND gate_2 AND gate_3"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <gating:gateReference gating:ref="Gate_180000002_RkwxX2dhdGU." />
+      <gating:gateReference gating:ref="Gate_180000003_TF9nYXRl" />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000005">
+    <data-type:custom_info>
+      <cytobank>
+        <name>FL3_positive</name>
+        <id>36000005</id>
+        <gate_set_id>6</gate_set_id>
+        <version>-1</version>
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <compensation_id>0</compensation_id>
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <definition>{"gates":[1,4],"negGates":[],"tailoredPerPopulation":{},"booleanExpression":"gate_1 AND gate_4"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Q2VsbHNfZ2F0ZQ.." />
+      <gating:gateReference gating:ref="Gate_180000004_RkwzX2dhdGU." />
+    </gating:and>
+  </gating:BooleanGate>
+</gating:Gating-ML>

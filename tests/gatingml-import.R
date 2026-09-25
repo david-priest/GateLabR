@@ -174,5 +174,5 @@ problem <- tryCatch(
   },
   error = function(e) conditionMessage(e)
 )
-stopifnot(grepl("EllipsoidGate ellipse-1 is not supported", problem, fixed = TRUE))
+stopifnot(grepl("EllipsoidGate ellipse-1 is not an ellipse GateLabR can read", problem, fixed = TRUE))
 stopifnot(grepl("transformation linear-1", problem, fixed = TRUE))
