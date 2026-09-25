@@ -666,6 +666,9 @@ test_that("a logicle or arcsinh whose parameters give no inverse is refused by n
     list(logicle(262144, 3, 4.5, 0), "a logicle with T = 262144, W = 3, M = 4.5 and A = 0, whose W is greater than M / 2"),
     list(logicle(262144, 0.5, 4.5, -1), "a logicle with T = 262144, W = 0.5, M = 4.5 and A = -1, whose A is less than -W"),
     list(logicle(262144, 0.5, 4.5, 4), "a logicle with T = 262144, W = 0.5, M = 4.5 and A = 4, whose A is greater than M - 2W"),
+    # Past the bound by 1e-11, more than the 1e-12 of M (4.5e-12) taken as rounding.
+    list(logicle(262144, 2.25000000001, 4.5, 0), "a logicle with T = 262144, W = 2.25000000001, M = 4.5 and A = 0, whose W is greater than M / 2"),
+    list(logicle(262144, 0.5, 4.5, 3.50000000001), "a logicle with T = 262144, W = 0.5, M = 4.5 and A = 3.50000000001, whose A is greater than M - 2W"),
     list(fasinh(-1, 4.5, 0), "an arcsinh (fasinh) with T = -1, M = 4.5 and A = 0, whose T is not positive"),
     list(fasinh(262144, 0, 0), "an arcsinh (fasinh) with T = 262144, M = 0 and A = 0, whose M is not positive"),
     list(fasinh(262144, 1, -1), "an arcsinh (fasinh) with T = 262144, M = 1 and A = -1, whose M + A is not positive"),
@@ -686,8 +689,48 @@ test_that("a logicle or arcsinh whose parameters give no inverse is refused by n
     expect_equal(lower(gml_import(range_on(logicle(p[1], p[2], p[3], p[4])))), as.numeric(inverse(0.2 * p[3])),
                  info = paste(p, collapse = " "))
   }
+  # A W or A past its bound by at most 1e-12 of M is on it. Written in decimal with A at M - 2W, a
+  # logicle is on its bound, but M - 2W computes to the double below A (4.42 - 2 * 0.87 =
+  # 2.6799999999999997, 4.1 - 2 * 0.35 = 3.3999999999999995); both were refused, and flowCore,
+  # which compares A + W with M - W, refuses them as well. Each reads as the logicle on its bound,
+  # given here as flowCore builds one a hair inside it, and not as the identity.
+  on_bound <- list(
+    list(written = c(262144, 0.87, 4.42, 2.68), inside = c(262144, 0.87, 4.42, 2.68 - 1e-9)),
+    list(written = c(262144, 0.35, 4.1, 3.4), inside = c(262144, 0.35, 4.1, 3.4 - 1e-9)),
+    list(written = c(262144, 0.5, 4.5, 3.500000000001), inside = c(262144, 0.5, 4.5, 3.5)),
+    list(written = c(262144, 2.250000000001, 4.5, 0), inside = c(262144, 2.25, 4.5, 0))
+  )
+  for (case in on_bound) {
+    p <- case$written
+    q <- case$inside
+    lg <- flowCore::logicleTransform("lg", w = q[2], t = q[1], m = q[3], a = q[4])
+    inverse <- flowCore::inverseLogicleTransform(lg, transformationId = "inv")
+    expect_equal(lower(gml_import(range_on(logicle(p[1], p[2], p[3], p[4])))), as.numeric(inverse(0.2 * q[3])),
+                 info = paste(p, collapse = " "))
+  }
   forward <- function(x) (asinh(x * sinh(2 * log(10)) / 1000) - 0.5 * log(10)) / (1.5 * log(10))
   expect_equal(forward(lower(gml_import(range_on(fasinh(1000, 2, -0.5))))), 0.2)
+})
+
+test_that("every logicle written to two decimals with A at M - 2W passes the bound check and builds in flowCore", {
+  # M from 3 to 5.5 and W up to M / 2: 14,915 of these 53,526 logicles were refused, and flowCore
+  # refuses 10,799 of them as written, so taken past the bound check unchanged they would be read
+  # as the identity (.gml_declared_map).
+  refused <- character()
+  not_built <- character()
+  for (mi in 300:550) for (wi in 0:floor(mi / 2)) {
+    m <- as.numeric(sprintf("%.2f", mi / 100))
+    w <- as.numeric(sprintf("%.2f", wi / 100))
+    a <- as.numeric(sprintf("%.2f", (mi - 2 * wi) / 100))
+    tr_def <- list(type = "logicle", T = 262144, W = w, M = m, A = a)
+    if (!is.null(.gml_transform_problem(tr_def))) refused <- c(refused, paste(w, m, a))
+    if (a + w > m - w) {
+      built <- tryCatch(is.numeric(.gml_declared_map(tr_def)$forward(c(-100, 0, 1000))), error = function(e) FALSE)
+      if (!built) not_built <- c(not_built, paste(w, m, a))
+    }
+  }
+  expect_identical(refused, character())
+  expect_identical(not_built, character())
 })
 
 test_that("flin, Gating-ML's linear scale, is read", {

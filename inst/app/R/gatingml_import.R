@@ -734,13 +734,46 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   out
 }
 
+# How far past one of logicle's upper bounds, W <= M / 2 and A <= M - 2W, a parameter may lie and
+# still be taken as on it, as a fraction of M; GateLab allows the same. A logicle written in
+# decimal with A at M - 2W is on the bound, but M - 2W can compute to the double below the one A
+# reads to: M = 4.42, W = 0.87 and A = 2.68 give M - 2W = 2.6799999999999997, and such a logicle
+# was refused. The rounding is a few units in the last place, about 1e-16 of M; 1e-12 of M is
+# thousands of times that and far below any difference a writer means. The lower bound, -W <= A,
+# is compared exactly: -W is exact in double precision, so an A written at -W reads to it.
+.GML_LOGICLE_BOUND_TOLERANCE <- 1e-12
+
+# Whether `value` is within the logicle bound `bound`: at most it, or past it by at most
+# .GML_LOGICLE_BOUND_TOLERANCE of M.
+.gml_within_logicle_bound <- function(value, bound, m) {
+  isTRUE(value <= bound) || isTRUE(value - bound <= .GML_LOGICLE_BOUND_TOLERANCE * abs(m))
+}
+
+# W and A as flowCore's logicle takes them. flowCore compares its own bounds, 2W > M and
+# A + W > M - W, exactly, so it refuses a W or A that .gml_within_logicle_bound takes as on its
+# bound (M = 4.42, W = 0.87 and A = 2.68 give A + W = 3.5500000000000003 and M - W =
+# 3.5499999999999998), and .gml_declared_map would read that logicle as the identity. Such a W is
+# taken as M / 2, and such an A as (M - W) - W, one step of (M - W) times the machine epsilon lower
+# where flowCore still refuses it; either moves A by a few units in the last place. A W or A past
+# its bound by more is left as it is, and .gml_transform_problem refuses the gate.
+.gml_logicle_for_flowcore <- function(w, m, a) {
+  if (w > m / 2 && .gml_within_logicle_bound(w, m / 2, m)) w <- m / 2
+  if (w <= m / 2 && a + w > m - w && .gml_within_logicle_bound(a, m - 2 * w, m)) {
+    a <- min(a, (m - w) - w)
+    if (a + w > m - w) a <- a - (m - w) * .Machine$double.eps
+  }
+  list(w = w, a = a)
+}
+
 # Why a transformation (.gml_parse_transforms) has no map GateLabR can take its coordinates
 # through, or NULL when it has one. .gml_declared_map read such a logicle as the identity, since
 # flowCore refuses to build it, and such a fasinh as the identity or, when M + A is not positive,
 # as a map that is constant or decreasing, so a gate on it selected other events than the file
 # defines.
 #   logicle: T > 0, M > 0, 0 <= W <= M / 2 and -W <= A <= M - 2W (Gating-ML 2.0 section 6.4.3, and
-#     what flowCore's logicle accepts; it evaluates a negative A down to -W exactly).
+#     what flowCore's logicle accepts; it evaluates a negative A down to -W exactly). A W or A past
+#     its upper bound by at most .GML_LOGICLE_BOUND_TOLERANCE of M is on it
+#     (.gml_within_logicle_bound).
 #   fasinh: T > 0, M > 0 and M + A > 0, which make its inverse, T / sinh(M ln 10) sinh(y (M + A)
 #     ln 10 - A ln 10), increasing, and sinh(M ln 10), (M + A) ln 10 and T / sinh(M ln 10) finite
 #     and not zero in double precision, without which the inverse is 0 or undefined everywhere.
@@ -761,9 +794,9 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     why <- if (!(t_v > 0)) "T is not positive"
       else if (!(m_v > 0)) "M is not positive"
       else if (!(w_v >= 0)) "W is negative"
-      else if (w_v > m_v / 2) "W is greater than M / 2"
+      else if (!.gml_within_logicle_bound(w_v, m_v / 2, m_v)) "W is greater than M / 2"
       else if (a_v < -w_v) "A is less than -W"
-      else if (a_v > m_v - 2 * w_v) "A is greater than M - 2W"
+      else if (!.gml_within_logicle_bound(a_v, m_v - 2 * w_v, m_v)) "A is greater than M - 2W"
     if (is.null(why)) return(NULL)
     return(paste0("a logicle with T = ", t_v, ", W = ", w_v, ", M = ", m_v, " and A = ", a_v, ", whose ", why))
   }
@@ -1421,6 +1454,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     if (!is.finite(t_v) || !is.finite(w_v) || t_v <= 0 || w_v < 0) return(identity_map)
     if (!requireNamespace("flowCore", quietly = TRUE)) return(identity_map)
     to_flowcore <- if (isTRUE(logicle_unit)) m_v else 1
+    on_bound <- .gml_logicle_for_flowcore(w_v, m_v, a_v)
+    w_v <- on_bound$w;  a_v <- on_bound$a
     lg <- tryCatch(
       flowCore::logicleTransform("lg_fwd", w = w_v, t = t_v, m = m_v, a = a_v),
       error = function(e) NULL
