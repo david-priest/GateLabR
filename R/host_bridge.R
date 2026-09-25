@@ -1094,14 +1094,17 @@
   # supplied), listed in requiredFeatures. GateLab writes it for a hosted save as for a file, so
   # that a GateLab predating the feature refuses the SCE's copy by its version. The JSON is stored
   # as written, and the mirror below is built from the version 2 layout it shares.
-  version <- suppressWarnings(as.integer(parsed$version))
-  if (length(version) != 1L || is.na(version) ||
-      !version %in% c(2L, 3L, 4L)) {
+  # The version must be the number 2, 3 or 4. It was read with as.integer(), so 4.5 and the string
+  # "4" were stored as version 4, as 2.5 and 3.5 were as 2 and 3.
+  version <- parsed$version
+  if (!is.numeric(version) || length(version) != 1L || is.na(version) ||
+      !version %in% c(2, 3, 4)) {
     stop(
       "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
       call. = FALSE
     )
   }
+  version <- as.integer(version)
 
   partition <- .gatelabr_sample_partition(
     sce,

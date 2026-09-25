@@ -1114,20 +1114,24 @@ test_that("a version 4 workspace is stored as GateLab wrote it, and its mirror k
   }
   expect_identical(reloaded[["gate-3"]]$vertices[[1]][[1]], -.Machine$double.xmax)
 
-  # A version GateLabR does not know is still refused.
-  later <- sub('"version":4,', '"version":5,', workspace_json, fixed = TRUE)
-  expect_error(
-    GateLabR:::.gatelabr_store_host_workspace(
-      sce,
-      dataset_id = "test-sce",
-      expected_revision = 0L,
-      client_revision = 1L,
-      reason = "explicit",
-      workspace_json = later
-    ),
-    "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
-    fixed = TRUE
-  )
+  # A version GateLabR does not know is still refused, and so is a version that only truncates to
+  # a known one: 4.5 and the string "4" were read as 4, as 2.5 and 3.5 were as 2 and 3.
+  for (unknown in c('"version":5,', '"version":4.5,', '"version":"4",', '"version":2.5,',
+                    '"version":3.5,', '"version":true,')) {
+    expect_error(
+      GateLabR:::.gatelabr_store_host_workspace(
+        sce,
+        dataset_id = "test-sce",
+        expected_revision = 0L,
+        client_revision = 1L,
+        reason = "explicit",
+        workspace_json = sub('"version":4,', unknown, workspace_json, fixed = TRUE)
+      ),
+      "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
+      fixed = TRUE,
+      info = unknown
+    )
+  }
 })
 
 test_that("a canonical workspace held as a list reaches the host with every digit", {
