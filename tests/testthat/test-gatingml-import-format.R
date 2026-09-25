@@ -1333,6 +1333,88 @@ test_that("a fasinh whose T / sinh(M ln 10) overflows is refused by name", {
   expect_identical(min(edges), 0)
 })
 
+test_that("a gate number that is not a finite xs:double is refused by name; an absent bound is no bound", {
+  # Each was read without a word: min="NaN", "abc" or "" as no bound, "INF" and "-INF" as no bound
+  # on either side (min="INF" held every event, where FlowKit holds none), "0x10" as 16, and a
+  # polygon vertex that did not read was dropped, leaving another polygon.
+  gate_file <- function(gate) {
+    gml_write(sprintf('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+%s
+</gating:Gating-ML>', gate))
+  }
+  range_with <- function(bounds) {
+    gate_file(sprintf('  <gating:RectangleGate gating:id="R1" gating:name="FL1_range">
+    <gating:dimension %s>
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>', bounds))
+  }
+  for (edge in list(c("min", "NaN"), c("min", "INF"), c("max", "-INF"), c("min", "-INF"), c("max", "+INF"),
+                    c("min", "abc"), c("min", ""), c("min", " "), c("min", "0x10"), c("max", "1e400"))) {
+    other <- if (identical(edge[[1]], "min")) 'gating:max="5000"' else 'gating:min="100"'
+    expect_error(
+      gml_import(range_with(sprintf('gating:%s="%s" %s', edge[[1]], edge[[2]], other))),
+      sprintf('RectangleGate R1 (FL1_range): %s on FL1-A is "%s", which is not a finite number.', edge[[1]], edge[[2]]),
+      fixed = TRUE, info = paste(edge, collapse = " = ")
+    )
+  }
+
+  # A bound left out is no bound, and xs:double's other spellings of a number read as it.
+  holds <- function(bounds) gml_membership(gml_import(range_with(bounds)))[["/FL1_range"]]
+  expect_identical(holds('gating:min="100"'), which(gml_events[, "FL1-A"] >= 100))
+  expect_identical(holds('gating:max="100"'), which(gml_events[, "FL1-A"] < 100))
+  for (spelling in c(" 100 ", "+100", "1e2", "100.", "100.0e0")) {
+    expect_identical(holds(sprintf('gating:min="%s"', spelling)), holds('gating:min="100"'), info = spelling)
+  }
+
+  # A polygon vertex, and an ellipse's numbers, likewise.
+  polygon <- function(vertices) {
+    gate_file(sprintf('  <gating:PolygonGate gating:id="P1" gating:name="Poly">
+    <gating:dimension><data-type:fcs-dimension data-type:name="FL1-A"/></gating:dimension>
+    <gating:dimension><data-type:fcs-dimension data-type:name="FL2-A"/></gating:dimension>
+%s
+  </gating:PolygonGate>', paste(vertices, collapse = "\n")))
+  }
+  vertex <- function(x, y) {
+    sprintf('    <gating:vertex><gating:coordinate data-type:value="%s"/><gating:coordinate data-type:value="%s"/></gating:vertex>', x, y)
+  }
+  square <- list(vertex(0, 0), vertex(1000, 0), vertex(1000, 1000), vertex(0, 1000), vertex(-10, 500))
+  expect_length(gml_import(polygon(square))$gates[[1]]$vertices, 5L)
+  nan_vertex <- square
+  nan_vertex[[3]] <- vertex("NaN", 1000)
+  expect_error(gml_import(polygon(nan_vertex)),
+               'PolygonGate P1 (Poly): vertex 3\'s x is "NaN", which is not a finite number.', fixed = TRUE)
+  one_coordinate <- square
+  one_coordinate[[2]] <- '    <gating:vertex><gating:coordinate data-type:value="1000"/></gating:vertex>'
+  expect_error(gml_import(polygon(one_coordinate)), "PolygonGate P1 (Poly): vertex 2 has 1 coordinate, not 2.",
+               fixed = TRUE)
+  no_value <- square
+  no_value[[4]] <- '    <gating:vertex><gating:coordinate data-type:value="0"/><gating:coordinate/></gating:vertex>'
+  expect_error(gml_import(polygon(no_value)), "PolygonGate P1 (Poly): vertex 4's y has no value.", fixed = TRUE)
+
+  ellipse <- function(mean_x = "500", entry = "0", d2 = "1") {
+    gate_file(sprintf('  <gating:EllipsoidGate gating:id="E1" gating:name="Oval">
+    <gating:dimension><data-type:fcs-dimension data-type:name="FL1-A"/></gating:dimension>
+    <gating:dimension><data-type:fcs-dimension data-type:name="FL2-A"/></gating:dimension>
+    <gating:mean><gating:coordinate data-type:value="%s"/><gating:coordinate data-type:value="500"/></gating:mean>
+    <gating:covarianceMatrix>
+      <gating:row><gating:entry data-type:value="40000"/><gating:entry data-type:value="%s"/></gating:row>
+      <gating:row><gating:entry data-type:value="0"/><gating:entry data-type:value="40000"/></gating:row>
+    </gating:covarianceMatrix>
+    <gating:distanceSquare data-type:value="%s"/>
+  </gating:EllipsoidGate>', mean_x, entry, d2))
+  }
+  expect_silent(gml_import(ellipse()))
+  expect_error(gml_import(ellipse(mean_x = "0x10")),
+               'EllipsoidGate E1 (Oval): the mean\'s x is "0x10", which is not a finite number.', fixed = TRUE)
+  expect_error(gml_import(ellipse(entry = "NaN")),
+               'EllipsoidGate E1 (Oval): covariance entry 1, 2 is "NaN", which is not a finite number.', fixed = TRUE)
+  expect_error(gml_import(ellipse(d2 = "INF")),
+               'EllipsoidGate E1 (Oval): distanceSquare is "INF", which is not a finite number.', fixed = TRUE)
+})
+
 test_that("GateLab's compensation record of version 4 names its reference by the gates' dimensions", {
   # From gatelabr_scales version 4 the reference is always "dimensions": enabled says whether the
   # gates were drawn on compensated values, read as "FCS" when they were and "uncompensated" when

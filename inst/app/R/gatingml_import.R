@@ -794,6 +794,82 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   !is.null(channel) && length(channel) == 1L && grepl("^time$", trimws(channel), ignore.case = TRUE)
 }
 
+# The numbers a gate writes that GateLabR cannot read as the file means them, described, or
+# character(0). Gating-ML types each of them xs:double, and each is refused unless it is a finite
+# one: a dimension's min or max, as an attribute or a min or max element; a vertex's coordinate; an
+# ellipse's mean coordinate, covariance entry and distanceSquare. A vertex without two coordinates,
+# or a coordinate without a value, is refused too. Each was given a value without a word: a min of
+# "NaN", "abc" or "" was read as no bound, "INF" and "-INF" as no bound on either side, so that
+# min="INF" held every event where FlowKit holds none, "0x10" was read as 16, and a vertex that did
+# not read was dropped from its polygon. A bound the file leaves out is still no bound.
+.gml_unreadable_gate_numbers <- function(gate_node) {
+  labels <- character(0)
+  texts <- character(0)
+  number <- function(label, text) {
+    if (is.null(text)) return(invisible(NULL))
+    labels <<- c(labels, label)
+    texts <<- c(texts, text)
+  }
+  for (dim in .gml_children_local(gate_node, "dimension")) {
+    param <- .gml_first_child_local(dim, "fcs-dimension") %||% .gml_first_child_local(dim, "parameter")
+    channel <- (if (!is.null(param)) .gml_attr_local(param, "name")) %||% "a dimension"
+    for (side in c("min", "max")) {
+      number(paste(side, "on", channel), .gml_attr_local(dim, side))
+      for (el in .gml_children_local(dim, side)) number(paste(side, "on", channel), .gml_attr_local(el, "value"))
+    }
+  }
+  # A polygon GateLab writes can carry thousands of vertices, so theirs are gathered in one pass.
+  vertex_nodes <- .gml_children_local(gate_node, "vertex")
+  vertices <- lapply(seq_along(vertex_nodes), function(i) {
+    coords <- .gml_children_local(vertex_nodes[[i]], "coordinate")
+    axes <- c("x", "y")[seq_len(min(2L, length(coords)))]
+    values <- vapply(seq_along(axes), function(k) {
+      .gml_attr_local(coords[[k]], "value") %||% NA_character_
+    }, character(1))
+    list(
+      labels = sprintf("vertex %d's %s", i, axes[!is.na(values)]),
+      texts = values[!is.na(values)],
+      missing = c(
+        if (length(coords) < 2L) {
+          sprintf("vertex %d has %d coordinate%s, not 2", i, length(coords), if (length(coords) == 1L) "" else "s")
+        },
+        sprintf("vertex %d's %s has no value", i, axes[is.na(values)])
+      )
+    )
+  })
+  labels <- c(labels, unlist(lapply(vertices, `[[`, "labels")))
+  texts <- c(texts, unlist(lapply(vertices, `[[`, "texts")))
+  missing <- as.character(unlist(lapply(vertices, `[[`, "missing")))
+  mean_el <- .gml_first_child_local(gate_node, "mean")
+  if (!is.null(mean_el)) {
+    coords <- .gml_children_local(mean_el, "coordinate")
+    for (k in seq_len(min(2L, length(coords)))) {
+      number(paste0("the mean's ", if (k == 1L) "x" else "y"), .gml_attr_local(coords[[k]], "value"))
+    }
+  }
+  cov_el <- .gml_first_child_local(gate_node, "covarianceMatrix")
+  if (!is.null(cov_el)) {
+    rows <- .gml_children_local(cov_el, "row")
+    for (i in seq_along(rows)) {
+      entries <- .gml_children_local(rows[[i]], "entry")
+      for (j in seq_along(entries)) {
+        number(sprintf("covariance entry %d, %d", i, j), .gml_attr_local(entries[[j]], "value"))
+      }
+    }
+  }
+  d2_el <- .gml_first_child_local(gate_node, "distanceSquare")
+  if (!is.null(d2_el)) number("distanceSquare", .gml_attr_local(d2_el, "value"))
+
+  finite <- logical(length(texts))
+  lexical <- grepl(.GML_XS_DOUBLE_FINITE, texts)
+  if (any(lexical)) finite[lexical] <- is.finite(.gml_num(texts[lexical]))
+  c(
+    if (any(!finite)) paste0(labels[!finite], " is ", encodeString(texts[!finite], quote = '"'),
+                             ", which is not a finite number"),
+    missing
+  )
+}
+
 .gml_parse_dimensions <- function(gate_node) {
   dims <- list()
   for (dim in .gml_children_local(gate_node, "dimension")) {
@@ -2330,6 +2406,15 @@ import_gatingml_from_cytobank <- function(file_path,
         "derived dimension), which GateLabR cannot gate on."
       ))
       next
+    }
+
+    # A number that is not a finite xs:double is refused by name. The gate is still read, so that
+    # the gates that reference it are not reported as missing.
+    unreadable_numbers <- if (identical(loc, "BooleanGate")) character(0) else .gml_unreadable_gate_numbers(el)
+    if (length(unreadable_numbers)) {
+      import_problems <- c(import_problems, paste0(
+        .gml_gate_label(el), ": ", paste(unreadable_numbers, collapse = "; "), "."
+      ))
     }
 
     if (identical(loc, "RectangleGate")) {
