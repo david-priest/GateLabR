@@ -111,6 +111,7 @@
   partition <- .gatelabr_sample_partition(sce, sample_column, include_metadata = FALSE)
   expected_sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
   masks <- list()
+  not_evaluated <- list()
   rows <- lapply(memberships$populations, function(population) {
     if (!is.list(population)) stop("Population memberships: a population is malformed.", call. = FALSE)
     hierarchy_id <- .gatelabr_membership_scalar(population$hierarchyId, "hierarchy id")
@@ -130,7 +131,17 @@
     if (!is.null(masks[[key]])) {
       stop("Population memberships repeat population '", name, "'.", call. = FALSE)
     }
-    masks[[key]] <<- .gatelabr_pack_bits(membership)
+    # An event the population was not evaluated for is kept in a second bitset, with the note
+    # for each such sample, and read back as NA.
+    masks[[key]] <<- .gatelabr_pack_bits(membership %in% TRUE)
+    if (anyNA(membership)) {
+      notes <- attr(membership, "not_evaluated")
+      not_evaluated[[key]] <<- list(
+        events = .gatelabr_pack_bits(is.na(membership)),
+        samples = notes$samples,
+        notes = notes$notes
+      )
+    }
     data.frame(
       hierarchy_id = hierarchy_id,
       hierarchy = hierarchies$hierarchy[match(hierarchy_id, hierarchies$hierarchy_id)],
@@ -139,7 +150,7 @@
       parent_id = parent_id,
       gate_logic = gate_logic,
       gates = .gatelabr_membership_gate_text(population$gates, gate_logic),
-      event_count = sum(membership),
+      event_count = sum(membership, na.rm = TRUE),
       stringsAsFactors = FALSE
     )
   })
@@ -187,7 +198,7 @@
     "depth", "path", "gate_logic", "gates", "event_count"
   )]
 
-  list(
+  record <- list(
     format = "gatelab-sce-memberships",
     # Version 2 carries event_ids; a version 1 record, from before they existed, has none.
     version = 2L,
@@ -203,6 +214,10 @@
     populations = populations,
     masks = masks
   )
+  # Present only when some population was not evaluated for some sample; a record without it has
+  # every population evaluated for every event.
+  if (length(not_evaluated) > 0L) record$not_evaluated <- not_evaluated
+  record
 }
 
 # The stored record, checked against the object it is being read from.
@@ -363,10 +378,39 @@
   as.integer(positions)
 }
 
-# One population's membership for every event of this object, in this object's order.
+# One population's membership for every event of this object, in this object's order: NA for an
+# event of a sample the population was not evaluated for.
 .gatelabr_population_membership <- function(record, key) {
-  saved <- .gatelabr_unpack_bits(record$masks[[key]], as.integer(record$event_count))
+  event_count <- as.integer(record$event_count)
+  saved <- .gatelabr_unpack_bits(record$masks[[key]], event_count)
+  unevaluated <- record$not_evaluated[[key]]
+  if (!is.null(unevaluated)) {
+    saved[.gatelabr_unpack_bits(unevaluated$events, event_count)] <- NA
+  }
   saved[record$positions]
+}
+
+# One warning for the populations read here that are NA for some of this object's events, naming
+# each population, the samples it was not evaluated for, and the note GateLab sent for each.
+# `na_counts` is the number of this object's events each row of `rows` is NA for; `lead` is a first
+# line saying what the NA did to the result.
+.gatelabr_warn_not_evaluated <- function(record, rows, na_counts, lead = NULL) {
+  lines <- character(0)
+  for (index in seq_len(nrow(rows))) {
+    if (na_counts[[index]] == 0L) next
+    key <- paste0(rows$hierarchy_id[[index]], "/", rows$population_id[[index]])
+    unevaluated <- record$not_evaluated[[key]]
+    lines <- c(
+      lines,
+      paste0(
+        "Population '", rows$population[[index]], "' is NA for ", na_counts[[index]],
+        " of this object's events, as it was not evaluated for:"
+      ),
+      paste0("  sample '", unevaluated$samples, "': ", unevaluated$notes)
+    )
+  }
+  if (length(lines) > 0L) warning(paste(c(lead, lines), collapse = "\n"), call. = FALSE)
+  invisible(NULL)
 }
 
 .gatelabr_resolve_hierarchy <- function(record, hierarchy = NULL) {
@@ -408,6 +452,13 @@
 #' \code{NA} (\code{other$gatelab_event_id <- NA_real_}) rather than dropping it from the saved
 #' one, and the saved events read again once the combined object is subset back to them.
 #'
+#' A population can be \emph{not evaluated} for a sample. GateLab reads each sample's memberships
+#' under the tree that sample is gated under, and when that tree has no counterpart for a
+#' population (a copy whose structure was changed), it sends no membership for the sample's
+#' events, with a note naming the file, the population and the file's tree. Those events are
+#' \code{NA} in that population, never \code{FALSE}, and every read that returns such an
+#' \code{NA} warns with the note.
+#'
 #' @param sce A \code{SingleCellExperiment} gated with GateLabR and saved with
 #'   \dQuote{Save to SCE}.
 #' @param hierarchy A hierarchy name or id. \code{NULL} means the hierarchy that was active when
@@ -424,15 +475,19 @@
 #'   before children: \code{population_id}, \code{population}, \code{parent}, \code{depth},
 #'   \code{path} (names from the root joined by \code{" > "}), \code{gates} (the gate names the
 #'   population is defined by, \code{not} marking an excluded gate), and \code{event_count}, the
-#'   number of this object's events the population holds.
+#'   number of this object's events the population holds; events it was not evaluated for are
+#'   not counted.
 #'
 #'   \code{gatelabPopulations}: a logical matrix with one row per SCE column (event) and one
 #'   column per population, named by population; a name shared by two populations of the
-#'   hierarchy is suffixed with the population id.
+#'   hierarchy is suffixed with the population id. An event is \code{NA} in a population that was
+#'   not evaluated for its sample.
 #'
 #'   \code{gatelabLeafPopulation}: a factor with one level per population of the hierarchy in tree
 #'   order plus \code{ungated}, giving each event its deepest population. Where two populations of
-#'   equal depth both hold an event, the one earlier in the tree wins.
+#'   equal depth both hold an event, the one earlier in the tree wins. An event is \code{NA} where
+#'   a population not evaluated for it could hold it (no ancestor is known not to) and would
+#'   outrank the population found.
 #'
 #' @examples
 #' \dontrun{
@@ -470,7 +525,7 @@ gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
   if (!identical(record$positions, seq_len(as.integer(record$event_count)))) {
     rows$event_count <- vapply(
       paste0(rows$hierarchy_id, "/", rows$population_id),
-      function(key) sum(.gatelabr_population_membership(record, key)),
+      function(key) sum(.gatelabr_population_membership(record, key), na.rm = TRUE),
       integer(1),
       USE.NAMES = FALSE
     )
@@ -527,10 +582,14 @@ gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_
   duplicated_names <- labels %in% labels[duplicated(labels)]
   labels[duplicated_names] <- paste0(labels[duplicated_names], " (", rows$population_id[duplicated_names], ")")
   colnames(out) <- labels
+  na_counts <- integer(nrow(rows))
   for (index in seq_len(nrow(rows))) {
     key <- paste0(rows$hierarchy_id[[index]], "/", rows$population_id[[index]])
-    out[, index] <- .gatelabr_population_membership(record, key)
+    membership <- .gatelabr_population_membership(record, key)
+    na_counts[[index]] <- sum(is.na(membership))
+    out[, index] <- membership
   }
+  .gatelabr_warn_not_evaluated(record, rows, na_counts)
   out
 }
 
@@ -552,13 +611,52 @@ gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", al
   }
   leaf <- rep(NA_integer_, event_count)
   best_depth <- rep(0L, event_count)
+  unevaluated <- list()
   for (index in seq_len(nrow(below_root))) {
     key <- paste0(below_root$hierarchy_id[[index]], "/", below_root$population_id[[index]])
-    inside <- .gatelabr_population_membership(record, key)
-    deeper <- inside & below_root$depth[[index]] > best_depth
+    membership <- .gatelabr_population_membership(record, key)
+    if (anyNA(membership)) unevaluated[[as.character(index)]] <- membership
+    deeper <- membership %in% TRUE & below_root$depth[[index]] > best_depth
     leaf[deeper] <- index
     best_depth[deeper] <- below_root$depth[[index]]
   }
   codes <- ifelse(is.na(leaf), length(levels) + 1L, leaf)
-  factor(c(levels, ungated)[codes], levels = c(levels, ungated))
+  out <- factor(c(levels, ungated)[codes], levels = c(levels, ungated))
+  if (length(unevaluated) == 0L) return(out)
+
+  # A population that is NA for an event could hold it, unless an ancestor is known not to, as a
+  # population holds only events of its parent. Where it could, and would outrank the population
+  # found (deeper, or as deep and earlier in the tree), the event's deepest population is unknown.
+  unknown <- logical(event_count)
+  na_counts <- integer(nrow(below_root))
+  rank <- ifelse(is.na(leaf), Inf, leaf)
+  for (name in names(unevaluated)) {
+    index <- as.integer(name)
+    could_hold <- is.na(unevaluated[[name]])
+    parent_id <- below_root$parent_id[[index]]
+    repeat {
+      parent <- match(parent_id, rows$population_id)
+      if (is.na(parent)) break
+      parent_membership <- .gatelabr_population_membership(
+        record,
+        paste0(rows$hierarchy_id[[parent]], "/", rows$population_id[[parent]])
+      )
+      could_hold <- could_hold & !(parent_membership %in% FALSE)
+      parent_id <- rows$parent_id[[parent]]
+    }
+    depth <- below_root$depth[[index]]
+    outranks <- depth > best_depth | (depth == best_depth & index < rank)
+    if (any(could_hold & outranks)) {
+      unknown <- unknown | (could_hold & outranks)
+      na_counts[[index]] <- sum(is.na(unevaluated[[name]]))
+    }
+  }
+  .gatelabr_warn_not_evaluated(
+    record,
+    below_root,
+    na_counts,
+    lead = paste0("The deepest population of ", sum(unknown), " of this object's events is NA.")
+  )
+  out[unknown] <- NA
+  out
 }

@@ -1386,6 +1386,7 @@
     )
   }
   membership <- logical(sum(lengths(partition$event_indices)))
+  unevaluated <- list(samples = character(0), events = integer(0), notes = character(0))
   for (sample_index in seq_along(expected_sample_ids)) {
     sample_id <- expected_sample_ids[[sample_index]]
     mask <- sample_masks[[match(sample_id, sample_ids)]]
@@ -1399,13 +1400,62 @@
         call. = FALSE
       )
     }
+    label <- partition$samples[[sample_index]]$label
+    note <- .gatelabr_not_evaluated_note(mask, population_name, label)
+    if (!is.null(note)) {
+      membership[partition$event_indices[[sample_index]]] <- NA
+      unevaluated$samples <- c(unevaluated$samples, label)
+      unevaluated$events <- c(unevaluated$events, expected_events)
+      unevaluated$notes <- c(unevaluated$notes, note)
+      next
+    }
     membership[partition$event_indices[[sample_index]]] <-
       .gatelabr_decode_membership_bits(
         mask$membershipBitsBase64,
         expected_events
       )
   }
+  if (length(unevaluated$samples) > 0L) {
+    warning(
+      "Population '", population_name, "' was not evaluated for ",
+      length(unevaluated$samples),
+      if (length(unevaluated$samples) == 1L) " sample" else " samples",
+      ", so its events there are NA, not outside:\n",
+      paste0(
+        "  sample '", unevaluated$samples, "' (", unevaluated$events,
+        ifelse(unevaluated$events == 1L, " event", " events"), "): ", unevaluated$notes,
+        collapse = "\n"
+      ),
+      call. = FALSE
+    )
+    # The notes travel with the membership so a save can keep them for the readers to repeat.
+    attr(membership, "not_evaluated") <- unevaluated[c("samples", "notes")]
+  }
   membership
+}
+
+# A sample's note that a population was not evaluated for it, or NULL when it was. GateLab sends
+# a population that the tree a file is gated under has no counterpart for (a copy whose structure
+# was changed) with no bits and this note. Its events there are unknown, not outside, so they
+# become NA; FALSE would read in R as a finding that they are outside.
+.gatelabr_not_evaluated_note <- function(mask, population_name, sample_label) {
+  note <- mask$notEvaluated
+  if (is.null(note)) return(NULL)
+  if (!is.character(note) || length(note) != 1L || is.na(note) || !nzchar(trimws(note))) {
+    stop(
+      "Population '", population_name, "' has a malformed not-evaluated note for sample '",
+      sample_label, "'.",
+      call. = FALSE
+    )
+  }
+  if (!identical(mask$membershipBitsBase64, "")) {
+    stop(
+      "Population '", population_name, "' is marked not evaluated for sample '",
+      sample_label, "' but carries membership bits.",
+      call. = FALSE
+    )
+  }
+  note
 }
 
 .gatelabr_write_host_coldata <- function(
@@ -1490,6 +1540,7 @@
 
   cd <- SummarizedExperiment::colData(sce)
   for (entry in prepared) {
+    # An event of a sample the population was not evaluated for stays NA, under neither label.
     cd[[entry$column_name]] <- factor(
       entry$membership,
       levels = c(TRUE, FALSE),
@@ -1503,7 +1554,7 @@
       list(
         columnName = entry$column_name,
         populationId = entry$population_id,
-        memberCount = sum(entry$membership)
+        memberCount = sum(entry$membership, na.rm = TRUE)
       )
     }))
   )

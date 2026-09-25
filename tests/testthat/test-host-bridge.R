@@ -666,6 +666,53 @@ test_that("packed browser population masks write back in original SCE event orde
   )
 })
 
+test_that("a population not evaluated for a sample writes NA for its events, not the outside label", {
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 2L,
+    reason = "explicit",
+    workspace_json = canonical_host_workspace_json()
+  )
+  column <- list(
+    populationId = "child",
+    populationName = "CD3+",
+    columnName = "CD3_positive",
+    inLabel = "in",
+    outLabel = "out",
+    sampleMasks = list(
+      list(
+        sampleId = "sample-0",
+        eventCount = 2L,
+        membershipBitsBase64 = base64enc::base64encode(as.raw(1L))
+      ),
+      list(
+        sampleId = "sample-1",
+        eventCount = 1L,
+        membershipBitsBase64 = "",
+        notEvaluated = paste(
+          "'CD3+' of 'Main' was not evaluated for Donor B:",
+          "the tree it is gated under, 'Main copy', has no such population."
+        )
+      )
+    )
+  )
+  expect_warning(
+    written <- GateLabR:::.gatelabr_write_host_coldata(
+      stored$sce,
+      dataset_id = "test-sce",
+      workspace_revision = 1L,
+      columns = list(column)
+    ),
+    "Population 'CD3\\+' was not evaluated for 1 sample.*sample 'Donor B' \\(1 event\\).*has no such population"
+  )
+  written_column <- SummarizedExperiment::colData(written$sce)$CD3_positive
+  expect_identical(as.character(written_column), c("in", "out", NA))
+  expect_identical(levels(written_column), c("in", "out"))
+  expect_identical(written$result$columns[[1]]$memberCount, 1L)
+})
+
 test_that("sample metadata keeps colData names exactly as GateLab writes them", {
   stored <- GateLabR:::.gatelabr_store_host_workspace(
     make_host_bridge_sce(),
