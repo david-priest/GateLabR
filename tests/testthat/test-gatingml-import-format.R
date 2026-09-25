@@ -1251,3 +1251,18 @@ test_that("a GateLab format mark with a Time unit or gain convention GateLabR do
     expect_error(gml_import(bad), edit[[3]], fixed = TRUE, info = edit[[2]])
   }
 })
+
+test_that("a polygon of one vertex given three times holds nothing, not the event lying on it", {
+  # GateLab writes a gate with nothing within its axes' clamps but a point as that point three
+  # times, which no reader holds anything in. GateLabR's polygon test counts an event on a vertex.
+  first <- gml_events[1, c("FL1-A", "FL2-A")]
+  vertex <- sprintf('<gating:vertex><gating:coordinate data-type:value="%s"/><gating:coordinate data-type:value="%s"/></gating:vertex>',
+                    first[[1]], first[[2]])
+  point <- gml_write(gml_doc(paste0(
+    '  <gating:PolygonGate gating:id="Point" gating:name="Point">',
+    '<gating:dimension><data-type:fcs-dimension data-type:name="FL1-A"/></gating:dimension>',
+    '<gating:dimension><data-type:fcs-dimension data-type:name="FL2-A"/></gating:dimension>',
+    vertex, vertex, vertex, "</gating:PolygonGate>"
+  )))
+  expect_identical(gml_membership(gml_import(point))[["/Point"]], integer(0))
+})

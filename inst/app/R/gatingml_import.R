@@ -1590,6 +1590,13 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   xs <- vapply(vertices, function(v) as.numeric(v[1]), numeric(1))
   ys <- vapply(vertices, function(v) as.numeric(v[2]), numeric(1))
   n <- length(xs)
+  # A polygon of one point, given three times, holds nothing: GateLab writes a gate with nothing
+  # inside its axes' clamps but a point that way, and no reader counts an event in it. GateLabR's
+  # polygon test counts an event lying on a vertex, so it is kept at the largest double, which no
+  # event reaches.
+  if (n > 0L && all(xs == xs[[1]]) && all(ys == ys[[1]])) {
+    return(list(vertices = rep(list(rep(.Machine$double.xmax, 2L)), 3L), problem = NULL))
+  }
   # The declared vertices are mapped before any edge is followed, so a polygon with a vertex that
   # cannot be mapped is refused for that vertex, not for the slanted edges that end at it, which
   # .gml_edge_params cannot follow either.
