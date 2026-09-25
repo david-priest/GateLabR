@@ -574,6 +574,41 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   out
 }
 
+# Why a logicle or fasinh transformation (.gml_parse_transforms) has no map GateLabR can take its
+# coordinates through, or NULL when it has one. .gml_declared_map reads such a logicle as the
+# identity, since flowCore refuses to build it, and such a fasinh as the identity or, when M + A is
+# not positive, as a map that is constant or decreasing, so a gate on it selected other events than
+# the file defines.
+#   logicle: T > 0, M > 0, 0 <= W <= M / 2 and -W <= A <= M - 2W (Gating-ML 2.0 section 6.4.3, and
+#     what flowCore's logicle accepts; it evaluates a negative A down to -W exactly).
+#   fasinh: T > 0, M > 0 and M + A > 0, which make its inverse, T / sinh(M ln 10) sinh(y (M + A)
+#     ln 10 - A ln 10), increasing.
+.gml_transform_problem <- function(tr_def) {
+  if (!is.list(tr_def)) return(NULL)
+  t_v <- tr_def$T
+  m_v <- tr_def$M
+  a_v <- tr_def$A
+  if (identical(tr_def$type, "logicle")) {
+    w_v <- tr_def$W
+    why <- if (!(t_v > 0)) "T is not positive"
+      else if (!(m_v > 0)) "M is not positive"
+      else if (!(w_v >= 0)) "W is negative"
+      else if (w_v > m_v / 2) "W is greater than M / 2"
+      else if (a_v < -w_v) "A is less than -W"
+      else if (a_v > m_v - 2 * w_v) "A is greater than M - 2W"
+    if (is.null(why)) return(NULL)
+    return(paste0("a logicle with T = ", t_v, ", W = ", w_v, ", M = ", m_v, " and A = ", a_v, ", whose ", why))
+  }
+  if (identical(tr_def$type, "fasinh")) {
+    why <- if (!(t_v > 0)) "T is not positive"
+      else if (!(m_v > 0)) "M is not positive"
+      else if (!(m_v + a_v > 0)) "M + A is not positive"
+    if (is.null(why)) return(NULL)
+    return(paste0("an arcsinh (fasinh) with T = ", t_v, ", M = ", m_v, " and A = ", a_v, ", whose ", why))
+  }
+  NULL
+}
+
 .gml_parse_dimensions <- function(gate_node) {
   dims <- list()
   for (dim in .gml_children_local(gate_node, "dimension")) {
@@ -1986,6 +2021,14 @@ import_gatingml_from_cytobank <- function(file_path,
           import_problems,
           paste0(g$gml_id, " references unsupported or missing transformation ", ref, ".")
         )
+      } else if (!is.null(ref) && nzchar(ref)) {
+        why <- .gml_transform_problem(transforms_map[[ref]])
+        if (!is.null(why)) {
+          import_problems <- c(import_problems, paste0(
+            "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") is on transformation ", ref, ", ",
+            why, ", so GateLabR cannot take the gate's coordinates to the values it gates on."
+          ))
+        }
       }
     }
     if (!is.null(g$parent_id) && is.null(raw_gates[[g$parent_id]])) {

@@ -583,6 +583,62 @@ test_that("an arcsinh with A other than 0 is inverted as Gating-ML defines it", 
   expect_equal(inverse(forward(c(-250, 0, 1000, 150000))), c(-250, 0, 1000, 150000))
 })
 
+test_that("a logicle or arcsinh whose parameters give no inverse is refused by name", {
+  # Such a logicle, which flowCore refuses to build, was read as the identity, and such an arcsinh
+  # as the identity or, with M + A not positive, as a constant or decreasing map: the range below
+  # was compared with raw values, or turned into an empty one.
+  range_on <- function(transform) {
+    gml_write(sprintf('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <transforms:transformation transforms:id="Tr">
+    %s
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="R1" gating:name="FL1_range">
+    <gating:dimension gating:transformation-ref="Tr" gating:min="0.2" gating:max="0.9">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>', transform))
+  }
+  logicle <- function(t, w, m, a) {
+    sprintf('<transforms:logicle transforms:T="%s" transforms:W="%s" transforms:M="%s" transforms:A="%s"/>', t, w, m, a)
+  }
+  fasinh <- function(t, m, a) {
+    sprintf('<transforms:fasinh transforms:T="%s" transforms:M="%s" transforms:A="%s"/>', t, m, a)
+  }
+  refused <- list(
+    list(logicle(0, 0.5, 4.5, 0), "a logicle with T = 0, W = 0.5, M = 4.5 and A = 0, whose T is not positive"),
+    list(logicle(262144, 0.5, 0, 0), "a logicle with T = 262144, W = 0.5, M = 0 and A = 0, whose M is not positive"),
+    list(logicle(262144, -0.1, 4.5, 0), "a logicle with T = 262144, W = -0.1, M = 4.5 and A = 0, whose W is negative"),
+    list(logicle(262144, 3, 4.5, 0), "a logicle with T = 262144, W = 3, M = 4.5 and A = 0, whose W is greater than M / 2"),
+    list(logicle(262144, 0.5, 4.5, -1), "a logicle with T = 262144, W = 0.5, M = 4.5 and A = -1, whose A is less than -W"),
+    list(logicle(262144, 0.5, 4.5, 4), "a logicle with T = 262144, W = 0.5, M = 4.5 and A = 4, whose A is greater than M - 2W"),
+    list(fasinh(-1, 4.5, 0), "an arcsinh (fasinh) with T = -1, M = 4.5 and A = 0, whose T is not positive"),
+    list(fasinh(262144, 0, 0), "an arcsinh (fasinh) with T = 262144, M = 0 and A = 0, whose M is not positive"),
+    list(fasinh(262144, 1, -1), "an arcsinh (fasinh) with T = 262144, M = 1 and A = -1, whose M + A is not positive"),
+    list(fasinh(262144, 1, -2), "an arcsinh (fasinh) with T = 262144, M = 1 and A = -2, whose M + A is not positive")
+  )
+  for (case in refused) {
+    expect_error(gml_import(range_on(case[[1]])),
+                 paste0('Gate "FL1_range" (R1) is on transformation Tr, ', case[[2]], ", so GateLabR cannot"),
+                 fixed = TRUE, info = case[[1]])
+  }
+  # The limits are the parameters' own: W = M / 2, A = -W, A = M - 2W and a negative arcsinh A with
+  # M + A positive give an inverse, and read.
+  lower <- function(parsed) parsed$gates[[1]]$vertices[[1]][1]
+  for (p in list(c(262144, 2.25, 4.5, 0), c(262144, 0.5, 4.5, -0.5), c(262144, 0.5, 4.5, -0.25),
+                 c(262144, 0.5, 4.5, 3.5))) {
+    lg <- flowCore::logicleTransform("lg", w = p[2], t = p[1], m = p[3], a = p[4])
+    inverse <- flowCore::inverseLogicleTransform(lg, transformationId = "inv")
+    expect_equal(lower(gml_import(range_on(logicle(p[1], p[2], p[3], p[4])))), as.numeric(inverse(0.2 * p[3])),
+                 info = paste(p, collapse = " "))
+  }
+  forward <- function(x) (asinh(x * sinh(2 * log(10)) / 1000) - 0.5 * log(10)) / (1.5 * log(10))
+  expect_equal(forward(lower(gml_import(range_on(fasinh(1000, 2, -0.5))))), 0.2)
+})
+
 test_that("flin, Gating-ML's linear scale, is read", {
   # flin(x) = (x + A) / (T + A) is affine, so a polygon on it has the same straight edges in raw
   # values and needs nothing more than its vertices inverted.
