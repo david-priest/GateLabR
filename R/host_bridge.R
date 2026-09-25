@@ -103,7 +103,9 @@
 }
 
 .gatelabr_first_rowdata_field <- function(sce, candidates) {
-  rd <- as.data.frame(SummarizedExperiment::rowData(sce))
+  # optional = TRUE keeps each column's name as it is. By default the conversion makes names
+  # syntactic, so "$pnn" and "$pns" became "X.pnn" and "X.pns" and were never found.
+  rd <- as.data.frame(SummarizedExperiment::rowData(sce), optional = TRUE)
   if (ncol(rd) == 0L) return(NULL)
   lowered <- tolower(colnames(rd))
   for (candidate in candidates) {

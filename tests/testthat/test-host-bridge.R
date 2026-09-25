@@ -224,6 +224,29 @@ test_that("React host corrects stale auto modality but respects explicit choices
   expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "flow")
 })
 
+test_that("rowData columns named $pnn and $pns reach the channel descriptors", {
+  # FCS keyword names are a common choice of rowData column. as.data.frame() made them syntactic,
+  # "X.pnn" and "X.pns", so neither was found: the channels went to the app without their $PnN and
+  # $PnS, and instrument detection lost the $PnN evidence.
+  sce <- make_host_instrument_sce(c("Y89Di", "Nd142Di", "Eu151Di"))
+  rd <- SummarizedExperiment::rowData(sce)
+  rd$gatelabr_pnn <- NULL
+  rd[["$pnn"]] <- c("Y89Di", "Nd142Di", "Eu151Di")
+  rd[["$pns"]] <- c("CD45", "CD3", "CD19")
+  SummarizedExperiment::rowData(sce) <- rd
+  expect_identical(colnames(SummarizedExperiment::rowData(sce)), c("$pnn", "$pns"))
+
+  expect_identical(
+    GateLabR:::.gatelabr_first_rowdata_field(sce, "$pnn"),
+    c("Y89Di", "Nd142Di", "Eu151Di")
+  )
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce)
+  expect_identical(vapply(descriptor$channels, `[[`, character(1), "pnn"), c("Y89Di", "Nd142Di", "Eu151Di"))
+  expect_identical(vapply(descriptor$channels, `[[`, character(1), "pns"), c("CD45", "CD3", "CD19"))
+  # The row names ("Marker 1" to "Marker 3") say nothing of the instrument; the $PnN do.
+  expect_identical(descriptor$instrument, "cytof")
+})
+
 test_that("React host recognizes conventional flow channel identities", {
   sce <- make_host_instrument_sce(c("FSC-A", "SSC-A", "BV421-A"))
 
