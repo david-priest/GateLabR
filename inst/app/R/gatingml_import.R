@@ -36,15 +36,44 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   .gml_attr_local(node, "use-as-complement") %||% .gml_attr_local(node, "complement")
 }
 
-# Whether a gateReference or a PopulationGatePair excludes its gate. The value is an xs:boolean, so
-# "true" or "1" with any surrounding space excludes and "false" or "0" includes (read without
-# regard to case); NA when the value is none of these (.gml_positive_and_logic_problems refuses
-# the file for it).
-.gml_is_complement <- function(node) {
-  value <- .gml_complement_value(node)
-  if (is.null(value)) return(FALSE)
+# A complement value read as an xs:boolean: "true" or "1" with any surrounding space is TRUE and
+# "false" or "0" is FALSE (read without regard to case); NA when it is none of these.
+.gml_xs_boolean <- function(value) {
   value <- tolower(trimws(value))
   if (value %in% c("true", "1")) TRUE else if (value %in% c("false", "0")) FALSE else NA
+}
+
+# Why GateLabR cannot tell whether a gateReference or a PopulationGatePair excludes its gate, or
+# NULL when it can: a value that is not an xs:boolean, or both spellings with values that disagree.
+# Read by use-as-complement alone, a pair written use-as-complement="false" complement="true" was
+# an inclusion, where the older spelling says the population excludes the gate.
+.gml_complement_problem <- function(node) {
+  use_as <- .gml_attr_local(node, "use-as-complement")
+  older <- .gml_attr_local(node, "complement")
+  for (value in c(use_as, older)) {
+    if (is.na(.gml_xs_boolean(value))) {
+      return(paste0(
+        "the complement value ", encodeString(value, quote = '"'),
+        ", which is not an xs:boolean (true, false, 1 or 0)"
+      ))
+    }
+  }
+  if (!is.null(use_as) && !is.null(older) && .gml_xs_boolean(use_as) != .gml_xs_boolean(older)) {
+    return(paste0(
+      "use-as-complement=", encodeString(use_as, quote = '"'), " and complement=",
+      encodeString(older, quote = '"'), ", which disagree"
+    ))
+  }
+  NULL
+}
+
+# Whether a gateReference or a PopulationGatePair excludes its gate; NA when its complement value
+# cannot be read (.gml_complement_problem says why, and .gml_positive_and_logic_problems refuses
+# the file for it).
+.gml_is_complement <- function(node) {
+  if (!is.null(.gml_complement_problem(node))) return(NA)
+  value <- .gml_complement_value(node)
+  if (is.null(value)) FALSE else .gml_xs_boolean(value)
 }
 
 # Detect who wrote this Gating-ML so the importer can match channels + advise
@@ -1367,7 +1396,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       rid <- .gml_attr_local(r, "ref")
       if (is.null(rid) || !nzchar(rid)) next
       refs[[length(refs) + 1L]] <- list(gate_id = rid, complement = .gml_is_complement(r),
-                                        complement_value = .gml_complement_value(r))
+                                        complement_problem = .gml_complement_problem(r))
     }
 
     cb_ids <- .gml_parse_cytobank_ids(node)
@@ -1479,12 +1508,12 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     logic_seen[[id]] <- logic
     logic
   }
-  # A complement value that is not an xs:boolean ("yes", or empty) says neither that the gate is
-  # excluded nor that it is included.
-  add_unreadable_complement <- function(name, value) {
+  # A complement value that is not an xs:boolean ("yes", or empty), or use-as-complement and
+  # complement with values that disagree, says neither that the gate is excluded nor that it is
+  # included (.gml_complement_problem).
+  add_unreadable_complement <- function(name, problem) {
     problems <<- c(problems, paste0(
-      "Population ", .gml_quote_name(name), " gives its gate the complement value ",
-      encodeString(value, quote = '"'), ", which is not an xs:boolean (true, false, 1 or 0), so ",
+      "Population ", .gml_quote_name(name), " gives its gate ", problem, ", so ",
       "GateLabR cannot tell whether the population excludes that gate."
     ))
   }
@@ -1495,7 +1524,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     if (isTRUE(gate$operand_helper)) next
     pop_names <- names_by_gate[[gate$gml_id]] %||% gate$name
     for (ref in gate$refs %||% list()) {
-      if (is.na(ref$complement)) for (name in pop_names) add_unreadable_complement(name, ref$complement_value)
+      if (is.na(ref$complement)) for (name in pop_names) add_unreadable_complement(name, ref$complement_problem)
     }
     if (identical(gate$operation, "or")) {
       for (name in pop_names) add_problem(name, "OR")
@@ -1524,7 +1553,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   for (pair in pairs) {
     complement <- .gml_is_complement(pair)
     if (is.na(complement)) {
-      add_unreadable_complement(.gml_pair_population_name(pair, raw_gates), .gml_complement_value(pair))
+      add_unreadable_complement(.gml_pair_population_name(pair, raw_gates), .gml_complement_problem(pair))
     } else if (complement) {
       add_problem(.gml_pair_population_name(pair, raw_gates), "NOT")
     }

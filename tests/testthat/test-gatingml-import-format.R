@@ -723,6 +723,38 @@ test_that("a complement value that is not an xs:boolean is refused, naming the p
   }
 })
 
+test_that("use-as-complement and complement that disagree are refused, naming the population", {
+  # use-as-complement was read and complement ignored, so a PopulationGatePair written
+  # use-as-complement="false" complement="true" was read as an inclusion, which the older spelling
+  # says is an exclusion.
+  with_pair <- function(attrs) {
+    gml_variant("tree-standard-0.8.3.xml", function(lines) {
+      sub('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU.">',
+          sprintf('<gating:PopulationGatePair gating:gate-ref="Gate_180000002_RkwxX2dhdGU." %s>', attrs),
+          lines, fixed = TRUE)
+    })
+  }
+  for (values in list(c("false", "true"), c("true", "false"), c("0", " 1"))) {
+    pair <- with_pair(sprintf('gating:use-as-complement="%s" gating:complement="%s"', values[[1]], values[[2]]))
+    expect_error(gml_import(pair), sprintf(
+      'Population "FL1_positive" gives its gate use-as-complement="%s" and complement="%s", which disagree',
+      values[[1]], values[[2]]
+    ), fixed = TRUE, info = paste(values, collapse = " / "))
+  }
+  # On a gateReference too.
+  reference <- gml_variant("flowkit-boolean.xml", function(lines) {
+    hit <- grep('<gating:gateReference gating:ref="FL3_pos"/>', lines, fixed = TRUE)[1]
+    lines[hit] <- '<gating:gateReference gating:ref="FL3_pos" gating:use-as-complement="false" gating:complement="true"/>'
+    lines
+  })
+  expect_error(gml_import(reference), paste0(
+    'Population "Both" gives its gate use-as-complement="false" and complement="true", which disagree'
+  ), fixed = TRUE)
+  # Two spellings that agree read as their one value.
+  agree <- with_pair('gating:use-as-complement="false" gating:complement="0"')
+  gml_expect_membership(gml_membership(gml_import(agree)), gml_expected("-0.8.3")$populations$tree)
+})
+
 test_that("mass cytometry gates in raw values, or under another arcsinh, are converted to the data's arcsinh", {
   # GateLabR gates mass cytometry on arcsinh(x / cofactor), Time and the event geometry raw. A
   # dimension with no transformation is raw values, and one under an arcsinh of another cofactor
