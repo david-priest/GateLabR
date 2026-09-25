@@ -1266,9 +1266,11 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # first: removing the punctuation first removed every upper-case letter too, so FL1-H, FL1-A and
 # BL1-A all became "1", and PE-A and APC both "". A letter or digit is one in any script: keeping
 # a-z and 0-9 alone removed every other letter, so TCR gamma-delta became "tcr", as TCR alpha-beta
-# did, and a gate on one was read on the other.
+# did, and a gate on one was read on the other. A sign is kept too: every "+", and every "-" but one
+# between two letters or digits, which is a separator, as in FITC-A. With them removed, a gate on
+# CD3- or on CD3, over data with CD3+ and neither of them, was read on CD3+.
 .gml_punctuation_insensitive <- function(ch) {
-  gsub("[^\\p{L}\\p{N}]", "", tolower(ch), perl = TRUE)
+  gsub("[^\\p{L}\\p{N}+-]|(?<=[\\p{L}\\p{N}])-(?=[\\p{L}\\p{N}])", "", tolower(ch), perl = TRUE)
 }
 
 # A $PnN map guessed from the session channels' names, which the Shiny app adds after the maps the

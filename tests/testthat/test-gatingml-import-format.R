@@ -1368,6 +1368,46 @@ test_that("a name that differs from a channel only in letters outside ASCII is r
   expect_identical(channel_of("fl3_a"), loaded[["FL3-A"]])
 })
 
+test_that("a name that differs from a channel only in a sign is refused, not read on it", {
+  # Case and punctuation were ignored by removing every character but letters and digits, and with
+  # them "+" and "-": over data with CD3+ and no CD3-, a gate on CD3- was read on CD3+ without a
+  # word, as was one on CD3, on flow and mass cytometry data and through a $PnN, and a gain was
+  # applied to the wrong channel the same way.
+  loaded <- c(`FL1-A` = "CD3+", `FL2-A` = "CD8-", `FL3-A` = "FITC-A", Time = "Time")
+  absent <- c("CD3-", "CD3", "CD8+", "CD8")
+  maps <- list(session = stats::setNames(as.list(unname(loaded)), unname(loaded)), pnn = as.list(loaded))
+  for (map in names(maps)) for (instrument in c("flow", "cytof")) for (name in absent) {
+    expect_error(
+      import_gatingml_from_cytobank(gml_range_on(name), unname(loaded), maps[[map]], instrument = instrument),
+      sprintf('references channel(s) not present in the loaded data: "%s".', name),
+      fixed = TRUE, info = paste(map, instrument, name)
+    )
+  }
+  expect_error(
+    import_gatingml_from_cytobank(gml_range_on("FITC-A"), unname(loaded), maps$pnn, instrument = "flow",
+                                  gains = c(`CD3-` = 2)),
+    'gains names a channel the loaded data do not have: "CD3-".',
+    fixed = TRUE
+  )
+
+  # A "+" is kept, and a "-" unless it stands between two letters or digits, where it is a separator
+  # as in FITC-A: every other spelling that differs from a channel in case and punctuation alone
+  # still finds it, and a metal still finds its channel on mass cytometry data.
+  channel_of <- function(name, channels = unname(loaded), map = maps$pnn, instrument = "flow") {
+    parsed <- import_gatingml_from_cytobank(gml_range_on(name), channels, map, instrument = instrument)
+    parsed$gates[[1]]$x_channel
+  }
+  for (name in c("cd3+", "CD3 +", "cd3_+")) expect_identical(channel_of(name), "CD3+", info = name)
+  for (name in c("cd8-", "CD8 -", "CD8_-")) expect_identical(channel_of(name), "CD8-", info = name)
+  for (map in maps) for (name in c("FITC_A", "fitc-a", "FITC A", "fitca")) {
+    expect_identical(channel_of(name, map = map), "FITC-A", info = name)
+  }
+  expect_identical(channel_of("fl3_a"), "FITC-A")
+  mass <- c("Time", "CD3+ (Y89Di)", "141Pr")
+  expect_identical(channel_of("Y89Di", mass, NULL, "cytof"), "CD3+ (Y89Di)")
+  expect_identical(channel_of("Pr141Di", mass, NULL, "cytof"), "141Pr")
+})
+
 test_that("on mass cytometry data a name reads on another channel only through a metal both spell", {
   # The last step reduced any name to its first letters and number, so on mass cytometry data a
   # gate on CD11c, which the data lack, was read on CD11b and one on CD62L on CD62P; through the
