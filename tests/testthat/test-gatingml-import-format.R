@@ -1305,6 +1305,48 @@ test_that("a name that differs from a channel only in letters outside ASCII is r
   expect_identical(channel_of("fl3_a"), loaded[["FL3-A"]])
 })
 
+test_that("on mass cytometry data a name reads on another channel only through a metal both spell", {
+  # The last step reduced any name to its first letters and number, so on mass cytometry data a
+  # gate on CD11c, which the data lack, was read on CD11b and one on CD62L on CD62P; through the
+  # $PnN map the Shiny app guesses from the channel names by the same reduction, CD45RA and CD45
+  # were read on CD45RO. Nothing was said. A metal is an element's symbol in its own case with one
+  # of that element's masses, as in Sm149Di, 149Sm or "CD4 (Nd145Di)"; CD45 is not Cd45.
+  pnn <- c("Time", "Sm149Di", "Nd143Di", "Nd150Di", "Ir191Di")
+  loaded <- c("Time", "CD11b", "CD45RO", "CD62P", "DNA1")
+  file_map <- stats::setNames(as.list(loaded), pnn)
+  app_map <- function(channels, map = list()) {
+    merged <- c(map, .gml_guess_pnn_map_from_channels(channels))
+    merged[!duplicated(names(merged))]
+  }
+  channel_of <- function(name, channels, map) {
+    parsed <- import_gatingml_from_cytobank(gml_range_on(name), channels, map, instrument = "cytof",
+                                            cytof_cofactor = 5)
+    parsed$gates[[1]]$x_channel
+  }
+  for (map in list(file = file_map, app = app_map(loaded, file_map))) {
+    for (name in c("CD11c", "CD62L", "CD45RA", "CD45")) {
+      expect_error(channel_of(name, loaded, map),
+                   sprintf('references channel(s) not present in the loaded data: "%s".', name),
+                   fixed = TRUE, info = name)
+    }
+  }
+  expect_length(.gml_guess_pnn_map_from_channels(c(loaded, "B220", "S100A8")), 0L)
+
+  # A metal still finds its channel, through a $PnN or in a channel's own name, either way round.
+  expect_identical(channel_of("149Sm", loaded, file_map), "CD11b")
+  expect_identical(channel_of("Nd143", loaded, app_map(loaded, file_map)), "CD45RO")
+  named <- c("Time", "CD4 (Nd145Di)", "CD8 (Nd146Di)")
+  expect_identical(channel_of("Nd145Di", named, NULL), "CD4 (Nd145Di)")
+  expect_identical(channel_of("146Nd", named, app_map(named)), "CD8 (Nd146Di)")
+  expect_identical(.gml_guess_pnn_map_from_channels(named)[["Nd145Di"]], "CD4 (Nd145Di)")
+
+  # A metal two channels spell is no channel's: the guess had kept the last channel for it.
+  twice <- c("Time", "CD4 (Nd145Di)", "CD8 (Nd145Di)")
+  expect_false(any(c("Nd145Di", "Nd145") %in% names(.gml_guess_pnn_map_from_channels(twice))))
+  expect_error(channel_of("Nd145Di", twice, app_map(twice)),
+               'references channel(s) not present in the loaded data: "Nd145Di".', fixed = TRUE)
+})
+
 test_that("Gating-ML's flog is read, with an event at zero only in a range with no lower bound", {
   # flog(x) = log10(x / T) / M + 1 is -Inf at zero and undefined below; FlowKit and flowCore do not
   # test an absent bound, so a range open below holds an event at zero and none below it.

@@ -1195,39 +1195,64 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   none
 }
 
-# A mass cytometry channel name reduced to its metal, e.g. "CD3 (Y89Di)" -> "y89" and "140Ce_Beads"
-# -> "ce140"; a name with no metal in it, case-folded with its punctuation removed.
-.gml_normalize_channel <- function(ch) {
-  s <- trimws(ch)
-  s <- gsub("[()]", "", s)
-  s <- gsub("Di", "", s, ignore.case = TRUE)
+# The elements whose natural isotopes reach a mass cytometer's range (75 to 209), each with the
+# masses of its lightest and heaviest natural isotope.
+.GML_METAL_MASSES <- list(
+  Ge = c(70, 76), As = c(75, 75), Se = c(74, 82), Br = c(79, 81), Kr = c(78, 86), Rb = c(85, 87),
+  Sr = c(84, 88), Y = c(89, 89), Zr = c(90, 96), Nb = c(93, 93), Mo = c(92, 100), Ru = c(96, 104),
+  Rh = c(103, 103), Pd = c(102, 110), Ag = c(107, 109), Cd = c(106, 116), In = c(113, 115),
+  Sn = c(112, 124), Sb = c(121, 123), Te = c(120, 130), I = c(127, 127), Xe = c(124, 136),
+  Cs = c(133, 133), Ba = c(130, 138), La = c(138, 139), Ce = c(136, 142), Pr = c(141, 141),
+  Nd = c(142, 150), Sm = c(144, 154), Eu = c(151, 153), Gd = c(152, 160), Tb = c(159, 159),
+  Dy = c(156, 164), Ho = c(165, 165), Er = c(162, 170), Tm = c(169, 169), Yb = c(168, 176),
+  Lu = c(175, 176), Hf = c(174, 180), Ta = c(180, 181), W = c(180, 186), Re = c(185, 187),
+  Os = c(184, 192), Ir = c(191, 193), Pt = c(190, 198), Au = c(197, 197), Hg = c(196, 204),
+  Tl = c(203, 205), Pb = c(204, 208), Bi = c(209, 209)
+)
 
-  # Prefer isotope-like tokens found anywhere in the label, e.g.
-  # "CD3 (Y89Di)" -> y89, "140Ce_Beads" -> ce140.
-  all_hits <- unlist(regmatches(s, gregexpr("[A-Za-z]{1,3}[0-9]{2,3}|[0-9]{2,3}[A-Za-z]{1,3}", s, perl = TRUE)))
-  if (length(all_hits) > 0) {
-    for (tok in all_hits) {
-      if (grepl("^[A-Za-z]{1,3}[0-9]{2,3}$", tok, perl = TRUE)) {
-        parts <- regmatches(tok, regexec("^([A-Za-z]{1,3})([0-9]{2,3})$", tok, perl = TRUE))[[1]]
-        if (length(parts) >= 3) return(paste0(tolower(parts[2]), parts[3]))
-      }
-      if (grepl("^[0-9]{2,3}[A-Za-z]{1,3}$", tok, perl = TRUE)) {
-        parts <- regmatches(tok, regexec("^([0-9]{2,3})([A-Za-z]{1,3})$", tok, perl = TRUE))[[1]]
-        if (length(parts) >= 3) return(paste0(tolower(parts[3]), parts[2]))
-      }
+# Every metal a channel name spells, in the order it spells them: list(text, metal), where text is
+# the spelling as written and metal the element's symbol in lower case followed by the mass, so
+# "Nd145Di", "145Nd" and "CD4 (Nd145Di)" all spell "nd145". A metal is an element's symbol in its
+# own case (an upper-case letter and at most one lower-case one) with a mass within that element's
+# natural isotopes (.GML_METAL_MASSES), either way round, optionally followed by "Di" or "Dd", and
+# not run into a longer word or number. A marker name spells none: "CD45" is not cadmium 45,
+# "CD45RA", "CD11c" and "CD62L" have no symbol in its case, and "B220" names no isotope of boron.
+.gml_metal_spellings <- function(ch) {
+  text <- as.character(ch)
+  if (length(text) != 1L || is.na(text) || !nzchar(text)) return(list())
+  forms <- list(
+    list(pattern = "(?<![A-Za-z])([A-Z][a-z]?)([0-9]{2,3})(?:[Dd][IiDd])?(?![a-z0-9])", symbol = 1L, mass = 2L),
+    list(pattern = "(?<![A-Za-z0-9])([0-9]{2,3})([A-Z][a-z]?)(?:[Dd][IiDd])?(?![a-z])", symbol = 2L, mass = 1L)
+  )
+  found <- list()
+  for (form in forms) {
+    hits <- gregexpr(form$pattern, text, perl = TRUE)[[1]]
+    if (hits[[1]] < 0L) next
+    starts <- attr(hits, "capture.start")
+    lengths <- attr(hits, "capture.length")
+    part <- function(i, group) substr(text, starts[i, group], starts[i, group] + lengths[i, group] - 1L)
+    for (i in seq_along(hits)) {
+      symbol <- part(i, form$symbol)
+      mass <- as.integer(part(i, form$mass))
+      span <- .GML_METAL_MASSES[[symbol]]
+      if (is.null(span) || mass < span[[1]] || mass > span[[2]]) next
+      found[[length(found) + 1L]] <- list(
+        at = hits[[i]],
+        text = substr(text, hits[[i]], hits[[i]] + attr(hits, "match.length")[[i]] - 1L),
+        metal = paste0(tolower(symbol), mass)
+      )
     }
   }
+  lapply(found[order(vapply(found, function(f) f$at, numeric(1)))], function(f) f[c("text", "metal")])
+}
 
-  compact <- gsub("[^A-Za-z0-9]", "", s)
-  m1 <- regexec("^([A-Za-z]{1,3})([0-9]{2,3})$", compact, perl = TRUE)
-  p1 <- regmatches(compact, m1)[[1]]
-  if (length(p1) >= 3) return(paste0(tolower(p1[2]), p1[3]))
-
-  m2 <- regexec("^([0-9]{2,3})([A-Za-z]{1,3})$", compact, perl = TRUE)
-  p2 <- regmatches(compact, m2)[[1]]
-  if (length(p2) >= 3) return(paste0(tolower(p2[3]), p2[2]))
-
-  .gml_punctuation_insensitive(ch)
+# The metal a mass cytometry channel name spells (.gml_metal_spellings), the first where it spells
+# more than one, or "" where it spells none. "CD3 (Y89Di)" gives "y89" and "140Ce_Beads" "ce140".
+# Any name had been reduced to its first letters and two or three digits, so CD11c and CD11b both
+# gave "cd11", and on mass cytometry data a gate on CD11c was read on CD11b.
+.gml_normalize_channel <- function(ch) {
+  spelled <- .gml_metal_spellings(ch)
+  if (length(spelled)) spelled[[1]]$metal else ""
 }
 
 # A channel name case-folded, with its punctuation removed and every letter and digit kept. FlowJo
@@ -1241,24 +1266,29 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   gsub("[^\\p{L}\\p{N}]", "", tolower(ch), perl = TRUE)
 }
 
+# A $PnN map guessed from the session channels' names, which the Shiny app adds after the maps the
+# data carry: each metal a channel's name spells (.gml_metal_spellings), as written and without its
+# "Di" or "Dd", maps to that channel, unless another channel spells the same metal. The first letters
+# and digits of any name were taken, and a later channel's replaced an earlier's: over CD45RO, CD45
+# was a $PnN for CD45RO, so a gate on CD45 or CD45RA, which the data lacked, was read on CD45RO.
 .gml_guess_pnn_map_from_channels <- function(session_channels) {
   if (is.null(session_channels) || length(session_channels) == 0) return(list())
-  out <- list()
-
-  for (ch in session_channels) {
-    text <- as.character(ch)
-    hits <- unlist(regmatches(text, gregexpr("[A-Za-z]{1,3}[0-9]{2,3}Di|[0-9]{2,3}[A-Za-z]{1,3}Di|[A-Za-z]{1,3}[0-9]{2,3}|[0-9]{2,3}[A-Za-z]{1,3}", text, perl = TRUE)))
-    if (length(hits) == 0) next
-    for (tok in hits) {
-      tok_clean <- gsub("[^A-Za-z0-9]", "", tok)
-      if (!nzchar(tok_clean)) next
-      out[[tok_clean]] <- text
-      out[[gsub("Di$", "", tok_clean, ignore.case = TRUE)]] <- text
+  metal_of_key <- list()
+  channels_of_metal <- list()
+  for (ch in as.character(session_channels)) {
+    for (spelled in .gml_metal_spellings(ch)) {
+      channels_of_metal[[spelled$metal]] <- unique(c(channels_of_metal[[spelled$metal]], ch))
+      for (key in unique(c(spelled$text, sub("[Dd][IiDd]$", "", spelled$text)))) {
+        metal_of_key[[key]] <- spelled$metal
+      }
     }
   }
-
-  if (length(out) == 0) return(list())
-  out[!duplicated(names(out))]
+  out <- list()
+  for (key in names(metal_of_key)) {
+    owners <- channels_of_metal[[metal_of_key[[key]]]]
+    if (length(owners) == 1L) out[[key]] <- owners
+  }
+  out
 }
 
 # The session channel a name in the file refers to, or NULL when it refers to none. A name is taken
@@ -1266,15 +1296,16 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # pnn_to_channel maps to a session channel, exactly, then with case and punctuation ignored
 # (.gml_punctuation_insensitive); a session channel with case ignored, then with case and
 # punctuation ignored; and, on mass cytometry data only (instrument "cytof"), the one channel whose
-# metal is the name's (.gml_normalize_channel), such as "141Pr" for "Pr141Di". A name found none of
-# these ways is not a channel of the loaded data, and its gate is refused by name.
+# metal is the metal the name spells (.gml_normalize_channel), such as "141Pr" for "Pr141Di". A name
+# found none of these ways is not a channel of the loaded data, and its gate is refused by name.
 #
 # The metal was tried on every instrument and in any case, and a name with no metal in it was
 # reduced without its upper-case letters: a gate on FL1-H, over data with FL1-A and no FL1-H, was
 # read as a gate on FL1-A without a word, and a gate on PE-A over data without it stopped with
-# "subscript out of bounds". On a flow detector the metal keeps only the first letters and number,
-# so BV421-H would be read as BV421-A; that is why it is left to mass cytometry, and to a name that
-# finds one channel.
+# "subscript out of bounds". The metal then kept any name's first letters and number, so BV421-H
+# would have been read as BV421-A on flow data, and CD11c as CD11b on mass cytometry data; it is
+# now an element in its case with one of its masses, both in the name and in the channel it finds,
+# it is left to mass cytometry, and it must find one channel.
 .gml_resolve_channel <- function(ch, session_channels, pnn_to_channel = NULL, instrument = NULL) {
   if (is.null(ch) || length(ch) != 1L || is.na(ch) || !nzchar(ch)) return(NULL)
   if (ch %in% session_channels) return(ch)
