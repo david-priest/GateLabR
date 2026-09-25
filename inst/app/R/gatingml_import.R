@@ -1945,6 +1945,16 @@ import_gatingml_from_cytobank <- function(file_path,
         )
         next
       }
+      # A gateReference names its gate with ref, which Gating-ML requires. One without, or with an
+      # empty ref, was passed over, and the BooleanGate combined its other operands alone. The gate
+      # is still read, so that the gates that reference it are not reported as missing.
+      unnamed <- vapply(as.list(refs), function(r) !nzchar(.gml_attr_local(r, "ref") %||% ""), logical(1))
+      if (any(unnamed)) {
+        import_problems <- c(import_problems, paste0(
+          .gml_gate_label(el), " has a gateReference that names no gate (its ref is missing or ",
+          "empty), so GateLabR cannot tell which gate it combines."
+        ))
+      }
     }
 
     g <- .gml_parse_gate_node(el)

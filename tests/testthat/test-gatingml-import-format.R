@@ -521,6 +521,25 @@ test_that("Gating-ML's own model refuses NOT and OR by name", {
   expect_match(err, 'Population "FL1_neg" uses NOT logic;', fixed = TRUE)
 })
 
+test_that("a gateReference that names no gate is refused, naming its BooleanGate", {
+  # A gateReference without a ref, or with an empty one, was passed over, so Both became Cells and
+  # FL1_pos alone (227 events, where FlowKit selects 124 with the reference intact), and Deep under
+  # it changed with it (130, not 73).
+  for (reference in c("<gating:gateReference/>", '<gating:gateReference gating:ref=""/>')) {
+    unnamed <- gml_variant("flowkit-boolean.xml", function(lines) {
+      hit <- grep('<gating:gateReference gating:ref="FL3_pos"/>', lines, fixed = TRUE)[1]
+      lines[hit] <- sub('<gating:gateReference gating:ref="FL3_pos"/>', reference, lines[hit], fixed = TRUE)
+      lines
+    })
+    err <- tryCatch(gml_import(unnamed), error = function(e) conditionMessage(e))
+    expect_type(err, "character")
+    expect_match(err, "BooleanGate Both has a gateReference that names no gate (its ref is missing or empty)",
+                 fixed = TRUE, info = reference)
+    # Only the BooleanGate itself is reported, not the gates that reference it.
+    expect_no_match(err, "missing gate", fixed = TRUE, info = reference)
+  }
+})
+
 test_that("a GateLab Cytobank-format tree that does not describe the file is refused", {
   incomplete <- gml_variant("tree-cytobank.xml", function(lines) {
     sub(',{"id":"GateSet_36000005","parent":"GateSet_36000000"}', "", lines, fixed = TRUE)
