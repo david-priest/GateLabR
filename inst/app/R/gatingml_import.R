@@ -112,6 +112,34 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   }, logical(1)))
 }
 
+# The words that end the about text of GateLab's standard format since its logicle coordinates
+# moved to Gating-ML's own scale: "...; logicle on the Gating-ML 2.0 scale, T at 1". The about text
+# sits in Cytobank's custom_info, which a program that drops the format mark and gatelabr_scales
+# can keep, so a file carrying these words is on that scale whatever else it has lost. GateLabR
+# writes flowCore's scale and never writes them.
+.GML_ABOUT_LOGICLE_SCALE <- "logicle on the Gating-ML 2.0 scale, T at 1"
+
+# The root custom_info's cytobank/about text, or "".
+.gml_about_text <- function(root) {
+  ci <- .gml_first_child_local(root, "custom_info")
+  if (is.null(ci)) return("")
+  about <- .gml_first_child_local(.gml_first_child_local(ci, "cytobank") %||% ci, "about")
+  if (is.null(about)) "" else xml2::xml_text(about)
+}
+
+# The version the root custom_info's gatelabr_scales states, or 0 when it states none. GateLab
+# writes version 4 since its logicle coordinates are on Gating-ML's scale; GateLabR writes 3.
+.gml_gatelabr_scales_version <- function(root) {
+  ci <- .gml_first_child_local(root, "custom_info")
+  gs <- if (!is.null(ci)) .gml_first_child_local(ci, "gatelabr_scales") else NULL
+  def <- if (!is.null(gs)) .gml_first_child_local(gs, "definition") else NULL
+  if (is.null(def)) return(0)
+  parsed <- tryCatch(jsonlite::fromJSON(xml2::xml_text(def), simplifyVector = FALSE),
+                     error = function(e) NULL)
+  version <- if (is.list(parsed)) parsed$version else NULL
+  if (is.numeric(version) && length(version) == 1L && is.finite(version)) version else 0
+}
+
 # Whether GateLabR wrote the file: the root custom_info's cytobank/about text, which every
 # GateLabR export carries ("Gating-ML 2.0 export from GateLabR ..."; GateLab writes "from GateLab
 # (...)").
@@ -227,19 +255,22 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       parsed <- value
     }
   }
-  # GateLab writes version 2. Another version may place populations or scale logicle coordinates
-  # by rules GateLabR does not know, so it is refused rather than read as version 2.
+  # GateLab writes version 3, and wrote version 2 before it; version 3 adds `time`, says the
+  # file's flog is Gating-ML's own, and may carry `gain`. Another version may place populations or
+  # scale coordinates by rules GateLabR does not know, so it is refused rather than read as these.
   version <- parsed[["version"]]
   logicle <- parsed[["logicle"]]
   hierarchy <- parsed[["hierarchy"]]
+  time <- parsed[["time"]]
+  gain <- parsed[["gain"]]
   tree <- if (identical(hierarchy, "tree")) .gml_parse_format_tree(parsed[["tree"]]) else NULL
   if (marked && length(problems) == 0L) {
-    if (!(is.numeric(version) && length(version) == 1L && isTRUE(version == 2))) {
+    if (!(is.numeric(version) && length(version) == 1L && isTRUE(version %in% c(2, 3)))) {
       problems <- paste0(
         "The file's GateLab format mark has ",
         if (is.null(version)) "no version" else paste("version", jsonlite::toJSON(version, auto_unbox = TRUE)),
-        "; GateLabR reads version 2 only, so it cannot tell how the file places its populations ",
-        "or scales its logicle coordinates."
+        "; GateLabR reads versions 2 and 3 only, so it cannot tell how the file places its populations ",
+        "or scales its coordinates."
       )
     } else if (!(identical(logicle, "gating-ml") || identical(logicle, "flowcore"))) {
       problems <- unreadable('gives no logicle scale GateLabR knows ("gating-ml" or "flowcore")')
@@ -247,20 +278,40 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       problems <- unreadable('gives no hierarchy GateLabR knows ("parent_id" or "tree")')
     } else if (identical(hierarchy, "tree") && is.null(tree)) {
       problems <- unreadable("lists a tree that is not a list of populations, each with an id and a parent")
+    } else if (!is.null(time) && !(identical(time, "seconds") || identical(time, "ticks"))) {
+      problems <- unreadable('gives no Time unit GateLabR knows ("seconds" or "ticks")')
+    } else if (!is.null(gain) && !(identical(gain, "gating-ml") || identical(gain, "stored"))) {
+      problems <- unreadable('gives no gain convention GateLabR knows ("gating-ml" or "stored")')
     }
   }
+  readable <- marked && length(problems) == 0L
   list(
     problems = problems,
     marked = marked,
+    # Without a mark saying which: a file GateLab or GateLabR wrote is on flowCore's scale, unless
+    # its gatelabr_scales is version 4 or later or its about text carries the words above, which
+    # only GateLab's files on Gating-ML's scale do; any other file is on the standard's scale.
     logicle_unit = if (identical(logicle, "gating-ml")) {
       TRUE
     } else if (identical(logicle, "flowcore")) {
       FALSE
     } else {
-      !.gml_written_by_gatelab(root)
+      !.gml_written_by_gatelab(root) || .gml_gatelabr_scales_version(root) >= 4 ||
+        grepl(.GML_ABOUT_LOGICLE_SCALE, .gml_about_text(root), fixed = TRUE)
     },
     parent_id_hierarchy = identical(hierarchy, "parent_id"),
-    tree = tree
+    tree = tree,
+    # The unit of a Time dimension's coordinates: "seconds", the stored ticks times $TIMESTEP,
+    # which GateLab's standard format writes, or "ticks", as stored. Only GateLab's mark says
+    # seconds; every other file GateLabR reads in ticks, as it always has.
+    time_unit = if (readable && identical(time, "seconds")) "seconds" else "ticks",
+    # Whether coordinates are Gating-ML scale values, stored value / $PnG, which GateLab's standard
+    # format writes (its mark says "gating-ml"). Every other file is read on stored values.
+    scale_values = readable && identical(gain, "gating-ml"),
+    # Whether a flog is Gating-ML's own, undefined at or below zero: in GateLab's files from mark
+    # version 3 and in files from other writers. GateLab's files before then were written for its
+    # older flog, which holds every value below T 10^-M at 0.
+    flog_standard = if (marked) readable && isTRUE(version >= 3) else !.gml_written_by_gatelab(root)
   )
 }
 
@@ -298,6 +349,18 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   }
   if (standard && any(vapply(raw_gates, function(g) identical(g$gate_type, "boolean"), logical(1)))) {
     found <- c(found, "standard-format BooleanGates without a GatingHierarchy")
+  }
+  # GateLab's files on Gating-ML's logicle scale (gatelabr_scales version 4, or the about text's
+  # words) are the files whose mark states the Time unit, and its standard format writes Time in
+  # seconds, so without the mark a gate on Time could be in either unit.
+  about_text <- .gml_about_text(root)
+  new_format <- .gml_gatelabr_scales_version(root) >= 4 ||
+    grepl(.GML_ABOUT_LOGICLE_SCALE, about_text, fixed = TRUE)
+  on_time <- any(unlist(lapply(raw_gates, function(g) {
+    vapply(g$dims %||% list(), function(d) .gml_is_time(d$channel), logical(1))
+  })))
+  if (new_format && on_time && !grepl("Cytobank-compatible", about_text, fixed = TRUE)) {
+    found <- c(found, "a gate on Time, whose unit, seconds or ticks, only the mark states")
   }
   if (length(found) == 0L) return(character(0))
   paste0(
@@ -399,6 +462,16 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     stop("Invalid embedded GateLab compensation state: enabled must be true or false.")
   }
   reference <- as.character(raw$reference %||% "")
+  # From version 4 GateLab writes the reference "dimensions": the matrix is the one the gates were
+  # drawn under, as the gates' dimensions reference it, and the record says only whether they were
+  # drawn on compensated values. It reads as "FCS" when compensation is enabled, as the record's
+  # matrix is then checked against the loaded data's own, and as "uncompensated" when it is not.
+  scales_version <- parsed$version
+  if (identical(reference, "dimensions") && is.numeric(scales_version) &&
+      length(scales_version) == 1L && isTRUE(scales_version >= 4) &&
+      length(raw$enabled) == 1L && is.logical(raw$enabled) && !is.na(raw$enabled)) {
+    reference <- if (isTRUE(raw$enabled)) "FCS" else "uncompensated"
+  }
   if (length(reference) != 1L || !reference %in% c("FCS", "uncompensated")) {
     stop("Invalid embedded GateLab compensation state: unsupported matrix reference.")
   }
@@ -498,6 +571,11 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     v <- suppressWarnings(as.integer(trimws(xml2::xml_text(gsid_el))))
     if (length(v) == 1 && !is.na(v)) out$gate_set_id <- v
   }
+  cid_el <- .gml_first_child_local(cb, "compensation_id")
+  if (!is.null(cid_el)) {
+    v <- suppressWarnings(as.integer(trimws(xml2::xml_text(cid_el))))
+    if (length(v) == 1 && !is.na(v)) out$compensation_id <- v
+  }
   out
 }
 
@@ -511,80 +589,138 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   suppressWarnings(as.integer(sub("^pop_", "", hits)))
 }
 
+# A transformation parameter as the file writes it: NULL when absent, NA when it is not a finite
+# number as xs:double spells one (R's as.numeric also reads "0x10", " " and "Inf"), else the number.
+.GML_XS_DOUBLE_FINITE <- "^\\s*[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][+-]?[0-9]+)?\\s*$"
+.gml_parameter <- function(node, name) {
+  text <- .gml_attr_local(node, name)
+  if (is.null(text)) return(NULL)
+  value <- if (grepl(.GML_XS_DOUBLE_FINITE, text)) .gml_num(text) else NA_real_
+  if (.gml_has_num(value)) value else structure(NA_real_, text = text)
+}
+
+# Why a transformation's parameters, as the file writes them, cannot be read: the first one that
+# is present but not a finite number, or one required and absent. NULL when all can be read.
+.gml_unreadable_parameters <- function(values, required) {
+  for (name in names(values)) {
+    value <- values[[name]]
+    if (is.null(value)) {
+      if (name %in% required) return(paste0("gives no ", name))
+    } else if (is.na(value)) {
+      return(paste0("whose ", name, " is ", encodeString(attr(value, "text"), quote = '"'),
+                    ", which is not a finite number"))
+    }
+  }
+  NULL
+}
+
+# Every transformation the file declares, by id: list(type, parameters..., bound_min, bound_max).
+# A transformation whose parameters or bounds cannot be read is recorded as type "unreadable" with
+# `why`, and .gml_transform_problem refuses every gate on it by name: a parameter left at its
+# default because the file wrote something else for it, "abc" or "", describes another scale.
+# A parameter the file leaves out takes its default (logicle M 4.5 and A 0, fasinh M log10(e) and
+# A 0, flin A 0), as GateLab gives it.
 .gml_parse_transforms <- function(root_node) {
   out <- list()
   for (el in xml2::xml_children(root_node)) {
     if (!identical(.gml_local_name(el), "transformation")) next
     tr_id <- .gml_attr_local(el, "id")
     if (is.null(tr_id) || !nzchar(tr_id)) next
+    unreadable <- function(what, why) list(type = "unreadable", why = paste0(what, " ", why))
 
-    # logicle transform (GateLabR flow export and FlowJo/BD exports)
-    logicle_el <- .gml_first_child_local(el, "logicle")
-    if (!is.null(logicle_el)) {
-      t_v <- .gml_num(.gml_attr_local(logicle_el, "T"))
-      w_v <- .gml_num(.gml_attr_local(logicle_el, "W"))
-      m_v <- .gml_num(.gml_attr_local(logicle_el, "M"))
-      a_v <- .gml_num(.gml_attr_local(logicle_el, "A"))
-      if (.gml_has_num(t_v) && .gml_has_num(w_v)) {
-        out[[tr_id]] <- list(
-          type = "logicle",
-          T    = t_v,
-          W    = w_v,
-          M    = if (.gml_has_num(m_v)) m_v else 4.5,
-          A    = if (.gml_has_num(a_v)) a_v else 0.0
-        )
-        next
+    # boundMin and boundMax (Transformations.v2.0.xsd): a value the transformation gives beyond
+    # one is held at it before the gate is tested. INF and -INF, as xs:double spells them, are no
+    # bound.
+    bound <- function(name) {
+      text <- .gml_attr_local(el, name)
+      if (is.null(text)) return(NULL)
+      trimmed <- trimws(text)
+      if (trimmed %in% c("INF", "+INF", "-INF")) return(NULL)
+      value <- if (grepl(.GML_XS_DOUBLE_FINITE, text)) .gml_num(text) else NA_real_
+      if (.gml_has_num(value)) value else structure(NA_real_, text = text)
+    }
+    bound_min <- bound("boundMin")
+    bound_max <- bound("boundMax")
+    bound_why <- NULL
+    for (b in list(list("boundMin", bound_min), list("boundMax", bound_max))) {
+      if (!is.null(b[[2]]) && is.na(b[[2]])) {
+        bound_why <- paste0("whose ", b[[1]], " is ", encodeString(attr(b[[2]], "text"), quote = '"'),
+                            ", which is not a number")
+        break
       }
     }
-
-    # fasinh / arcsinh — store full {type, T, M, A} for correct inversion.
-    # Gating-ML 2.0: f(x) = (arcsinh(x*sinh(M*ln10)/T) + A*ln10) / ((M+A)*ln10)
-    fasinh_el  <- .gml_first_child_local(el, "fasinh")
-    arcsinh_el <- .gml_first_child_local(el, "arcsinh")
-    src_el <- fasinh_el %||% arcsinh_el
-    t_val  <- NULL
-    if (!is.null(fasinh_el))  t_val <- .gml_num(.gml_attr_local(fasinh_el,  "T"))
-    if (!.gml_has_num(t_val) && !is.null(arcsinh_el)) {
-      t_val <- .gml_num(.gml_attr_local(arcsinh_el, "T"))
+    if (is.null(bound_why) && !is.null(bound_min) && !is.null(bound_max) && bound_min > bound_max) {
+      bound_why <- paste0("whose boundMin ", bound_min, " is above its boundMax ", bound_max)
     }
-    if (.gml_has_num(t_val)) {
-      m_val <- .gml_num(.gml_attr_local(src_el, "M"))
-      a_val <- .gml_num(.gml_attr_local(src_el, "A"))
-      out[[tr_id]] <- list(
-        type = "fasinh",
-        T    = t_val,
-        M    = if (.gml_has_num(m_val)) m_val else log10(exp(1)),
-        A    = if (.gml_has_num(a_val)) a_val else 0
-      )
+    with_bounds <- function(def) {
+      def$bound_min <- bound_min
+      def$bound_max <- bound_max
+      def
+    }
+
+    # logicle (GateLab's standard format, GateLabR's flow export, FlowJo and FlowKit exports).
+    logicle_el <- .gml_first_child_local(el, "logicle")
+    if (!is.null(logicle_el)) {
+      p <- lapply(stats::setNames(nm = c("T", "W", "M", "A")), function(n) .gml_parameter(logicle_el, n))
+      why <- .gml_unreadable_parameters(p, c("T", "W")) %||% bound_why
+      out[[tr_id]] <- if (!is.null(why)) unreadable("a logicle", why) else with_bounds(list(
+        type = "logicle", T = p$T, W = p$W, M = p$M %||% 4.5, A = p$A %||% 0
+      ))
       next
     }
 
-    # flin, Gating-ML 2.0's linear scale (section 6.1): f(x) = (x + A) / (T + A), with T > 0 and
-    # 0 <= A <= T. Its inverse is affine, so a gate on it is the same shape in raw values.
+    # fasinh (Gating-ML 2.0 section 6.3), and the arcsinh older exports wrote:
+    #   f(x) = (arcsinh(x sinh(M ln 10) / T) + A ln 10) / ((M + A) ln 10)
+    fasinh_el <- .gml_first_child_local(el, "fasinh") %||% .gml_first_child_local(el, "arcsinh")
+    if (!is.null(fasinh_el)) {
+      p <- lapply(stats::setNames(nm = c("T", "M", "A")), function(n) .gml_parameter(fasinh_el, n))
+      why <- .gml_unreadable_parameters(p, "T") %||% bound_why
+      out[[tr_id]] <- if (!is.null(why)) unreadable("an arcsinh (fasinh)", why) else with_bounds(list(
+        type = "fasinh", T = p$T, M = p$M %||% log10(exp(1)), A = p$A %||% 0
+      ))
+      next
+    }
+
+    # flog (section 6.2): f(x) = log10(x / T) / M + 1, undefined at and below zero. Cytobank
+    # writes it for a Log scale, and GateLab for a FlowJo log axis and a log axis of its own.
+    flog_el <- .gml_first_child_local(el, "flog") %||% .gml_first_child_local(el, "log")
+    if (!is.null(flog_el)) {
+      p <- lapply(stats::setNames(nm = c("T", "M")), function(n) .gml_parameter(flog_el, n))
+      why <- .gml_unreadable_parameters(p, c("T", "M")) %||% bound_why
+      out[[tr_id]] <- if (!is.null(why)) unreadable("a flog", why) else with_bounds(list(
+        type = "flog", T = p$T, M = p$M
+      ))
+      next
+    }
+
+    # flin, Gating-ML 2.0's linear scale (section 6.1): f(x) = (x + A) / (T + A). Its inverse is
+    # affine, so a gate on it is the same shape in raw values.
     flin_el <- .gml_first_child_local(el, "flin")
     if (!is.null(flin_el)) {
-      t_v <- .gml_num(.gml_attr_local(flin_el, "T"))
-      a_v <- .gml_num(.gml_attr_local(flin_el, "A"))
-      if (!.gml_has_num(a_v)) a_v <- 0
-      if (.gml_has_num(t_v) && t_v > 0 && a_v >= 0 && a_v <= t_v) {
-        out[[tr_id]] <- list(type = "flin", T = t_v, A = a_v)
-      }
+      p <- lapply(stats::setNames(nm = c("T", "A")), function(n) .gml_parameter(flin_el, n))
+      why <- .gml_unreadable_parameters(p, "T") %||% bound_why
+      out[[tr_id]] <- if (!is.null(why)) unreadable("a flin", why) else with_bounds(list(
+        type = "flin", T = p$T, A = p$A %||% 0
+      ))
     }
   }
   out
 }
 
-# Why a logicle or fasinh transformation (.gml_parse_transforms) has no map GateLabR can take its
-# coordinates through, or NULL when it has one. .gml_declared_map reads such a logicle as the
-# identity, since flowCore refuses to build it, and such a fasinh as the identity or, when M + A is
-# not positive, as a map that is constant or decreasing, so a gate on it selected other events than
-# the file defines.
+# Why a transformation (.gml_parse_transforms) has no map GateLabR can take its coordinates
+# through, or NULL when it has one. .gml_declared_map read such a logicle as the identity, since
+# flowCore refuses to build it, and such a fasinh as the identity or, when M + A is not positive,
+# as a map that is constant or decreasing, so a gate on it selected other events than the file
+# defines.
 #   logicle: T > 0, M > 0, 0 <= W <= M / 2 and -W <= A <= M - 2W (Gating-ML 2.0 section 6.4.3, and
 #     what flowCore's logicle accepts; it evaluates a negative A down to -W exactly).
 #   fasinh: T > 0, M > 0 and M + A > 0, which make its inverse, T / sinh(M ln 10) sinh(y (M + A)
-#     ln 10 - A ln 10), increasing.
+#     ln 10 - A ln 10), increasing, and sinh(M ln 10), (M + A) ln 10 and T / sinh(M ln 10) finite
+#     and not zero in double precision, without which the inverse is 0 or undefined everywhere.
+#   flog: T > 0 and M > 0. flin: T > 0 and 0 <= A <= T.
 .gml_transform_problem <- function(tr_def) {
   if (!is.list(tr_def)) return(NULL)
+  if (identical(tr_def$type, "unreadable")) return(tr_def$why)
   t_v <- tr_def$T
   m_v <- tr_def$M
   a_v <- tr_def$A
@@ -603,10 +739,29 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     why <- if (!(t_v > 0)) "T is not positive"
       else if (!(m_v > 0)) "M is not positive"
       else if (!(m_v + a_v > 0)) "M + A is not positive"
+      else if (!is.finite(sinh(m_v * log(10)))) "sinh(M ln 10) overflows double precision"
+      else if (!is.finite((m_v + a_v) * log(10))) "(M + A) ln 10 overflows double precision"
+      else if (!(t_v / sinh(m_v * log(10)) > 0)) "T / sinh(M ln 10) is zero in double precision"
     if (is.null(why)) return(NULL)
     return(paste0("an arcsinh (fasinh) with T = ", t_v, ", M = ", m_v, " and A = ", a_v, ", whose ", why))
   }
+  if (identical(tr_def$type, "flog")) {
+    why <- if (!(t_v > 0)) "T is not positive" else if (!(m_v > 0)) "M is not positive"
+    if (is.null(why)) return(NULL)
+    return(paste0("a flog with T = ", t_v, " and M = ", m_v, ", whose ", why))
+  }
+  if (identical(tr_def$type, "flin")) {
+    why <- if (!(t_v > 0)) "T is not positive" else if (!(a_v >= 0 && a_v <= t_v)) "A is not between 0 and T"
+    if (is.null(why)) return(NULL)
+    return(paste0("a flin with T = ", t_v, " and A = ", a_v, ", whose ", why))
+  }
   NULL
+}
+
+# Whether a dimension is FCS Time: the parameter FlowKit, FlowJo and GateLab scale by $TIMESTEP,
+# found by its $PnN, "Time" in any case.
+.gml_is_time <- function(channel) {
+  !is.null(channel) && length(channel) == 1L && grepl("^time$", trimws(channel), ignore.case = TRUE)
 }
 
 .gml_parse_dimensions <- function(gate_node) {
@@ -676,6 +831,9 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     cb <- if (!is.null(ci)) .gml_first_child_local(ci, "cytobank") else NULL
     label_node <- if (!is.null(cb)) .gml_first_child_local(cb, "cytobank_compensation_name") else NULL
     if (!is.null(label_node)) label <- trimws(xml2::xml_text(label_node))
+    # The id Cytobank's gates name this matrix by, in their custom_info compensation_id.
+    id_node <- if (!is.null(cb)) .gml_first_child_local(cb, "cytobank_compensation_id") else NULL
+    cytobank_id <- if (!is.null(id_node)) suppressWarnings(as.integer(trimws(xml2::xml_text(id_node)))) else NA_integer_
 
     n <- length(detectors)
     matrix <- NULL
@@ -714,7 +872,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       detectors = detectors,
       fluorochromes = fluorochromes,
       matrix = matrix,
-      problem = problem
+      problem = problem,
+      cytobank_id = if (length(cytobank_id) == 1L) cytobank_id else NA_integer_
     )
   }
   out
@@ -741,6 +900,44 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     raw_gates[[id]] <- g
   }
   raw_gates
+}
+
+# Take a Cytobank gate's named compensation as its dimensions' matrix. Cytobank writes
+# compensation-ref="FCS" on every compensated dimension, whatever matrix the gate was drawn under,
+# and says which in the gate's custom_info compensation_id: -2 uncompensated, 0 the FCS file's own
+# matrix, and a positive id a named compensation, which the export carries as a spectrumMatrix
+# with that cytobank_compensation_id. GateLab's Cytobank format does the same for gates drawn under
+# a matrix that is not the FCS file's own. Read as "FCS", such a gate was evaluated with the FCS
+# file's matrix. A positive id with no such spectrumMatrix names a matrix the file does not carry,
+# and a gate on it is refused by name: the FCS file's matrix is never applied in its place.
+# Returns list(raw_gates, problems).
+.gml_adopt_cytobank_compensation_ids <- function(raw_gates, spectra) {
+  by_id <- list()
+  for (sp in spectra) {
+    if (!is.na(sp$cytobank_id) && sp$cytobank_id > 0L) by_id[[as.character(sp$cytobank_id)]] <- sp$id
+  }
+  problems <- character(0)
+  for (id in names(raw_gates)) {
+    g <- raw_gates[[id]]
+    cid <- g$compensation_id
+    if (identical(g$gate_type, "boolean") || is.null(cid) || cid <= 0L) next
+    matrix_id <- by_id[[as.character(cid)]]
+    compensated <- FALSE
+    for (i in seq_along(g$dims)) {
+      if (!identical(tolower(trimws(g$dims[[i]]$compensation_ref %||% "")), "fcs")) next
+      compensated <- TRUE
+      if (!is.null(matrix_id)) g$dims[[i]]$compensation_ref <- matrix_id
+    }
+    if (compensated && is.null(matrix_id)) {
+      problems <- c(problems, paste0(
+        "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") was drawn under Cytobank compensation ",
+        cid, ", which the file does not carry as a spectrumMatrix; GateLabR does not apply the ",
+        "FCS file's own matrix in its place."
+      ))
+    }
+    raw_gates[[id]] <- g
+  }
+  list(raw_gates = raw_gates, problems = problems)
 }
 
 # What the gates' dimensions compensate with: "FCS", "uncompensated", or "matrix" for a
@@ -985,13 +1182,16 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 .gml_identity_inverter <- function(v) v
 
 .gml_identity_map <- function() {
-  list(inverse = .gml_identity_inverter, forward = .gml_identity_inverter, kind = "identity")
+  list(inverse = .gml_identity_inverter, forward = .gml_identity_inverter, kind = "identity",
+       lower = -Inf, upper = Inf)
 }
 
 # A transformation's own map between the coordinates it declares and raw values:
 #   inverse: declared coordinate -> raw value; forward: raw value -> declared coordinate;
 #   kind:    "identity", "affine" (a x + b, so a straight edge stays straight), or "curved" (a
-#            straight edge in the declared space is a curve in raw values).
+#            straight edge in the declared space is a curve in raw values);
+#   lower, upper: the raw values an edge with no bound reaches, below and above: -Inf and Inf,
+#            except flog's lower, 0, the least value flog is defined at (it gives -Inf there).
 # No transformation (NULL) is raw values already.
 .gml_declared_map <- function(tr_def, logicle_unit = FALSE) {
   identity_map <- .gml_identity_map()
@@ -1004,7 +1204,21 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     return(list(
       inverse = function(v) as.numeric(v) * span - offset,
       forward = function(v) (as.numeric(v) + offset) / span,
-      kind = "affine"
+      kind = "affine", lower = -Inf, upper = Inf
+    ))
+  }
+
+  # flog, Gating-ML 2.0's log scale (section 6.2): f(x) = log10(x / T) / M + 1, so x = T
+  # 10^((y - 1) M). It is undefined at and below zero: FlowKit and flowCore give -Inf at 0 and NaN
+  # below, so an event below zero is in no gate, and one at zero only in a range with no lower
+  # bound, which is not tested.
+  if (is.list(tr_def) && identical(tr_def$type, "flog")) {
+    t_v <- tr_def$T
+    m_v <- tr_def$M
+    return(list(
+      inverse = function(v) t_v * 10^((as.numeric(v) - 1) * m_v),
+      forward = function(v) suppressWarnings(log10(as.numeric(v) / t_v)) / m_v + 1,
+      kind = "curved", lower = 0, upper = Inf
     ))
   }
 
@@ -1030,7 +1244,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
         tryCatch(as.numeric(inv_lg(as.numeric(v) * to_flowcore)), error = function(e) as.numeric(v))
       },
       forward = function(v) as.numeric(lg(as.numeric(v))) / to_flowcore,
-      kind = "curved"
+      kind = "curved", lower = -Inf, upper = Inf
     ))
   }
 
@@ -1055,7 +1269,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     return(list(
       inverse = function(v) cf_eff * sinh(as.numeric(v) * k1 - k0),
       forward = function(v) (asinh(as.numeric(v) / cf_eff) + k0) / k1,
-      kind = "curved"
+      kind = "curved", lower = -Inf, upper = Inf
     ))
   }
 
@@ -1068,10 +1282,26 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     return(list(
       inverse = function(v) cf * sinh(as.numeric(v)),
       forward = function(v) asinh(as.numeric(v) / cf),
-      kind = "curved"
+      kind = "curved", lower = -Inf, upper = Inf
     ))
   }
   identity_map
+}
+
+# A map whose raw values are the file's, taken to the values GateLabR stores by `scale`: NULL for
+# none, or list(to_stored, to_file), each increasing. GateLab's standard format writes Time in
+# seconds, stored ticks times $TIMESTEP, and every other coordinate as a Gating-ML scale value,
+# stored value / $PnG; a declared transform is then of those values, so the stored value is the
+# transform's inverse taken back by the same factor.
+.gml_scaled_map <- function(map, scale) {
+  if (is.null(scale)) return(map)
+  list(
+    inverse = function(v) scale$to_stored(map$inverse(v)),
+    forward = function(v) map$forward(scale$to_file(as.numeric(v))),
+    kind = if (identical(map$kind, "identity")) "affine" else map$kind,
+    lower = scale$to_stored(map$lower),
+    upper = scale$to_stored(map$upper)
+  )
 }
 
 # Whether a transformation is arcsinh(x / cofactor) exactly: fasinh with A = 0, (M + A) ln 10 = 1
@@ -1079,6 +1309,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # arcsinh.
 .gml_is_data_arcsinh <- function(tr_def, cofactor) {
   if (!is.list(tr_def) || !identical(tr_def$type, "fasinh")) return(FALSE)
+  if (!is.null(tr_def$bound_min) || !is.null(tr_def$bound_max)) return(FALSE)
   t_v <- suppressWarnings(as.numeric(tr_def$T))
   m_v <- suppressWarnings(as.numeric(tr_def$M %||% log10(exp(1))))
   a_v <- suppressWarnings(as.numeric(tr_def$A %||% 0))
@@ -1092,19 +1323,21 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # A coordinate is taken from the space its dimension declares to raw values, then to the data's
 # arcsinh. A dimension already on the data's arcsinh is taken as it is; any other (raw values, an
 # arcsinh of another cofactor, logicle, flin) is curved, since arcsinh is.
-.gml_cytof_axis_map <- function(channel, tr_def, logicle_unit, cofactor) {
+.gml_cytof_axis_map <- function(channel, tr_def, logicle_unit, cofactor, scale = NULL) {
   raw_channel <- if (exists(".is_cytof_raw_channel", mode = "function")) {
     isTRUE(.is_cytof_raw_channel(channel))
   } else {
     grepl("^(time|event_length|cell_length|file_number)$", channel, ignore.case = TRUE)
   }
-  declared <- .gml_declared_map(tr_def, logicle_unit)
+  declared <- .gml_scaled_map(.gml_declared_map(tr_def, logicle_unit), scale)
   if (raw_channel) return(declared)
-  if (.gml_is_data_arcsinh(tr_def, cofactor)) return(.gml_identity_map())
+  if (is.null(scale) && .gml_is_data_arcsinh(tr_def, cofactor)) return(.gml_identity_map())
   list(
     inverse = function(v) asinh(declared$inverse(v) / cofactor),
     forward = function(v) declared$forward(cofactor * sinh(as.numeric(v))),
-    kind = "curved"
+    kind = "curved",
+    lower = asinh(declared$lower / cofactor),
+    upper = asinh(declared$upper / cofactor)
   )
 }
 
@@ -1116,9 +1349,11 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # flowCore's (see .gml_parse_gatelab_format). instrument: "flow" when the gates will be evaluated
 # on flow data, whose gates GateLabR stores in raw values; "cytof" when they will be evaluated on
 # mass cytometry data held as arcsinh(x / cytof_cofactor) (.gml_cytof_axis_map); NULL keeps the
-# behaviour this function had before it was given one.
+# behaviour this function had before it was given one. scale: how the file's raw values become
+# the stored ones, for Time in seconds and scale values (.gml_scaled_map); NULL for none.
 .gml_axis_map <- function(resolved_channel, trans_ref, transforms_map,
-                          logicle_unit = FALSE, instrument = NULL, cytof_cofactor = 5) {
+                          logicle_unit = FALSE, instrument = NULL, cytof_cofactor = 5,
+                          scale = NULL) {
   identity_map <- .gml_identity_map()
   if (is.null(resolved_channel) || !nzchar(resolved_channel)) return(identity_map)
 
@@ -1126,9 +1361,9 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   # and flow data in raw values, like the channels around it.
   tr_def <- if (!is.null(trans_ref) && nzchar(trans_ref)) transforms_map[[trans_ref]] else NULL
   if (identical(instrument, "cytof")) {
-    return(.gml_cytof_axis_map(resolved_channel, tr_def, logicle_unit, cytof_cofactor))
+    return(.gml_cytof_axis_map(resolved_channel, tr_def, logicle_unit, cytof_cofactor, scale))
   }
-  if (is.null(tr_def)) return(identity_map)
+  if (is.null(tr_def)) return(.gml_scaled_map(identity_map, scale))
 
   # fasinh / arcsinh on flow data, or when the caller does not say which data:
   #
@@ -1156,7 +1391,55 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
                         ignore.case = TRUE)
     if (!is_scatter && !always_raw && !identical(instrument, "flow")) return(identity_map)
   }
-  .gml_declared_map(tr_def, logicle_unit)
+  .gml_scaled_map(.gml_declared_map(tr_def, logicle_unit), scale)
+}
+
+# The double next to x, towards +Inf (dir = 1) or -Inf (dir = -1), read off its bits.
+.gml_next_double <- function(x, dir) {
+  if (!is.finite(x)) return(x)
+  if (x == 0) return(dir * 4.9406564584124654e-324)
+  words <- readBin(writeBin(x, raw(), endian = "little"), "integer", n = 2L, endian = "little")
+  if (anyNA(words)) return(x + dir * abs(x) * .Machine$double.eps)
+  low <- as.numeric(words[[1]]) %% 4294967296
+  high <- words[[2]]
+  # Away from zero the magnitude's bits count up, towards it they count down.
+  step <- if ((x > 0) == (dir > 0)) 1 else -1
+  low <- low + step
+  if (low >= 4294967296) {
+    low <- 0
+    high <- high + 1L
+  } else if (low < 0) {
+    low <- 4294967295
+    high <- high - 1L
+  }
+  low <- if (low >= 2147483648) as.integer(low - 4294967296) else as.integer(low)
+  readBin(writeBin(c(low, high), raw(), endian = "little"), "double", n = 1L, endian = "little")
+}
+
+# A rectangle edge on an axis that maps straight edges to straight ones (raw values, flin, Time in
+# seconds, scale values), placed on the stored values exactly: the least stored x whose declared
+# value, as a reader computes it with `forward`, is at or above a lower edge, or the greatest at
+# or below an upper one. Taking the edge back through the inverse rounds, and can land one step
+# past a stored value that lies on the edge (Time at 10.052100219726563 s with $TIMESTEP 0.01 is
+# the tick 1005.2100219726562, which the edge divided by 0.01 rounds past). `guess` is the inverse;
+# the search moves from it one double at a time, and gives the guess back if that does not settle.
+.gml_exact_edge <- function(value, guess, forward, side) {
+  if (!is.finite(guess)) return(guess)
+  inside <- if (identical(side, "lower")) function(x) isTRUE(forward(x) >= value)
+            else function(x) isTRUE(forward(x) <= value)
+  outward <- if (identical(side, "lower")) -1 else 1
+  x <- guess
+  for (i in seq_len(64L)) {
+    if (inside(x)) break
+    x <- .gml_next_double(x, -outward)
+  }
+  if (!inside(x)) return(guess)
+  for (i in seq_len(64L)) {
+    beyond <- .gml_next_double(x, outward)
+    if (!inside(beyond)) return(x)
+    x <- beyond
+  }
+  guess
 }
 
 # The declared-coordinate -> stored-value half of .gml_axis_map.
@@ -1227,6 +1510,64 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     if (length(t) + length(split) > max_pieces) return(NULL)
     t <- sort(c(t, (t[split] + t[split + 1L]) / 2))
   }
+}
+
+# One dimension of a RectangleGate in the values GateLabR stores: list(range = c(lower, upper)),
+# or list(empty) saying why it holds no event.
+#
+# An edge with no bound (absent, or at the largest double) reaches the map's own limit, -Inf and
+# Inf except at flog's zero, and is stored at the largest double, beyond every value. A
+# transformation's boundMin and boundMax hold the values beyond them at the bound: a lower edge at
+# or below boundMin then holds every value below it too, and is no bound, as is an upper edge at
+# or above boundMax; a range wholly beyond one holds nothing. On an axis that keeps straight edges
+# straight (raw values, flin, Time in seconds, scale values), an edge is placed on the stored
+# values exactly (.gml_exact_edge); on a curved one, through the inverse.
+.gml_rectangle_range <- function(dim, map, tr_def = NULL) {
+  big <- .Machine$double.xmax
+  lo <- dim$min
+  hi <- dim$max
+  if (!is.null(lo) && lo <= -big) lo <- NULL
+  if (!is.null(hi) && hi >= big) hi <- NULL
+  b_min <- tr_def$bound_min
+  b_max <- tr_def$bound_max
+  if (!is.null(lo) && !is.null(b_max) && lo > b_max) {
+    return(list(empty = paste0("on ", dim$channel, " starts at ", lo, ", above the transformation's boundMax ", b_max)))
+  }
+  if (!is.null(hi) && !is.null(b_min) && hi < b_min) {
+    return(list(empty = paste0("on ", dim$channel, " ends at ", hi, ", below the transformation's boundMin ", b_min)))
+  }
+  if (!is.null(lo) && !is.null(b_min) && lo <= b_min) lo <- NULL
+  if (!is.null(hi) && !is.null(b_max) && hi >= b_max) hi <- NULL
+  place <- function(value, side) {
+    limit <- if (identical(side, "lower")) map$lower %||% -Inf else map$upper %||% Inf
+    if (is.null(value)) return(max(-big, min(big, limit)))
+    guess <- map$inverse(value)
+    if (!identical(map$kind, "curved")) {
+      guess <- .gml_exact_edge(value, guess, map$forward, side)
+    } else if (identical(side, "lower") && is.finite(limit) && isTRUE(guess <= limit)) {
+      # A finite lower edge on flog below every positive value's image still leaves out zero,
+      # whose flog is -Inf.
+      guess <- .gml_next_double(limit, 1)
+    }
+    max(-big, min(big, guess))
+  }
+  list(range = c(place(lo, "lower"), place(hi, "upper")))
+}
+
+# Which transformation bound a polygon's vertices reach, on their declared axes, or NULL.
+.gml_polygon_at_bound <- function(vertices, tr_x, tr_y) {
+  for (axis in 1:2) {
+    tr_def <- if (axis == 1L) tr_x else tr_y
+    if (is.null(tr_def$bound_min) && is.null(tr_def$bound_max)) next
+    values <- vapply(vertices, function(v) as.numeric(v[axis]), numeric(1))
+    if (!is.null(tr_def$bound_min) && any(values <= tr_def$bound_min)) {
+      return(paste0("its transformation's boundMin ", tr_def$bound_min))
+    }
+    if (!is.null(tr_def$bound_max) && any(values >= tr_def$bound_max)) {
+      return(paste0("its transformation's boundMax ", tr_def$bound_max))
+    }
+  }
+  NULL
 }
 
 # A Gating-ML polygon's vertices in the values GateLabR stores. Gating-ML makes a gate's transforms
@@ -1350,10 +1691,14 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
     # in GateLabR's two-dimensional rectangle mask.
     y <- if (length(dims) >= 2) dims[[2]] else dims[[1]]
 
-    xlo <- if (!is.null(x$min) && is.finite(x$min)) x$min else -1e9
-    xhi <- if (!is.null(x$max) && is.finite(x$max)) x$max else 1e9
-    ylo <- if (!is.null(y$min) && is.finite(y$min)) y$min else -1e9
-    yhi <- if (!is.null(y$max) && is.finite(y$max)) y$max else 1e9
+    # An absent bound is no bound; so is one at or beyond the largest double, which GateLab
+    # writes on a dimension unbounded on both sides, since Gating-ML requires one of the two, and
+    # which Cytobank's definition gives for an unbounded edge. It was held at -1e9 or 1e9, which
+    # real raw values pass.
+    xlo <- if (!is.null(x$min) && x$min > -.Machine$double.xmax) x$min else -Inf
+    xhi <- if (!is.null(x$max) && x$max < .Machine$double.xmax) x$max else Inf
+    ylo <- if (!is.null(y$min) && y$min > -.Machine$double.xmax) y$min else -Inf
+    yhi <- if (!is.null(y$max) && y$max < .Machine$double.xmax) y$max else Inf
 
     return(list(
       gml_id = gml_id,
@@ -1363,7 +1708,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       y_channel = y$channel,
       vertices = list(c(xlo, ylo), c(xhi, ylo), c(xhi, yhi), c(xlo, yhi)),
       channels = c(x$channel, y$channel),
-      dims = list(x, y)
+      dims = list(x, y),
+      compensation_id = .gml_parse_cytobank_ids(node)$compensation_id
     ))
   }
 
@@ -1391,7 +1737,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       y_channel = dims[[2]]$channel,
       vertices = verts,
       channels = c(dims[[1]]$channel, dims[[2]]$channel),
-      dims = dims
+      dims = dims,
+      compensation_id = .gml_parse_cytobank_ids(node)$compensation_id
     ))
   }
 
@@ -1409,7 +1756,8 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       y_channel = dims[[2]]$channel,
       vertices = .gml_ellipse_boundary(ellipse),
       channels = c(dims[[1]]$channel, dims[[2]]$channel),
-      dims = dims
+      dims = dims,
+      compensation_id = .gml_parse_cytobank_ids(node)$compensation_id
     ))
   }
 
@@ -1827,12 +2175,23 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 #' @param cytof_cofactor The loaded mass cytometry data's arcsinh cofactor (with instrument
 #'   "cytof"). A file that records GateLab's own cofactor (gatelabr_scales) is read on that one
 #'   instead, since importing it re-transforms the data to it. Default 5.
+#' @param timestep The loaded data's $TIMESTEP, in seconds per stored Time tick: 1 when the FCS
+#'   file states none. Needed only for a file whose GateLab format mark says its Time coordinates
+#'   are in seconds (GateLab's standard format); a gate on Time in such a file is refused when it
+#'   is not given. Every other file's Time is read as stored ticks.
+#' @param gains The loaded data's $PnG, a named numeric vector by channel (session channel names),
+#'   for the channels whose Gating-ML scale value is the stored value divided by the gain (GateLab
+#'   leaves out Time, QC channels and logarithmically amplified channels). Applied only where the
+#'   file's GateLab format mark says its coordinates are scale values (GateLab's standard format);
+#'   NULL, or a channel not named, is a gain of 1.
 #' @return List with gates, gate_order, populations, root_population_id and import stats
 import_gatingml_from_cytobank <- function(file_path,
                                           session_channels,
                                           pnn_to_channel = NULL,
                                           instrument = NULL,
-                                          cytof_cofactor = NULL) {
+                                          cytof_cofactor = NULL,
+                                          timestep = NULL,
+                                          gains = NULL) {
   if (!requireNamespace("xml2", quietly = TRUE)) {
     stop("Package 'xml2' is required for Gating-ML import. Install with: install.packages('xml2')")
   }
@@ -1841,6 +2200,17 @@ import_gatingml_from_cytobank <- function(file_path,
   }
   if (is.null(session_channels) || length(session_channels) == 0) {
     stop("No session channels available; load an SCE first.")
+  }
+  if (!is.null(timestep) &&
+      !(is.numeric(timestep) && length(timestep) == 1L && is.finite(timestep) && timestep > 0)) {
+    stop("timestep must be one positive number.")
+  }
+  if (!is.null(gains)) {
+    gains <- unlist(gains)
+    if (!is.numeric(gains) || is.null(names(gains)) || any(!nzchar(names(gains))) ||
+        anyDuplicated(names(gains)) || any(!is.finite(gains)) || any(gains <= 0)) {
+      stop("gains must be positive numbers named by channel.")
+    }
   }
 
   doc <- xml2::read_xml(file_path)
@@ -1968,11 +2338,16 @@ import_gatingml_from_cytobank <- function(file_path,
     if (identical(g$gate_type, "boolean")) bool_order <- c(bool_order, g$gml_id)
   }
   spectra <- .gml_parse_spectrum_matrices(root)
-  raw_gates <- .gml_resolve_spectrum_dimensions(raw_gates, spectra)
+  # Whether the file has lost GateLab's mark is judged on the dimensions as written: a Cytobank
+  # gate's compensation_id makes its "FCS" dimensions reference a spectrumMatrix only below.
+  lost_mark_problems <- .gml_lost_mark_problems(root, raw_gates, spectra, hierarchy_node, gatelab_format)
+  adopted <- .gml_adopt_cytobank_compensation_ids(raw_gates, spectra)
+  raw_gates <- .gml_resolve_spectrum_dimensions(adopted$raw_gates, spectra)
   import_problems <- c(
     import_problems,
     gatelab_format$problems,
-    .gml_lost_mark_problems(root, raw_gates, spectra, hierarchy_node, gatelab_format),
+    lost_mark_problems,
+    adopted$problems,
     .gml_positive_and_logic_problems(raw_gates, hierarchy_node),
     .gml_missing_channel_problems(raw_gates, session_channels, pnn_to_channel)
   )
@@ -2037,6 +2412,15 @@ import_gatingml_from_cytobank <- function(file_path,
           import_problems <- c(import_problems, paste0(
             "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") is on transformation ", ref, ", ",
             why, ", so GateLabR cannot take the gate's coordinates to the values it gates on."
+          ))
+        } else if (identical(transforms_map[[ref]]$type, "flog") && !isTRUE(gatelab_format$flog_standard)) {
+          # GateLab wrote its files for its older flog until its mark reached version 3: every
+          # value below T 10^-M is held at 0, so a gate reaching 0 holds every event below it,
+          # where Gating-ML's flog, which GateLabR reads, holds none at or below zero.
+          import_problems <- c(import_problems, paste0(
+            "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") is on transformation ", ref,
+            ", a flog GateLab wrote before its format mark reached version 3, which holds every ",
+            "value below T 10^-M at 0; GateLabR reads Gating-ML's own flog only."
           ))
         }
       }
@@ -2120,6 +2504,29 @@ import_gatingml_from_cytobank <- function(file_path,
       data_cofactor <= 0) {
     stop("cytof_cofactor must be one positive number.")
   }
+  # How a dimension's raw coordinates become the stored values (.gml_scaled_map): Time in seconds
+  # divided by $TIMESTEP, where GateLab's mark says the file writes seconds, and a scale value
+  # times its channel's $PnG, where the mark says the file writes scale values. list(scale) or
+  # list(problem).
+  axis_scale <- function(file_channel, resolved_channel) {
+    if (.gml_is_time(file_channel) || .gml_is_time(resolved_channel)) {
+      if (!identical(gatelab_format$time_unit, "seconds")) return(list(scale = NULL))
+      if (is.null(timestep)) {
+        return(list(problem = paste0(
+          "is on Time, which the file's GateLab format mark says is in seconds, and the loaded ",
+          "data's $TIMESTEP was not given (timestep), so GateLabR cannot take its coordinates to ",
+          "the stored ticks."
+        )))
+      }
+      if (timestep == 1) return(list(scale = NULL))
+      return(list(scale = list(to_stored = function(v) v / timestep,
+                               to_file = function(x) x * timestep)))
+    }
+    gain <- if (isTRUE(gatelab_format$scale_values) && !is.null(gains) &&
+                resolved_channel %in% names(gains)) gains[[resolved_channel]] else 1
+    if (gain == 1) return(list(scale = NULL))
+    list(scale = list(to_stored = function(v) v * gain, to_file = function(x) x / gain))
+  }
 
   for (gml_id in names(raw_gates)) {
     g <- raw_gates[[gml_id]]
@@ -2144,12 +2551,36 @@ import_gatingml_from_cytobank <- function(file_path,
 
     x_tr <- if (length(g$dims) >= 1) g$dims[[1]]$transformation_ref %||% NULL else NULL
     y_tr <- if (length(g$dims) >= 2) g$dims[[2]]$transformation_ref %||% NULL else NULL
+    x_scale <- axis_scale(g$dims[[1]]$channel, x_ch)
+    y_scale <- axis_scale(g$dims[[min(2L, length(g$dims))]]$channel, y_ch)
+    unscaled <- Filter(Negate(is.null), list(x_scale$problem, y_scale$problem))
+    if (length(unscaled) > 0L) {
+      polygon_problems <- c(polygon_problems, paste0(
+        "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") ", unscaled[[1]]
+      ))
+      next
+    }
     map_x <- .gml_axis_map(x_ch, x_tr, transforms_map, gatelab_format$logicle_unit, instrument,
-                           data_cofactor)
+                           data_cofactor, x_scale$scale)
     map_y <- .gml_axis_map(y_ch, y_tr, transforms_map, gatelab_format$logicle_unit, instrument,
-                           data_cofactor)
+                           data_cofactor, y_scale$scale)
+    tr_x <- if (!is.null(x_tr) && nzchar(x_tr)) transforms_map[[x_tr]] else NULL
+    tr_y <- if (!is.null(y_tr) && nzchar(y_tr)) transforms_map[[y_tr]] else NULL
 
     if (identical(g$gate_type, "polygon")) {
+      # A transformation's boundMin and boundMax hold the values beyond them at the bound before
+      # the gate is tested, which moves the events beyond onto a line of the declared space. A
+      # polygon inside the bounds holds none of them, and reads as if there were no bounds; one
+      # reaching a bound would hold them, which GateLabR's polygons cannot state.
+      at_bound <- .gml_polygon_at_bound(g$vertices, tr_x, tr_y)
+      if (!is.null(at_bound)) {
+        polygon_problems <- c(polygon_problems, paste0(
+          "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") is a polygon that reaches ", at_bound,
+          ", where the transformation holds every value beyond it; GateLabR's polygons cannot ",
+          "hold those events."
+        ))
+        next
+      }
       mapped <- .gml_polygon_vertices(g$vertices, map_x, map_y, densify = densify_polygons)
       if (!is.null(mapped$problem)) {
         polygon_problems <- c(polygon_problems, paste0(
@@ -2160,10 +2591,22 @@ import_gatingml_from_cytobank <- function(file_path,
       }
       verts <- mapped$vertices
     } else {
-      # Each axis's map is monotone, so a rectangle's bounds map to the stored rectangle's.
-      verts <- lapply(g$vertices, function(v) {
-        c(map_x$inverse(as.numeric(v[1])), map_y$inverse(as.numeric(v[2])))
-      })
+      # Each axis's map is increasing, so a rectangle's bounds map to the stored rectangle's
+      # (.gml_rectangle_range).
+      range_x <- .gml_rectangle_range(g$dims[[1]], map_x, tr_x)
+      range_y <- .gml_rectangle_range(g$dims[[min(2L, length(g$dims))]], map_y, tr_y)
+      empty <- Filter(Negate(is.null), list(range_x$empty, range_y$empty))
+      if (length(empty) > 0L) {
+        polygon_problems <- c(polygon_problems, paste0(
+          "Gate ", .gml_quote_name(g$name), " (", g$gml_id, ") holds no event: its range ",
+          empty[[1]], ", which GateLabR's rectangles cannot state."
+        ))
+        next
+      }
+      verts <- list(
+        c(range_x$range[[1]], range_y$range[[1]]), c(range_x$range[[2]], range_y$range[[1]]),
+        c(range_x$range[[2]], range_y$range[[2]]), c(range_x$range[[1]], range_y$range[[2]])
+      )
     }
     if (length(verts) < 3 && identical(g$gate_type, "polygon")) {
       n_skipped <- n_skipped + 1L

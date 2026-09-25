@@ -1,5 +1,5 @@
-# Gating-ML files as GateLab writes them from 2026-09 (format mark version 2), and as GateLab 0.8.3
-# wrote them before. The fixtures under fixtures/gatingml/ are GateLab's own exports of synthetic
+# Gating-ML files as GateLab writes them from 2026-09 (format mark version 3; version 2 before it),
+# and as GateLab 0.8.3 wrote them before the mark. The fixtures under fixtures/gatingml/ are GateLab's own exports of synthetic
 # strategies over synthetic events, written by tools/gatingml-fixtures.ts, which also records the
 # events GateLab places in each population. See fixtures/gatingml/README.md.
 
@@ -263,6 +263,8 @@ test_that("GateLabR's own exports keep polygons straight in raw values, as GateL
       format = format, counts_mat = counts
     ))
     expect_true(any(grepl("transformation-ref", readLines(out, warn = FALSE))), info = format)
+    # GateLabR writes flowCore's logicle scale, so never the words that say a file is on Gating-ML's.
+    expect_false(any(grepl(.GML_ABOUT_LOGICLE_SCALE, readLines(out, warn = FALSE), fixed = TRUE)), info = format)
     parsed <- import_gatingml_from_cytobank(out, channels, stats::setNames(as.list(channels), channels),
                                             instrument = "flow")
     expect_identical(gml_membership(parsed, counts)[["/Slanted"]], drawn, info = format)
@@ -328,16 +330,40 @@ test_that("a spillover matrix the file defines is read, and applied only when it
     "no spillover matrix"
   )
 
-  # The Cytobank format carries the same matrix, referenced by no dimension, and GateLab's
-  # compensation record.
+  # The Cytobank format writes compensation-ref="FCS" on every compensated dimension, as Cytobank
+  # does, and names the matrix in each gate's compensation_id: 1 is the spectrumMatrix whose
+  # cytobank_compensation_id is 1, the same matrix. Read as "FCS", the gates were evaluated with
+  # the FCS file's matrix.
   cytobank <- gml_import(gml_fixture("matrix-cytobank.xml"))
-  expect_null(cytobank$spectrum_matrix)
-  expect_true("FCS" %in% cytobank$compensation_refs)
+  expect_identical(cytobank$spectrum_matrix$id, "Spill_1")
+  expect_equal(cytobank$spectrum_matrix$matrix, external)
+  expect_setequal(cytobank$compensation_refs, c("uncompensated", "matrix"))
   gml_expect_membership(gml_membership(cytobank, compensated), info$populations$matrix)
+  expect_identical(
+    resolve_gatingml_compensation(cytobank$compensation, cytobank$compensation_refs, TRUE,
+                                  external, cytobank$spectrum_matrix)$target,
+    TRUE
+  )
   expect_error(
-    resolve_gatingml_compensation(cytobank$compensation, cytobank$compensation_refs, TRUE, fcs),
+    resolve_gatingml_compensation(cytobank$compensation, cytobank$compensation_refs, TRUE, fcs,
+                                  cytobank$spectrum_matrix),
     "different FCS spillover matrix"
   )
+  expect_error(
+    resolve_gatingml_compensation(NULL, cytobank$compensation_refs, TRUE, fcs, cytobank$spectrum_matrix),
+    "spillover matrix it defines"
+  )
+
+  # A compensation_id naming a matrix the file does not carry is refused by name, never read as
+  # the FCS file's own.
+  missing <- gml_variant("matrix-cytobank.xml", function(lines) {
+    sub("<cytobank_compensation_id>1</cytobank_compensation_id>",
+        "<cytobank_compensation_id>7</cytobank_compensation_id>", lines, fixed = TRUE)
+  })
+  expect_error(gml_import(missing), paste0(
+    'Gate "FL1_gate" (Gate_180000002_RkwxX2dhdGU.) was drawn under Cytobank compensation 1, which ',
+    "the file does not carry as a spectrumMatrix"
+  ), fixed = TRUE)
 })
 
 test_that("a spillover matrix GateLabR cannot apply is refused when a dimension references it", {
@@ -580,13 +606,19 @@ test_that("a GateLab tree that contradicts the file's BooleanGates is refused, n
 
 test_that("a format mark of a version GateLabR does not read is refused", {
   for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
-    later <- gml_variant(name, function(lines) sub('{"version":2,', '{"version":3,', lines, fixed = TRUE))
-    expect_error(gml_import(later), "format mark has version 3;", fixed = TRUE, info = name)
+    later <- gml_variant(name, function(lines) sub('{"version":3,', '{"version":4,', lines, fixed = TRUE))
+    expect_error(gml_import(later), "format mark has version 4;", fixed = TRUE, info = name)
   }
   unversioned <- gml_variant("tree-standard.xml", function(lines) {
-    sub('{"version":2,', "{", lines, fixed = TRUE)
+    sub('{"version":3,', "{", lines, fixed = TRUE)
   })
   expect_error(gml_import(unversioned), "format mark has no version;", fixed = TRUE)
+  # Version 2, which GateLab wrote before version 3, still reads.
+  earlier <- gml_variant("tree-standard.xml", function(lines) {
+    sub('{"version":3,"logicle":"gating-ml","hierarchy":"parent_id","time":"seconds","gain":"gating-ml"}',
+        '{"version":2,"logicle":"gating-ml","hierarchy":"parent_id"}', lines, fixed = TRUE)
+  })
+  gml_expect_membership(gml_membership(gml_import(earlier)), gml_expected()$populations$tree)
 })
 
 test_that("an arcsinh with A other than 0 is inverted as Gating-ML defines it", {
@@ -716,7 +748,7 @@ test_that("a GateLab format mark that names a key twice refuses the file", {
   # populations under different parents. GateLab never writes a key twice.
   for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
     twice <- gml_variant(name, function(lines) {
-      sub('{"version":2,', '{"version":2,"logicle":"flowcore",', lines, fixed = TRUE)
+      sub('{"version":3,', '{"version":3,"logicle":"flowcore",', lines, fixed = TRUE)
     })
     expect_error(gml_import(twice), 'gatelab_format) names the key "logicle" more than once', fixed = TRUE,
                  info = name)
@@ -734,7 +766,7 @@ test_that("a GateLab format mark with a comment refuses the file", {
   # GateLab never writes a comment.
   edits <- list(
     c("<gatelab_format>", "<gatelab_format>/* GateLab */"),
-    c('{"version":2,', '{"version":2,/* GateLab */'),
+    c('{"version":3,', '{"version":3,/* GateLab */'),
     c("</gatelab_format>", "// GateLab</gatelab_format>")
   )
   for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
@@ -964,4 +996,258 @@ test_that("a gate on a barcode channel is converted like one on any other channe
   axis <- .gml_axis_map("barcode", "Logicle", logicle, logicle_unit = TRUE, instrument = "flow")
   expect_identical(axis$kind, "curved")
   expect_equal(axis$inverse(axis$forward(c(-50, 10, 5000))), c(-50, 10, 5000))
+})
+
+test_that("GateLab's files from FlowJo gates read as ordinary gates: grid rings, skirted polygons and clamp rectangles", {
+  # A polygon on FlowJo's gate grid is written as the union of its grid cells, a rectilinear ring
+  # in raw values whose outer edge is the largest float32, with GateLab's own mark beside it. A
+  # continuous polygon on a biex or log axis reaching past the table's end or the floor is written
+  # in raw values, clipped there, with skirt loops out to 1e15 that hold the events beyond. A
+  # rectangle edge at a clamp is written raw with that bound left out, and a range over both ends
+  # of a biex table with gating:min at the largest negative double, which is no bound.
+  expected <- gml_expected()$populations$flowjo
+  for (name in c("flowjo-standard.xml", "flowjo-cytobank.xml")) {
+    parsed <- gml_import(gml_fixture(name))
+    gml_expect_membership(gml_membership(parsed), expected)
+    gates <- stats::setNames(parsed$gates, vapply(parsed$gates, `[[`, "", "name"))
+    # The ring is read as it is, vertex for vertex: nothing to follow on raw axes.
+    ring <- unlist(gates$Grid_cells$vertices)
+    expect_gte(max(abs(ring)), 3.4028234663852886e38)
+    xml <- xml2::xml_root(xml2::read_xml(gml_fixture(name)))
+    grid <- xml2::xml_find_first(xml, ".//*[local-name()='PolygonGate'][.//*[local-name()='gatelab_flowjo_grid']]")
+    expect_length(gates$Grid_cells$vertices, length(xml2::xml_find_all(grid, "./*[local-name()='vertex']")))
+    # Edges with no bound are stored beyond every value.
+    span <- range(vapply(gates$Biex_span_gate$vertices, `[`, 0, 1))
+    expect_identical(span, c(-.Machine$double.xmax, .Machine$double.xmax), info = name)
+    floor <- range(vapply(gates$Biex_floor_gate$vertices, `[`, 0, 1))
+    expect_identical(floor[[1]], -.Machine$double.xmax, info = name)
+  }
+})
+
+test_that("an edge with no bound holds values past 1e9, where the importer's stand-in had stopped", {
+  # A missing bound was held at -1e9 or 1e9, which real raw values pass: a detector width reaches
+  # beyond 2e9 on some instruments.
+  events <- cbind(`FL1-A` = c(-3e9, -2e3, 5e2, 3e9), `FL2-A` = c(0, 0, 0, 0))
+  open_range <- gml_write(gml_doc(
+    '  <gating:RectangleGate gating:id="Below" gating:name="Below"><gating:dimension gating:max="1000"><data-type:fcs-dimension data-type:name="FL1-A"/></gating:dimension></gating:RectangleGate>',
+    '  <gating:RectangleGate gating:id="Any" gating:name="Any"><gating:dimension gating:min="-1.7976931348623157e+308"><data-type:fcs-dimension data-type:name="FL1-A"/></gating:dimension></gating:RectangleGate>'
+  ))
+  membership <- gml_membership(gml_import(open_range), events)
+  expect_identical(membership[["/Below"]], 1:3)
+  expect_identical(membership[["/Any"]], 1:4)
+})
+
+test_that("Time in seconds and Gating-ML scale values are taken back to the stored values", {
+  # GateLab's standard format writes Time in seconds, stored ticks times $TIMESTEP, and every other
+  # coordinate as a Gating-ML scale value, stored value / $PnG; its mark says so ("time":
+  # "seconds", "gain": "gating-ml"). The Cytobank format writes both as stored.
+  info <- gml_expected()
+  expected <- info$populations$timegain
+  gains <- unlist(info$gains)
+  standard <- import_gatingml_from_cytobank(gml_fixture("timegain-standard.xml"), gml_channels,
+                                            gml_identity_map, instrument = "flow",
+                                            timestep = info$timestep, gains = gains)
+  gml_expect_membership(gml_membership(standard), expected)
+  cytobank <- gml_import(gml_fixture("timegain-cytobank.xml"))
+  gml_expect_membership(gml_membership(cytobank), expected)
+  # Early is half-open on whole-number ticks and Late closed: tick 300 is in Late alone.
+  early <- gml_events[unlist(expected[["/Cells/Early"]]), "Time"]
+  expect_true(all(early >= 100 & early < 300))
+  expect_true(299 %in% early)
+  expect_true(300 %in% gml_events[unlist(expected[["/Cells/Late"]]), "Time"])
+
+  # Without the data's $TIMESTEP a gate on Time in seconds is refused by name.
+  expect_error(
+    import_gatingml_from_cytobank(gml_fixture("timegain-standard.xml"), gml_channels, gml_identity_map,
+                                  instrument = "flow", gains = gains),
+    'Gate "Time_early_gate" (Gate_180000002_VGltZV9lYXJseV9nYXRl) is on Time, which the file\'s GateLab format mark says is in seconds',
+    fixed = TRUE
+  )
+  # Without the gains, the gates on FL1-A and FL2-A select other events.
+  ungained <- import_gatingml_from_cytobank(gml_fixture("timegain-standard.xml"), gml_channels,
+                                            gml_identity_map, instrument = "flow", timestep = info$timestep)
+  expect_false(identical(gml_membership(ungained)[["/FL1_raw"]], as.integer(unlist(expected[["/FL1_raw"]]))))
+  # Gains apply only where the mark says the file is on scale values.
+  gml_expect_membership(gml_membership(import_gatingml_from_cytobank(
+    gml_fixture("timegain-cytobank.xml"), gml_channels, gml_identity_map, instrument = "flow",
+    timestep = info$timestep, gains = gains
+  )), expected)
+})
+
+test_that("a rectangle edge on a raw axis in seconds lands on the stored tick exactly", {
+  # 10.052100219726563 s is the tick 1005.2100219726562 times 0.01 as a reader computes it, and the
+  # edge divided by 0.01 rounds one step past that tick, leaving it out of a range it starts.
+  scale <- list(to_stored = function(v) v / 0.01, to_file = function(x) x * 0.01)
+  map <- .gml_axis_map("Time", NULL, list(), instrument = "flow", scale = scale)
+  tick <- 1005.2100219726562
+  expect_identical(tick * 0.01, 10.052100219726563)
+  expect_gt(10.052100219726563 / 0.01, tick)
+  lower <- .gml_rectangle_range(list(channel = "Time", min = 10.052100219726563), map)$range[[1]]
+  expect_identical(lower, tick)
+  # A closed upper edge there holds the tick, and nothing a reader puts above the edge.
+  upper <- .gml_rectangle_range(list(channel = "Time", max = 10.052100219726563), map)$range[[2]]
+  expect_gte(upper, tick)
+  expect_lte(upper * 0.01, 10.052100219726563)
+  expect_gt(.gml_next_double(upper, 1) * 0.01, 10.052100219726563)
+})
+
+test_that("Gating-ML's flog is read, with an event at zero only in a range with no lower bound", {
+  # flog(x) = log10(x / T) / M + 1 is -Inf at zero and undefined below; FlowKit and flowCore do not
+  # test an absent bound, so a range open below holds an event at zero and none below it.
+  expected <- gml_expected()$populations$flog
+  for (name in c("flog-standard.xml", "flog-cytobank.xml")) {
+    parsed <- gml_import(gml_fixture(name))
+    gml_expect_membership(gml_membership(parsed), expected)
+  }
+  fl1 <- gml_events[, "FL1-A"]
+  open_below <- unlist(expected[["/FL1_log_open"]])
+  expect_true(which(fl1 == 0) %in% open_below)
+  expect_false(any(fl1[open_below] < 0))
+  # GateLab's own flog gates from FlowJo's log axes, in a version 3 file, read the same way.
+  flowjo <- gml_expected()$populations$flowjo
+  expect_identical(gml_membership(gml_import(gml_fixture("flowjo-standard.xml")))[["/Log_poly"]],
+                   as.integer(unlist(flowjo[["/Log_poly"]])))
+
+  # A file GateLab wrote before its mark reached version 3 used its older flog, which holds every
+  # value below T 10^-M at 0; such a gate is refused by name.
+  older <- gml_variant("flowjo-standard.xml", function(lines) {
+    sub('{"version":3,"logicle":"gating-ml","hierarchy":"parent_id","time":"seconds","gain":"gating-ml"}',
+        '{"version":2,"logicle":"gating-ml","hierarchy":"parent_id"}', lines, fixed = TRUE)
+  })
+  expect_error(gml_import(older), paste0(
+    'Gate "Log_poly_gate" (Gate_180000012_TG9nX3BvbHlfZ2F0ZQ..) is on transformation Tr_Log_262144_5, ',
+    "a flog GateLab wrote before its format mark reached version 3"
+  ), fixed = TRUE)
+})
+
+test_that("a transformation's boundMin and boundMax are applied, and what GateLabR cannot hold of them is refused", {
+  # A value beyond a bound is held at the bound before the gate is tested: a lower edge at or below
+  # boundMin holds every value below it, and an upper edge at or above boundMax every value above.
+  expected <- gml_expected()$populations$bounds
+  parsed <- gml_import(gml_fixture("bounds-standard.xml"))
+  gml_expect_membership(gml_membership(parsed), expected)
+  box <- Filter(function(g) identical(g$name, "Bounded_rect"), parsed$gates)[[1]]
+  expect_identical(min(vapply(box$vertices, `[`, 0, 1)), -.Machine$double.xmax)
+  expect_identical(max(vapply(box$vertices, `[`, 0, 2)), .Machine$double.xmax)
+
+  # A polygon reaching a bound would hold the events held there.
+  reaching <- gml_variant("bounds-standard.xml", function(lines) {
+    hit <- grep("<gating:coordinate", lines)[1]
+    lines[hit] <- sub('data-type:value="[^"]+"', 'data-type:value="0.05"', lines[hit])
+    lines
+  })
+  expect_error(gml_import(reaching), "is a polygon that reaches its transformation's boundMin 0.1", fixed = TRUE)
+  # A range wholly beyond a bound holds no event, which a rectangle cannot state.
+  beyond <- gml_variant("bounds-standard.xml", function(lines) {
+    sub('gating:min="0.5" gating:max="0.9999999999999"', 'gating:min="0.95" gating:max="0.9999999999999"', lines, fixed = TRUE)
+  })
+  expect_error(gml_import(beyond), "holds no event: its range on FL2-A starts at 0.95, above the transformation's boundMax 0.9",
+               fixed = TRUE)
+  # Bounds that cannot be read are refused, naming the transformation.
+  for (edit in list(c('transforms:boundMin="0.1"', 'transforms:boundMin="low"', 'whose boundMin is "low", which is not a number'),
+                    c('transforms:boundMin="0.1"', 'transforms:boundMin="0.95"', "whose boundMin 0.95 is above its boundMax 0.9"))) {
+    bad <- gml_variant("bounds-standard.xml", function(lines) sub(edit[[1]], edit[[2]], lines, fixed = TRUE))
+    expect_error(gml_import(bad), edit[[3]], fixed = TRUE, info = edit[[2]])
+  }
+})
+
+test_that("a transformation parameter that is not a number is refused by name, not given its default", {
+  # A parameter the file writes but that is not a finite number was read as absent, so a logicle
+  # with M="abc" was read at M = 4.5 and an arcsinh with M="abc" at log10(e).
+  range_on <- function(transform) {
+    gml_write(sprintf('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <transforms:transformation transforms:id="Tr">%s</transforms:transformation>
+  <gating:RectangleGate gating:id="R1" gating:name="FL1_range">
+    <gating:dimension gating:transformation-ref="Tr" gating:min="0.2" gating:max="0.9">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>', transform))
+  }
+  refused <- list(
+    list('<transforms:logicle transforms:T="262144" transforms:W="0.5" transforms:M="abc" transforms:A="0"/>',
+         'a logicle whose M is "abc", which is not a finite number'),
+    list('<transforms:logicle transforms:T="262144" transforms:W="" transforms:M="4.5" transforms:A="0"/>',
+         'a logicle whose W is "", which is not a finite number'),
+    list('<transforms:logicle transforms:T="262144" transforms:M="4.5" transforms:A="0"/>',
+         "a logicle gives no W"),
+    list('<transforms:fasinh transforms:T="262144" transforms:M="abc" transforms:A="0"/>',
+         'an arcsinh (fasinh) whose M is "abc", which is not a finite number'),
+    list('<transforms:fasinh transforms:T="0x10" transforms:M="4" transforms:A="0"/>',
+         'an arcsinh (fasinh) whose T is "0x10", which is not a finite number'),
+    list('<transforms:fasinh transforms:T="262144" transforms:M="4" transforms:A="Inf"/>',
+         'an arcsinh (fasinh) whose A is "Inf", which is not a finite number'),
+    list('<transforms:flog transforms:T="262144" transforms:M="five"/>',
+         'a flog whose M is "five", which is not a finite number'),
+    list('<transforms:flin transforms:T="262144" transforms:A="abc"/>',
+         'a flin whose A is "abc", which is not a finite number'),
+    # sinh(M ln 10) overflows double precision past M = 308.25, and the inverse is then 0 everywhere;
+    # it was read as the identity.
+    list('<transforms:fasinh transforms:T="262144" transforms:M="310" transforms:A="0"/>',
+         "an arcsinh (fasinh) with T = 262144, M = 310 and A = 0, whose sinh(M ln 10) overflows double precision")
+  )
+  for (case in refused) {
+    expect_error(gml_import(range_on(case[[1]])),
+                 paste0('Gate "FL1_range" (R1) is on transformation Tr, ', case[[2]], ", so GateLabR cannot"),
+                 fixed = TRUE, info = case[[1]])
+  }
+  # A parameter the file leaves out still takes its default, as GateLab gives it.
+  lg <- flowCore::logicleTransform("lg", w = 0.5, t = 262144, m = 4.5, a = 0)
+  inverse <- flowCore::inverseLogicleTransform(lg, transformationId = "inv")
+  default_m <- gml_import(range_on('<transforms:logicle transforms:T="262144" transforms:W="0.5"/>'))
+  expect_equal(default_m$gates[[1]]$vertices[[1]][1], as.numeric(inverse(0.2 * 4.5)))
+  # M = 308 is below the overflow and reads.
+  forward <- function(x) asinh(x * sinh(308 * log(10)) / 262144) / (308 * log(10))
+  high_m <- gml_import(range_on('<transforms:fasinh transforms:T="262144" transforms:M="308" transforms:A="0"/>'))
+  expect_equal(forward(high_m$gates[[1]]$vertices[[1]][1]), 0.2)
+})
+
+test_that("GateLab's compensation record of version 4 names its reference by the gates' dimensions", {
+  # From gatelabr_scales version 4 the reference is always "dimensions": enabled says whether the
+  # gates were drawn on compensated values, read as "FCS" when they were and "uncompensated" when
+  # not. A reference GateLabR does not know is refused, as before.
+  expect_identical(gml_import(gml_fixture("tree-standard.xml"))$compensation$reference, "uncompensated")
+  matrix <- gml_import(gml_fixture("matrix-standard.xml"))$compensation
+  expect_identical(matrix$reference, "FCS")
+  expect_true(matrix$enabled)
+  older <- gml_variant("tree-standard.xml", function(lines) {
+    sub('{"version":4,"channels"', '{"version":3,"channels"', lines, fixed = TRUE)
+  })
+  expect_error(gml_import(older), "unsupported matrix reference")
+  unknown <- gml_variant("tree-standard.xml", function(lines) {
+    sub('"reference":"dimensions"', '"reference":"workspace"', lines, fixed = TRUE)
+  })
+  expect_error(gml_import(unknown), "unsupported matrix reference")
+})
+
+test_that("a file on Gating-ML's logicle scale says so in its about text or its scales version, without the mark", {
+  lg <- flowCore::logicleTransform("lg", w = 0.5, t = 262144, m = 4.5, a = 1)
+  inverse <- flowCore::inverseLogicleTransform(lg, transformationId = "inv")
+  lower_bound <- function(parsed) parsed$gates[[1]]$vertices[[1]][1]
+  expected <- as.numeric(inverse(0.4 * 4.5))
+  words <- "<data-type:custom_info><cytobank><about>Gating-ML 2.0 export from GateLab (standard / re-importable; logicle on the Gating-ML 2.0 scale, T at 1)</about></cytobank></data-type:custom_info>"
+  expect_equal(lower_bound(gml_import(gml_logicle_file(0.4, words))), expected)
+  scales_v4 <- '<data-type:custom_info><gatelabr_scales><definition>{"version":4,"channels":{}}</definition></gatelabr_scales></data-type:custom_info>'
+  expect_equal(lower_bound(gml_import(gml_logicle_file(0.4, scales_v4))), expected)
+  # GateLab's older about text still reads on flowCore's scale.
+  older <- sub("; logicle on the Gating-ML 2.0 scale, T at 1", "", words, fixed = TRUE)
+  expect_equal(lower_bound(gml_import(gml_logicle_file(0.4 * 4.5, older))), expected)
+
+  # Without the mark, a gate on Time in such a file could be in seconds or ticks, and is refused.
+  on_time <- gml_write(gml_doc(
+    words,
+    '  <gating:RectangleGate gating:id="Window" gating:name="Window"><gating:dimension gating:min="1" gating:max="3"><data-type:fcs-dimension data-type:name="Time"/></gating:dimension></gating:RectangleGate>'
+  ))
+  expect_error(gml_import(on_time), "a gate on Time, whose unit, seconds or ticks, only the mark states", fixed = TRUE)
+})
+
+test_that("a GateLab format mark with a Time unit or gain convention GateLabR does not know is refused", {
+  for (edit in list(c('"time":"seconds"', '"time":"minutes"', "gives no Time unit GateLabR knows"),
+                    c('"gain":"gating-ml"', '"gain":"divided"', "gives no gain convention GateLabR knows"))) {
+    bad <- gml_variant("tree-standard.xml", function(lines) sub(edit[[1]], edit[[2]], lines, fixed = TRUE))
+    expect_error(gml_import(bad), edit[[3]], fixed = TRUE, info = edit[[2]])
+  }
 })

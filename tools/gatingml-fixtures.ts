@@ -23,8 +23,10 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FcsFile } from "@gatelab/engine/fcs";
-import { Sample } from "@gatelab/engine/sample";
+import { Sample, transformFromSpec } from "@gatelab/engine/sample";
 import { exportGatingML, type GatingMLFormat } from "@gatelab/engine/gatingmlExport";
+import { importGatingML } from "@gatelab/engine/gatingml";
+import { flowJoWorkspaceToGatingML } from "@gatelab/engine/flowjoWorkspace";
 import { applyGatingStrategy } from "@gatelab/engine/populations";
 import {
   linkChildToParent,
@@ -109,14 +111,21 @@ const EXTERNAL_SPILLOVER = {
   ],
 };
 
-function sample(withSpillover: boolean): Sample {
+/** $TIMESTEP and $PnG of the synthetic file where a strategy needs them (see timeGainStrategy). */
+const TIMESTEP = "0.01";
+const GAINS: Record<string, number> = { "FL1-A": 0.5, "FL2-A": 2 };
+
+function sample(withSpillover: boolean, withTimestepAndGains = false): Sample {
   const fcs: FcsFile = {
     version: "FCS3.1",
     nEvents: N_EVENTS,
     instrument: "flow",
-    keywords: { $FIL: "synthetic.fcs" },
+    keywords: withTimestepAndGains ? { $FIL: "synthetic.fcs", $TIMESTEP: TIMESTEP } : { $FIL: "synthetic.fcs" },
     spillover: withSpillover ? FCS_SPILLOVER : null,
-    channels: CHANNELS.map((name, index) => ({ index, name, marker: null, bits: 32, range: 262144 })),
+    channels: CHANNELS.map((name, index) => ({
+      index, name, marker: null, bits: 32, range: 262144,
+      ...(withTimestepAndGains && GAINS[name] !== undefined ? { gain: GAINS[name] } : {}),
+    })),
     columns: EVENTS.map((col) => Float32Array.from(col)),
   };
   return new Sample(fcs);
@@ -304,6 +313,186 @@ function matrixStrategy(s: Sample): Tree {
   ]);
 }
 
+/**
+ * Gates as GateLab holds them after importing a FlowJo workspace with FlowJo's rule (its default):
+ * polygons on FlowJo's gate grid, which Gating-ML carries as the union of their cells (a
+ * rectilinear ring in raw values out to the largest float32, with GateLab's mark); continuous
+ * polygons on a biex and a log axis that reach past the biex table's bottom and the log axis's
+ * floor, which Gating-ML carries in raw values with skirt loops out to 1e15; and rectangles, which
+ * FlowJo compares in raw values, with a bound its rule opened at a clamp left out. Beside them,
+ * gates drawn in GateLab on those axes: rectangles with edges at a biex table's ends, written raw
+ * with the bound left out, one of them unbounded on both sides, and on GateLab's own log axis a
+ * rectangle reaching its floor (written raw) and a polygon away from it (written under flog).
+ */
+function flowJoStrategy(s: Sample): Tree {
+  const T = "http://www.isac-net.org/std/Gating-ML/v2.0/transformations";
+  const D = "http://www.isac-net.org/std/Gating-ML/v2.0/datatypes";
+  const G = "http://www.isac-net.org/std/Gating-ML/v2.0/gating";
+  const p = (ch: string) => `<data-type:parameter data-type:name="${ch}"/>`;
+  const dim = (ch: string, min?: number, max?: number) =>
+    `<gating:dimension${min === undefined ? "" : ` gating:min="${min}"`}${max === undefined ? "" : ` gating:max="${max}"`}>` +
+    `<data-type:fcs-dimension data-type:name="${ch}"/></gating:dimension>`;
+  const polygon = (id: string, x: string, y: string, vertices: [number, number][], grid: boolean) =>
+    `<gating:PolygonGate eventsInside="1" quadId="-1"${grid ? ' gateResolution="256"' : ""} gating:id="${id}">` +
+    dim(x) + dim(y) +
+    vertices.map(([a, b]) => `<gating:vertex><gating:coordinate data-type:value="${a}"/><gating:coordinate data-type:value="${b}"/></gating:vertex>`).join("") +
+    "</gating:PolygonGate>";
+  const rectangle = (id: string, dims: string[]) =>
+    `<gating:RectangleGate eventsInside="1" percentX="0" percentY="0" gating:id="${id}">${dims.join("")}</gating:RectangleGate>`;
+  const population = (name: string, gate: string, children = "") =>
+    `<Population name="${name}" count="1"><Gate>${gate}</Gate>${children ? `<Subpopulations>${children}</Subpopulations>` : ""}</Population>`;
+  const biexAxis = (ch: string) =>
+    `<transforms:biex transforms:length="256" transforms:maxRange="262144" transforms:neg="0" transforms:width="-10" transforms:pos="4.41854">${p(ch)}</transforms:biex>`;
+  const wsp = `<Workspace xmlns:transforms="${T}" xmlns:data-type="${D}" xmlns:gating="${G}"><SampleList><Sample>
+  <DataSet uri="file:synthetic.fcs"/>
+  <Transformations>
+    <transforms:linear transforms:minRange="0" transforms:maxRange="262144" transforms:gain="1">${p("FSC-A")}</transforms:linear>
+    <transforms:linear transforms:minRange="0" transforms:maxRange="262144" transforms:gain="1">${p("SSC-A")}</transforms:linear>
+    ${biexAxis("FL1-A")}
+    <transforms:log transforms:offset="1" transforms:decades="5">${p("FL2-A")}</transforms:log>
+    ${biexAxis("FL3-A")}
+  </Transformations>
+  <SampleNode name="synthetic.fcs" count="${N_EVENTS}"><Subpopulations>
+    ${population("Grid_cells", polygon("g1", "FSC-A", "FL1-A", [[30000, -500], [180000, -300], [170000, 40000], [40000, 20000]], true),
+      population("Biex_poly", polygon("g2", "FL1-A", "FL3-A", [[-5000, -5000], [2500, -5000], [2500, 400], [600, 3000], [-5000, 3000]], false)) +
+      population("Biex_low_rect", rectangle("g3", [dim("FL1-A", -1e6, 2000), dim("FL3-A", 1000, 1e6)])))}
+    ${population("Biex_all_range", rectangle("g4", [dim("FL3-A", -1e7, 1e7)]))}
+    ${population("Log_floor_rect", rectangle("g5", [dim("FL2-A", 0.1, 5000), dim("SSC-A", 10000, 150000)]),
+      population("Log_floor_poly", polygon("g6", "FL2-A", "SSC-A", [[0.01, 20000], [20000, 30000], [30000, 140000], [0.01, 120000]], false)))}
+    ${population("Log_rect", rectangle("g7", [dim("FL2-A", 100, 20000), dim("FSC-A", 20000, 200000)]))}
+    ${population("Log_grid", polygon("g8", "FL2-A", "FL3-A", [[0.5, -800], [30000, -200], [50000, 50000], [3, 30000]], true))}
+  </Subpopulations></SampleNode></Sample></SampleList></Workspace>`;
+  const conv = flowJoWorkspaceToGatingML(wsp, 0, null, undefined, { flowJoGrid: true });
+  const res = importGatingML(conv.gatingMl, s.channels.map((c) => c.key), {}, "flow");
+  if (conv.gridPolygons !== 2) throw new Error(`expected 2 grid polygons, got ${conv.gridPolygons}`);
+
+  // Rectangles drawn in GateLab on FlowJo's biex axis (as the continuous biex polygon holds it)
+  // and on GateLab's own log axis, with edges at the clamps: FlowJo's rule does not apply to them,
+  // so an edge at a biex table's end or at the log floor is written raw with that bound left out,
+  // and a range over both ends of the table is unbounded on both sides.
+  const biexPoly = Object.values(res.gates).find((g) => g.name === "Biex_poly") as Gate & { transforms?: Record<string, never> };
+  const biexSpec = biexPoly.transforms!["FL3-A"];
+  const biex = transformFromSpec(biexSpec);
+  const [bottom, top] = [biex.forward(-Number.MAX_VALUE), biex.forward(Number.MAX_VALUE)];
+  const onAxes = (gate: Gate, transforms: Record<string, unknown>): Gate =>
+    Object.assign(gate, { space: "display", transforms }) as Gate;
+  const flogSpec = { kind: "flog", T: 262144, M: 5 };
+  const flog = transformFromSpec(flogSpec as never);
+  const extra: Record<string, Gate> = {
+    span: onAxes(newGate("Biex_span_gate", "rectangle", "FL3-A", "FL3-A", rect(bottom, bottom, top, top)),
+      { "FL3-A": biexSpec }),
+    floor: onAxes(newGate("Biex_floor_gate", "rectangle", "FL1-A", "FL3-A",
+      rect(bottom, biex.forward(500), biex.forward(3000), biex.forward(60000))), { "FL1-A": biexSpec, "FL3-A": biexSpec }),
+    logFloor: onAxes(newGate("Log_floor_gate", "rectangle", "FL2-A", "FL2-A", rect(0, 0, flog.forward(4000), flog.forward(4000))),
+      { "FL2-A": flogSpec }),
+    logPoly: onAxes(newGate("Log_poly_gate", "polygon", "FL1-A", "FL2-A",
+      [[0.45, 0.4], [0.9, 0.5], [0.8, 0.95], [0.5, 0.75]]), { "FL1-A": flogSpec, "FL2-A": flogSpec }),
+  };
+  let populations = res.populations;
+  const gates = { ...res.gates };
+  const order = [...res.gate_order];
+  for (const [name, gate] of [["Biex_span", extra.span], ["Biex_floor", extra.floor], ["Log_floor", extra.logFloor], ["Log_poly", extra.logPoly]] as const) {
+    gates[gate.gate_id] = gate;
+    order.push(gate.gate_id);
+    const pop = newPopulation(name, [newGateRef(gate.gate_id, true)], res.root_population_id);
+    populations = linkChildToParent({ ...populations, [pop.population_id]: pop }, pop.population_id, res.root_population_id);
+  }
+  return { gates, gate_order: order, populations, root_population_id: res.root_population_id };
+}
+
+/**
+ * Gates on Time and on channels with a gain, over a file with $TIMESTEP 0.01 and $PnG 0.5 on FL1-A
+ * and 2 on FL2-A. The standard format writes Time in seconds and every other coordinate as a
+ * Gating-ML scale value, stored value / $PnG; the Cytobank format writes both as stored. Time_early
+ * is half-open, the rule of a rectangle drawn in GateLab, on whole-number ticks, so an event lies
+ * on each of its edges; Time_late is closed and shares an edge with it.
+ */
+function timeGainStrategy(s: Sample): Tree {
+  const g = gateSet(s);
+  const halfOpen = (gate: Gate): Gate => Object.assign(gate, { bounds: "half-open" }) as Gate;
+  const cf = 50;
+  const timeAsinh = newGate("Time_asinh_gate", "rectangle", "Time", "Time",
+    rect(Math.asinh(150 / cf), Math.asinh(150 / cf), Math.asinh(500 / cf), Math.asinh(500 / cf)));
+  Object.assign(timeAsinh, { space: "display", transforms: { Time: { kind: "asinh", cofactor: cf } } });
+  const gates = {
+    cells: g.cells,
+    early: halfOpen(newGate("Time_early_gate", "rectangle", "Time", "Time", rect(100, 100, 300, 300))),
+    late: newGate("Time_late_gate", "rectangle", "Time", "Time", rect(300, 300, 450, 450)),
+    timeFl2: newGate("Time_FL2_gate", "polygon", "Time", "FL2-A", [[50, -2000], [550, -2000], [550, 30000], [50, 5000]]),
+    fl2Logicle: displayGate(s, newGate("FL2_logicle_gate", "rectangle", "FL2-A", "FL1-A", rect(0.5, 0.1, 0.95, 0.9))),
+    fl1Raw: halfOpen(newGate("FL1_raw_gate", "rectangle", "FL1-A", "FL2-A", rect(1000, -1000, 50000, 60000))),
+    timeAsinh,
+  };
+  return build(gates, [
+    { name: "Cells", parent: null, refs: [["cells", true]] },
+    { name: "Early", parent: "Cells", refs: [["early", true]] },
+    { name: "Early_FL2", parent: "Early", refs: [["fl2Logicle", true]] },
+    { name: "Late", parent: "Cells", refs: [["late", true]] },
+    { name: "Time_FL2", parent: "Cells", refs: [["timeFl2", true]] },
+    { name: "FL1_raw", parent: null, refs: [["fl1Raw", true]] },
+    { name: "Time_asinh", parent: null, refs: [["timeAsinh", true]] },
+  ]);
+}
+
+/** A strategy from another writer's file, as GateLab holds it after importing that file. */
+function fromThirdParty(s: Sample, body: string): Tree {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+${body}
+</gating:Gating-ML>`;
+  const res = importGatingML(xml, s.channels.map((c) => c.key), {}, "flow");
+  if (res.warnings.length) throw new Error(`third-party import warned: ${res.warnings.join(" | ")}`);
+  return { gates: res.gates, gate_order: res.gate_order, populations: res.populations, root_population_id: res.root_population_id };
+}
+
+const tpDim = (ch: string, tr: string | null, min?: number, max?: number) =>
+  `    <gating:dimension gating:compensation-ref="uncompensated"${tr ? ` gating:transformation-ref="${tr}"` : ""}` +
+  `${min === undefined ? "" : ` gating:min="${min}"`}${max === undefined ? "" : ` gating:max="${max}"`}>` +
+  `<data-type:fcs-dimension data-type:name="${ch}"/></gating:dimension>`;
+const tpPolygon = (id: string, dims: string[], vertices: [number, number][]) =>
+  `  <gating:PolygonGate gating:id="${id}">\n${dims.join("\n")}\n` +
+  vertices.map(([a, b]) => `    <gating:vertex><gating:coordinate data-type:value="${a}"/><gating:coordinate data-type:value="${b}"/></gating:vertex>`).join("\n") +
+  "\n  </gating:PolygonGate>";
+const tpRectangle = (id: string, dims: string[], parent?: string) =>
+  `  <gating:RectangleGate gating:id="${id}"${parent ? ` gating:parent_id="${parent}"` : ""}>\n${dims.join("\n")}\n  </gating:RectangleGate>`;
+
+/**
+ * Gating-ML's own flog from another writer, which GateLab holds as that flog: a range with no lower
+ * bound, which holds an event at zero (flog is -Inf there, and an absent bound is not tested) and
+ * none below it, a rectangle, and a polygon with slanted edges on flog axes.
+ */
+function flogStrategy(s: Sample): Tree {
+  return fromThirdParty(s, [
+    '  <transforms:transformation transforms:id="Log5"><transforms:flog transforms:T="262144" transforms:M="5"/></transforms:transformation>',
+    tpRectangle("FL1_log_open", [tpDim("FL1-A", "Log5", undefined, 0.7)]),
+    tpRectangle("FL_log_box", [tpDim("FL1-A", "Log5", 0.4, 0.9), tpDim("FL2-A", "Log5", 0.3, 0.95)]),
+    tpPolygon("FL_log_poly", [tpDim("FL1-A", "Log5"), tpDim("FL3-A", "Log5")],
+      [[0.45, 0.35], [0.9, 0.5], [0.85, 0.95], [0.5, 0.8]]),
+  ].join("\n"));
+}
+
+/**
+ * A transformation's boundMin and boundMax, from another writer: values beyond a bound are held
+ * at it before the gate is tested. GateLab keeps them on a logicle gate and writes them back as
+ * the transformation's; a bounded flin rectangle it holds on raw values with the bound applied.
+ * The Cytobank format cannot carry a bound, so this strategy is written in the standard format
+ * only.
+ */
+function boundsStrategy(s: Sample): Tree {
+  return fromThirdParty(s, [
+    '  <transforms:transformation transforms:id="LgB" transforms:boundMin="0.1" transforms:boundMax="0.9">' +
+      '<transforms:logicle transforms:T="262144" transforms:W="0.5" transforms:M="4.5" transforms:A="0"/></transforms:transformation>',
+    '  <transforms:transformation transforms:id="LinB" transforms:boundMax="0.1">' +
+      '<transforms:flin transforms:T="262144" transforms:A="0"/></transforms:transformation>',
+    tpRectangle("Bounded_rect", [tpDim("FL1-A", "LgB", 0.05, 0.6), tpDim("FL2-A", "LgB", 0.5, 1)]),
+    tpPolygon("Bounded_poly", [tpDim("FL1-A", "LgB"), tpDim("FL3-A", "LgB")],
+      [[0.3, 0.2], [0.85, 0.4], [0.8, 0.85], [0.35, 0.7]]),
+    tpRectangle("Lin_bounded", [tpDim("FL3-A", "LinB", 0.005, 0.5)]),
+  ].join("\n"));
+}
+
 // ---------------------------------------------------------------------------
 // Export, and the events GateLab puts in each population
 // ---------------------------------------------------------------------------
@@ -337,6 +526,8 @@ const fixtures: {
   setup: (s: Sample) => void;
   withSpillover: boolean;
   currentOnly?: boolean;
+  withTimestepAndGains?: boolean;
+  formats?: GatingMLFormat[];
 }[] = [
   { stem: "tree", tree: treeStrategy, setup: () => {}, withSpillover: false },
   { stem: "exclusion", tree: exclusionStrategy, setup: () => {}, withSpillover: false },
@@ -352,15 +543,19 @@ const fixtures: {
   { stem: "slanted", tree: slantedStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
   { stem: "ellipse", tree: ellipseStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
   { stem: "repeated", tree: repeatedStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
+  { stem: "flowjo", tree: flowJoStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
+  { stem: "timegain", tree: timeGainStrategy, setup: () => {}, withSpillover: false, currentOnly: true, withTimestepAndGains: true },
+  { stem: "flog", tree: flogStrategy, setup: () => {}, withSpillover: false, currentOnly: true },
+  { stem: "bounds", tree: boundsStrategy, setup: () => {}, withSpillover: false, currentOnly: true, formats: ["standard"] },
 ];
 
 for (const f of fixtures) {
   if (suffix && f.currentOnly) continue;
-  const s = sample(f.withSpillover);
+  const s = sample(f.withSpillover, f.withTimestepAndGains);
   f.setup(s);
   const t = f.tree(s);
   memberships[f.stem] = membership(s, t);
-  for (const format of ["standard", "cytobank"] as GatingMLFormat[]) {
+  for (const format of f.formats ?? (["standard", "cytobank"] as GatingMLFormat[])) {
     const xml = exportGatingML({ ...t, sample: s, format, timestamp: TIMESTAMP });
     const out = join(outDir, `${f.stem}-${format}${suffix}.xml`);
     writeFileSync(out, xml);
@@ -376,6 +571,7 @@ writeFileSync(
   JSON.stringify({
     fcs_spillover: FCS_SPILLOVER,
     external_spillover: EXTERNAL_SPILLOVER,
+    ...(suffix ? {} : { timestep: Number(TIMESTEP), gains: GAINS }),
     populations: memberships,
   }) + "\n",
 );

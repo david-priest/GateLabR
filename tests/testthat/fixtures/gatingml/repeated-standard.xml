@@ -2,22 +2,26 @@
 <gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xsi:schemaLocation="http://www.isac-net.org/std/Gating-ML/v2.0/gating http://flowcyt.sourceforge.net/gating/2.0/xsd/Gating-ML.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/transformations http://flowcyt.sourceforge.net/gating/2.0/xsd/Transformations.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/datatypes http://flowcyt.sourceforge.net/gating/2.0/xsd/DataTypes.v2.0.xsd">
   <data-type:custom_info>
     <cytobank>
-      <about>Gating-ML 2.0 export from GateLab (standard / re-importable)</about>
+      <about>Gating-ML 2.0 export from GateLab (standard / re-importable; logicle on the Gating-ML 2.0 scale, T at 1)</about>
       <export_timestamp>2026-01-01T00:00:00</export_timestamp>
     </cytobank>
+    <gatelab_edge_rule>half-open</gatelab_edge_rule>
+    <gatelab_rectangles>
+      <definition>{"version":1,"rectangles":{"Gate_180000001_Q2VsbHNfZ2F0ZQ..":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"asinh","cofactor":150},"y":{"kind":"asinh","cofactor":150}},"x":[5.991470797049389,7.888584672618833],"y":[5.586013501203196,7.726065797132709],"written":["5.991470797049389|7.888584672619622","5.586013501203196|7.726065797133482"]},"Gate_180000002_RkwxX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":0.9029294218957991,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":0.8958733628756148,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.05,0.98],"written":["0.55|0.980000000000098","0.05|0.980000000000098"]},"Gate_180000004_RkwzX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":0.881328037029516,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":0.881328037029516,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.55,0.98],"written":["0.55|0.980000000000098"]}}}</definition>
+    </gatelab_rectangles>
     <gatelabr_scales>
-      <definition>{"version":3,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":0.902929},"FL2-A":{"w":0.895873},"FL3-A":{"w":0.881328}},"compensation":{"enabled":false,"reference":"uncompensated","channels":[]}}</definition>
+      <definition>{"version":4,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":0.902929},"FL2-A":{"w":0.895873},"FL3-A":{"w":0.881328}},"compensation":{"enabled":false,"reference":"dimensions","channels":[]}}</definition>
     </gatelabr_scales>
-    <gatelab_format>{"version":2,"logicle":"gating-ml","hierarchy":"parent_id"}</gatelab_format>
+    <gatelab_format>{"version":3,"logicle":"gating-ml","hierarchy":"parent_id","time":"seconds","gain":"gating-ml"}</gatelab_format>
   </data-type:custom_info>
   <transforms:transformation transforms:id="Tr_Fasinh_150">
-    <transforms:fasinh transforms:T="176.28017904657" transforms:M="0.434294481903252" transforms:A="0" />
+    <transforms:fasinh transforms:T="176.2801790465702" transforms:M="0.4342944819032518" transforms:A="0" />
   </transforms:transformation>
   <transforms:transformation transforms:id="Tr_Logicle_FL1_A_W0_9029">
-    <transforms:logicle transforms:T="262144" transforms:W="0.902929421895799" transforms:M="4.5" transforms:A="0" />
+    <transforms:logicle transforms:T="262144" transforms:W="0.9029294218957991" transforms:M="4.5" transforms:A="0" />
   </transforms:transformation>
   <transforms:transformation transforms:id="Tr_Logicle_FL2_A_W0_8959">
-    <transforms:logicle transforms:T="262144" transforms:W="0.895873362875615" transforms:M="4.5" transforms:A="0" />
+    <transforms:logicle transforms:T="262144" transforms:W="0.8958733628756148" transforms:M="4.5" transforms:A="0" />
   </transforms:transformation>
   <transforms:transformation transforms:id="Tr_Logicle_FL3_A_W0_8813">
     <transforms:logicle transforms:T="262144" transforms:W="0.881328037029516" transforms:M="4.5" transforms:A="0" />
@@ -40,13 +44,13 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396697,"max":8.13443450502118,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.00371336228892,"max":7.97353060594931,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.94002773483411,6.65603964916795],"rectangle":{"x1":5.99147079704939,"y1":5.5860135012032,"x2":7.88858467261883,"y2":7.72606579713271}}</definition>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396696985,"max":8.134434505021183,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.003713362288923,"max":7.973530605949307,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.940027734834505,6.6560396491683385],"rectangle":{"x1":5.991470797049389,"y1":5.586013501203196,"x2":7.888584672619622,"y2":7.726065797133482}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.99147079704939" gating:max="7.88858467261883" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.991470797049389" gating:max="7.888584672619622" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="FSC-A" />
     </gating:dimension>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.5860135012032" gating:max="7.72606579713271" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.586013501203196" gating:max="7.726065797133482" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="SSC-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -68,13 +72,13 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.0938866717918133,"max":1.00105660140768,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.0719448858771773,"max":1.00062637031132,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765,0.515],"rectangle":{"x1":0.55,"y1":0.05,"x2":0.98,"y2":0.98}}</definition>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.0938866717918153,"max":1.0010566014077826,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.07194488587717923,"max":1.000626370311417,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765000000000049,0.515000000000049],"rectangle":{"x1":0.55,"y1":0.05,"x2":0.980000000000098,"y2":0.980000000000098}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.55" gating:max="0.98" gating:transformation-ref="Tr_Logicle_FL1_A_W0_9029">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.55" gating:max="0.980000000000098" gating:transformation-ref="Tr_Logicle_FL1_A_W0_9029">
       <data-type:fcs-dimension data-type:name="FL1-A" />
     </gating:dimension>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.05" gating:max="0.98" gating:transformation-ref="Tr_Logicle_FL2_A_W0_8959">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.05" gating:max="0.980000000000098" gating:transformation-ref="Tr_Logicle_FL2_A_W0_8959">
       <data-type:fcs-dimension data-type:name="FL2-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -96,7 +100,7 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.0704133056168475,"max":0.922515777034497,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.0991390000785973,"max":0.925503120663128,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.6,0.566666666666667],"polygon":{"vertices":[[0.3,0.3],[0.9,0.3],[0.9,0.5],[0.6,0.5],[0.6,0.9],[0.3,0.9]]}}</definition>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.07041330561684746,"max":0.922515777034497,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.09913900007859733,"max":0.9255031206631277,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.6,0.5666666666666667],"polygon":{"vertices":[[0.3,0.3],[0.9,0.3],[0.9,0.5],[0.6,0.5],[0.6,0.9],[0.3,0.9]]}}</definition>
       </cytobank>
     </data-type:custom_info>
     <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Logicle_FL2_A_W0_8959">
@@ -148,10 +152,10 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.100623030788697,"max":1.00118868687821,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.100623030788697,"max":1.00118868687821,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765,0.765],"rectangle":{"x1":0.55,"y1":0.55,"x2":0.98,"y2":0.98}}</definition>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.10062303078869894,"max":1.0011886868783098,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.10062303078869894,"max":1.0011886868783098,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765000000000049,0.765000000000049],"rectangle":{"x1":0.55,"y1":0.55,"x2":0.980000000000098,"y2":0.980000000000098}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.55" gating:max="0.98" gating:transformation-ref="Tr_Logicle_FL3_A_W0_8813">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.55" gating:max="0.980000000000098" gating:transformation-ref="Tr_Logicle_FL3_A_W0_8813">
       <data-type:fcs-dimension data-type:name="FL3-A" />
     </gating:dimension>
   </gating:RectangleGate>

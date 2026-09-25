@@ -2,25 +2,29 @@
 <gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xsi:schemaLocation="http://www.isac-net.org/std/Gating-ML/v2.0/gating http://flowcyt.sourceforge.net/gating/2.0/xsd/Gating-ML.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/transformations http://flowcyt.sourceforge.net/gating/2.0/xsd/Transformations.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/datatypes http://flowcyt.sourceforge.net/gating/2.0/xsd/DataTypes.v2.0.xsd">
   <data-type:custom_info>
     <cytobank>
-      <about>Gating-ML 2.0 export from GateLab (standard / re-importable)</about>
+      <about>Gating-ML 2.0 export from GateLab (standard / re-importable; logicle on the Gating-ML 2.0 scale, T at 1)</about>
       <export_timestamp>2026-01-01T00:00:00</export_timestamp>
     </cytobank>
+    <gatelab_edge_rule>half-open</gatelab_edge_rule>
+    <gatelab_rectangles>
+      <definition>{"version":1,"rectangles":{"Gate_180000001_Q2VsbHNfZ2F0ZQ..":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"asinh","cofactor":150},"y":{"kind":"asinh","cofactor":150}},"x":[5.991470797049389,7.888584672618833],"y":[5.586013501203196,7.726065797132709],"written":["5.991470797049389|7.888584672619622","5.586013501203196|7.726065797133482"]},"Gate_180000002_RkwxX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":1.2350379090074917,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":1.4757645178554561,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.05,0.98],"written":["0.55|0.980000000000098","0.05|0.980000000000098"]},"Gate_180000003_RkwzX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":1.4036669674495352,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":1.4036669674495352,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.55,0.98],"written":["0.55|0.980000000000098"]}}}</definition>
+    </gatelab_rectangles>
     <gatelabr_scales>
-      <definition>{"version":3,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":1.235038},"FL2-A":{"w":1.475765},"FL3-A":{"w":1.403667}},"compensation":{"enabled":true,"reference":"FCS","channels":["FL1-A","FL2-A","FL3-A"],"matrix":[[1,0.2,0.05],[0.08,1,0.15],[0.01,0.1,1]]}}</definition>
+      <definition>{"version":4,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":1.235038},"FL2-A":{"w":1.475765},"FL3-A":{"w":1.403667}},"compensation":{"enabled":true,"reference":"dimensions","channels":["FL1-A","FL2-A","FL3-A"],"matrix":[[1,0.2,0.05],[0.08,1,0.15],[0.01,0.1,1]]}}</definition>
     </gatelabr_scales>
-    <gatelab_format>{"version":2,"logicle":"gating-ml","hierarchy":"parent_id"}</gatelab_format>
+    <gatelab_format>{"version":3,"logicle":"gating-ml","hierarchy":"parent_id","time":"seconds","gain":"gating-ml"}</gatelab_format>
   </data-type:custom_info>
   <transforms:transformation transforms:id="Tr_Fasinh_150">
-    <transforms:fasinh transforms:T="176.28017904657" transforms:M="0.434294481903252" transforms:A="0" />
+    <transforms:fasinh transforms:T="176.2801790465702" transforms:M="0.4342944819032518" transforms:A="0" />
   </transforms:transformation>
   <transforms:transformation transforms:id="Tr_Logicle_FL1_A_W1_235">
-    <transforms:logicle transforms:T="262144" transforms:W="1.23503790900749" transforms:M="4.5" transforms:A="0" />
+    <transforms:logicle transforms:T="262144" transforms:W="1.2350379090074917" transforms:M="4.5" transforms:A="0" />
   </transforms:transformation>
   <transforms:transformation transforms:id="Tr_Logicle_FL2_A_W1_4758">
-    <transforms:logicle transforms:T="262144" transforms:W="1.47576451785546" transforms:M="4.5" transforms:A="0" />
+    <transforms:logicle transforms:T="262144" transforms:W="1.4757645178554561" transforms:M="4.5" transforms:A="0" />
   </transforms:transformation>
   <transforms:transformation transforms:id="Tr_Logicle_FL3_A_W1_4037">
-    <transforms:logicle transforms:T="262144" transforms:W="1.40366696744954" transforms:M="4.5" transforms:A="0" />
+    <transforms:logicle transforms:T="262144" transforms:W="1.4036669674495352" transforms:M="4.5" transforms:A="0" />
   </transforms:transformation>
   <transforms:spectrumMatrix transforms:id="Spill_1">
     <data-type:custom_info>
@@ -73,13 +77,13 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396697,"max":8.13443450502118,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.00371336228892,"max":7.97353060594931,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.94002773483411,6.65603964916795],"rectangle":{"x1":5.99147079704939,"y1":5.5860135012032,"x2":7.88858467261883,"y2":7.72606579713271}}</definition>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396696985,"max":8.134434505021183,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.003713362288923,"max":7.973530605949307,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.940027734834505,6.6560396491683385],"rectangle":{"x1":5.991470797049389,"y1":5.586013501203196,"x2":7.888584672619622,"y2":7.726065797133482}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.99147079704939" gating:max="7.88858467261883" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.991470797049389" gating:max="7.888584672619622" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="FSC-A" />
     </gating:dimension>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.5860135012032" gating:max="7.72606579713271" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.586013501203196" gating:max="7.726065797133482" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="SSC-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -101,13 +105,13 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.107347980273956,"max":1.00132054863282,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.106988120847486,"max":1.00131349256564,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765,0.515],"rectangle":{"x1":0.55,"y1":0.05,"x2":0.98,"y2":0.98}}</definition>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.10734798027395841,"max":1.0013205486329226,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.1069881208474875,"max":1.001313492565737,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765000000000049,0.515000000000049],"rectangle":{"x1":0.55,"y1":0.05,"x2":0.980000000000098,"y2":0.980000000000098}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="Spill_1" gating:min="0.55" gating:max="0.98" gating:transformation-ref="Tr_Logicle_FL1_A_W1_235">
+    <gating:dimension gating:compensation-ref="Spill_1" gating:min="0.55" gating:max="0.980000000000098" gating:transformation-ref="Tr_Logicle_FL1_A_W1_235">
       <data-type:fcs-dimension data-type:name="Comp_FL1-A" />
     </gating:dimension>
-    <gating:dimension gating:compensation-ref="Spill_1" gating:min="0.05" gating:max="0.98" gating:transformation-ref="Tr_Logicle_FL2_A_W1_4758">
+    <gating:dimension gating:compensation-ref="Spill_1" gating:min="0.05" gating:max="0.980000000000098" gating:transformation-ref="Tr_Logicle_FL2_A_W1_4758">
       <data-type:fcs-dimension data-type:name="Comp_FL2-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -129,10 +133,10 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.087654405852703,"max":1.00093440011476,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.087654405852703,"max":1.00093440011476,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765,0.765],"rectangle":{"x1":0.55,"y1":0.55,"x2":0.98,"y2":0.98}}</definition>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.08765440585270494,"max":1.0009344001148588,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.08765440585270494,"max":1.0009344001148588,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.765000000000049,0.765000000000049],"rectangle":{"x1":0.55,"y1":0.55,"x2":0.980000000000098,"y2":0.980000000000098}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="Spill_1" gating:min="0.55" gating:max="0.98" gating:transformation-ref="Tr_Logicle_FL3_A_W1_4037">
+    <gating:dimension gating:compensation-ref="Spill_1" gating:min="0.55" gating:max="0.980000000000098" gating:transformation-ref="Tr_Logicle_FL3_A_W1_4037">
       <data-type:fcs-dimension data-type:name="Comp_FL3-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -154,7 +158,7 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":1,"argument":"1","min":-10231.6794770547,"max":66097.2503144569,"bins":256,"size":256},"y":{"flag":1,"argument":"1","min":-21408.7483499375,"max":68825.3530159531,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[30500,9750],"polygon":{"vertices":[[1000,-2000],[60000,-2000],[60000,3000],[1000,40000]]}}</definition>
+        <definition>{"scale":{"x":{"flag":1,"argument":"1","min":-10231.679477054679,"max":66097.25031445689,"bins":256,"size":256},"y":{"flag":1,"argument":"1","min":-21408.7483499375,"max":68825.35301595312,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[30500,9750],"polygon":{"vertices":[[1000,-2000],[60000,-2000],[60000,3000],[1000,40000]]}}</definition>
       </cytobank>
     </data-type:custom_info>
     <gating:dimension gating:compensation-ref="Spill_1">
@@ -198,7 +202,7 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.105393187136194,"max":0.919971873289765,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.0860758134449653,"max":0.920426187320137,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.6,0.566666666666667],"polygon":{"vertices":[[0.3,0.3],[0.9,0.3],[0.9,0.5],[0.6,0.5],[0.6,0.9],[0.3,0.9]]}}</definition>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":-0.10539318713619394,"max":0.9199718732897652,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":-0.08607581344496529,"max":0.9204261873201368,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.6,0.5666666666666667],"polygon":{"vertices":[[0.3,0.3],[0.9,0.3],[0.9,0.5],[0.6,0.5],[0.6,0.9],[0.3,0.9]]}}</definition>
       </cytobank>
     </data-type:custom_info>
     <gating:dimension gating:compensation-ref="Spill_1" gating:transformation-ref="Tr_Logicle_FL2_A_W1_4758">

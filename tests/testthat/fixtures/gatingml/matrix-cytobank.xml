@@ -6,13 +6,17 @@
       <cytobank_gating_version>2.0</cytobank_gating_version>
       <export_timestamp>2026-01-01T00:00:00</export_timestamp>
     </cytobank>
+    <gatelab_edge_rule>half-open</gatelab_edge_rule>
+    <gatelab_rectangles>
+      <definition>{"version":1,"rectangles":{"Gate_180000001_Q2VsbHNfZ2F0ZQ..":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"asinh","cofactor":150},"y":{"kind":"asinh","cofactor":150}},"x":[5.991470797049389,7.888584672618833],"y":[5.586013501203196,7.726065797132709],"written":["5.991470797049389|7.888584672619622","5.586013501203196|7.726065797133482"]},"Gate_180000002_RkwxX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":1.2350379090074917,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":1.4757645178554561,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.05,0.98],"written":["3.9745423268505107|7.954321664768421","-4.67279187608277|7.957598389765262"],"placedFrom":["3.97454246115076|7.954321774529889","-4.6727918682780745|7.957598497613942"]},"Gate_180000003_RkwzX2dhdGU.":{"bounds":"closed","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":1.4036669674495352,"M":4.5,"A":0},"y":{"kind":"logicle","T":262144,"W":1.4036669674495352,"M":4.5,"A":0}},"x":[0.55,0.98],"y":[0.55,0.98],"written":["4.188138346759581|7.956341968886167"],"placedFrom":["4.1881384715472505|7.95634207746684"]}}}</definition>
+    </gatelab_rectangles>
     <gatelabr_scales>
-      <definition>{"version":3,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":1.235038},"FL2-A":{"w":1.475765},"FL3-A":{"w":1.403667}},"compensation":{"enabled":true,"reference":"FCS","channels":["FL1-A","FL2-A","FL3-A"],"matrix":[[1,0.2,0.05],[0.08,1,0.15],[0.01,0.1,1]]}}</definition>
+      <definition>{"version":4,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":1.235038},"FL2-A":{"w":1.475765},"FL3-A":{"w":1.403667}},"compensation":{"enabled":true,"reference":"dimensions","channels":["FL1-A","FL2-A","FL3-A"],"matrix":[[1,0.2,0.05],[0.08,1,0.15],[0.01,0.1,1]]}}</definition>
     </gatelabr_scales>
-    <gatelab_format>{"version":2,"logicle":"gating-ml","hierarchy":"tree","tree":[{"id":"GateSet_36000000","parent":null},{"id":"GateSet_36000001","parent":"GateSet_36000000"},{"id":"GateSet_36000002","parent":"GateSet_36000000"}]}</gatelab_format>
+    <gatelab_format>{"version":3,"logicle":"gating-ml","hierarchy":"tree","time":"ticks","tree":[{"id":"GateSet_36000000","parent":null},{"id":"GateSet_36000001","parent":"GateSet_36000000"},{"id":"GateSet_36000002","parent":"GateSet_36000000"}]}</gatelab_format>
   </data-type:custom_info>
   <transforms:transformation transforms:id="Tr_Fasinh_150">
-    <transforms:fasinh transforms:T="176.28017904657" transforms:M="0.434294481903252" transforms:A="0" />
+    <transforms:fasinh transforms:T="176.2801790465702" transforms:M="0.4342944819032518" transforms:A="0" />
   </transforms:transformation>
   <transforms:spectrumMatrix transforms:id="Spill_1">
     <data-type:custom_info>
@@ -65,13 +69,13 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396697,"max":8.13443450502118,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.00371336228892,"max":7.97353060594931,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.94002773483411,6.65603964916795],"rectangle":{"x1":5.99147079704939,"y1":5.5860135012032,"x2":7.88858467261883,"y2":7.72606579713271}}</definition>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":3.4039319396696985,"max":8.134434505021183,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":3.003713362288923,"max":7.973530605949307,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.940027734834505,6.6560396491683385],"rectangle":{"x1":5.991470797049389,"y1":5.586013501203196,"x2":7.888584672619622,"y2":7.726065797133482}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.99147079704939" gating:max="7.88858467261883" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.991470797049389" gating:max="7.888584672619622" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="FSC-A" />
     </gating:dimension>
-    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.5860135012032" gating:max="7.72606579713271" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="5.586013501203196" gating:max="7.726065797133482" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="SSC-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -93,13 +97,13 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-5.08707784970373,"max":8.21003549265109,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-6.22760527690579,"max":8.23573974809372,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[5.96443211783982,1.64240331466744],"rectangle":{"x1":3.97454246115076,"y1":-4.67279186827807,"x2":7.95432177452889,"y2":7.95759849761296}}</definition>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-5.087077847508519,"max":8.21003538069542,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-6.227605274748839,"max":8.235739638089068,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[5.964431995809466,1.6424032568412459],"rectangle":{"x1":3.9745423268505107,"y1":-4.67279187608277,"x2":7.954321664768421,"y2":7.957598389765262}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="FCS" gating:min="3.97454246115076" gating:max="7.95432177452889" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="FCS" gating:min="3.9745423268505107" gating:max="7.954321664768421" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="FL1-A" />
     </gating:dimension>
-    <gating:dimension gating:compensation-ref="FCS" gating:min="-4.67279186827807" gating:max="7.95759849761296" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="FCS" gating:min="-4.67279187608277" gating:max="7.957598389765262" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="FL2-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -121,13 +125,10 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-5.73765593481263,"max":8.22485184241248,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-5.73765593481263,"max":8.22485184241248,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.07224027450655,6.07224027450655],"rectangle":{"x1":4.18813847154725,"y1":4.18813847154725,"x2":7.95634207746585,"y2":7.95634207746585}}</definition>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-5.737655932641038,"max":8.22485173166121,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-5.737655932641038,"max":8.22485173166121,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[6.072240157822874,6.072240157822874],"rectangle":{"x1":4.188138346759581,"y1":4.188138346759581,"x2":7.956341968886167,"y2":7.956341968886167}}</definition>
       </cytobank>
     </data-type:custom_info>
-    <gating:dimension gating:compensation-ref="FCS" gating:min="4.18813847154725" gating:max="7.95634207746585" gating:transformation-ref="Tr_Fasinh_150">
-      <data-type:fcs-dimension data-type:name="FL3-A" />
-    </gating:dimension>
-    <gating:dimension gating:compensation-ref="FCS" gating:min="4.18813847154725" gating:max="7.95634207746585" gating:transformation-ref="Tr_Fasinh_150">
+    <gating:dimension gating:compensation-ref="FCS" gating:min="4.188138346759581" gating:max="7.956341968886167" gating:transformation-ref="Tr_Fasinh_150">
       <data-type:fcs-dimension data-type:name="FL3-A" />
     </gating:dimension>
   </gating:RectangleGate>
@@ -149,7 +150,7 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":1,"argument":"1","min":-10231.6794770547,"max":66097.2503144569,"bins":256,"size":256},"y":{"flag":1,"argument":"1","min":-21408.7483499375,"max":68825.3530159531,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[30500,9750],"polygon":{"vertices":[[1000,-2000],[60000,-2000],[60000,3000],[1000,40000]]}}</definition>
+        <definition>{"scale":{"x":{"flag":1,"argument":"1","min":-10231.679477054679,"max":66097.25031445689,"bins":256,"size":256},"y":{"flag":1,"argument":"1","min":-21408.7483499375,"max":68825.35301595312,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[30500,9750],"polygon":{"vertices":[[1000,-2000],[60000,-2000],[60000,3000],[1000,40000]]}}</definition>
       </cytobank>
     </data-type:custom_info>
     <gating:dimension gating:compensation-ref="FCS">
@@ -193,7 +194,7 @@
         <gating_group_name>Default group</gating_group_name>
         <file_sync_mode>0</file_sync_mode>
         <pop_sync_mode>0</pop_sync_mode>
-        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-6.21524887476334,"max":7.60556323882845,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-5.72487204858667,"max":7.57287364488841,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[2.50255980565075,2.68753408837027],"polygon":{"vertices":[[-2.02479261817033,-1.05651215465448],[7.16441665046479,-1.05651215465448],[7.16441665046479,3.83562998050303],[4.63173159656832,3.83562998050303],[4.63173159656832,7.15550756077463],[-2.02479261817033,7.15550756077463],[-2.02479261817033,-1.05651215465448]]}}</definition>
+        <definition>{"scale":{"x":{"flag":4,"argument":"150","min":-6.215248874763337,"max":7.605563238828449,"bins":256,"size":256},"y":{"flag":4,"argument":"150","min":-5.72487204858667,"max":7.57287364488841,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[2.5025598056507468,2.6875340883702696],"polygon":{"vertices":[[-2.0247926181703266,-1.0565121546544767],[7.164416650464788,-1.0565121546544767],[7.164416650464788,3.835629980503027],[4.631731596568316,3.835629980503027],[4.631731596568316,7.155507560774631],[-2.0247926181703266,7.155507560774631],[-2.0247926181703266,-1.0565121546544767]]}}</definition>
       </cytobank>
     </data-type:custom_info>
     <gating:dimension gating:compensation-ref="FCS" gating:transformation-ref="Tr_Fasinh_150">
@@ -203,32 +204,32 @@
       <data-type:fcs-dimension data-type:name="FL3-A" />
     </gating:dimension>
     <gating:vertex>
-      <gating:coordinate data-type:value="-2.02479261817033" />
-      <gating:coordinate data-type:value="-1.05651215465448" />
+      <gating:coordinate data-type:value="-2.0247926181703266" />
+      <gating:coordinate data-type:value="-1.0565121546544767" />
     </gating:vertex>
     <gating:vertex>
-      <gating:coordinate data-type:value="7.16441665046479" />
-      <gating:coordinate data-type:value="-1.05651215465448" />
+      <gating:coordinate data-type:value="7.164416650464788" />
+      <gating:coordinate data-type:value="-1.0565121546544767" />
     </gating:vertex>
     <gating:vertex>
-      <gating:coordinate data-type:value="7.16441665046479" />
-      <gating:coordinate data-type:value="3.83562998050303" />
+      <gating:coordinate data-type:value="7.164416650464788" />
+      <gating:coordinate data-type:value="3.835629980503027" />
     </gating:vertex>
     <gating:vertex>
-      <gating:coordinate data-type:value="4.63173159656832" />
-      <gating:coordinate data-type:value="3.83562998050303" />
+      <gating:coordinate data-type:value="4.631731596568316" />
+      <gating:coordinate data-type:value="3.835629980503027" />
     </gating:vertex>
     <gating:vertex>
-      <gating:coordinate data-type:value="4.63173159656832" />
-      <gating:coordinate data-type:value="7.15550756077463" />
+      <gating:coordinate data-type:value="4.631731596568316" />
+      <gating:coordinate data-type:value="7.155507560774631" />
     </gating:vertex>
     <gating:vertex>
-      <gating:coordinate data-type:value="-2.02479261817033" />
-      <gating:coordinate data-type:value="7.15550756077463" />
+      <gating:coordinate data-type:value="-2.0247926181703266" />
+      <gating:coordinate data-type:value="7.155507560774631" />
     </gating:vertex>
     <gating:vertex>
-      <gating:coordinate data-type:value="-2.02479261817033" />
-      <gating:coordinate data-type:value="-1.05651215465448" />
+      <gating:coordinate data-type:value="-2.0247926181703266" />
+      <gating:coordinate data-type:value="-1.0565121546544767" />
     </gating:vertex>
   </gating:PolygonGate>
   <gating:BooleanGate gating:id="GateSet_36000000">
