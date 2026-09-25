@@ -9,6 +9,12 @@
 .gatelabr_coldata_contract_version <- 1L
 .gatelabr_rowdata_contract_version <- 1L
 
+# A workspace R writes for the host is written with 17 significant digits, which name every double
+# exactly. jsonlite's digits = NA writes 15, which moved a number GateLab reads from a file needing
+# 16 or 17, and wrote GateLab's unbounded edge, the largest double, as 1.79769313486232e+308: above
+# the largest double, so R and JavaScript both read it as infinite and GateLab refused the gate.
+.gatelabr_workspace_json_digits <- I(17)
+
 .gatelabr_canonical_workspace_record <- function(sce) {
   canonical <- S4Vectors::metadata(sce)$gatelab_workspace
   if (is.null(canonical)) return(NULL)
@@ -40,7 +46,7 @@
       dataframe = "rows",
       matrix = "rowmajor",
       POSIXt = "ISO8601",
-      digits = NA
+      digits = .gatelabr_workspace_json_digits
     )
   }
   list(workspace_json = as.character(workspace_json), revision = 0L)
@@ -89,7 +95,7 @@
         dataframe = "rows",
         matrix = "rowmajor",
         POSIXt = "ISO8601",
-        digits = NA
+        digits = .gatelabr_workspace_json_digits
       )
   }
 

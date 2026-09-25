@@ -996,7 +996,9 @@ test_that("the legacy mirror keeps each gate's space and transforms", {
 # GateLab writes it for a hosted save: version 4, the features listed, a half-open rectangle, a
 # polygon on FlowJo's grid with the vertices FlowJo saved, a FlowJo rectangle with the axes and
 # the bound its rule opened, a biex axis on FlowJo's table, a standard flog with bounds, and a
-# file compensated with a matrix a workspace supplied.
+# file compensated with a matrix a workspace supplied. The FlowJo rectangle's open edge is the
+# largest double, as GateLab writes an unbounded edge, and a FlowJo vertex and a biex parameter
+# need 16 and 17 significant digits, as numbers GateLab reads from a file can.
 version_four_host_workspace_json <- function(dataset_id = "test-sce") {
   gates <- paste0(
     '"gates":{',
@@ -1009,13 +1011,14 @@ version_four_host_workspace_json <- function(dataset_id = "test-sce") {
     '"CD3":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"linear","minRange":0,"maxRange":262144}},',
     '"CD19":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"biex","maxValue":262144,',
     '"pos":4.41854,"neg":0,"widthBasis":-10,"channelRange":256}}},',
-    '"flowjo_vertices":[[20000,-150],[200000,40],[180000,150000],[40000,90000]],',
+    '"flowjo_vertices":[[30000.123456789013,-150],[200000,40],[180000,150000],[40000,90000]],',
     '"flowjo_polygon":{"quadId":-1,"gateResolution":256},',
     '"color":"#377eb8","label_offset":null},',
     '"gate-3":{"gate_id":"gate-3","name":"FlowJo box","gate_type":"rectangle",',
-    '"x_channel":"CD3","y_channel":"CD19","vertices":[[-1e+308,2],[5,2],[5,8],[-1e+308,8]],',
+    '"x_channel":"CD3","y_channel":"CD19",',
+    '"vertices":[[-1.7976931348623157e+308,2],[5,2],[5,8],[-1.7976931348623157e+308,8]],',
     '"space":"display","transforms":{',
-    '"CD3":{"kind":"biex","maxValue":262144,"pos":4.41854,"neg":0,"widthBasis":-10,',
+    '"CD3":{"kind":"biex","maxValue":262144,"pos":4.418541234567891,"neg":0,"widthBasis":-10,',
     '"channelRange":256,"tableChannels":4096},',
     '"CD19":{"kind":"flog","T":262144,"M":5,"standard":true,"bounds":{"min":0.1}}},',
     '"flowjo_axes":{"CD3":{"kind":"wsplog","offset":3,"decades":5},',
@@ -1042,8 +1045,8 @@ version_four_host_workspace_json <- function(dataset_id = "test-sce") {
   sub(
     '"labels":{},"metadata":{}},',
     paste0(
-      '"labels":{},"metadata":{},"externalSpillover":{"matrix":{"channels":["CD3","CD19"],',
-      '"matrix":[[1,0.1],[0.02,1]]},"label":"Synthetic matrix"}},'
+      '"labels":{},"metadata":{},"externalSpillover":{"label":"Synthetic matrix",',
+      '"channels":["CD3","CD19"],"matrix":[[1,0.1],[0.02,1]]}},'
     ),
     json,
     fixed = TRUE
@@ -1088,18 +1091,28 @@ test_that("a version 4 workspace is stored as GateLab wrote it, and its mirror k
   }
   expect_identical(mirror$gates[["gate-1"]]$bounds, "half-open")
 
-  # And a host reloading the mirror, with the canonical record gone, sends them back unchanged.
+  # And a host reloading the mirror, with the canonical record gone, sends them back unchanged:
+  # the same doubles, the open edge still the largest double and not written as one that reads as
+  # infinite, and every digit of the 16- and 17-digit numbers.
   bare <- written$sce
   S4Vectors::metadata(bare)$gatelab_workspace <- NULL
   legacy <- GateLabR:::.gatelabr_host_workspace_envelope(bare, dataset_id = "test-sce")
   expect_identical(legacy$sourceFormat, "gatelabr-legacy")
   reloaded <- jsonlite::fromJSON(legacy$workspaceJson, simplifyVector = FALSE)$gates
+  # JSON has one number type; jsonlite reads a whole number as an integer and R writes a whole
+  # double back without a decimal point, so compare the numbers as doubles.
+  as_doubles <- function(value) {
+    if (is.list(value)) return(lapply(value, as_doubles))
+    if (is.integer(value)) as.double(value) else value
+  }
   for (gate_id in c("gate-1", "gate-2", "gate-3")) {
-    for (field in setdiff(fields, "space")) {
-      expect_equal(reloaded[[gate_id]][[field]], sent$gating$gates[[gate_id]][[field]],
-                   info = paste(gate_id, field))
+    for (field in c("vertices", setdiff(fields, "space"))) {
+      expect_identical(as_doubles(reloaded[[gate_id]][[field]]),
+                       as_doubles(sent$gating$gates[[gate_id]][[field]]),
+                       info = paste(gate_id, field))
     }
   }
+  expect_identical(reloaded[["gate-3"]]$vertices[[1]][[1]], -.Machine$double.xmax)
 
   # A version GateLabR does not know is still refused.
   later <- sub('"version":4,', '"version":5,', workspace_json, fixed = TRUE)
@@ -1115,6 +1128,24 @@ test_that("a version 4 workspace is stored as GateLab wrote it, and its mirror k
     "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
     fixed = TRUE
   )
+})
+
+test_that("a canonical workspace held as a list reaches the host with every digit", {
+  # A canonical workspace stored as a parsed list, not as JSON, is written for the host by R with
+  # the same 17 digits as the mirror, so its open edge and 17-digit numbers arrive unchanged.
+  sce <- make_host_bridge_sce()
+  sent <- jsonlite::fromJSON(version_four_host_workspace_json(), simplifyVector = FALSE)
+  S4Vectors::metadata(sce)$gatelab_workspace <- sent
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(sce, dataset_id = "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelab-workspace")
+  received <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)$gating$gates
+  for (gate_id in c("gate-2", "gate-3")) {
+    for (field in c("vertices", "transforms", "flowjo_vertices")) {
+      expect_identical(received[[gate_id]][[field]], sent$gating$gates[[gate_id]][[field]],
+                       info = paste(gate_id, field))
+    }
+  }
+  expect_identical(received[["gate-3"]]$vertices[[1]][[1]], -.Machine$double.xmax)
 })
 
 test_that("a revision conflict carries the data a browser needs to resync", {
