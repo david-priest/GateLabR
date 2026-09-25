@@ -131,11 +131,12 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 # How a file asks to be read where Gating-ML alone leaves room, from the gatelab_format element
 # GateLab writes in the root custom_info: a JSON object {"version": 2, "logicle": ..., "hierarchy":
 # ...}, with "tree" when the hierarchy is "tree". A mark that is present but cannot be read in full
-# (empty, not JSON, behind a byte order mark, not an object, a key named twice in one object,
-# another version, or a field GateLabR does not know) is recorded in `problems`, which refuse the
-# file: read as no mark, it would put the file's logicle coordinates on the wrong scale and its
-# populations in the wrong places. JSON leaves a repeated key to the reader, and jsonlite keeps the
-# first value where GateLab's JSON.parse keeps the last, so a mark with one could be read two ways.
+# (empty, not JSON, JSON to jsonlite only, such as with a comment, behind a byte order mark, not an
+# object, a key named twice in one object, another version, or a field GateLabR does not know) is
+# recorded in `problems`, which refuse the file: read as no mark, it would put the file's logicle
+# coordinates on the wrong scale and its populations in the wrong places. JSON leaves a repeated
+# key to the reader, and jsonlite keeps the first value where GateLab's JSON.parse keeps the last,
+# so a mark with one could be read two ways.
 #
 # marked: whether the file carries the element at all.
 #
@@ -175,11 +176,20 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     } else {
       NULL
     }
+    # jsonlite::fromJSON also reads past a /* */ or // comment, before, inside or after the object,
+    # which JSON does not allow and GateLab's JSON.parse refuses; jsonlite::validate holds to JSON.
+    strict <- if (nzchar(text) && !bom) jsonlite::validate(text) else TRUE
     repeated <- .gml_json_repeated_key(value)
     if (!nzchar(text)) {
       problems <- unreadable("is empty")
     } else if (bom) {
       problems <- unreadable("begins with a byte order mark (U+FEFF), which GateLab does not read as JSON")
+    } else if (!isTRUE(strict) && !is.null(value)) {
+      reason <- sub("\\.$", "", trimws(sub("\n.*", "", attr(strict, "err") %||% "")))
+      problems <- unreadable(paste0(
+        "is not valid JSON", if (nzchar(reason)) paste0(" (", reason, ")"),
+        "; jsonlite reads it, but GateLab's JSON.parse does not"
+      ))
     } else if (!(is.list(value) && !is.null(names(value)))) {
       problems <- unreadable("is not a JSON object")
     } else if (!is.null(repeated)) {

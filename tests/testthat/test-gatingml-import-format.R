@@ -653,6 +653,25 @@ test_that("a GateLab format mark that names a key twice refuses the file", {
   expect_error(gml_import(reparented), 'gatelab_format) names the key "parent" more than once', fixed = TRUE)
 })
 
+test_that("a GateLab format mark with a comment refuses the file", {
+  # jsonlite::fromJSON reads past a /* */ or // comment before, inside or after the object, where
+  # GateLab's JSON.parse refuses the mark, so the two would read the file by different rules.
+  # GateLab never writes a comment.
+  edits <- list(
+    c("<gatelab_format>", "<gatelab_format>/* GateLab */"),
+    c('{"version":2,', '{"version":2,/* GateLab */'),
+    c("</gatelab_format>", "// GateLab</gatelab_format>")
+  )
+  for (name in c("tree-standard.xml", "tree-cytobank.xml")) {
+    for (edit in edits) {
+      commented <- gml_variant(name, function(lines) sub(edit[[1]], edit[[2]], lines, fixed = TRUE))
+      expect_true(any(grepl(edit[[2]], readLines(commented, warn = FALSE), fixed = TRUE)))
+      expect_error(gml_import(commented), "gatelab_format) is not valid JSON", fixed = TRUE,
+                   info = paste(name, edit[[2]]))
+    }
+  }
+})
+
 test_that("a PopulationGatePair written complement=\"1\" or \" true\" is refused as NOT logic", {
   # complement is an xs:boolean, as use-as-complement on a gateReference is, so "1" and a value
   # with surrounding space exclude too; read as an inclusion, FL1_positive would select the events
