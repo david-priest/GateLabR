@@ -1303,6 +1303,36 @@ test_that("a transformation parameter that is not a number is refused by name, n
   expect_equal(forward(high_m$gates[[1]]$vertices[[1]][1]), 0.2)
 })
 
+test_that("a fasinh whose T / sinh(M ln 10) overflows is refused by name", {
+  # T / sinh(M ln 10) was only required to be above zero. At T = 1e308 and M = 0.001 it is Inf, and
+  # the gate was read with its coordinate 0 placed at Inf * 0, NaN.
+  range_on <- function(t) {
+    gml_write(sprintf('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <transforms:transformation transforms:id="Tr">
+    <transforms:fasinh transforms:T="%s" transforms:M="0.001" transforms:A="0"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="R1" gating:name="FL1_range">
+    <gating:dimension gating:transformation-ref="Tr" gating:min="0" gating:max="0.5">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>', t))
+  }
+  expect_error(
+    gml_import(range_on("1e308")),
+    paste0('Gate "FL1_range" (R1) is on transformation Tr, an arcsinh (fasinh) with T = 1e+308, M = 0.001 ',
+           "and A = 0, whose T / sinh(M ln 10) overflows double precision, so GateLabR cannot"),
+    fixed = TRUE
+  )
+  # A thousand times smaller it is finite, and the range reads to finite edges.
+  edges <- vapply(gml_import(range_on("1e305"))$gates[[1]]$vertices, `[`, 0, 1)
+  expect_true(all(is.finite(edges)))
+  expect_identical(min(edges), 0)
+})
+
 test_that("GateLab's compensation record of version 4 names its reference by the gates' dimensions", {
   # From gatelabr_scales version 4 the reference is always "dimensions": enabled says whether the
   # gates were drawn on compensated values, read as "FCS" when they were and "uncompensated" when

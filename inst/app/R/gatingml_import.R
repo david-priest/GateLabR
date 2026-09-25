@@ -744,6 +744,8 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 #   fasinh: T > 0, M > 0 and M + A > 0, which make its inverse, T / sinh(M ln 10) sinh(y (M + A)
 #     ln 10 - A ln 10), increasing, and sinh(M ln 10), (M + A) ln 10 and T / sinh(M ln 10) finite
 #     and not zero in double precision, without which the inverse is 0 or undefined everywhere.
+#     T / sinh(M ln 10) was only required to be above zero, so where it overflowed (T = 1e308,
+#     M = 0.001 and A = 0, say) the gate was read, and its coordinate 0 was placed at Inf * 0, NaN.
 #   flog: T > 0 and M > 0. flin: T > 0 and 0 <= A <= T.
 .gml_transform_problem <- function(tr_def) {
   if (!is.list(tr_def)) return(NULL)
@@ -768,6 +770,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
       else if (!(m_v + a_v > 0)) "M + A is not positive"
       else if (!is.finite(sinh(m_v * log(10)))) "sinh(M ln 10) overflows double precision"
       else if (!is.finite((m_v + a_v) * log(10))) "(M + A) ln 10 overflows double precision"
+      else if (!is.finite(t_v / sinh(m_v * log(10)))) "T / sinh(M ln 10) overflows double precision"
       else if (!(t_v / sinh(m_v * log(10)) > 0)) "T / sinh(M ln 10) is zero in double precision"
     if (is.null(why)) return(NULL)
     return(paste0("an arcsinh (fasinh) with T = ", t_v, ", M = ", m_v, " and A = ", a_v, ", whose ", why))
