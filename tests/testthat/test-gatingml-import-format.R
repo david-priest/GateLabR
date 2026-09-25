@@ -1145,6 +1145,50 @@ test_that("the next double is one step away for every bit pattern, and stepping 
   expect_identical(.gml_exact_edge(edge, below, function(v) v, "upper"), edge)
 })
 
+test_that("gains are read by the channel they name, through pnn_to_channel, and a name matching none is refused", {
+  # A gain whose name matched no session channel was ignored, so its channel was read at a gain of
+  # 1 with no word. Session channels that differ from the file's $PnN, with the $PnG keyed by $PnN
+  # and a pnn_to_channel map, as a loaded SCE's rownames can be.
+  info <- gml_expected()
+  expected <- info$populations$timegain
+  labels <- c(`FSC-A` = "FSC-A", `SSC-A` = "SSC-A", `FL1-A` = "CD3 label", `FL2-A` = "CD19 label",
+              `FL3-A` = "CD4 label", Time = "Time")
+  events <- gml_events
+  colnames(events) <- labels[colnames(events)]
+  pnn_map <- as.list(labels)
+  gains_by_pnn <- unlist(info$gains)
+  expect_identical(sort(names(gains_by_pnn)), c("FL1-A", "FL2-A"))
+  parsed <- import_gatingml_from_cytobank(
+    gml_fixture("timegain-standard.xml"), unname(labels), pnn_map, instrument = "flow",
+    timestep = info$timestep, gains = gains_by_pnn
+  )
+  gml_expect_membership(gml_membership(parsed, events), expected)
+  # Keyed by the session channel it reads the same.
+  gains_by_channel <- stats::setNames(gains_by_pnn, labels[names(gains_by_pnn)])
+  gml_expect_membership(gml_membership(import_gatingml_from_cytobank(
+    gml_fixture("timegain-standard.xml"), unname(labels), pnn_map, instrument = "flow",
+    timestep = info$timestep, gains = gains_by_channel
+  ), events), expected)
+
+  # A name that is no channel, and two names for one channel, are refused by name.
+  expect_error(
+    import_gatingml_from_cytobank(
+      gml_fixture("timegain-standard.xml"), unname(labels), pnn_map, instrument = "flow",
+      timestep = info$timestep, gains = c(gains_by_pnn, `FL9-A` = 3)
+    ),
+    'gains names a channel the loaded data do not have: "FL9-A".',
+    fixed = TRUE
+  )
+  expect_error(
+    import_gatingml_from_cytobank(
+      gml_fixture("timegain-standard.xml"), unname(labels), pnn_map, instrument = "flow",
+      timestep = info$timestep, gains = c(gains_by_pnn, `CD3 label` = 0.5)
+    ),
+    'gains names the channel "CD3 label" more than once ("FL1-A", "CD3 label").',
+    fixed = TRUE
+  )
+})
+
 test_that("Gating-ML's flog is read, with an event at zero only in a range with no lower bound", {
   # flog(x) = log10(x / T) / M + 1 is -Inf at zero and undefined below; FlowKit and flowCore do not
   # test an absent bound, so a range open below holds an event at zero and none below it.

@@ -2220,11 +2220,13 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 #'   file states none. Needed only for a file whose GateLab format mark says its Time coordinates
 #'   are in seconds (GateLab's standard format); a gate on Time in such a file is refused when it
 #'   is not given. Every other file's Time is read as stored ticks.
-#' @param gains The loaded data's $PnG, a named numeric vector by channel (session channel names),
-#'   for the channels whose Gating-ML scale value is the stored value divided by the gain (GateLab
-#'   leaves out Time, QC channels and logarithmically amplified channels). Applied only where the
-#'   file's GateLab format mark says its coordinates are scale values (GateLab's standard format);
-#'   NULL, or a channel not named, is a gain of 1.
+#' @param gains The loaded data's $PnG, a named numeric vector by channel (session channel names,
+#'   or $PnN names that pnn_to_channel maps to them), for the channels whose Gating-ML scale value
+#'   is the stored value divided by the gain (GateLab leaves out Time, QC channels and
+#'   logarithmically amplified channels). Applied only where the file's GateLab format mark says
+#'   its coordinates are scale values (GateLab's standard format); NULL, or a channel not named, is
+#'   a gain of 1. A name that is no channel of the loaded data, or a second name for a channel
+#'   already named, is refused.
 #' @return List with gates, gate_order, populations, root_population_id and import stats
 import_gatingml_from_cytobank <- function(file_path,
                                           session_channels,
@@ -2252,6 +2254,29 @@ import_gatingml_from_cytobank <- function(file_path,
         anyDuplicated(names(gains)) || any(!is.finite(gains)) || any(gains <= 0)) {
       stop("gains must be positive numbers named by channel.")
     }
+    # Each gain is named by a session channel, or by a $PnN that pnn_to_channel maps to one, and is
+    # found as a gate's channel is. A name found as no channel was ignored, so the channel it was
+    # meant for was read at a gain of 1 with no word; it is refused, as a Time gate without
+    # timestep is.
+    gain_channels <- vapply(names(gains), function(name) {
+      .gml_resolve_channel(name, session_channels, pnn_to_channel) %||% NA_character_
+    }, character(1), USE.NAMES = FALSE)
+    unknown <- names(gains)[is.na(gain_channels)]
+    if (length(unknown)) {
+      stop(
+        "gains names ", if (length(unknown) == 1L) "a channel" else "channels",
+        " the loaded data do not have: ", paste0('"', unknown, '"', collapse = ", "),
+        ". Name each gain by a session channel, or by its $PnN with pnn_to_channel mapping it to one."
+      )
+    }
+    repeated <- unique(gain_channels[duplicated(gain_channels)])
+    if (length(repeated)) {
+      stop(paste(vapply(repeated, function(channel) {
+        paste0('gains names the channel "', channel, '" more than once (',
+               paste0('"', names(gains)[gain_channels == channel], '"', collapse = ", "), ").")
+      }, character(1)), collapse = " "))
+    }
+    names(gains) <- gain_channels
   }
 
   doc <- xml2::read_xml(file_path)
