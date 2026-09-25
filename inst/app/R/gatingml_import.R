@@ -746,7 +746,10 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 #     and not zero in double precision, without which the inverse is 0 or undefined everywhere.
 #     T / sinh(M ln 10) was only required to be above zero, so where it overflowed (T = 1e308,
 #     M = 0.001 and A = 0, say) the gate was read, and its coordinate 0 was placed at Inf * 0, NaN.
-#   flog: T > 0 and M > 0. flin: T > 0 and 0 <= A <= T.
+#   flog: T > 0 and M > 0.
+#   flin: T > 0, 0 <= A <= T, and T + A finite in double precision. T + A was not checked, so where
+#     it overflowed (T = A = 1e308, say) the gate was read, and its coordinate 0 was placed at
+#     0 * Inf - A, NaN.
 .gml_transform_problem <- function(tr_def) {
   if (!is.list(tr_def)) return(NULL)
   if (identical(tr_def$type, "unreadable")) return(tr_def$why)
@@ -781,7 +784,9 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     return(paste0("a flog with T = ", t_v, " and M = ", m_v, ", whose ", why))
   }
   if (identical(tr_def$type, "flin")) {
-    why <- if (!(t_v > 0)) "T is not positive" else if (!(a_v >= 0 && a_v <= t_v)) "A is not between 0 and T"
+    why <- if (!(t_v > 0)) "T is not positive"
+      else if (!(a_v >= 0 && a_v <= t_v)) "A is not between 0 and T"
+      else if (!is.finite(t_v + a_v)) "T + A overflows double precision"
     if (is.null(why)) return(NULL)
     return(paste0("a flin with T = ", t_v, " and A = ", a_v, ", whose ", why))
   }

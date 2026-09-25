@@ -1554,6 +1554,39 @@ test_that("a fasinh whose T / sinh(M ln 10) overflows is refused by name", {
   expect_identical(min(edges), 0)
 })
 
+test_that("a flin whose T + A overflows is refused by name", {
+  # flin(x) = (x + A) / (T + A), and its inverse is y (T + A) - A. T + A was not checked, so where it
+  # overflowed double precision (T = A = 1e308, or 9e307) the gate was read, and its coordinate 0 was
+  # placed at 0 * Inf - A, NaN: the range [0, 0.5] held no event.
+  range_on <- function(t, a) {
+    gml_write(sprintf('<?xml version="1.0"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating"
+  xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations"
+  xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes">
+  <transforms:transformation transforms:id="Tr">
+    <transforms:flin transforms:T="%s" transforms:A="%s"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="R1" gating:name="FL1_range">
+    <gating:dimension gating:transformation-ref="Tr" gating:min="0" gating:max="0.5">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>', t, a))
+  }
+  for (p in list(c("1e308", "1e+308"), c("9e307", "9e+307"))) {
+    expect_error(
+      gml_import(range_on(p[1], p[1])),
+      paste0('Gate "FL1_range" (R1) is on transformation Tr, a flin with T = ', p[2], " and A = ", p[2],
+             ", whose T + A overflows double precision, so GateLabR cannot"),
+      fixed = TRUE, info = p[1]
+    )
+  }
+  # Where T + A is finite, as at T = A = 8e307, the range reads: [0, 0.5] is every value up to 0.
+  parsed <- gml_import(range_on("8e307", "8e307"))
+  expect_true(all(is.finite(unlist(parsed$gates[[1]]$vertices))))
+  expect_identical(unname(gml_membership(parsed)[[1]]), which(gml_events[, "FL1-A"] <= 0))
+})
+
 test_that("a gate number that is not a finite xs:double is refused by name; an absent bound is no bound", {
   # Each was read without a word: min="NaN", "abc" or "" as no bound, "INF" and "-INF" as no bound
   # on either side (min="INF" held every event, where FlowKit holds none), "0x10" as 16, and a
