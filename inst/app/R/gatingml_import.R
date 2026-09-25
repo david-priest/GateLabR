@@ -1421,26 +1421,25 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   .gml_scaled_map(.gml_declared_map(tr_def, logicle_unit), scale)
 }
 
-# The double next to x, towards +Inf (dir = 1) or -Inf (dir = -1), read off its bits.
+# The double next to x, towards +Inf (dir = 1) or -Inf (dir = -1), read off its bits. The eight
+# bytes are counted as one number, least significant byte first, carrying or borrowing from byte
+# to byte. They were read as two signed 32-bit integers, and a word of 0x80000000 is R's
+# NA_integer_: a low word of it (about 1 in 8 float32 values held as doubles) fell back to
+# x +/- |x| eps, two steps wherever |x| lies in the upper half of its binade; a high word of it
+# (a negative subnormal) gave x back; and writing it gave a coercion warning.
 .gml_next_double <- function(x, dir) {
   if (!is.finite(x)) return(x)
   if (x == 0) return(dir * 4.9406564584124654e-324)
-  words <- readBin(writeBin(x, raw(), endian = "little"), "integer", n = 2L, endian = "little")
-  if (anyNA(words)) return(x + dir * abs(x) * .Machine$double.eps)
-  low <- as.numeric(words[[1]]) %% 4294967296
-  high <- words[[2]]
-  # Away from zero the magnitude's bits count up, towards it they count down.
-  step <- if ((x > 0) == (dir > 0)) 1 else -1
-  low <- low + step
-  if (low >= 4294967296) {
-    low <- 0
-    high <- high + 1L
-  } else if (low < 0) {
-    low <- 4294967295
-    high <- high - 1L
+  bytes <- as.integer(writeBin(x, raw(), endian = "little"))
+  # Away from zero the magnitude's bits count up, towards it they count down. The sign bit is
+  # never reached: the largest magnitude counts up to Inf's bits, and a nonzero one down to 1.
+  step <- if ((x > 0) == (dir > 0)) 1L else -1L
+  for (i in seq_along(bytes)) {
+    byte <- bytes[[i]] + step
+    bytes[[i]] <- byte %% 256L
+    if (byte >= 0L && byte <= 255L) break
   }
-  low <- if (low >= 2147483648) as.integer(low - 4294967296) else as.integer(low)
-  readBin(writeBin(c(low, high), raw(), endian = "little"), "double", n = 1L, endian = "little")
+  readBin(as.raw(bytes), "double", n = 1L, endian = "little")
 }
 
 # A rectangle edge on an axis that maps straight edges to straight ones (raw values, flin, Time in

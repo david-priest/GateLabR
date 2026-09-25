@@ -1091,6 +1091,60 @@ test_that("a rectangle edge on a raw axis in seconds lands on the stored tick ex
   expect_gt(.gml_next_double(upper, 1) * 0.01, 10.052100219726563)
 })
 
+test_that("the next double is one step away for every bit pattern, and stepping costs no warning", {
+  # .gml_next_double read a double's two 32-bit words as signed integers. A word of 0x80000000 is
+  # R's NA_integer_, and the fallback x +/- |x| eps then moved two steps wherever |x| lies in the
+  # upper half of its binade; about 1 in 8 float32 values held as doubles have that low word. A
+  # high word of 0x80000000, on a negative subnormal, gave x itself back. Writing 0x80000000 back
+  # went through as.integer(-2^31), which is NA with a warning.
+  words <- function(x) as.integer(writeBin(x, raw(), endian = "little"))
+  float32 <- readBin(writeBin((1:4000) * 487.123456789 - 1e6, raw(), size = 4), "double",
+                     n = 4000L, size = 4)
+  low_word_min <- vapply(float32, function(x) identical(words(x)[1:4], c(0L, 0L, 0L, 128L)),
+                         logical(1))
+  expect_gt(sum(low_word_min), 0)
+  tiny <- 4.9406564584124654e-324
+  x <- c(
+    float32[low_word_min],
+    (1.5 + 2^-21) * 2^(-20:20), -(1.5 + 2^-21) * 2^(-20:20),   # low word 0x80000000
+    (1 + (2^32 - 1) * 2^-52) * c(1, -1),                         # low word 0xFFFFFFFF
+    (1.5 + 2^-21 - 2^-52) * c(1, -1),                            # low word 0x7FFFFFFF
+    (1 + 2^-20) * c(1, -1),                                      # low word 0x00000000
+    -3 * tiny, 3 * tiny, -tiny, tiny,                            # high word 0x80000000 or 0
+    1, -1, 0.1, -262144
+  )
+  wrong <- character(0)
+  for (value in x) {
+    for (dir in c(1, -1)) {
+      warned <- FALSE
+      step <- withCallingHandlers(
+        .gml_next_double(value, dir),
+        warning = function(w) {
+          warned <<- TRUE
+          invokeRestart("muffleWarning")
+        }
+      )
+      # One step: on the right side, with no double between, so the midpoint rounds to an end.
+      mid <- value / 2 + step / 2
+      if (abs(value) < 1e-300) mid <- (value + step) / 2
+      ok <- !warned && isTRUE(if (dir > 0) step > value else step < value) &&
+        (mid == value || mid == step)
+      if (!ok) wrong <- c(wrong, sprintf("%.17g dir %d", value, dir))
+    }
+  }
+  expect_identical(wrong, character(0))
+  expect_identical(.gml_next_double(1.5 + 2^-21, 1), 1.5 + 2^-21 + 2^-52)
+  expect_identical(.gml_next_double(-3 * tiny, 1), -2 * tiny)
+  expect_identical(.gml_next_double(-3 * tiny, -1), -4 * tiny)
+  expect_identical(.gml_next_double(.Machine$double.xmax, 1), Inf)
+  expect_identical(.gml_next_double(-.Machine$double.xmax, -1), -Inf)
+
+  # An upper edge on a straight axis whose inverse lands one double below it is moved onto it.
+  below <- 1.5 + 2^-21
+  edge <- below + 2^-52
+  expect_identical(.gml_exact_edge(edge, below, function(v) v, "upper"), edge)
+})
+
 test_that("Gating-ML's flog is read, with an event at zero only in a range with no lower bound", {
   # flog(x) = log10(x / T) / M + 1 is -Inf at zero and undefined below; FlowKit and flowCore do not
   # test an absent bound, so a range open below holds an event at zero and none below it.
