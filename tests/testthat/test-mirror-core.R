@@ -60,6 +60,17 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
     dispEllipse = gate(
       "dispEllipse", "ellipse",
       '"mean":[0.75,0.2],"covariance":[[0.01,0],[0,0.01]],"distance_square":1', "display"
+    ),
+    # Unbounded below on y and above on x, as GateLab writes an open edge: the largest double.
+    openRect = gate(
+      "openRect", "rectangle",
+      '"vertices":[[1000,-1.7976931348623157e+308],[1.7976931348623157e+308,1000]]', "raw"
+    ),
+    # Vertices needing 16 and 17 significant digits, as numbers read from a file can.
+    finePoly = gate(
+      "finePoly", "polygon",
+      '"vertices":[[1000.0000000000001,-1000],[30000.123456789013,-1000],[30000.123456789013,1000]]',
+      "raw"
     )
   )
   population <- function(id) {
@@ -69,7 +80,11 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
       '"event_count":0,"percent_of_parent":0}'
     )
   }
-  ids <- if (is.null(gate_ids)) names(gates) else gate_ids
+  ids <- if (is.null(gate_ids)) {
+    c("rawRect", "noSpaceRect", "dispRect", "dispPoly", "dispEllipse")
+  } else {
+    gate_ids
+  }
   gates <- gates[ids]
   paste0(
     '{"format":"gatelab-workspace","version":2,"workspaceId":"w",',
@@ -205,4 +220,34 @@ test_that("a mirror of a flow or CyTOF SCE restores the same gates in the core",
   restored <- mirror_core_restore(cytof)
   expect_identical(restored$canonical$gatingSpace, "display")
   expect_mirror_restores_like_canonical(restored)
+})
+
+test_that("a mirror restores an unbounded edge and every digit of a vertex in the core", {
+  # The host wrote the mirror with 15 significant digits. GateLab writes an unbounded edge as the
+  # largest double, 1.7976931348623157e308, which at 15 digits became 1.79769313486232e+308: a
+  # number above the largest double, read as infinite, so the core refused the mirror's
+  # vertices. A vertex needing 16 or 17 digits was restored as another number.
+  fixture <- mirror_core_fixture(
+    mirror_core_sce("flow"),
+    instrument_mode = "flow",
+    gate_ids = c("openRect", "finePoly")
+  )
+  restored <- mirror_core_restore(fixture)
+  expect_mirror_restores_like_canonical(restored)
+  if (!is.null(restored$mirror$error)) return(invisible())
+  for (gate_id in c("openRect", "finePoly")) {
+    expect_identical(
+      restored$mirror$gates[[gate_id]]$vertices,
+      restored$canonical$gates[[gate_id]]$vertices,
+      label = paste0("gate '", gate_id, "' vertices restored from the mirror")
+    )
+  }
+  expect_identical(
+    restored$canonical$gates$openRect$vertices[[1]][[2]],
+    -.Machine$double.xmax
+  )
+  expect_identical(
+    restored$canonical$gates$finePoly$vertices[[2]][[1]],
+    jsonlite::fromJSON("[30000.123456789013]")
+  )
 })

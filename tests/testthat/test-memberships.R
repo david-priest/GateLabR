@@ -577,3 +577,86 @@ test_that("a malformed memberships payload is refused before anything is stored"
     "parent outside its hierarchy"
   )
 })
+
+# A population the tree a sample is gated under has no counterpart for arrives as not evaluated:
+# no bits and a note. Here CD3+CD19- is not evaluated for Donor A (events 1-2).
+not_evaluated_note <- paste(
+  "'CD3+CD19-' of 'Main' was not evaluated for Donor A:",
+  "the tree it is gated under, 'Main copy', has no such population."
+)
+
+not_evaluated_payload <- function() {
+  payload <- memberships_payload()
+  payload$populations[[3]]$sampleMasks[[1]] <- list(
+    sampleId = "sample-0",
+    eventCount = 2L,
+    membershipBitsBase64 = "",
+    notEvaluated = not_evaluated_note
+  )
+  payload
+}
+
+store_not_evaluated <- function(memberships) {
+  GateLabR:::.gatelabr_store_host_workspace(
+    make_memberships_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = memberships_workspace_json(),
+    memberships = memberships
+  )
+}
+
+test_that("a population not evaluated for a sample is NA for its events, never outside", {
+  expect_warning(
+    written <- store_not_evaluated(not_evaluated_payload()),
+    "Population 'CD3\\+CD19-' was not evaluated for 1 sample.*sample 'Donor A' \\(2 events\\)"
+  )
+  expect_identical(written$result$memberships, list(hierarchies = 2L, populations = 5L))
+  sce <- written$sce
+  # The count is of the events known to be inside.
+  expect_identical(gatelabHierarchy(sce)$event_count, c(3L, 2L, 1L))
+
+  expect_warning(
+    members <- gatelabPopulations(sce),
+    "Population 'CD3\\+CD19-' is NA for 2 of this object's events.*sample 'Donor A'.*has no such population"
+  )
+  expect_identical(unname(members[, "CD3+"]), c(TRUE, FALSE, TRUE))
+  expect_identical(unname(members[, "CD3+CD19-"]), c(NA, NA, TRUE))
+
+  # Event 1 is in CD3+ and may be in CD3+CD19- below it, so its deepest population is unknown.
+  # Event 2 is outside CD3+, so it is outside CD3+CD19- too, and stays ungated.
+  expect_warning(leaf <- gatelabLeafPopulation(sce), "sample 'Donor A'")
+  expect_identical(as.character(leaf), c(NA, "ungated", "CD3+CD19-"))
+  expect_identical(levels(leaf), c("CD3+", "CD3+CD19-", "ungated"))
+
+  # Populations evaluated for every sample, and objects without the unevaluated events, read
+  # without a warning.
+  expect_no_warning(gatelabPopulations(sce, populations = "CD3+"))
+  expect_no_warning(gatelabPopulations(sce, hierarchy = "Barcodes"))
+  expect_no_warning(subset <- gatelabPopulations(sce[, 3]))
+  expect_identical(unname(subset[, "CD3+CD19-"]), TRUE)
+  expect_no_warning(expect_identical(as.character(gatelabLeafPopulation(sce[, 3])), "CD3+CD19-"))
+
+  # The NA follows the events through a reorder.
+  reordered <- sce[, c(3, 1, 2)]
+  expect_warning(members <- gatelabPopulations(reordered, populations = "CD3+CD19-"), "Donor A")
+  expect_identical(unname(members[, 1]), c(TRUE, NA, NA))
+})
+
+test_that("a not-evaluated mask that also carries bits, or a malformed note, is refused", {
+  with_bits <- not_evaluated_payload()
+  with_bits$populations[[3]]$sampleMasks[[1]]$membershipBitsBase64 <-
+    base64enc::base64encode(as.raw(0L))
+  expect_error(store_not_evaluated(with_bits), "not evaluated for sample 'Donor A' but carries membership bits")
+
+  blank_note <- not_evaluated_payload()
+  blank_note$populations[[3]]$sampleMasks[[1]]$notEvaluated <- ""
+  expect_error(store_not_evaluated(blank_note), "malformed not-evaluated note for sample 'Donor A'")
+
+  # Empty bits without a note are still a short payload.
+  no_note <- not_evaluated_payload()
+  no_note$populations[[3]]$sampleMasks[[1]]$notEvaluated <- NULL
+  expect_error(store_not_evaluated(no_note), "has 0 bytes; expected 1")
+})
