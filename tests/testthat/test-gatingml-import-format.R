@@ -1016,11 +1016,11 @@ test_that("GateLab's files from FlowJo gates read as ordinary gates: grid rings,
     xml <- xml2::xml_root(xml2::read_xml(gml_fixture(name)))
     grid <- xml2::xml_find_first(xml, ".//*[local-name()='PolygonGate'][.//*[local-name()='gatelab_flowjo_grid']]")
     expect_length(gates$Grid_cells$vertices, length(xml2::xml_find_all(grid, "./*[local-name()='vertex']")))
-    # Edges with no bound are stored beyond every value.
+    # Edges with no bound are stored at -1e30 and 1e30, beyond every value a cytometer records.
     span <- range(vapply(gates$Biex_span_gate$vertices, `[`, 0, 1))
-    expect_identical(span, c(-.Machine$double.xmax, .Machine$double.xmax), info = name)
+    expect_identical(span, c(-1e30, 1e30), info = name)
     floor <- range(vapply(gates$Biex_floor_gate$vertices, `[`, 0, 1))
-    expect_identical(floor[[1]], -.Machine$double.xmax, info = name)
+    expect_identical(floor[[1]], -1e30, info = name)
   }
 })
 
@@ -1035,6 +1035,69 @@ test_that("an edge with no bound holds values past 1e9, where the importer's sta
   membership <- gml_membership(gml_import(open_range), events)
   expect_identical(membership[["/Below"]], 1:3)
   expect_identical(membership[["/Any"]], 1:4)
+})
+
+# A file with two ranges, each with an edge that has no bound: one from above[[2]] up on the channel
+# above[[1]], and one up to below[[2]] on the channel below[[1]].
+gml_open_ranges <- function(above, below) {
+  gml_write(gml_doc(
+    sprintf('  <gating:RectangleGate gating:id="Above" gating:name="Above"><gating:dimension gating:min="%s"><data-type:fcs-dimension data-type:name="%s"/></gating:dimension></gating:RectangleGate>',
+            above[[2]], above[[1]]),
+    sprintf('  <gating:RectangleGate gating:id="Below" gating:name="Below"><gating:dimension gating:max="%s"><data-type:fcs-dimension data-type:name="%s"/></gating:dimension></gating:RectangleGate>',
+            below[[2]], below[[1]])
+  ))
+}
+
+# Export `parsed`, as imported over `data`, in both formats with GateLabR's own exporter, and
+# expect each file to read back to the same events.
+gml_expect_export_reads_back <- function(parsed, counts, data, instrument, counts_mat = NULL) {
+  sys.source(file.path(app_r_dir, "gatingml_export.R"), envir = globalenv())
+  channels <- colnames(counts)
+  sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = t(counts), exprs = t(data)))
+  rownames(sce) <- channels
+  S4Vectors::metadata(sce)$instrument_type <- instrument
+  S4Vectors::metadata(sce)$cofactor <- 5
+  S4Vectors::metadata(sce)$channel_to_pnn <- stats::setNames(as.list(channels), channels)
+  drawn <- gml_membership(parsed, data)
+  expect_gt(length(drawn[["/Above"]]), 0L)
+  expect_gt(length(drawn[["/Below"]]), 0L)
+  for (format in c("standard", "cytobank")) {
+    out <- tempfile(fileext = ".xml")
+    suppressMessages(export_gatingml_to_cytobank(
+      parsed$gates, parsed$gate_order, parsed$populations, parsed$root_population_id, sce, out,
+      format = format, counts_mat = counts_mat
+    ))
+    back <- import_gatingml_from_cytobank(out, channels, stats::setNames(as.list(channels), channels),
+                                          instrument = instrument, cytof_cofactor = 5)
+    expect_identical(gml_membership(back, data), drawn, info = paste(instrument, format))
+  }
+}
+
+test_that("an edge with no bound on flow data can be drawn and written, and its export reads back", {
+  # An edge with no bound was stored at the largest double, where flowCore's logicle, which draws a
+  # flow gate in the Shiny app and writes it to Gating-ML, stops with "scale() didn't converge":
+  # an imported range could be neither drawn nor exported.
+  parsed <- gml_import(gml_open_ranges(c("FL1-A", "100"), c("FL2-A", "1000")))
+  for (gate in parsed$gates) {
+    shown <- flow_forward_vertices(gate$vertices, gate$x_channel, gate$y_channel,
+                                   raw_mat = gml_events, channel_names = gml_channels)
+    expect_true(all(is.finite(unlist(shown))), info = gate$name)
+  }
+  gml_expect_export_reads_back(parsed, gml_events, gml_events, "flow", counts_mat = gml_events)
+})
+
+test_that("an edge with no bound on mass cytometry data is written as a number GateLabR reads back", {
+  # An edge with no bound was stored at the largest double, which the exporter writes with %.15g as
+  # 1.79769313486232e+308: rounded up past the largest double, the literal reads as Inf, and
+  # GateLabR refused its own file.
+  events <- as.matrix(utils::read.csv(gml_fixture("cytof-events.csv"), check.names = FALSE))
+  storage.mode(events) <- "double"
+  channels <- colnames(events)
+  data <- transform_matrix_by_instrument(events, channels, "cytof", cofactor = 5)
+  parsed <- import_gatingml_from_cytobank(gml_open_ranges(c("Nd142Di", "20"), c("Sm147Di", "30")), channels,
+                                          stats::setNames(as.list(channels), channels),
+                                          instrument = "cytof", cytof_cofactor = 5)
+  gml_expect_export_reads_back(parsed, events, data, "cytof")
 })
 
 test_that("Time in seconds and Gating-ML scale values are taken back to the stored values", {
@@ -1383,8 +1446,8 @@ test_that("a transformation's boundMin and boundMax are applied, and what GateLa
   parsed <- gml_import(gml_fixture("bounds-standard.xml"))
   gml_expect_membership(gml_membership(parsed), expected)
   box <- Filter(function(g) identical(g$name, "Bounded_rect"), parsed$gates)[[1]]
-  expect_identical(min(vapply(box$vertices, `[`, 0, 1)), -.Machine$double.xmax)
-  expect_identical(max(vapply(box$vertices, `[`, 0, 2)), .Machine$double.xmax)
+  expect_identical(min(vapply(box$vertices, `[`, 0, 1)), -1e30)
+  expect_identical(max(vapply(box$vertices, `[`, 0, 2)), 1e30)
 
   # A polygon reaching a bound would hold the events held there.
   reaching <- gml_variant("bounds-standard.xml", function(lines) {

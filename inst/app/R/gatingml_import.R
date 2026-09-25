@@ -1688,18 +1688,28 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   }
 }
 
+# Where GateLabR stores an edge with no bound, below and above: -1e30 and 1e30, and no edge further
+# out. That is beyond every value a cytometer records (a detector's width passes 2e9 on some
+# instruments, past the -1e9 and 1e9 at which this importer once held such an edge), and a number
+# the rest of GateLabR carries. The largest double, at which this importer later stored it, is not:
+# flowCore's logicle, which draws a flow gate in the Shiny app and writes it to Gating-ML, does not
+# converge there (nor at 1e200 with T = 262144 and W = 0.5), and the exporter writes numbers with
+# %.15g, which rounds the largest double up to 1.79769313486232e+308, a literal that reads as Inf.
+.GML_OPEN_EDGE <- 1e30
+
 # One dimension of a RectangleGate in the values GateLabR stores: list(range = c(lower, upper)),
 # or list(empty) saying why it holds no event.
 #
 # An edge with no bound (absent, or at the largest double) reaches the map's own limit, -Inf and
-# Inf except at flog's zero, and is stored at the largest double, beyond every value. A
-# transformation's boundMin and boundMax hold the values beyond them at the bound: a lower edge at
-# or below boundMin then holds every value below it too, and is no bound, as is an upper edge at
-# or above boundMax; a range wholly beyond one holds nothing. On an axis that keeps straight edges
-# straight (raw values, flin, Time in seconds, scale values), an edge is placed on the stored
-# values exactly (.gml_exact_edge); on a curved one, through the inverse.
+# Inf except at flog's zero, and is stored at -1e30 or 1e30 (.GML_OPEN_EDGE), as is an edge beyond
+# them. A transformation's boundMin and boundMax hold the values beyond them at the bound: a lower
+# edge at or below boundMin then holds every value below it too, and is no bound, as is an upper
+# edge at or above boundMax; a range wholly beyond one holds nothing. On an axis that keeps
+# straight edges straight (raw values, flin, Time in seconds, scale values), an edge is placed on
+# the stored values exactly (.gml_exact_edge); on a curved one, through the inverse.
 .gml_rectangle_range <- function(dim, map, tr_def = NULL) {
   big <- .Machine$double.xmax
+  far <- .GML_OPEN_EDGE
   lo <- dim$min
   hi <- dim$max
   if (!is.null(lo) && lo <= -big) lo <- NULL
@@ -1716,7 +1726,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   if (!is.null(hi) && !is.null(b_max) && hi >= b_max) hi <- NULL
   place <- function(value, side) {
     limit <- if (identical(side, "lower")) map$lower %||% -Inf else map$upper %||% Inf
-    if (is.null(value)) return(max(-big, min(big, limit)))
+    if (is.null(value)) return(max(-far, min(far, limit)))
     guess <- map$inverse(value)
     if (!identical(map$kind, "curved")) {
       guess <- .gml_exact_edge(value, guess, map$forward, side)
@@ -1725,7 +1735,7 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
       # whose flog is -Inf.
       guess <- .gml_next_double(limit, 1)
     }
-    max(-big, min(big, guess))
+    max(-far, min(far, guess))
   }
   list(range = c(place(lo, "lower"), place(hi, "upper")))
 }
@@ -1768,10 +1778,10 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
   n <- length(xs)
   # A polygon of one point, given three times, holds nothing: GateLab writes a gate with nothing
   # inside its axes' clamps but a point that way, and no reader counts an event in it. GateLabR's
-  # polygon test counts an event lying on a vertex, so it is kept at the largest double, which no
-  # event reaches.
+  # polygon test counts an event lying on a vertex, so it is kept at 1e30 on both axes
+  # (.GML_OPEN_EDGE), which no event reaches.
   if (n > 0L && all(xs == xs[[1]]) && all(ys == ys[[1]])) {
-    return(list(vertices = rep(list(rep(.Machine$double.xmax, 2L)), 3L), problem = NULL))
+    return(list(vertices = rep(list(rep(.GML_OPEN_EDGE, 2L)), 3L), problem = NULL))
   }
   # The declared vertices are mapped before any edge is followed, so a polygon with a vertex that
   # cannot be mapped is refused for that vertex, not for the slanted edges that end at it, which
