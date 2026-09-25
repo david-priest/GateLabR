@@ -1234,9 +1234,11 @@ resolve_gatingml_compensation <- function(compensation, dimension_refs,
 # writes a detector as "v-FLT525_30-E-A" where the FCS file calls it "v-FLT525/30-E-A", and the
 # separator is all the two disagree about; "b-FLT525/30-B-A" stays another name. The case is folded
 # first: removing the punctuation first removed every upper-case letter too, so FL1-H, FL1-A and
-# BL1-A all became "1", and PE-A and APC both "".
+# BL1-A all became "1", and PE-A and APC both "". A letter or digit is one in any script: keeping
+# a-z and 0-9 alone removed every other letter, so TCR gamma-delta became "tcr", as TCR alpha-beta
+# did, and a gate on one was read on the other.
 .gml_punctuation_insensitive <- function(ch) {
-  gsub("[^a-z0-9]", "", tolower(ch))
+  gsub("[^\\p{L}\\p{N}]", "", tolower(ch), perl = TRUE)
 }
 
 .gml_guess_pnn_map_from_channels <- function(session_channels) {

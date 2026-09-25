@@ -1257,6 +1257,54 @@ test_that("a channel the data lack is refused by name, not read as another chann
                'not present in the loaded data: "BV421-H".', fixed = TRUE)
 })
 
+# A file with one range, from 10 up, on the channel `name`.
+gml_range_on <- function(name) {
+  gml_write(gml_doc(sprintf(
+    '  <gating:RectangleGate gating:id="R1" gating:name="Range"><gating:dimension gating:min="10"><data-type:fcs-dimension data-type:name="%s"/></gating:dimension></gating:RectangleGate>',
+    name
+  )))
+}
+
+test_that("a name that differs from a channel only in letters outside ASCII is refused, not read on it", {
+  # Case and punctuation were ignored by removing every character outside a-z and 0-9, and with
+  # them every letter outside ASCII: over data with TCR alpha-beta and no gamma-delta, a gate on
+  # TCR gamma-delta was read on alpha-beta without a word, as IFN-alpha was on IFN-gamma, IL-1alpha
+  # on IL-1beta and CD8beta on CD8alpha, on flow and mass cytometry data and through a $PnN, and a
+  # gain was applied to the wrong channel the same way. The letters are built from their code
+  # points, so the test means the same in any locale.
+  u <- function(prefix, ...) paste0(prefix, intToUtf8(c(...)))
+  alpha <- 0x3B1
+  beta <- 0x3B2
+  gamma <- 0x3B3
+  delta <- 0x3B4
+  loaded <- c(`FL1-A` = u("TCR", alpha, beta), `FL2-A` = u("IFN-", gamma), `FL3-A` = u("IL-1", beta),
+              `FL4-A` = u("CD8", alpha), Time = "Time")
+  absent <- c(u("TCR", gamma, delta), u("IFN-", alpha), u("IL-1", alpha), u("CD8", beta))
+  maps <- list(session = stats::setNames(as.list(unname(loaded)), unname(loaded)), pnn = as.list(loaded))
+  for (map in names(maps)) for (instrument in c("flow", "cytof")) for (name in absent) {
+    expect_error(
+      import_gatingml_from_cytobank(gml_range_on(name), unname(loaded), maps[[map]], instrument = instrument),
+      paste0("references channel(s) not present in the loaded data: ", encodeString(name, quote = '"'), "."),
+      fixed = TRUE, info = paste(map, instrument, which(absent == name))
+    )
+  }
+  expect_error(
+    import_gatingml_from_cytobank(gml_range_on("FL1-A"), unname(loaded), maps$pnn, instrument = "flow",
+                                  gains = stats::setNames(2, absent[[1]])),
+    paste0('gains names a channel the loaded data do not have: "', absent[[1]], '".'),
+    fixed = TRUE
+  )
+
+  # With case and punctuation ignored and every letter kept, a name still finds its channel.
+  channel_of <- function(name) {
+    parsed <- import_gatingml_from_cytobank(gml_range_on(name), unname(loaded), maps$pnn, instrument = "flow")
+    parsed$gates[[1]]$x_channel
+  }
+  expect_identical(channel_of(u("tcr_", alpha, beta)), loaded[["FL1-A"]])
+  expect_identical(channel_of(u("IFN ", gamma)), loaded[["FL2-A"]])
+  expect_identical(channel_of("fl3_a"), loaded[["FL3-A"]])
+})
+
 test_that("Gating-ML's flog is read, with an event at zero only in a range with no lower bound", {
   # flog(x) = log10(x / T) / M + 1 is -Inf at zero and undefined below; FlowKit and flowCore do not
   # test an absent bound, so a range open below holds an event at zero and none below it.
