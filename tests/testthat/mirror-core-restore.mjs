@@ -36,6 +36,12 @@ for (const file of envelopes) {
       gatingSpace: samples[0].gatingSpace,
       sourceGateSpace: restored.sourceGateSpace,
       gates: workspace.gating.gates,
+      // What each restored sample carries besides its identity, such as a matrix a workspace
+      // supplied (externalSpillover).
+      samples: workspace.samples.map((sample) => ({
+        sampleId: sample.sampleId,
+        externalSpillover: sample.externalSpillover ?? null,
+      })),
     };
   } catch (error) {
     out[file] = { error: String(error?.message ?? error) };
