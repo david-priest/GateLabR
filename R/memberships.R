@@ -75,6 +75,18 @@
   event_ids$offset + event_ids$stride * seq_len(event_count) - (event_ids$stride - 1)
 }
 
+# The name and version of the stored record. GateLabR 1.4.6 and 1.4.7 accept a record by its name
+# and event count alone and never read its version. Given a record in which a population was not
+# evaluated for some events, they would read those events as outside it (FALSE rather than NA),
+# and they read every event by its position. The record is therefore written under a name those
+# versions do not accept, so they refuse it; GateLabR before 1.4.6 has no reader of it at all.
+# This version reads records under both names, and refuses a record under the current name whose
+# version it does not know, so that a later layout can be refused by its version alone.
+.gatelabr_memberships_format <- "gatelab-sce-population-memberships"
+.gatelabr_memberships_version <- 3L
+# The name of versions 1 (GateLabR 1.4.6 and 1.4.7, without event ids) and 2 (with event ids).
+.gatelabr_memberships_legacy_format <- "gatelab-sce-memberships"
+
 # Validate the payload an explicit save carries and pack it against this SCE's sample layout.
 .gatelabr_pack_host_memberships <- function(
     sce,
@@ -199,9 +211,10 @@
   )]
 
   record <- list(
-    format = "gatelab-sce-memberships",
-    # Version 2 carries event_ids; a version 1 record, from before they existed, has none.
-    version = 2L,
+    # Version 3 has the layout of version 2, which added event_ids to version 1, and can also
+    # carry not_evaluated; its new name is what makes GateLabR 1.4.6 and 1.4.7 refuse it.
+    format = .gatelabr_memberships_format,
+    version = .gatelabr_memberships_version,
     revision = as.integer(revision),
     saved_at = saved_at,
     event_count = ncol(sce),
@@ -230,7 +243,8 @@
   # object, and `$` reaches only the first. The memberships can be stored in any of them.
   saves <- Filter(function(workspace) {
     is.list(workspace) && is.list(workspace$memberships) &&
-      identical(workspace$memberships$format, "gatelab-sce-memberships")
+      (identical(workspace$memberships$format, .gatelabr_memberships_format) ||
+        identical(workspace$memberships$format, .gatelabr_memberships_legacy_format))
   }, unname(md[names(md) %in% "gatelab_workspace"]))
   if (length(saves) == 0L) {
     workspace <- md$gatelab_workspace
@@ -255,6 +269,26 @@
   }
   workspace <- .gatelabr_memberships_save(sce, saves)
   record <- workspace$memberships
+  # A record under the current name whose version this reader does not know may hold a layout it
+  # would read wrongly, so it is refused rather than read.
+  if (identical(record$format, .gatelabr_memberships_format)) {
+    version <- record$version
+    if (!is.numeric(version) || length(version) != 1L || is.na(version) ||
+        version != .gatelabr_memberships_version) {
+      shown <- if (is.numeric(version) && length(version) == 1L) {
+        format(version)
+      } else {
+        paste(deparse(version), collapse = "")
+      }
+      stop(
+        "These population memberships are stored as record version ", shown,
+        ", which this version of GateLabR does not read: they were saved by a later version ",
+        "of GateLabR, or altered since. Update GateLabR to read them, or press ",
+        "\"Save to SCE\" in GateLabR on this object to store them again.",
+        call. = FALSE
+      )
+    }
+  }
   record$positions <- .gatelabr_membership_positions(sce, record)
   # Stale against the workspace the memberships were saved with, which on a combined object need
   # not be the first record.
