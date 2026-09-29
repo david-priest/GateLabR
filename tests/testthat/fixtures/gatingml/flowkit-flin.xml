@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Lin">
+    <transforms:flin transforms:T="262144" transforms:A="1000"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Lin_box">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Lin" gating:min="0.08681558386282795" gating:max="0.6900043322287417">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Lin" gating:min="0.01992065181041559">
+      <data-type:fcs-dimension data-type:name="SSC-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:PolygonGate gating:id="Lin_slant">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Lin">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Lin">
+      <data-type:fcs-dimension data-type:name="SSC-A"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.04075715197762442"/>
+      <gating:coordinate data-type:value="0.04811624053750038"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.563081430699541"/>
+      <gating:coordinate data-type:value="0.01992065181041559"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.6900043322287417"/>
+      <gating:coordinate data-type:value="0.5322352020186666"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.08681558386282795"/>
+      <gating:coordinate data-type:value="0.37859308971513694"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+</gating:Gating-ML>

@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <gating:PolygonGate gating:id="Far_wedge">
+    <gating:dimension gating:compensation-ref="uncompensated">
+      <data-type:fcs-dimension data-type:name="Ce140Di"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated">
+      <data-type:fcs-dimension data-type:name="Nd142Di"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.5"/>
+      <gating:coordinate data-type:value="0.2"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="10000000.0"/>
+      <gating:coordinate data-type:value="21000000.0"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.2"/>
+      <gating:coordinate data-type:value="3.0"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:PolygonGate gating:id="Far_wedge_flat">
+    <gating:dimension gating:compensation-ref="uncompensated">
+      <data-type:fcs-dimension data-type:name="Sm147Di"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated">
+      <data-type:fcs-dimension data-type:name="Ce140Di"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.3"/>
+      <gating:coordinate data-type:value="0.1"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="20000000.0"/>
+      <gating:coordinate data-type:value="11000000.0"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.1"/>
+      <gating:coordinate data-type:value="2.0"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+</gating:Gating-ML>

@@ -1,7 +1,7 @@
 ^launch\.R$
 ^install_dependencies\.R$
 ^DIVISION_TAB_HANDOFF\.md$
-^.*\.xml$
+^[^/]*\.xml$
 ^session\.log$
 ^\.gitignore$
 ^\.DS_Store$

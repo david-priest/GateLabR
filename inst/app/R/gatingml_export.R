@@ -41,7 +41,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
   if (!is_flow) {
     # CyTOF: one fasinh transform for all arcsinh-transformed channels.
-    # Gating-ML 2.0 fasinh: f(x) = (arcsinh(x*sinh(M*ln10)/T) - A*ln10) / ((M+A)*ln10)
+    # Gating-ML 2.0 fasinh: f(x) = (arcsinh(x*sinh(M*ln10)/T) + A*ln10) / ((M+A)*ln10)
     # With M=log10(e), M*ln10=1, so f(x) = arcsinh(x*sinh(1)/T).
     # To encode arcsinh(x/cofactor): T = cofactor * sinh(1).
     gml_T <- cofactor * sinh(log10e * log(10))

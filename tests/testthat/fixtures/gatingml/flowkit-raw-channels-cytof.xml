@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Length_lin">
+    <transforms:flin transforms:T="50" transforms:A="5"/>
+  </transforms:transformation>
+  <transforms:transformation transforms:id="Asinh_A03">
+    <transforms:fasinh transforms:T="1000" transforms:M="4.5" transforms:A="0.3"/>
+  </transforms:transformation>
+  <transforms:transformation transforms:id="Time_logicle">
+    <transforms:logicle transforms:T="1000" transforms:W="0.5" transforms:M="4.5" transforms:A="0"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Length_flin">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Length_lin" gating:min="0.44545454545454544" gating:max="0.7181818181818183">
+      <data-type:fcs-dimension data-type:name="Event_length"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:PolygonGate gating:id="Length_by_Nd142">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A03">
+      <data-type:fcs-dimension data-type:name="Event_length"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A03">
+      <data-type:fcs-dimension data-type:name="Nd142Di"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.595893805771444"/>
+      <gating:coordinate data-type:value="0.4225200360299252"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.6714935780672977"/>
+      <gating:coordinate data-type:value="0.13735018087663645"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.7076172035887076"/>
+      <gating:coordinate data-type:value="0.6183958152634648"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.6482553500055046"/>
+      <gating:coordinate data-type:value="0.9450361879315184"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:RectangleGate gating:id="Time_logicle">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Time_logicle" gating:min="0.7270708575231271" gating:max="0.9011965644817641">
+      <data-type:fcs-dimension data-type:name="Time"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>

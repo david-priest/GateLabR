@@ -1,0 +1,75 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Arcsinh_5">
+    <transforms:fasinh transforms:T="5.8760059682190064" transforms:M="0.4342944819032518" transforms:A="0"/>
+  </transforms:transformation>
+  <transforms:transformation transforms:id="Asinh_other">
+    <transforms:fasinh transforms:T="262144" transforms:M="4.5" transforms:A="0"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Raw_box">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="1.2070735" gating:max="472.953268">
+      <data-type:fcs-dimension data-type:name="Ce140Di"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.392046">
+      <data-type:fcs-dimension data-type:name="Sm147Di"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:PolygonGate gating:id="Raw_slant">
+    <gating:dimension gating:compensation-ref="uncompensated">
+      <data-type:fcs-dimension data-type:name="Ce140Di"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated">
+      <data-type:fcs-dimension data-type:name="Nd142Di"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.1755265"/>
+      <gating:coordinate data-type:value="1.6902244999999998"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="6.854489"/>
+      <gating:coordinate data-type:value="0.058545"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="472.953268"/>
+      <gating:coordinate data-type:value="14.738012000000001"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="1.408285"/>
+      <gating:coordinate data-type:value="544.7204765"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:PolygonGate gating:id="Arcsinh_slant">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Arcsinh_5">
+      <data-type:fcs-dimension data-type:name="Ce140Di"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Arcsinh_5">
+      <data-type:fcs-dimension data-type:name="Nd142Di"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.035097970520232655"/>
+      <gating:coordinate data-type:value="0.3319167535654012"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="1.1209001193573807"/>
+      <gating:coordinate data-type:value="0.011708729612778093"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="5.242731865046956"/>
+      <gating:coordinate data-type:value="1.8014696701519979"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.27805996578921927"/>
+      <gating:coordinate data-type:value="5.384003106922666"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:RectangleGate gating:id="Other_range">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_other" gating:min="0.0164707675884862">
+      <data-type:fcs-dimension data-type:name="Ce140Di"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="Time_window">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="100.5" gating:max="450.5">
+      <data-type:fcs-dimension data-type:name="Time"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>
