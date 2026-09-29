@@ -1,7 +1,7 @@
 var $h = Object.defineProperty;
 var Kh = (n, e, t) => e in n ? $h(n, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : n[e] = t;
 var xe = (n, e, t) => Kh(n, typeof e != "symbol" ? e + "" : e, t);
-import { o as ko } from "./embed-D4X-AL0o.js";
+import { ar as ko } from "./embed-DO2k8cj_.js";
 function _e(n) {
   "@babel/helpers - typeof";
   return _e = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
@@ -8916,7 +8916,7 @@ endobj\r
   var d = c.getContext("2d");
   d.fillStyle = "#fff", d.fillRect(0, 0, c.width, c.height);
   var m = { ignoreMouse: !0, ignoreAnimation: !0, ignoreDimensions: !0 }, A = this;
-  return ($t.canvg ? Promise.resolve($t.canvg) : import("./index.es-BSmEsQP9.js")).catch(function(P) {
+  return ($t.canvg ? Promise.resolve($t.canvg) : import("./index.es-CZXWhMCV.js")).catch(function(P) {
     return Promise.reject(new Error("Could not load canvg: " + P));
   }).then(function(P) {
     return P.default ? P.default : P;
@@ -9672,6 +9672,10 @@ const O1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   jsPDF: Mt
 }, Symbol.toStringTag, { value: "Module" }));
 export {
+  Mt as E,
+  Gr as M,
+  Ia as O,
   _e as _,
-  O1 as j
+  O1 as j,
+  mi as q
 };
