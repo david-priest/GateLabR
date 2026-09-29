@@ -9,7 +9,7 @@ population holds, for every hierarchy. These functions read that back without re
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.4.7</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,7 +35,7 @@ population holds, for every hierarchy. These functions read that back without re
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Population hierarchies stored in a gated SingleCellExperiment</h1>
-      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/main/R/memberships.R" class="external-link"><code>R/memberships.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/v1.5.0/R/memberships.R" class="external-link"><code>R/memberships.R</code></a></small>
       <div class="d-none name"><code>gatelabMemberships.Rd</code></div>
     </div>
 
@@ -100,13 +100,17 @@ the hierarchy, root included.</p></dd>
   before children: <code>population_id</code>, <code>population</code>, <code>parent</code>, <code>depth</code>,
   <code>path</code> (names from the root joined by <code>" &gt; "</code>), <code>gates</code> (the gate names the
   population is defined by, <code>not</code> marking an excluded gate), and <code>event_count</code>, the
-  number of this object's events the population holds.</p>
+  number of this object's events the population holds; events it was not evaluated for are
+  not counted.</p>
 <p><code>gatelabPopulations</code>: a logical matrix with one row per SCE column (event) and one
   column per population, named by population; a name shared by two populations of the
-  hierarchy is suffixed with the population id.</p>
+  hierarchy is suffixed with the population id. An event is <code>NA</code> in a population that was
+  not evaluated for its sample.</p>
 <p><code>gatelabLeafPopulation</code>: a factor with one level per population of the hierarchy in tree
   order plus <code>ungated</code>, giving each event its deepest population. Where two populations of
-  equal depth both hold an event, the one earlier in the tree wins.</p>
+  equal depth both hold an event, the one earlier in the tree wins. An event is <code>NA</code> where
+  a population not evaluated for it could hold it (no ancestor is known not to) and would
+  outrank the population found.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -122,6 +126,12 @@ memberships saved by an earlier version of GateLabR, which kept them by position
 <code><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind()</a></code> needs the column on both objects: give the object that lacks it the column as
 <code>NA</code> (<code>other$gatelab_event_id &lt;- NA_real_</code>) rather than dropping it from the saved
 one, and the saved events read again once the combined object is subset back to them.</p>
+<p>A population can be <em>not evaluated</em> for a sample. GateLab reads each sample's memberships
+under the tree that sample is gated under, and when that tree has no counterpart for a
+population (a copy whose structure was changed), it sends no membership for the sample's
+events, with a note naming the file, the population and the file's tree. Those events are
+<code>NA</code> in that population, never <code>FALSE</code>, and every read that returns such an
+<code>NA</code> warns with the note.</p>
     </div>
 
     <div class="section level2">

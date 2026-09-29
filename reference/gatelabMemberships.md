@@ -62,17 +62,20 @@ hierarchy, parents before children: `population_id`, `population`,
 `parent`, `depth`, `path` (names from the root joined by `" > "`),
 `gates` (the gate names the population is defined by, `not` marking an
 excluded gate), and `event_count`, the number of this object's events
-the population holds.
+the population holds; events it was not evaluated for are not counted.
 
 `gatelabPopulations`: a logical matrix with one row per SCE column
 (event) and one column per population, named by population; a name
 shared by two populations of the hierarchy is suffixed with the
-population id.
+population id. An event is `NA` in a population that was not evaluated
+for its sample.
 
 `gatelabLeafPopulation`: a factor with one level per population of the
 hierarchy in tree order plus `ungated`, giving each event its deepest
 population. Where two populations of equal depth both hold an event, the
-one earlier in the tree wins.
+one earlier in the tree wins. An event is `NA` where a population not
+evaluated for it could hold it (no ancestor is known not to) and would
+outrank the population found.
 
 ## Details
 
@@ -95,6 +98,14 @@ objects: give the object that lacks it the column as `NA`
 (`other$gatelab_event_id <- NA_real_`) rather than dropping it from the
 saved one, and the saved events read again once the combined object is
 subset back to them.
+
+A population can be *not evaluated* for a sample. GateLab reads each
+sample's memberships under the tree that sample is gated under, and when
+that tree has no counterpart for a population (a copy whose structure
+was changed), it sends no membership for the sample's events, with a
+note naming the file, the population and the file's tree. Those events
+are `NA` in that population, never `FALSE`, and every read that returns
+such an `NA` warns with the note.
 
 ## Examples
 

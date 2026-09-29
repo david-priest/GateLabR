@@ -58,15 +58,18 @@ return directly to `colData` for a Bioconductor pipeline.
   and population trees with Cytobank and other ISAC Gating-ML 2.0 tools.
   Import is done by the embedded GateLab core in the browser, not in R:
   it reads rectangle, range, polygon and ellipse gates, AND populations,
-  and the Boolean NOT of a gate. An AND population that excludes a gate
-  is read back as GateLab and GateLabR write it, with
-  `gating:complement="true"` on the excluded gate’s reference, an
-  attribute outside the Gating-ML 2.0 schema. The schema’s own
-  `gating:use-as-complement="true"` is not yet read, and such a gate is
-  imported as an included gate, with no warning. Files containing OR
-  populations, other gate types, or gates whose channels cannot be
-  matched to the loaded data are refused before import. (FlowJo uses its
-  own `.wsp` format and does not round-trip Gating-ML.)
+  and the Boolean NOT of a gate. A population’s excluded gate is read
+  from the Gating-ML 2.0 schema’s `gating:use-as-complement="true"` on
+  the gate’s reference, which GateLab now writes in its Cytobank format,
+  and from `gating:complement="true"`, an attribute outside the schema
+  that GateLab and GateLabR wrote before. An OR population is left out,
+  with everything beneath it, and named in a warning, and the rest of
+  the file is imported; so is a population that uses a gate placed
+  beneath a population that is not its ancestor, which GateLab cannot
+  represent within one parent. Files containing other gate types,
+  transformations GateLab does not read, or gates whose channels cannot
+  be matched to the loaded data are refused before import. (FlowJo uses
+  its own `.wsp` format and does not round-trip Gating-ML.)
 - **Workspace persistence.** Gates, populations, scales, active assay,
   compensation provenance and illustration settings are saved inside the
   SCE and re-loaded automatically.
@@ -121,10 +124,11 @@ exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own
 `.wsp` format). GateLabR reads and writes Cytobank-compatible Gating-ML,
 so supported gate geometry and AND population trees can move between
 GateLabR and Cytobank. A population that excludes a gate is written with
-GateLab’s own `gating:complement` attribute rather than the schema’s
-`gating:use-as-complement`, so it round-trips between GateLab and
-GateLabR but has not been shown to cross to Cytobank. OR populations are
-not supported.
+the schema’s `gating:use-as-complement` in the Cytobank format and
+through a NOT gate in the standard format, and both are read back, as is
+the `gating:complement` attribute GateLab wrote before; such a
+population has not been shown to cross to Cytobank. OR populations are
+not imported.
 
 FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an
 independent project and is not affiliated with or endorsed by BD or
@@ -246,7 +250,12 @@ three-column layout is:
     through it, so they follow the events through a reorder or a subset.
     Events the saved object did not hold, such as those added by
     [`cbind()`](https://rdrr.io/r/base/cbind.html), have no membership,
-    and reading is refused rather than guessed.
+    and reading is refused rather than guessed. A population the tree a
+    file is gated under has no counterpart for is not evaluated for that
+    file: its events are `NA` in it, not `FALSE`, in the saved
+    memberships and in an exported `colData` column alike. The save, the
+    export and each read that returns such an `NA` warn, naming the file
+    and the population.
 
 7.  Save the SCE (e.g. `saveRDS(sce, "gated.rds")`) — the workspace is
     embedded in `metadata()` and reloaded next time.
