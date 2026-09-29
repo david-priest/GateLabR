@@ -23,17 +23,25 @@ mirror_core_sce <- function(instrument = NULL) {
   sce
 }
 
-mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_ids) {
+mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_ids,
+                                       version = 2L, required_features = NULL,
+                                       external_spillover = NULL) {
   partition <- GateLabR:::.gatelabr_sample_partition(sce, include_metadata = FALSE)
   samples <- vapply(seq_along(partition$samples), function(index) {
     sprintf(
       paste0(
         '{"sampleId":"%s:%s","fileName":"%s","dataPath":"data/sce-%d.fcs","logicleW":{},',
         '"scatterCofactor":{},"cytofCofactor":5,"compensationOn":false,',
-        '"instrumentMode":"%s","labels":{},"metadata":{}}'
+        '"instrumentMode":"%s","labels":{},"metadata":{}%s}'
       ),
       dataset_id, partition$samples[[index]]$id, partition$levels[[index]], index,
-      instrument_mode
+      instrument_mode,
+      # A matrix a workspace supplied, on the first sample only.
+      if (index == 1L && !is.null(external_spillover)) {
+        paste0(',"externalSpillover":', external_spillover)
+      } else {
+        ""
+      }
     )
   }, character(1))
   logicle <- '{"kind":"logicle","T":262144,"W":0.5,"M":4.5,"A":0}'
@@ -71,6 +79,38 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
       "finePoly", "polygon",
       '"vertices":[[1000.0000000000001,-1000],[30000.123456789013,-1000],[30000.123456789013,1000]]',
       "raw"
+    ),
+    # A rectangle under Gating-ML's edge rule: an event on its max is outside.
+    halfOpenRect = sub(
+      '"space":"raw"',
+      '"space":"raw","bounds":"half-open"',
+      gate("halfOpenRect", "rectangle", '"vertices":[[1000,-1000],[262144,1000]]', "raw"),
+      fixed = TRUE
+    ),
+    # A polygon on FlowJo's gate grid, with the vertices FlowJo saved.
+    gridPoly = paste0(
+      '"gridPoly":{"gate_id":"gridPoly","name":"gridPoly","gate_type":"polygon",',
+      '"x_channel":"CD3","y_channel":"CD19","vertices":[[10,20],[200,40],[180,150],[40,90]],',
+      '"color":"#e41a1c","label_offset":null,"space":"display","transforms":{',
+      '"CD3":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"linear","minRange":0,"maxRange":262144}},',
+      '"CD19":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"biex","maxValue":262144,',
+      '"pos":4.41854,"neg":0,"widthBasis":-10,"channelRange":256}}},',
+      '"flowjo_vertices":[[30000.123456789013,-150],[200000,40],[180000,150000],[40000,90000]],',
+      '"flowjo_polygon":{"quadId":-1,"gateResolution":256}}'
+    ),
+    # A FlowJo rectangle on a biex axis on FlowJo's 4,096-channel table and a standard flog with a
+    # bound, open below on x, with the axes and the bound FlowJo's rule opened.
+    flowjoRect = paste0(
+      '"flowjoRect":{"gate_id":"flowjoRect","name":"flowjoRect","gate_type":"rectangle",',
+      '"x_channel":"CD3","y_channel":"CD19",',
+      '"vertices":[[-1.7976931348623157e+308,0.2],[0.8,0.2],[0.8,0.9],[-1.7976931348623157e+308,0.9]],',
+      '"color":"#e41a1c","label_offset":null,"space":"display","transforms":{',
+      '"CD3":{"kind":"biex","maxValue":262144,"pos":4.418541234567891,"neg":0,"widthBasis":-10,',
+      '"channelRange":256,"tableChannels":4096},',
+      '"CD19":{"kind":"flog","T":262144,"M":5,"standard":true,"bounds":{"min":0.1}}},',
+      '"flowjo_axes":{"CD3":{"kind":"wsplog","offset":3,"decades":5},',
+      '"CD19":{"kind":"linear","minRange":0,"maxRange":262144}},',
+      '"flowjo_bounds":{"CD3":[3,null],"CD19":[null,null]}}'
     )
   )
   population <- function(id) {
@@ -87,7 +127,10 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
   }
   gates <- gates[ids]
   paste0(
-    '{"format":"gatelab-workspace","version":2,"workspaceId":"w",',
+    '{"format":"gatelab-workspace","version":', version, ',',
+    if (is.null(required_features)) "" else
+      paste0('"requiredFeatures":["', paste(required_features, collapse = '","'), '"],'),
+    '"workspaceId":"w",',
     '"savedAt":"2026-09-24T00:00:00Z","app":"GateLab","samples":[',
     paste(samples, collapse = ","), '],"activeSample":0,"gating":{"gates":{',
     paste(gates, collapse = ","), '},"gate_order":["', paste(ids, collapse = '","'), '"],',
@@ -103,7 +146,7 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
 
 # Write what the host serves for this SCE: the dataset, each sample's events, and the envelope the
 # host sends with the canonical record and with the mirror alone.
-mirror_core_fixture <- function(sce, instrument_mode, gate_ids = NULL) {
+mirror_core_fixture <- function(sce, instrument_mode, gate_ids = NULL, ...) {
   dataset_id <- "mirror-sce"
   written <- GateLabR:::.gatelabr_store_host_workspace(
     sce,
@@ -111,7 +154,7 @@ mirror_core_fixture <- function(sce, instrument_mode, gate_ids = NULL) {
     expected_revision = 0L,
     client_revision = 1L,
     reason = "autosave",
-    workspace_json = mirror_core_workspace_json(sce, dataset_id, instrument_mode, gate_ids)
+    workspace_json = mirror_core_workspace_json(sce, dataset_id, instrument_mode, gate_ids, ...)
   )$sce
   mirror_only <- written
   S4Vectors::metadata(mirror_only)$gatelab_workspace <- NULL
@@ -250,4 +293,62 @@ test_that("a mirror restores an unbounded edge and every digit of a vertex in th
     restored$canonical$gates$finePoly$vertices[[2]][[1]],
     jsonlite::fromJSON("[30000.123456789013]")
   )
+})
+
+test_that("a version 4 workspace stored by R restores in the embedded core, from the record and the mirror", {
+  # GateLab writes a hosted save as version 4, the version 2 layout with requiredFeatures, when it
+  # holds a half-open rectangle, a polygon on FlowJo's grid, a biex axis on FlowJo's table or a
+  # matrix a workspace supplied. GateLabR stores the JSON as written and mirrors each gate with its
+  # edge rule and FlowJo fields; the embedded core must read both back and hold the same gates, or
+  # the rectangle counts an event on its max again and the grid polygon loses FlowJo's vertices.
+  matrix <- paste0(
+    '{"label":"Synthetic matrix","channels":["CD3","CD19","CD4"],',
+    '"matrix":[[1,0.1,0],[0.02,1,0],[0,0,1]],"leftOut":["CD4"]}'
+  )
+  features <- c("flowjo-grid", "flowjo-biex-table", "external-spillover", "half-open-rectangle")
+  fixture <- mirror_core_fixture(
+    mirror_core_sce("flow"),
+    instrument_mode = "flow",
+    gate_ids = c("halfOpenRect", "gridPoly", "flowjoRect", "rawRect"),
+    version = 4L,
+    required_features = features,
+    external_spillover = matrix
+  )
+  restored <- mirror_core_restore(fixture)
+  expect_mirror_restores_like_canonical(restored)
+  if (!is.null(restored$canonical$error) || !is.null(restored$mirror$error)) return(invisible())
+
+  kept <- c("bounds", "flowjo_vertices", "flowjo_polygon", "flowjo_axes", "flowjo_bounds")
+  for (source in c("canonical", "mirror")) {
+    gates <- restored[[source]]$gates
+    expect_identical(gates$halfOpenRect$bounds, "half-open", label = paste(source, "halfOpenRect bounds"))
+    expect_identical(gates$gridPoly$transforms$CD3$kind, "flowjoChannels", label = paste(source, "grid axis"))
+    expect_identical(gates$flowjoRect$transforms$CD3$tableChannels, 4096L, label = paste(source, "biex table"))
+    expect_identical(gates$flowjoRect$vertices[[1]][[1]], -.Machine$double.xmax, label = paste(source, "open edge"))
+    expect_identical(
+      gates$gridPoly$flowjo_vertices[[1]][[1]],
+      jsonlite::fromJSON("[30000.123456789013]"),
+      label = paste(source, "FlowJo vertex")
+    )
+  }
+  # The mirror keeps every field the record has that the core keeps for these gates. A rectangle
+  # with no edge rule is closed: the core leaves the field out when it reads the record and writes
+  # "closed" when it reads the mirror, which select the same events.
+  edge_rule <- function(gate) {
+    if (identical(gate$gate_type, "rectangle") && is.null(gate$bounds)) gate$bounds <- "closed"
+    gate[kept]
+  }
+  for (gate_id in names(restored$canonical$gates)) {
+    expect_identical(
+      edge_rule(restored$mirror$gates[[gate_id]]),
+      edge_rule(restored$canonical$gates[[gate_id]]),
+      label = paste0("gate '", gate_id, "' FlowJo fields and edge rule restored from the mirror")
+    )
+  }
+
+  # The record keeps the matrix the workspace supplied, with what it left out, on its sample.
+  spillover <- restored$canonical$samples[[1]]$externalSpillover
+  expect_identical(spillover$label, "Synthetic matrix")
+  expect_identical(unlist(spillover$leftOut), "CD4")
+  expect_null(restored$canonical$samples[[2]]$externalSpillover)
 })

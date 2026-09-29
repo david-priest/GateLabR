@@ -44,41 +44,54 @@ test_that("the R host has no Gating-ML operation of its own", {
 
 test_that("the README's Gating-ML claims describe the importer launchGatingApp() runs", {
   core <- embedded_core_source()
-  # The embedded importer refuses OR populations, reads a complemented gate reference (NOT) as
-  # an excluded gate, and reads EllipsoidGate.
+  # The embedded importer leaves an OR population out, with everything beneath it, names it in a
+  # warning and imports the rest of the file; it reads a complemented gate reference (NOT) as an
+  # excluded gate, and reads EllipsoidGate. The core embedded before refused a file holding an OR
+  # population outright ("uses OR logic; GateLab imports AND populations, ...").
   expect_true(grepl(
-    "uses OR logic; GateLab imports AND populations, with NOT on individual gate references",
+    "combines its references with OR, which GateLab cannot represent; it and anything below it were skipped.",
     core,
     fixed = TRUE
   ))
+  expect_false(grepl("uses OR logic; GateLab imports AND populations", core, fixed = TRUE))
   expect_true(grepl('operation === "not" ?', core, fixed = TRUE))
   expect_true(grepl('"EllipsoidGate"', core, fixed = TRUE))
 
   readme <- package_readme()
   feature <- readme_gatingml_feature(readme)
-  # "NOT or OR populations ... are rejected" was the retired R importer's rule.
+  # "NOT or OR populations ... are rejected" was the retired R importer's rule, and "Files
+  # containing OR populations ... are refused" the previous core's.
   expect_false(grepl("NOT or OR populations", feature, fixed = TRUE))
-  expect_match(feature, "OR populations", fixed = TRUE)
+  expect_false(grepl("Files containing OR populations", feature, fixed = TRUE))
+  expect_match(feature, "An OR population is left out, with everything beneath it, and named in a warning", fixed = TRUE)
   expect_match(feature, "ellipse", fixed = TRUE)
   table_row <- grep("Gating-ML 2.0 exchange", readme, fixed = TRUE, value = TRUE)
   expect_length(table_row, 1L)
   expect_false(grepl("positive AND", table_row, fixed = TRUE))
 })
 
-test_that("the README says which form of an excluded gate the embedded importer reads", {
-  # The core writes an excluded gate as gating:complement="true", which is not in the Gating-ML 2.0
-  # schema, and reads that back. The schema's own attribute, gating:use-as-complement="true", is
-  # not read: A AND NOT B imports as A AND B, with no warning. The README said such populations
-  # "can move between GateLabR and Cytobank", which nothing has shown. When a core sync brings an
-  # importer that reads the schema's attribute, this test fails until the README follows.
+test_that("the README says which forms of an excluded gate the embedded importer reads", {
+  # The core writes an excluded gate's reference with the schema's gating:use-as-complement="true"
+  # and reads it, and still reads gating:complement="true", the attribute outside the Gating-ML 2.0
+  # schema that GateLab wrote before. The core embedded before wrote and read only the latter, so
+  # A AND NOT B from a schema-following writer imported as A AND B, with no warning, and the README
+  # said so. When a core sync stops reading either attribute, this test fails until the README
+  # follows.
   core <- embedded_core_source()
-  expect_true(grepl('gating:complement="true"', core, fixed = TRUE))
-  expect_false(grepl("use-as-complement", core, fixed = TRUE))
+  expect_true(grepl('gating:use-as-complement="true"', core, fixed = TRUE))
+  expect_false(grepl('gating:complement="true"', core, fixed = TRUE))
+  # Both attributes are read from one reference, in one statement.
+  expect_true(grepl(
+    '\\(\\s*\\w+,\\s*"use-as-complement"\\)[^;]*\\(\\s*\\w+,\\s*"complement"\\)',
+    core
+  ))
 
   readme <- package_readme()
   feature <- readme_gatingml_feature(readme)
-  expect_match(feature, "gating:use-as-complement", fixed = TRUE)
-  expect_match(feature, "imported as an included gate", fixed = TRUE)
+  expect_match(feature, 'gating:use-as-complement="true"', fixed = TRUE)
+  expect_match(feature, 'gating:complement="true"', fixed = TRUE)
+  expect_false(grepl("imported as an included gate", feature, fixed = TRUE))
+  expect_false(grepl("is not yet read", feature, fixed = TRUE))
   expect_false(grepl("AND populations in which a population may exclude a gate", feature, fixed = TRUE))
   whole <- paste(readme, collapse = " ")
   expect_false(grepl("including populations that exclude a gate, can move between", whole, fixed = TRUE))
@@ -90,7 +103,7 @@ test_that("the README and DESCRIPTION describe populations that may exclude a ga
   # The core writes a population's excluded gate as a complemented gate reference, and reads one
   # back as an excluded gate, so "positive AND" undersells what a population can be.
   core <- embedded_core_source()
-  expect_true(grepl('gating:complement="true"', core, fixed = TRUE))
+  expect_true(grepl('gating:use-as-complement="true"', core, fixed = TRUE))
 
   readme <- package_readme()
   expect_false(any(grepl("Positive AND", readme, fixed = TRUE)))
