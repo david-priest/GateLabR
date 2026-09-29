@@ -102,7 +102,8 @@ test_that("an explicit save stores every population packed beside the workspace"
   written <- store_with_memberships()
   expect_identical(written$result$memberships, list(hierarchies = 2L, populations = 5L))
   record <- S4Vectors::metadata(written$sce)$gatelab_workspace$memberships
-  expect_identical(record$format, "gatelab-sce-memberships")
+  expect_identical(record$format, "gatelab-sce-population-memberships")
+  expect_identical(record$version, 3L)
   expect_identical(record$revision, 1L)
   expect_identical(record$event_count, 3L)
   expect_identical(names(record$masks), c("main/root", "main/child", "main/grandchild", "bc/root2", "bc/s01"))
@@ -404,6 +405,7 @@ test_that("a record that carries no event ids does not block reading the saved e
   legacy <- store_with_memberships()$sce
   workspace <- S4Vectors::metadata(legacy)$gatelab_workspace
   workspace$memberships$event_ids <- NULL
+  workspace$memberships$format <- "gatelab-sce-memberships"
   workspace$memberships$version <- 1L
   S4Vectors::metadata(legacy)$gatelab_workspace <- workspace
   legacy$gatelab_event_id <- NA_real_
@@ -534,6 +536,7 @@ test_that("memberships whose events cannot be identified are refused, not read b
   legacy <- sce
   workspace <- S4Vectors::metadata(legacy)$gatelab_workspace
   workspace$memberships$event_ids <- NULL
+  workspace$memberships$format <- "gatelab-sce-memberships"
   workspace$memberships$version <- 1L
   S4Vectors::metadata(legacy)$gatelab_workspace <- workspace
   expect_error(gatelabPopulations(legacy), "saved by an earlier version of GateLabR")
@@ -576,4 +579,177 @@ test_that("a malformed memberships payload is refused before anything is stored"
     ),
     "parent outside its hierarchy"
   )
+})
+
+# A population the tree a sample is gated under has no counterpart for arrives as not evaluated:
+# no bits and a note. Here CD3+CD19- is not evaluated for Donor A (events 1-2).
+not_evaluated_note <- paste(
+  "'CD3+CD19-' of 'Main' was not evaluated for Donor A:",
+  "the tree it is gated under, 'Main copy', has no such population."
+)
+
+not_evaluated_payload <- function() {
+  payload <- memberships_payload()
+  payload$populations[[3]]$sampleMasks[[1]] <- list(
+    sampleId = "sample-0",
+    eventCount = 2L,
+    membershipBitsBase64 = "",
+    notEvaluated = not_evaluated_note
+  )
+  payload
+}
+
+store_not_evaluated <- function(memberships) {
+  GateLabR:::.gatelabr_store_host_workspace(
+    make_memberships_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = memberships_workspace_json(),
+    memberships = memberships
+  )
+}
+
+test_that("a population not evaluated for a sample is NA for its events, never outside", {
+  expect_warning(
+    written <- store_not_evaluated(not_evaluated_payload()),
+    "Population 'CD3\\+CD19-' was not evaluated for 1 sample.*sample 'Donor A' \\(2 events\\)"
+  )
+  expect_identical(written$result$memberships, list(hierarchies = 2L, populations = 5L))
+  sce <- written$sce
+  # The count is of the events known to be inside.
+  expect_identical(gatelabHierarchy(sce)$event_count, c(3L, 2L, 1L))
+
+  expect_warning(
+    members <- gatelabPopulations(sce),
+    "Population 'CD3\\+CD19-' is NA for 2 of this object's events.*sample 'Donor A'.*has no such population"
+  )
+  expect_identical(unname(members[, "CD3+"]), c(TRUE, FALSE, TRUE))
+  expect_identical(unname(members[, "CD3+CD19-"]), c(NA, NA, TRUE))
+
+  # Event 1 is in CD3+ and may be in CD3+CD19- below it, so its deepest population is unknown.
+  # Event 2 is outside CD3+, so it is outside CD3+CD19- too, and stays ungated.
+  expect_warning(leaf <- gatelabLeafPopulation(sce), "sample 'Donor A'")
+  expect_identical(as.character(leaf), c(NA, "ungated", "CD3+CD19-"))
+  expect_identical(levels(leaf), c("CD3+", "CD3+CD19-", "ungated"))
+
+  # Populations evaluated for every sample, and objects without the unevaluated events, read
+  # without a warning.
+  expect_no_warning(gatelabPopulations(sce, populations = "CD3+"))
+  expect_no_warning(gatelabPopulations(sce, hierarchy = "Barcodes"))
+  expect_no_warning(subset <- gatelabPopulations(sce[, 3]))
+  expect_identical(unname(subset[, "CD3+CD19-"]), TRUE)
+  expect_no_warning(expect_identical(as.character(gatelabLeafPopulation(sce[, 3])), "CD3+CD19-"))
+
+  # The NA follows the events through a reorder.
+  reordered <- sce[, c(3, 1, 2)]
+  expect_warning(members <- gatelabPopulations(reordered, populations = "CD3+CD19-"), "Donor A")
+  expect_identical(unname(members[, 1]), c(TRUE, NA, NA))
+})
+
+test_that("a not-evaluated mask that also carries bits, or a malformed note, is refused", {
+  with_bits <- not_evaluated_payload()
+  with_bits$populations[[3]]$sampleMasks[[1]]$membershipBitsBase64 <-
+    base64enc::base64encode(as.raw(0L))
+  expect_error(store_not_evaluated(with_bits), "not evaluated for sample 'Donor A' but carries membership bits")
+
+  blank_note <- not_evaluated_payload()
+  blank_note$populations[[3]]$sampleMasks[[1]]$notEvaluated <- ""
+  expect_error(store_not_evaluated(blank_note), "malformed not-evaluated note for sample 'Donor A'")
+
+  # Empty bits without a note are still a short payload.
+  no_note <- not_evaluated_payload()
+  no_note$populations[[3]]$sampleMasks[[1]]$notEvaluated <- NULL
+  expect_error(store_not_evaluated(no_note), "has 0 bytes; expected 1")
+})
+
+# The stored record under another name and version. Version 2 under the earlier name, as this
+# branch wrote it before the rename, has version 3's layout, so relabelling a version 3 record
+# reproduces one.
+relabel_memberships <- function(sce, format, version) {
+  workspace <- S4Vectors::metadata(sce)$gatelab_workspace
+  workspace$memberships$format <- format
+  workspace$memberships["version"] <- list(version)
+  S4Vectors::metadata(sce)$gatelab_workspace <- workspace
+  sce
+}
+
+# The membership reader of GateLabR 1.4.6 and 1.4.7. fixtures/memberships-v1.4.7.R is
+# R/memberships.R as tagged v1.4.7, byte for byte, and v1.4.6 holds the same file (blob 0d38d7c).
+# No earlier tag reads the stored record at all. Sourced beside the current namespace, the old
+# functions call their own helpers, and the current package only for the workspace revision.
+old_memberships_reader <- function() {
+  path <- testthat::test_path("fixtures", "memberships-v1.4.7.R")
+  expect_identical(unname(tools::md5sum(path)), "51e35860d67049e54e2f92d0d9018d1c")
+  reader <- new.env(parent = asNamespace("GateLabR"))
+  sys.source(path, envir = reader)
+  reader
+}
+
+test_that("GateLabR 1.4.6 and 1.4.7 refuse memberships this version saves", {
+  old <- old_memberships_reader()
+  expect_warning(sce <- store_not_evaluated(not_evaluated_payload())$sce, "not evaluated")
+  refused <- "No population memberships are stored in this SCE"
+  expect_error(old$gatelabHierarchies(sce), refused)
+  expect_error(old$gatelabHierarchy(sce), refused)
+  expect_error(old$gatelabPopulations(sce), refused)
+  expect_error(old$gatelabPopulations(sce, allow_stale = TRUE), refused)
+  expect_error(old$gatelabLeafPopulation(sce), refused)
+  # So are memberships in which every population was evaluated for every event.
+  expect_error(old$gatelabPopulations(store_with_memberships()$sce), refused)
+
+  # Under the name those versions accept, the same record is read without an error or a warning,
+  # and the events CD3+CD19- was not evaluated for come back outside it.
+  earlier_name <- relabel_memberships(sce, "gatelab-sce-memberships", 2L)
+  expect_no_warning(members <- old$gatelabPopulations(earlier_name))
+  expect_identical(unname(members[, "CD3+CD19-"]), c(FALSE, FALSE, TRUE))
+})
+
+test_that("memberships saved under the earlier name are read as before", {
+  expect_warning(sce <- store_not_evaluated(not_evaluated_payload())$sce, "not evaluated")
+  current <- suppressWarnings(gatelabPopulations(sce))
+  expect_identical(unname(current[, "CD3+CD19-"]), c(NA, NA, TRUE))
+
+  earlier_name <- relabel_memberships(sce, "gatelab-sce-memberships", 2L)
+  expect_warning(
+    members <- gatelabPopulations(earlier_name),
+    "Population 'CD3\\+CD19-' is NA for 2 of this object's events"
+  )
+  expect_identical(members, current)
+  expect_identical(gatelabHierarchy(earlier_name), gatelabHierarchy(sce))
+
+  evaluated <- relabel_memberships(store_with_memberships()$sce, "gatelab-sce-memberships", 2L)
+  expect_no_warning(members <- gatelabPopulations(evaluated))
+  expect_identical(unname(members[, "CD3+"]), c(TRUE, FALSE, TRUE))
+  expect_identical(as.character(gatelabLeafPopulation(evaluated)), c("CD3+", "ungated", "CD3+CD19-"))
+
+  # Version 1, from before event ids, is refused as before.
+  legacy <- relabel_memberships(evaluated, "gatelab-sce-memberships", 1L)
+  workspace <- S4Vectors::metadata(legacy)$gatelab_workspace
+  workspace$memberships$event_ids <- NULL
+  S4Vectors::metadata(legacy)$gatelab_workspace <- workspace
+  expect_error(gatelabPopulations(legacy), "saved by an earlier version of GateLabR")
+})
+
+test_that("memberships of a record version this version does not know are refused", {
+  sce <- store_with_memberships()$sce
+  expected <- unname(gatelabPopulations(sce)[, "CD3+"])
+  # A whole-number double, as some serialisations return an integer, is still version 3.
+  as_double <- relabel_memberships(sce, "gatelab-sce-population-memberships", 3)
+  expect_identical(unname(gatelabPopulations(as_double)[, "CD3+"]), expected)
+
+  unknown <- relabel_memberships(sce, "gatelab-sce-population-memberships", 4L)
+  expect_error(
+    gatelabPopulations(unknown),
+    "stored as record version 4, which this version of GateLabR does not read"
+  )
+  expect_error(gatelabHierarchies(unknown), "record version 4")
+  expect_error(gatelabLeafPopulation(unknown, allow_stale = TRUE), "record version 4")
+  for (version in list(2L, 3.5, "3", NA_integer_, NULL)) {
+    expect_error(
+      gatelabPopulations(relabel_memberships(sce, "gatelab-sce-population-memberships", version)),
+      "which this version of GateLabR does not read"
+    )
+  }
 })

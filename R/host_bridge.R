@@ -9,6 +9,12 @@
 .gatelabr_coldata_contract_version <- 1L
 .gatelabr_rowdata_contract_version <- 1L
 
+# A workspace R writes for the host is written with 17 significant digits, which name every double
+# exactly. jsonlite's digits = NA writes 15, which moved a number GateLab reads from a file needing
+# 16 or 17, and wrote GateLab's unbounded edge, the largest double, as 1.79769313486232e+308: above
+# the largest double, so R and JavaScript both read it as infinite and GateLab refused the gate.
+.gatelabr_workspace_json_digits <- I(17)
+
 .gatelabr_canonical_workspace_record <- function(sce) {
   canonical <- S4Vectors::metadata(sce)$gatelab_workspace
   if (is.null(canonical)) return(NULL)
@@ -40,7 +46,7 @@
       dataframe = "rows",
       matrix = "rowmajor",
       POSIXt = "ISO8601",
-      digits = NA
+      digits = .gatelabr_workspace_json_digits
     )
   }
   list(workspace_json = as.character(workspace_json), revision = 0L)
@@ -89,7 +95,7 @@
         dataframe = "rows",
         matrix = "rowmajor",
         POSIXt = "ISO8601",
-        digits = NA
+        digits = .gatelabr_workspace_json_digits
       )
   }
 
@@ -103,7 +109,9 @@
 }
 
 .gatelabr_first_rowdata_field <- function(sce, candidates) {
-  rd <- as.data.frame(SummarizedExperiment::rowData(sce))
+  # optional = TRUE keeps each column's name as it is. By default the conversion makes names
+  # syntactic, so "$pnn" and "$pns" became "X.pnn" and "X.pns" and were never found.
+  rd <- as.data.frame(SummarizedExperiment::rowData(sce), optional = TRUE)
   if (ncol(rd) == 0L) return(NULL)
   lowered <- tolower(colnames(rd))
   for (candidate in candidates) {
@@ -408,7 +416,10 @@
   cd <- SummarizedExperiment::colData(sce)
   candidates <- c("sample_id", "sample", "file_name", "filename", "fcs_file")
   include_metadata <- isTRUE(include_metadata)
-  metadata_cd <- if (include_metadata) as.data.frame(cd) else NULL
+  # optional = TRUE keeps every name as colData has it. The default runs make.names(), which
+  # turned a population column such as "CD4-CD8+ T cells" into "CD4.CD8..T.cells" and so sent
+  # the browser a metadata field no colData column has.
+  metadata_cd <- if (include_metadata) as.data.frame(cd, optional = TRUE) else NULL
 
   if (!is.null(sample_column)) {
     if (length(sample_column) != 1L || !sample_column %in% colnames(cd)) {
@@ -950,6 +961,14 @@
     # display space and every FlowJo biex or log gate would select other events.
     if (!is.null(gate$space)) normalized$space <- as.character(gate$space)
     if (!is.null(gate$transforms)) normalized$transforms <- gate$transforms
+    # A rectangle's edge rule, and what a gate imported from FlowJo carries of FlowJo's own
+    # definition, are part of the gate too: without `bounds` a half-open rectangle reloaded from
+    # the mirror counts an event on its max, and without the FlowJo fields a grid polygon loses
+    # the vertices FlowJo saved and a FlowJo rectangle the bounds FlowJo's rule opened. Each is
+    # carried as GateLab wrote it.
+    for (field in c("bounds", "flowjo_vertices", "flowjo_axes", "flowjo_bounds", "flowjo_polygon")) {
+      if (!is.null(gate[[field]])) normalized[[field]] <- gate[[field]]
+    }
     normalized
   })
   names(normalized_gates) <- gate_ids
@@ -1070,14 +1089,22 @@
   if (!is.list(parsed) || !identical(parsed$format, "gatelab-workspace")) {
     stop("GateLab supplied an unsupported workspace format.", call. = FALSE)
   }
-  version <- suppressWarnings(as.integer(parsed$version))
-  if (length(version) != 1L || is.na(version) ||
-      !version %in% c(2L, 3L)) {
+  # Version 4 is the version 2 layout of a workspace that needs a feature an older GateLab would
+  # misread (a grid gate, FlowJo's biex table, a half-open rectangle, a matrix a workspace
+  # supplied), listed in requiredFeatures. GateLab writes it for a hosted save as for a file, so
+  # that a GateLab predating the feature refuses the SCE's copy by its version. The JSON is stored
+  # as written, and the mirror below is built from the version 2 layout it shares.
+  # The version must be the number 2, 3 or 4. It was read with as.integer(), so 4.5 and the string
+  # "4" were stored as version 4, as 2.5 and 3.5 were as 2 and 3.
+  version <- parsed$version
+  if (!is.numeric(version) || length(version) != 1L || is.na(version) ||
+      !version %in% c(2, 3, 4)) {
     stop(
-      "GateLabR can store GateLab workspace versions 2 and 3 only.",
+      "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
       call. = FALSE
     )
   }
+  version <- as.integer(version)
 
   partition <- .gatelabr_sample_partition(
     sce,
@@ -1383,6 +1410,7 @@
     )
   }
   membership <- logical(sum(lengths(partition$event_indices)))
+  unevaluated <- list(samples = character(0), events = integer(0), notes = character(0))
   for (sample_index in seq_along(expected_sample_ids)) {
     sample_id <- expected_sample_ids[[sample_index]]
     mask <- sample_masks[[match(sample_id, sample_ids)]]
@@ -1396,13 +1424,62 @@
         call. = FALSE
       )
     }
+    label <- partition$samples[[sample_index]]$label
+    note <- .gatelabr_not_evaluated_note(mask, population_name, label)
+    if (!is.null(note)) {
+      membership[partition$event_indices[[sample_index]]] <- NA
+      unevaluated$samples <- c(unevaluated$samples, label)
+      unevaluated$events <- c(unevaluated$events, expected_events)
+      unevaluated$notes <- c(unevaluated$notes, note)
+      next
+    }
     membership[partition$event_indices[[sample_index]]] <-
       .gatelabr_decode_membership_bits(
         mask$membershipBitsBase64,
         expected_events
       )
   }
+  if (length(unevaluated$samples) > 0L) {
+    warning(
+      "Population '", population_name, "' was not evaluated for ",
+      length(unevaluated$samples),
+      if (length(unevaluated$samples) == 1L) " sample" else " samples",
+      ", so its events there are NA, not outside:\n",
+      paste0(
+        "  sample '", unevaluated$samples, "' (", unevaluated$events,
+        ifelse(unevaluated$events == 1L, " event", " events"), "): ", unevaluated$notes,
+        collapse = "\n"
+      ),
+      call. = FALSE
+    )
+    # The notes travel with the membership so a save can keep them for the readers to repeat.
+    attr(membership, "not_evaluated") <- unevaluated[c("samples", "notes")]
+  }
   membership
+}
+
+# A sample's note that a population was not evaluated for it, or NULL when it was. GateLab sends
+# a population that the tree a file is gated under has no counterpart for (a copy whose structure
+# was changed) with no bits and this note. Its events there are unknown, not outside, so they
+# become NA; FALSE would read in R as a finding that they are outside.
+.gatelabr_not_evaluated_note <- function(mask, population_name, sample_label) {
+  note <- mask$notEvaluated
+  if (is.null(note)) return(NULL)
+  if (!is.character(note) || length(note) != 1L || is.na(note) || !nzchar(trimws(note))) {
+    stop(
+      "Population '", population_name, "' has a malformed not-evaluated note for sample '",
+      sample_label, "'.",
+      call. = FALSE
+    )
+  }
+  if (!identical(mask$membershipBitsBase64, "")) {
+    stop(
+      "Population '", population_name, "' is marked not evaluated for sample '",
+      sample_label, "' but carries membership bits.",
+      call. = FALSE
+    )
+  }
+  note
 }
 
 .gatelabr_write_host_coldata <- function(
@@ -1487,6 +1564,7 @@
 
   cd <- SummarizedExperiment::colData(sce)
   for (entry in prepared) {
+    # An event of a sample the population was not evaluated for stays NA, under neither label.
     cd[[entry$column_name]] <- factor(
       entry$membership,
       levels = c(TRUE, FALSE),
@@ -1500,7 +1578,7 @@
       list(
         columnName = entry$column_name,
         populationId = entry$population_id,
-        memberCount = sum(entry$membership)
+        memberCount = sum(entry$membership, na.rm = TRUE)
       )
     }))
   )
