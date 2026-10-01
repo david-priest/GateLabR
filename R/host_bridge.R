@@ -180,8 +180,10 @@
   transformed <- any(tokens %in% c(
     "expr", "exprs", "expression", "transformed", "asinh", "logicle", "display"
   )) || grepl("exprs|expression", normalized)
+  # `normcounts`, `compcounts`: counts under a prefix are counts, linear values.
   counts <- any(tokens %in% c("count", "counts", "raw")) ||
-    normalized %in% c("original", "uncomp", "uncompensated")
+    normalized %in% c("original", "uncomp", "uncompensated") ||
+    grepl("counts?$", normalized)
   compensated <- !uncompensated && (
     any(tokens %in% c("comp", "compensated")) ||
       grepl("^comp(count|counts|expr|exprs|expression)$", normalized) ||
@@ -233,29 +235,41 @@
   "other"
 }
 
-# The cofactor of the arcsinh a display assay is in: metadata(sce)$cofactor as CATALYST and
-# .gatelabr_transformed_assay_matches_counts read it, else int_metadata(sce)$cofactor where it is
-# one number, else 5, the convention.
+# The cofactor of the arcsinh a display assay is in: metadata(sce)$cofactor, else
+# int_metadata(sce)$cofactor where CATALYST records it as one number, else 5, the convention,
+# said to be assumed (a per-channel cofactor is not one number, and 5 stands in for it too).
 .gatelabr_display_cofactor <- function(sce) {
   for (candidate in list(
     S4Vectors::metadata(sce)$cofactor,
     tryCatch(SingleCellExperiment::int_metadata(sce)$cofactor, error = function(...) NULL)
   )) {
     cofactor <- suppressWarnings(as.numeric(candidate))
-    if (length(cofactor) == 1L && is.finite(cofactor) && cofactor > 0) return(cofactor)
+    if (length(cofactor) == 1L && is.finite(cofactor) && cofactor > 0) {
+      return(list(cofactor = cofactor, stated = TRUE))
+    }
   }
-  5
+  list(cofactor = 5, stated = FALSE)
 }
 
 # What the app will draw: every assay by name, its space and how it is drawn, and which one the
 # app opens on. Said at launch so that nothing about the assays is assumed in silence.
 .gatelabr_assay_note <- function(sce) {
-  descriptor <- .gatelabr_sce_dataset_descriptor(sce, sample_column = NULL)
+  descriptor <- .gatelabr_sce_dataset_descriptor(
+    sce,
+    sample_column = NULL,
+    sample_partition = .gatelabr_sample_partition(sce, NULL, include_metadata = FALSE)
+  )
   lines <- vapply(descriptor$assays, function(assay) {
     paste0(
-      "  ", assay$id, ": ", assay$coordinateSpace, ", role ", assay$role, ", ",
+      "  ", assay$id, ": ", assay$coordinateSpace,
+      if (.gatelabr_assay_space_inferred(sce, assay$id)) " (inferred from its values)" else "",
+      ", role ", assay$role, ", ",
       if (identical(assay$coordinateSpace, "display")) {
-        paste0("drawn as stored (arcsinh, cofactor ", assay$displayCofactor, ")")
+        paste0(
+          "drawn as stored (arcsinh, cofactor ", assay$displayCofactor,
+          if (isTRUE(assay$displayCofactorStated)) "" else ", assumed: the object records none",
+          ")"
+        )
       } else {
         "drawn through the app's transform (arcsinh for mass cytometry)"
       }
@@ -352,11 +366,7 @@
 .gatelabr_transformed_assay_matches_counts <- function(sce, assay_name,
                                                        counts_name,
                                                        tolerance = 1e-6) {
-  md <- S4Vectors::metadata(sce)
-  cofactor <- suppressWarnings(as.numeric(md$cofactor))
-  if (length(cofactor) != 1L || !is.finite(cofactor) || cofactor <= 0) {
-    cofactor <- 5
-  }
+  cofactor <- .gatelabr_display_cofactor(sce)$cofactor
   n_events <- ncol(sce)
   if (n_events == 0L) return(NA)
   # Bounded, evenly spread sample: enough to separate "identical transform"
@@ -427,7 +437,32 @@
   traits <- .gatelabr_assay_name_traits(assay_name)
   if (traits$transformed) return("display")
   role <- .gatelabr_assay_role(assay_name, sce)
-  if (role %in% c("counts", "compensated")) "linear" else "display"
+  if (role %in% c("counts", "compensated")) return("linear")
+  # A name that says nothing: the values do. Every arcsinh of a count a cytometer records is
+  # below 20; larger values are linear. Said as inferred in the launch note.
+  .gatelabr_assay_space_from_values(sce, assay_name)
+}
+
+.gatelabr_assay_space_from_values <- function(sce, assay_name) {
+  n_events <- ncol(sce)
+  if (n_events == 0L) return("linear")
+  index <- if (n_events > 2000L) unique(round(seq(1, n_events, length.out = 2000L))) else seq_len(n_events)
+  values <- tryCatch(
+    as.matrix(SummarizedExperiment::assay(sce, assay_name)[, index, drop = FALSE]),
+    error = function(...) NULL
+  )
+  if (is.null(values) || !is.numeric(values)) return("linear")
+  finite <- values[is.finite(values)]
+  if (length(finite) == 0L) return("linear")
+  if (max(finite) <= 20) "display" else "linear"
+}
+
+# Whether an assay's space came from its values rather than its name or an override.
+.gatelabr_assay_space_inferred <- function(sce, assay_name) {
+  overrides <- S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces
+  if (is.list(overrides) && !is.null(overrides[[assay_name]])) return(FALSE)
+  traits <- .gatelabr_assay_name_traits(assay_name)
+  !traits$transformed && !.gatelabr_assay_role(assay_name, sce) %in% c("counts", "compensated")
 }
 
 .gatelabr_assay_revision <- function(sce, assay_name) {
@@ -687,7 +722,10 @@
     )
     # The arcsinh a display assay is in, so the app draws it as stored through its own arcsinh
     # at that cofactor, which puts a gate drawn on it and one drawn on counts in one space.
-    if (identical(space, "display")) assay$displayCofactor <- display_cofactor
+    if (identical(space, "display")) {
+      assay$displayCofactor <- display_cofactor$cofactor
+      assay$displayCofactorStated <- display_cofactor$stated
+    }
     assay
   })
 
