@@ -1,5 +1,31 @@
 # Changelog
 
+## GateLabR (development version)
+
+- A workspace whose gate names a channel the SCE lacks is stored, and
+  the gate and the channel are named in the console, once; it was
+  refused, with the gate’s id reported as a channel, so nothing drawn in
+  the session reached the object once a row had been renamed. At launch,
+  rows renamed since the workspace was saved are recognised from the
+  channel list the save recorded, when the two lists differ by renames
+  alone, and the gates that named them are restated; the object changes
+  when the app next writes to it.
+- The app’s header offers the SCE’s assays by name and draws the chosen
+  one: a linear assay through its instrument transform, a display-space
+  assay as stored, through the arcsinh its values are in. The dataset’s
+  default is a display-space `exprs` when the object has one, since that
+  is what an analysis in R works on, corrected or not; otherwise
+  `counts`. A display assay carries the cofactor of its arcsinh
+  (`metadata(sce)$cofactor`, else a one-number
+  `int_metadata(sce)$cofactor`, else 5, said to be assumed); an assay
+  named for its counts (`normcounts`) is linear, and one whose name says
+  nothing is placed by its values. The launch note lists every assay,
+  its space, its role and how it is drawn, in place of the inference
+  that an `exprs` differing from asinh(counts/cofactor) is
+  “compensated”. Needs the embedded GateLab core of the matching
+  release; an earlier core draws the linear counts assay whatever the
+  default.
+
 ## GateLabR 1.5.0
 
 - The embedded GateLab core is 0.8.4 (GateLab 0a701a1), up from 0.7.7.
