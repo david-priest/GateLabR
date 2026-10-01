@@ -92,6 +92,9 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
     vapply(descriptor$assays, `[[`, character(1), "coordinateSpace"),
     c("linear", "display")
   )
+  # A display assay says which arcsinh it is in; a linear one has nothing to say.
+  expect_null(descriptor$assays[[1]]$displayCofactor)
+  expect_identical(descriptor$assays[[2]]$displayCofactor, 5)
   expect_identical(vapply(descriptor$samples, `[[`, integer(1), "eventCount"), c(2L, 1L))
   expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
   expect_identical(descriptor$samples[[1]]$assayByteLength, 16)
@@ -1491,6 +1494,25 @@ test_that("the launch note names every assay, how it is drawn, and the one the a
   note <- GateLabR:::.gatelabr_assay_note(make_host_bridge_sce())
   expect_match(note, "opens on `exprs`", fixed = TRUE)
   expect_match(note, "counts: linear, role counts, drawn through the app's transform", fixed = TRUE)
-  expect_match(note, "exprs: display, role transformed, drawn as stored", fixed = TRUE)
+  expect_match(note, "exprs: display, role transformed, drawn as stored (arcsinh, cofactor 5)", fixed = TRUE)
   expect_match(note, "gatelabr_assay_roles", fixed = TRUE)
+})
+
+test_that("a display assay carries the cofactor the object records", {
+  sce <- make_host_bridge_sce()
+  S4Vectors::metadata(sce)$cofactor <- 10
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")
+  expect_identical(descriptor$assays[[2]]$displayCofactor, 10)
+  S4Vectors::metadata(sce)$cofactor <- NULL
+  SingleCellExperiment::int_metadata(sce)$cofactor <- 150
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$displayCofactor,
+    150
+  )
+  # A per-channel cofactor is not one number, and the convention stands in.
+  SingleCellExperiment::int_metadata(sce)$cofactor <- c(CD3 = 5, CD19 = 10)
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$displayCofactor,
+    5
+  )
 })

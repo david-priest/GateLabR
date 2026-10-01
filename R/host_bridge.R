@@ -233,6 +233,20 @@
   "other"
 }
 
+# The cofactor of the arcsinh a display assay is in: metadata(sce)$cofactor as CATALYST and
+# .gatelabr_transformed_assay_matches_counts read it, else int_metadata(sce)$cofactor where it is
+# one number, else 5, the convention.
+.gatelabr_display_cofactor <- function(sce) {
+  for (candidate in list(
+    S4Vectors::metadata(sce)$cofactor,
+    tryCatch(SingleCellExperiment::int_metadata(sce)$cofactor, error = function(...) NULL)
+  )) {
+    cofactor <- suppressWarnings(as.numeric(candidate))
+    if (length(cofactor) == 1L && is.finite(cofactor) && cofactor > 0) return(cofactor)
+  }
+  5
+}
+
 # What the app will draw: every assay by name, its space and how it is drawn, and which one the
 # app opens on. Said at launch so that nothing about the assays is assumed in silence.
 .gatelabr_assay_note <- function(sce) {
@@ -241,7 +255,7 @@
     paste0(
       "  ", assay$id, ": ", assay$coordinateSpace, ", role ", assay$role, ", ",
       if (identical(assay$coordinateSpace, "display")) {
-        "drawn as stored (already transformed)"
+        paste0("drawn as stored (arcsinh, cofactor ", assay$displayCofactor, ")")
       } else {
         "drawn through the app's transform (arcsinh for mass cytometry)"
       }
@@ -660,15 +674,21 @@
     sample_partition <- .gatelabr_sample_partition(sce, sample_column)
   }
 
+  display_cofactor <- .gatelabr_display_cofactor(sce)
   assays <- lapply(assay_names, function(assay_name) {
-    list(
+    space <- .gatelabr_assay_coordinate_space(sce, assay_name)
+    assay <- list(
       id = assay_name,
       label = assay_name,
       role = .gatelabr_assay_role(assay_name, sce),
-      coordinateSpace = .gatelabr_assay_coordinate_space(sce, assay_name),
+      coordinateSpace = space,
       revision = .gatelabr_assay_revision(sce, assay_name),
       encoding = "channel-major-float32-le"
     )
+    # The arcsinh a display assay is in, so the app draws it as stored through its own arcsinh
+    # at that cofactor, which puts a gate drawn on it and one drawn on counts in one space.
+    if (identical(space, "display")) assay$displayCofactor <- display_cofactor
+    assay
   })
 
   list(
