@@ -78,6 +78,28 @@ launchReactGateLab <- function(
     }
   )
   if (!is.null(precompensation)) message(precompensation)
+  # Gates that name rows renamed since the workspace was saved are restated under the new names
+  # where the channel list the save recorded shows the renames, and gates on channels the object
+  # lacks are named (workspace_channels.R). Neither is a reason to stop the launch. The object in
+  # the global environment changes only when the app next saves.
+  absent_gates <- NULL
+  reconciled <- tryCatch(
+    .gatelabr_reconcile_workspace_channels(sce),
+    error = function(cause) {
+      warning(
+        "GateLabR could not check the saved workspace's channels against this SCE: ",
+        conditionMessage(cause),
+        call. = FALSE
+      )
+      NULL
+    }
+  )
+  if (!is.null(reconciled)) {
+    sce <- reconciled$sce
+    absent_gates <- reconciled$absent
+    report <- .gatelabr_workspace_channel_report(reconciled, sce_name)
+    if (!is.null(report)) message(report)
+  }
 
   assets <- .gatelabr_react_asset_dir()
   prefix <- paste0(
@@ -108,7 +130,8 @@ launchReactGateLab <- function(
     sce_state = sce_state,
     sce_name = sce_name,
     dataset_id = dataset_id,
-    sample_column = sample_column
+    sample_column = sample_column,
+    absent_gates = absent_gates
   )
 
   message(
@@ -127,12 +150,17 @@ launchReactGateLab <- function(
     sce_state,
     sce_name,
     dataset_id,
-    sample_column = NULL) {
+    sample_column = NULL,
+    absent_gates = NULL) {
   force(sce_state)
   force(sce_name)
   force(dataset_id)
   force(sample_column)
   compensation_jobs <- .gatelabr_new_host_compensation_jobs()
+  # The gates on channels the SCE lacks that the console last named, at launch or at a save, so
+  # that an autosave names them again only when they change.
+  reported <- new.env(parent = emptyenv())
+  reported$signature <- .gatelabr_absent_channel_signature(absent_gates)
 
   function(input, output, session) {
     session$onSessionEnded(function() {
@@ -234,6 +262,18 @@ launchReactGateLab <- function(
           )
           sce_state(handled$sce)
           assign(sce_name, handled$sce, envir = .GlobalEnv)
+          if (identical(request$operation, "write-workspace")) {
+            signature <- .gatelabr_absent_channel_signature(handled$absent_gates)
+            if (!identical(signature, reported$signature)) {
+              reported$signature <- signature
+              if (nzchar(signature)) {
+                message(
+                  "GateLabR saved the workspace to `", sce_name, "`. ",
+                  .gatelabr_absent_channel_gates_text(handled$absent_gates)
+                )
+              }
+            }
+          }
           list(
             requestId = request_id,
             ok = TRUE,

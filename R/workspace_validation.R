@@ -419,15 +419,3 @@
 
   invisible(TRUE)
 }
-
-.gatelabr_validate_workspace_channels <- function(workspace, channel_ids) {
-  invalid_gates <- character(0)
-  for (gate_id in names(workspace$gates)) {
-    gate <- workspace$gates[[gate_id]]
-    if (!gate$x_channel %in% channel_ids ||
-        !gate$y_channel %in% channel_ids) {
-      invalid_gates <- c(invalid_gates, gate_id)
-    }
-  }
-  invalid_gates
-}

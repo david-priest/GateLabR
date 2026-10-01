@@ -1222,3 +1222,250 @@ test_that("a conflict is unattributable when the stored write carried no writer 
   )
   expect_true(is.na(conflict$writer_id))
 })
+
+# A gate names its channels by the SCE's rownames. Reported from a live session on an object whose
+# rows were renamed after its workspace was saved: every save was refused with "The workspace
+# refers to channels that are absent from this SCE: <gate id>", so nothing drawn reached the object.
+stored_host_workspace_sce <- function(workspace_json = canonical_host_workspace_json()) {
+  GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = workspace_json
+  )$sce
+}
+
+test_that("a gate on a channel the SCE lacks is stored and named, not refused", {
+  sce <- make_host_bridge_sce()
+  rownames(sce) <- c("CD3", "CD20")
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = canonical_host_workspace_json()
+  )
+
+  expect_identical(written$result$revision, 1L)
+  expect_identical(
+    S4Vectors::metadata(written$sce)$gatelab_workspace$workspace_json,
+    canonical_host_workspace_json()
+  )
+  expect_identical(written$absent_gates$gate_id, "gate-1")
+  expect_identical(written$absent_gates$channels, list("CD19"))
+  expect_identical(
+    written$result$gatesOnAbsentChannels,
+    list(list(gateId = "gate-1", name = "CD3 positive", channels = I("CD19")))
+  )
+  expect_match(
+    GateLabR:::.gatelabr_absent_channel_gates_text(written$absent_gates),
+    "1 gate names channels this SCE does not have, and selects no events until they are restored or the gate is redrawn: 'CD3 positive' (CD19).",
+    fixed = TRUE
+  )
+
+  # The dispatcher passes the gates through to the server, which names them in the console.
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    sce,
+    list(
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = 0L,
+        clientRevision = 1L,
+        reason = "autosave",
+        workspaceJson = canonical_host_workspace_json()
+      )
+    ),
+    dataset_id = "test-sce"
+  )
+  expect_identical(handled$absent_gates$gate_id, "gate-1")
+})
+
+test_that("the console names gates on absent channels once, not at every autosave", {
+  sce_name <- ".gatelabr_absent_channel_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+  sce <- make_host_bridge_sce()
+  rownames(sce) <- c("CD3", "CD20")
+  sce_state <- shiny::reactiveVal(sce)
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce"
+  )
+  write <- function(request_id, expected_revision, client_revision) {
+    list(
+      requestId = request_id,
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = expected_revision,
+        clientRevision = client_revision,
+        reason = "autosave",
+        workspaceJson = canonical_host_workspace_json()
+      )
+    )
+  }
+  messages <- character(0)
+  withCallingHandlers(
+    suppressWarnings(shiny::testServer(server, {
+      session$flushReact()
+      session$setInputs(gatelabr_host_request = write("write-1", 0L, 1L))
+      session$flushReact()
+      session$setInputs(gatelabr_host_request = write("write-2", 1L, 2L))
+      session$flushReact()
+    })),
+    message = function(condition) {
+      messages <<- c(messages, conditionMessage(condition))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_identical(
+    GateLabR:::.gatelabr_canonical_workspace_record(shiny::isolate(sce_state()))$revision,
+    2L
+  )
+  named <- grep("does not have", messages, value = TRUE, fixed = TRUE)
+  expect_length(named, 1L)
+  expect_match(named, "GateLabR saved the workspace to `.gatelabr_absent_channel_test_sce`.", fixed = TRUE)
+  expect_match(named, "'CD3 positive' (CD19)", fixed = TRUE)
+})
+
+test_that("a renamed channel list is recognised only when it differs by renames alone", {
+  rename_map <- GateLabR:::.gatelabr_channel_rename_map
+  expect_identical(rename_map(c("A", "B", "C"), c("A", "B2", "C")), c(B = "B2"))
+  expect_identical(
+    rename_map(c("A", "B", "C"), c("A2", "B", "C2")),
+    c(A = "A2", C = "C2")
+  )
+  # Another length, a row moved, a rename onto a name the saved list held, nothing recorded.
+  expect_length(rename_map(c("A", "B", "C"), c("A", "B")), 0L)
+  expect_length(rename_map(c("A", "B"), c("B", "A")), 0L)
+  expect_length(rename_map(c("A", "B", "C"), c("A", "C", "C2")), 0L)
+  expect_length(rename_map(NULL, c("A", "B")), 0L)
+  expect_length(rename_map(c("A", "B"), c("A", "B")), 0L)
+})
+
+test_that("a launch restates the gates on rows renamed since the save", {
+  saved <- stored_host_workspace_sce()
+  rownames(saved) <- c("CD3e", "CD19")
+
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(saved)
+
+  expect_identical(reconciled$renamed, c(CD3 = "CD3e"))
+  expect_identical(reconciled$restated, "CD3 positive")
+  expect_identical(nrow(reconciled$absent), 0L)
+  record <- S4Vectors::metadata(reconciled$sce)$gatelab_workspace
+  parsed <- jsonlite::fromJSON(record$workspace_json, simplifyVector = FALSE)
+  expected <- jsonlite::fromJSON(canonical_host_workspace_json(), simplifyVector = FALSE)
+  expected$gating$gates[["gate-1"]]$x_channel <- "CD3e"
+  expected$display$xChannel <- "CD3e"
+  names(expected$scales$globalScales)[[1]] <- "CD3e"
+  expect_equal(parsed, expected, tolerance = 0)
+  expect_identical(
+    S4Vectors::metadata(reconciled$sce)$gating_workspace$gates[["gate-1"]]$x_channel,
+    "CD3e"
+  )
+  # The revision stays as saved, so the app's first save does not conflict, and the channel list
+  # stays as saved until that save replaces it.
+  expect_identical(record$revision, 1L)
+  expect_identical(record$channel_ids, c("CD3", "CD19"))
+
+  rewritten <- GateLabR:::.gatelabr_store_host_workspace(
+    reconciled$sce,
+    dataset_id = "test-sce",
+    expected_revision = 1L,
+    client_revision = 2L,
+    reason = "autosave",
+    workspace_json = record$workspace_json
+  )
+  expect_identical(nrow(rewritten$absent_gates), 0L)
+  expect_identical(
+    S4Vectors::metadata(rewritten$sce)$gatelab_workspace$channel_ids,
+    c("CD3e", "CD19")
+  )
+
+  report <- GateLabR:::.gatelabr_workspace_channel_report(reconciled, "sce")
+  expect_match(
+    report,
+    "GateLabR: 1 row was renamed after the GateLab workspace in `sce` was saved (CD3 -> CD3e), recognised from the channel list the save recorded. The gate 'CD3 positive' now names the renamed channels. The change reaches `sce` with the app's next save.",
+    fixed = TRUE
+  )
+})
+
+test_that("a launch restates a stored tree's gates as well as the active tree's", {
+  with_stored_tree <- sub(
+    '"active_population_id":"child","selected_gate_id":"gate-1"}',
+    paste0(
+      '"active_population_id":"child","selected_gate_id":"gate-1",',
+      '"stored_hierarchies":[{"id":"tree-2","name":"Copy",',
+      '"gates":{"gate-2":{"gate_id":"gate-2","name":"CD19 positive",',
+      '"gate_type":"rectangle","x_channel":"CD19","y_channel":"CD3",',
+      '"vertices":[[1,2],[3,4]],"color":"#377eb8","label_offset":null}},',
+      '"populations":{},"root_population_id":null,"active_population_id":null}]}'
+    ),
+    canonical_host_workspace_json(),
+    fixed = TRUE
+  )
+  expect_false(identical(with_stored_tree, canonical_host_workspace_json()))
+  saved <- stored_host_workspace_sce(with_stored_tree)
+  rownames(saved) <- c("CD3e", "CD19")
+
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(saved)
+
+  expect_setequal(reconciled$restated, c("CD3 positive", "CD19 positive"))
+  parsed <- jsonlite::fromJSON(
+    S4Vectors::metadata(reconciled$sce)$gatelab_workspace$workspace_json,
+    simplifyVector = FALSE
+  )
+  stored_gate <- parsed$gating$stored_hierarchies[[1]]$gates[["gate-2"]]
+  expect_identical(c(stored_gate$x_channel, stored_gate$y_channel), c("CD19", "CD3e"))
+  # An empty object stays an object.
+  expect_identical(parsed$gating$stored_hierarchies[[1]]$populations, structure(list(), names = character(0)))
+})
+
+test_that("a channel list that differs by more than renames leaves the workspace as saved", {
+  saved <- stored_host_workspace_sce()
+  moved <- saved[c(2L, 1L), ]
+  rownames(moved) <- c("CD19", "CD3e")
+
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(moved)
+
+  expect_length(reconciled$renamed, 0L)
+  expect_identical(S4Vectors::metadata(reconciled$sce), S4Vectors::metadata(moved))
+  expect_identical(reconciled$absent$gate_id, "gate-1")
+  expect_identical(reconciled$absent$channels, list("CD3"))
+  expect_identical(
+    GateLabR:::.gatelabr_workspace_channel_report(reconciled, "sce"),
+    paste0(
+      "GateLabR: 1 gate names channels this SCE does not have, and selects no events until ",
+      "they are restored or the gate is redrawn: 'CD3 positive' (CD3). Saving is not affected."
+    )
+  )
+})
+
+test_that("a launch over an SCE whose gates have their channels changes nothing", {
+  saved <- stored_host_workspace_sce()
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(saved)
+  expect_identical(reconciled$sce, saved)
+  expect_null(GateLabR:::.gatelabr_workspace_channel_report(reconciled, "sce"))
+
+  bare <- make_host_bridge_sce()
+  expect_identical(GateLabR:::.gatelabr_reconcile_workspace_channels(bare)$sce, bare)
+})
+
+test_that("a workspace held only as the legacy mirror is named, not restated", {
+  sce <- add_host_bridge_workspace(make_host_bridge_sce())
+  rownames(sce) <- c("CD3e", "CD19")
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(sce)
+  expect_identical(reconciled$sce, sce)
+  expect_identical(reconciled$absent$gate_id, "gate-1")
+  expect_identical(reconciled$absent$channels, list("CD3"))
+})
