@@ -233,8 +233,33 @@
   "other"
 }
 
+# What the app will draw: every assay by name, its space and how it is drawn, and which one the
+# app opens on. Said at launch so that nothing about the assays is assumed in silence.
+.gatelabr_assay_note <- function(sce) {
+  descriptor <- .gatelabr_sce_dataset_descriptor(sce, sample_column = NULL)
+  lines <- vapply(descriptor$assays, function(assay) {
+    paste0(
+      "  ", assay$id, ": ", assay$coordinateSpace, ", role ", assay$role, ", ",
+      if (identical(assay$coordinateSpace, "display")) {
+        "drawn as stored (already transformed)"
+      } else {
+        "drawn through the app's transform (arcsinh for mass cytometry)"
+      }
+    )
+  }, character(1))
+  paste0(
+    "GateLabR offers the SCE's assays in the app's header; it opens on `",
+    descriptor$defaultAssayId, "`.\n",
+    paste(lines, collapse = "\n"),
+    "\n  To change what an assay is: metadata(sce)$gatelabr_assay_roles <- list(<assay> = ",
+    "\"counts\" | \"transformed\" | \"compensated\" | \"other\"), and ",
+    "metadata(sce)$gatelabr_assay_coordinate_spaces <- list(<assay> = \"linear\" | \"display\")."
+  )
+}
+
 # Describe any pre-compensation GateLabR inferred, so the assumption is stated
-# rather than silent. NULL when nothing was inferred.
+# rather than silent. NULL when nothing was inferred. Not said at launch since the assays
+# are offered by name (.gatelabr_assay_note); kept for callers that ask what was inferred.
 .gatelabr_precompensation_note <- function(sce) {
   names <- tryCatch(SummarizedExperiment::assayNames(sce), error = function(...) NULL)
   if (is.null(names)) return(NULL)
@@ -616,7 +641,12 @@
     function(assay_name) .gatelabr_assay_coordinate_space(sce, assay_name),
     character(1)
   )
-  default_assay <- if ("counts" %in% assay_names) {
+  # The app draws the default assay first. A transformed assay named `exprs` is what an analysis
+  # in R works on, corrected or not, so it is drawn as stored when the object has one; the app
+  # offers every assay by name, and a workspace saved from the object records which was drawn.
+  default_assay <- if ("exprs" %in% assay_names && assay_spaces[["exprs"]] == "display") {
+    "exprs"
+  } else if ("counts" %in% assay_names) {
     "counts"
   } else if (any(assay_spaces == "linear")) {
     assay_names[[which(assay_spaces == "linear")[[1]]]]

@@ -83,7 +83,8 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_identical(descriptor$id, "test-sce")
   expect_identical(descriptor$instrument, "cytof")
   expect_identical(descriptor$eventCount, 3L)
-  expect_identical(descriptor$defaultAssayId, "counts")
+  # exprs is what an analysis in R works on, so the app opens on it, drawn as stored.
+  expect_identical(descriptor$defaultAssayId, "exprs")
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "id"), c("CD3", "CD19"))
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "pnn"), c("Nd142Di", "Eu151Di"))
   expect_identical(vapply(descriptor$assays, `[[`, character(1), "role"), c("counts", "transformed"))
@@ -1468,4 +1469,28 @@ test_that("a workspace held only as the legacy mirror is named, not restated", {
   expect_identical(reconciled$sce, sce)
   expect_identical(reconciled$absent$gate_id, "gate-1")
   expect_identical(reconciled$absent$channels, list("CD3"))
+})
+
+test_that("the app opens on exprs when the object has one, else on the linear counts", {
+  sce <- make_host_bridge_sce()
+  only_counts <- sce
+  SummarizedExperiment::assays(only_counts) <- SummarizedExperiment::assays(only_counts)["counts"]
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(only_counts, dataset_id = "test-sce")$defaultAssayId,
+    "counts"
+  )
+  # An exprs declared linear is not drawn as stored, so it is not the default either.
+  S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(exprs = "linear")
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$defaultAssayId,
+    "counts"
+  )
+})
+
+test_that("the launch note names every assay, how it is drawn, and the one the app opens on", {
+  note <- GateLabR:::.gatelabr_assay_note(make_host_bridge_sce())
+  expect_match(note, "opens on `exprs`", fixed = TRUE)
+  expect_match(note, "counts: linear, role counts, drawn through the app's transform", fixed = TRUE)
+  expect_match(note, "exprs: display, role transformed, drawn as stored", fixed = TRUE)
+  expect_match(note, "gatelabr_assay_roles", fixed = TRUE)
 })
