@@ -83,7 +83,8 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_identical(descriptor$id, "test-sce")
   expect_identical(descriptor$instrument, "cytof")
   expect_identical(descriptor$eventCount, 3L)
-  expect_identical(descriptor$defaultAssayId, "counts")
+  # exprs is what an analysis in R works on, so the app opens on it, drawn as stored.
+  expect_identical(descriptor$defaultAssayId, "exprs")
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "id"), c("CD3", "CD19"))
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "pnn"), c("Nd142Di", "Eu151Di"))
   expect_identical(vapply(descriptor$assays, `[[`, character(1), "role"), c("counts", "transformed"))
@@ -91,6 +92,11 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
     vapply(descriptor$assays, `[[`, character(1), "coordinateSpace"),
     c("linear", "display")
   )
+  # A display assay says which arcsinh it is in, and whether that was recorded or assumed; a
+  # linear one has nothing to say.
+  expect_null(descriptor$assays[[1]]$displayCofactor)
+  expect_identical(descriptor$assays[[2]]$displayCofactor, 5)
+  expect_false(descriptor$assays[[2]]$displayCofactorStated)
   expect_identical(vapply(descriptor$samples, `[[`, integer(1), "eventCount"), c(2L, 1L))
   expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
   expect_identical(descriptor$samples[[1]]$assayByteLength, 16)
@@ -1373,10 +1379,10 @@ test_that("a launch restates the gates on rows renamed since the save", {
     S4Vectors::metadata(reconciled$sce)$gating_workspace$gates[["gate-1"]]$x_channel,
     "CD3e"
   )
-  # The revision stays as saved, so the app's first save does not conflict, and the channel list
-  # stays as saved until that save replaces it.
+  # The revision stays as saved, so the app's first save does not conflict; the channel list is
+  # the current one, as the gates now are.
   expect_identical(record$revision, 1L)
-  expect_identical(record$channel_ids, c("CD3", "CD19"))
+  expect_identical(record$channel_ids, c("CD3e", "CD19"))
 
   rewritten <- GateLabR:::.gatelabr_store_host_workspace(
     reconciled$sce,
@@ -1468,4 +1474,77 @@ test_that("a workspace held only as the legacy mirror is named, not restated", {
   expect_identical(reconciled$sce, sce)
   expect_identical(reconciled$absent$gate_id, "gate-1")
   expect_identical(reconciled$absent$channels, list("CD3"))
+})
+
+test_that("the app opens on exprs when the object has one, else on the linear counts", {
+  sce <- make_host_bridge_sce()
+  only_counts <- sce
+  SummarizedExperiment::assays(only_counts) <- SummarizedExperiment::assays(only_counts)["counts"]
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(only_counts, dataset_id = "test-sce")$defaultAssayId,
+    "counts"
+  )
+  # An exprs declared linear is not drawn as stored, so it is not the default either.
+  S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(exprs = "linear")
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$defaultAssayId,
+    "counts"
+  )
+})
+
+test_that("the launch note names every assay, how it is drawn, and the one the app opens on", {
+  note <- GateLabR:::.gatelabr_assay_note(make_host_bridge_sce())
+  expect_match(note, "opens on `exprs`", fixed = TRUE)
+  expect_match(note, "counts: linear, role counts, drawn through the app's transform", fixed = TRUE)
+  expect_match(note, "exprs: display, role transformed, drawn as stored (arcsinh, cofactor 5, assumed: the object records none)", fixed = TRUE)
+  expect_match(note, "gatelabr_assay_roles", fixed = TRUE)
+})
+
+test_that("a display assay carries the cofactor the object records", {
+  sce <- make_host_bridge_sce()
+  S4Vectors::metadata(sce)$cofactor <- 10
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")
+  expect_identical(descriptor$assays[[2]]$displayCofactor, 10)
+  expect_true(descriptor$assays[[2]]$displayCofactorStated)
+  # The probe that tells a transformed exprs from a compensated one reads the same cofactor.
+  expect_identical(descriptor$assays[[2]]$role, "compensated")
+  SummarizedExperiment::assay(sce, "exprs") <- asinh(SummarizedExperiment::assay(sce, "counts") / 10)
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$role,
+    "transformed"
+  )
+  S4Vectors::metadata(sce)$cofactor <- NULL
+  SingleCellExperiment::int_metadata(sce)$cofactor <- 150
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$displayCofactor,
+    150
+  )
+  # A per-channel cofactor is not one number, and the convention stands in.
+  SingleCellExperiment::int_metadata(sce)$cofactor <- c(CD3 = 5, CD19 = 10)
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$displayCofactor,
+    5
+  )
+})
+
+test_that("an assay named for its counts is linear, and an unnamed one is placed by its values", {
+  sce <- make_host_bridge_sce()
+  counts <- SummarizedExperiment::assay(sce, "counts")
+  SummarizedExperiment::assay(sce, "normcounts") <- counts * 1.1
+  SummarizedExperiment::assay(sce, "scores") <- asinh(counts / 5) - 0.5
+  SummarizedExperiment::assay(sce, "wide") <- counts * 100
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")
+  spaces <- vapply(descriptor$assays, `[[`, character(1), "coordinateSpace")
+  names(spaces) <- vapply(descriptor$assays, `[[`, character(1), "id")
+  expect_identical(spaces[["normcounts"]], "linear")
+  expect_identical(spaces[["scores"]], "display")
+  expect_identical(spaces[["wide"]], "linear")
+  note <- GateLabR:::.gatelabr_assay_note(sce)
+  expect_match(note, "normcounts: linear, role counts", fixed = TRUE)
+  expect_match(note, "scores: display (inferred from its values), role other, drawn as stored", fixed = TRUE)
+  expect_match(note, "wide: linear (inferred from its values), role other", fixed = TRUE)
+  # The default is still exprs; a declared space is not inferred.
+  expect_identical(descriptor$defaultAssayId, "exprs")
+  S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(scores = "linear")
+  expect_no_match(GateLabR:::.gatelabr_assay_note(sce), "scores: linear (inferred", fixed = TRUE)
 })

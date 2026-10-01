@@ -235,6 +235,9 @@
   if (!isTRUE(all.equal(reread, restated, tolerance = 0))) return(unchanged(gates))
 
   md$gatelab_workspace$workspace_json <- json
+  # The gates now name the current rows, and so does the list the save recorded; left as it
+  # was, a later rename would be read against names the gates no longer use.
+  md$gatelab_workspace$channel_ids <- channel_ids
   legacy <- md$gating_workspace
   if (is.list(legacy) && is.list(legacy$gates)) {
     legacy$gates <- lapply(legacy$gates, .gatelabr_rename_gate_channels, map = map)

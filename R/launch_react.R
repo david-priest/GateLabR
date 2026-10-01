@@ -61,23 +61,22 @@ launchReactGateLab <- function(
     "GateLabR will save gates, populations and colData back to `", sce_name,
     "` in your global environment."
   )
-  # Likewise for an inferred assay role: the user must know what was assumed
-  # about their data before they gate on it.
-  precompensation <- tryCatch(
-    .gatelabr_precompensation_note(sce),
+  # Likewise for the assays: the user must know what the app draws, and from which assay,
+  # before they gate on it.
+  assay_note <- tryCatch(
+    .gatelabr_assay_note(sce),
     error = function(cause) {
-      # Never fail a launch over an advisory note, but never swallow it either:
-      # a silent NULL is indistinguishable from "nothing detected", which sends
-      # anyone debugging an assay-role question down the wrong path.
+      # Never fail a launch over an advisory note, but never swallow it either: a silent NULL
+      # is indistinguishable from "nothing to say".
       warning(
-        "GateLabR could not check whether this SCE is already compensated: ",
+        "GateLabR could not describe this SCE's assays: ",
         conditionMessage(cause),
         call. = FALSE
       )
       NULL
     }
   )
-  if (!is.null(precompensation)) message(precompensation)
+  if (!is.null(assay_note)) message(assay_note)
   # Gates that name rows renamed since the workspace was saved are restated under the new names
   # where the channel list the save recorded shows the renames, and gates on channels the object
   # lacks are named (workspace_channels.R). Neither is a reason to stop the launch. The object in
