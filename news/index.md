@@ -1,7 +1,18 @@
 # Changelog
 
-## GateLabR (development version)
+## GateLabR 1.5.1
 
+- The embedded GateLab core is GateLab master 8b1f206, up from the 0.8.4
+  release: the pooled view follows the selection and is editable, and a
+  mass cytometry SCE opens pooled; the files off the plot are gated in
+  batches between paints, so an edit over hundreds of samples no longer
+  waits on one render per sample; the composition chart orders sample
+  groups numerically; and the header offers the SCE’s assays by name,
+  with `exprs` drawn as stored, as the next bullets describe. Open an
+  SCE saved by this version with this version or later: a workspace
+  saved into the SCE records the assay it was drawn from, which 1.5.0
+  ignores, drawing the linear counts assay, and refuses outright when
+  the workspace holds a compensation profile.
 - A workspace whose gate names a channel the SCE lacks is stored, and
   the gate and the channel are named in the console, once; it was
   refused, with the gate’s id reported as a channel, so nothing drawn in
