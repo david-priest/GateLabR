@@ -1186,16 +1186,19 @@
     character(1),
     "id"
   )
-  invalid_gates <- .gatelabr_validate_workspace_channels(legacy, channel_ids)
-  if (length(invalid_gates)) {
-    stop(
-      "The workspace refers to channels that are absent from this SCE: ",
-      paste(invalid_gates, collapse = ", "),
-      ".",
-      call. = FALSE
-    )
-  }
-  list(parsed = parsed, legacy = legacy, channel_ids = channel_ids)
+  # A gate on a channel this SCE lacks selects no events, and is stored and named rather than
+  # refused: a refusal stopped every save of the session, and so every edit, from reaching the
+  # object (workspace_channels.R).
+  absent_gates <- .gatelabr_gates_on_absent_channels(
+    .gatelabr_workspace_gate_records(parsed),
+    channel_ids
+  )
+  list(
+    parsed = parsed,
+    legacy = legacy,
+    channel_ids = channel_ids,
+    absent_gates = absent_gates
+  )
 }
 
 # A revision conflict carries the numbers the browser needs to recover, not just a message.
@@ -1352,7 +1355,17 @@
       populations = nrow(stored_memberships$populations)
     )
   }
-  list(sce = sce, result = result)
+  absent <- validated$absent_gates
+  if (nrow(absent)) {
+    result$gatesOnAbsentChannels <- lapply(seq_len(nrow(absent)), function(index) {
+      list(
+        gateId = absent$gate_id[[index]],
+        name = absent$name[[index]],
+        channels = I(absent$channels[[index]])
+      )
+    })
+  }
+  list(sce = sce, result = result, absent_gates = absent)
 }
 
 .gatelabr_decode_membership_bits <- function(encoded, event_count) {
