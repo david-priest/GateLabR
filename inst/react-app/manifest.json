@@ -1,57 +1,57 @@
 {
-  "_embed-B89EMwZT.js": {
-    "file": "embed-B89EMwZT.js",
+  "../../../../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js": {
+    "file": "index.es-eGPW4di9.js",
+    "name": "index.es",
+    "src": "../../../../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-5bGHBR82.js",
+      "_jspdf.es.min-CBYcz43x.js"
+    ]
+  },
+  "../../../../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "purify.es-_9WAe1aK.js",
+    "name": "purify.es",
+    "src": "../../../../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "../../../../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "html2canvas.esm-dgT_1dIT.js",
+    "name": "html2canvas.esm",
+    "src": "../../../../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
+  },
+  "../../../../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js": {
+    "file": "svg2pdf.es.min-C48CG9cg.js",
+    "name": "svg2pdf.es.min",
+    "src": "../../../../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-5bGHBR82.js",
+      "_jspdf.es.min-CBYcz43x.js"
+    ]
+  },
+  "_embed-5bGHBR82.js": {
+    "file": "embed-5bGHBR82.js",
     "name": "embed",
     "dynamicImports": [
-      "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
-      "_jspdf.es.min-BCVXgNHT.js",
+      "../../../../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
+      "_jspdf.es.min-CBYcz43x.js",
       "src/ui/CompensationTab.tsx",
       "src/ui/LayoutTab.tsx"
     ]
   },
-  "_jspdf.es.min-BCVXgNHT.js": {
-    "file": "jspdf.es.min-BCVXgNHT.js",
+  "_jspdf.es.min-CBYcz43x.js": {
+    "file": "jspdf.es.min-CBYcz43x.js",
     "name": "jspdf.es.min",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-B89EMwZT.js"
+      "_embed-5bGHBR82.js"
     ],
     "dynamicImports": [
-      "node_modules/html2canvas/dist/html2canvas.esm.js",
-      "node_modules/dompurify/dist/purify.es.mjs",
-      "node_modules/canvg/lib/index.es.js"
-    ]
-  },
-  "node_modules/canvg/lib/index.es.js": {
-    "file": "index.es-BUx1hJWS.js",
-    "name": "index.es",
-    "src": "node_modules/canvg/lib/index.es.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "_embed-B89EMwZT.js",
-      "_jspdf.es.min-BCVXgNHT.js"
-    ]
-  },
-  "node_modules/dompurify/dist/purify.es.mjs": {
-    "file": "purify.es-_9WAe1aK.js",
-    "name": "purify.es",
-    "src": "node_modules/dompurify/dist/purify.es.mjs",
-    "isDynamicEntry": true
-  },
-  "node_modules/html2canvas/dist/html2canvas.esm.js": {
-    "file": "html2canvas.esm-dgT_1dIT.js",
-    "name": "html2canvas.esm",
-    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
-    "isDynamicEntry": true
-  },
-  "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js": {
-    "file": "svg2pdf.es.min-DY75v51K.js",
-    "name": "svg2pdf.es.min",
-    "src": "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "_embed-B89EMwZT.js",
-      "_jspdf.es.min-BCVXgNHT.js"
+      "../../../../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
+      "../../../../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs",
+      "../../../../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js"
     ]
   },
   "src/embed.ts": {
@@ -60,31 +60,31 @@
     "src": "src/embed.ts",
     "isEntry": true,
     "imports": [
-      "_embed-B89EMwZT.js"
+      "_embed-5bGHBR82.js"
     ]
   },
   "src/ui/CompensationTab.tsx": {
-    "file": "CompensationTab-tEC2Nr4P.js",
+    "file": "CompensationTab-DAIbfg63.js",
     "name": "CompensationTab",
     "src": "src/ui/CompensationTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-B89EMwZT.js"
+      "_embed-5bGHBR82.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-BCVXgNHT.js"
+      "_jspdf.es.min-CBYcz43x.js"
     ]
   },
   "src/ui/LayoutTab.tsx": {
-    "file": "LayoutTab-OqeKx2I_.js",
+    "file": "LayoutTab-b_610Tse.js",
     "name": "LayoutTab",
     "src": "src/ui/LayoutTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-B89EMwZT.js"
+      "_embed-5bGHBR82.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-BCVXgNHT.js"
+      "_jspdf.es.min-CBYcz43x.js"
     ]
   },
   "style.css": {
