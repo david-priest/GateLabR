@@ -51,17 +51,38 @@
   paste0(sub("/+$", "", app_url), "/?agent=", utils::URLencode(relay_url, reserved = TRUE))
 }
 
+#' Open a page in the system's default browser, past any IDE override of options("browser").
+#'
+#' Positron and RStudio set \code{options(browser = )} to a handler that shows local addresses in
+#' their Viewer pane. The Viewer did not load GateLabR's page with the relay on it at all (no
+#' connection ever reached Shiny, 2026-10-06), and an embedded webview may refuse the WebSocket
+#' to the relay's port besides, so the agent's tab goes to a real browser.
+#' @noRd
+.gatelabr_open_in_system_browser <- function(page) {
+  sysname <- Sys.info()[["sysname"]]
+  if (identical(sysname, "Darwin") && file.exists("/usr/bin/open")) {
+    utils::browseURL(page, browser = "/usr/bin/open")
+  } else if (identical(sysname, "Windows")) {
+    utils::browseURL(page, browser = NULL)
+  } else if (nzchar(Sys.which("xdg-open"))) {
+    utils::browseURL(page, browser = unname(Sys.which("xdg-open")))
+  } else {
+    utils::browseURL(page)
+  }
+  invisible(page)
+}
+
 #' What to pass Shiny as launch.browser so the tab opens connected.
 #'
 #' Shiny calls \code{launch.browser(url)} with the app's own address; the function opens the page
-#' with the relay on it instead, and says what it opened, so the address can be pasted into the
-#' Agent menu by hand if the browser does not come up.
+#' with the relay on it in the system browser instead, and says what it opened, so the address can
+#' be pasted into the Agent menu by hand if the browser does not come up.
 #' @noRd
 .gatelabr_agent_browser <- function(relay_url) {
   force(relay_url)
   function(url) {
     page <- .gatelabr_agent_page_url(url, relay_url)
     message("GateLabR: opening ", page, "\n  (the tab connects to the agent relay at ", relay_url, ")")
-    utils::browseURL(page)
+    .gatelabr_open_in_system_browser(page)
   }
 }
