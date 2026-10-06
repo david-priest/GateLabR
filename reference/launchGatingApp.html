@@ -13,7 +13,7 @@ SingleCellExperiment host. Works both from an installed package
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,9 @@ SingleCellExperiment host. Works both from an installed package
 <span>  sce <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sample_column <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  port <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  launch.browser <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  launch.browser <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  agent <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  blocking <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -81,10 +83,28 @@ omitted, common sample columns such as <code>sample_id</code> are detected.</p><
 <dt id="arg-launch-browser">launch.browser<a class="anchor" aria-label="anchor" href="#arg-launch-browser"></a></dt>
 <dd><p>Whether to open a browser window (default: <code>TRUE</code>).</p></dd>
 
+
+<dt id="arg-agent">agent<a class="anchor" aria-label="anchor" href="#arg-agent"></a></dt>
+<dd><p>Open the tab connected to an agent's relay: <code>TRUE</code> reads the
+address the relay recorded in <code>~/.gatelab/agent-relay.json</code>, or give the
+<code>ws://</code> address itself. See <code><a href="launchReactGateLab.html">launchReactGateLab</a></code>.</p></dd>
+
+
+<dt id="arg-blocking">blocking<a class="anchor" aria-label="anchor" href="#arg-blocking"></a></dt>
+<dd><p><code>NULL</code> (the default) returns at once when the installed
+Shiny can run the app in the background (1.14 and later) and blocks
+otherwise; <code>FALSE</code> insists on returning at once; <code>TRUE</code> blocks.
+See <code><a href="launchReactGateLab.html">launchReactGateLab</a></code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly <code>NULL</code>; runs the Shiny app (blocking).</p>
+    <p>Invisibly the app's handle when the call returns at once
+  (<code><a href="gatelabStop.html">gatelabStop</a></code> stops the app, <code><a href="gatelabSync.html">gatelabSync</a></code> hands
+  it the object after a change at the console), otherwise invisibly
+  <code>NULL</code> once the app has stopped. Warns when the app stops with no
+  population memberships stored, or stale ones: the readers need an explicit
+  "Save to SCE".</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

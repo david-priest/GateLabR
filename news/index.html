@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,17 @@
       <small>Source: <a href="https://github.com/david-priest/GateLabR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.6.0" id="gatelabr-160">GateLabR 1.6.0<a class="anchor" aria-label="anchor" href="#gatelabr-160"></a></h2>
+<ul><li>
+<code>launchGatingApp(sce, agent = TRUE)</code> opens the tab connected to an agent’s relay (GateLab’s <code>tools/agent-mcp/server.mjs</code>, an MCP server): the launcher reads the address the relay recorded in <code>~/.gatelab/agent-relay.json</code>, or takes a <code>ws://</code> address as <code>agent</code>, and puts it on the page’s URL, so the tab connects as it opens. An agent then reads the gating as you see it and proposes gates, which appear in the tab with a badge; you adjust or undo them as any other, and saving stays yours. The Agent menu in the header connects a tab by hand.</li>
+<li>
+<code><a href="../reference/launchGatingApp.html">launchGatingApp()</a></code> returns at once when the installed Shiny can run an app in the background (1.14.0 and later, <code><a href="https://rdrr.io/pkg/shiny/man/startApp.html" class="external-link">shiny::startApp()</a></code>), so the prompt is free while the tab is open: run a chunk, read the object, draw a gate, in any order. The app is serviced while R is idle, so a long computation pauses it until the prompt returns. <code><a href="../reference/gatelabStop.html">gatelabStop()</a></code> stops it, as does the handle the launch returns; a second launch stops the first. With an older Shiny the launch blocks as before and says how to change that; <code>blocking = TRUE</code> keeps the old behaviour, <code>blocking = FALSE</code> insists and is an error without Shiny 1.14.</li>
+<li>While the app runs, a change to the object at the console (<code>sce$cluster &lt;- ...</code>, which rebinds the name) is kept: the app’s next save sees that the global name no longer holds the object it last wrote, refuses the write with a message naming <code><a href="../reference/gatelabSync.html">gatelabSync()</a></code>, and leaves the console’s object as it is. <code>gatelabSync("sce")</code> hands the console’s object to the app, which then saves into it; the cells must be the same, since the browser keeps the events it loaded. A read, such as Colour by, never writes the object. Before, every save assigned the app’s copy over the global name, which in a blocking launch nothing else could have changed.</li>
+<li>The embedded GateLab core is 0.9.0 (GateLab-dev 2acc33a), up from master 8b1f206 in 1.5.1: pooled plots in the Illustration, Layout and Strategy tabs, a Layout sheet drawn once per value of a metadata column, an “All events” switch wherever a plot samples its events, scatter axes that open linear (a saved workspace keeps its scale), the agent link, and key names for the user’s keyboard. The browser app’s walkthrough tutorial and its demo workspace are not shown under the SCE host. Workspaces saved by 1.5.1 open unchanged.</li>
+<li>When the app stops with no population memberships stored in the object, or with memberships older than the workspace, the launcher warns: <code><a href="../reference/gatelabMemberships.html">gatelabPopulations()</a></code> and <code><a href="../reference/gatelabMemberships.html">gatelabHierarchy()</a></code> need an explicit “Save to SCE”, which autosaves do not replace. Before, the refusal came only at the first read.</li>
+<li>The embedded core must carry GateLab’s agent link (GateLab-dev <a href="https://github.com/david-priest/GateLabR/issues/374" class="external-link">#374</a>) for <code>agent</code> to connect; the embed is its own change.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.5.1" id="gatelabr-151">GateLabR 1.5.1<a class="anchor" aria-label="anchor" href="#gatelabr-151"></a></h2>
 <ul><li>The embedded GateLab core is GateLab master 8b1f206, up from the 0.8.4 release: the pooled view follows the selection and is editable, and a mass cytometry SCE opens pooled; the files off the plot are gated in batches between paints, so an edit over hundreds of samples no longer waits on one render per sample; the composition chart orders sample groups numerically; and the header offers the SCE’s assays by name, with <code>exprs</code> drawn as stored, as the next bullets describe. Open an SCE saved by this version with this version or later: a workspace saved into the SCE records the assay it was drawn from, which 1.5.0 ignores, drawing the linear counts assay, and refuses outright when the workspace holds a compensation profile.</li>

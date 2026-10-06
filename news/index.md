@@ -1,5 +1,59 @@
 # Changelog
 
+## GateLabR 1.6.0
+
+- `launchGatingApp(sce, agent = TRUE)` opens the tab connected to an
+  agent’s relay (GateLab’s `tools/agent-mcp/server.mjs`, an MCP server):
+  the launcher reads the address the relay recorded in
+  `~/.gatelab/agent-relay.json`, or takes a `ws://` address as `agent`,
+  and puts it on the page’s URL, so the tab connects as it opens. An
+  agent then reads the gating as you see it and proposes gates, which
+  appear in the tab with a badge; you adjust or undo them as any other,
+  and saving stays yours. The Agent menu in the header connects a tab by
+  hand.
+- [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+  returns at once when the installed Shiny can run an app in the
+  background (1.14.0 and later,
+  [`shiny::startApp()`](https://rdrr.io/pkg/shiny/man/startApp.html)),
+  so the prompt is free while the tab is open: run a chunk, read the
+  object, draw a gate, in any order. The app is serviced while R is
+  idle, so a long computation pauses it until the prompt returns.
+  [`gatelabStop()`](https://david-priest.github.io/GateLabR/reference/gatelabStop.md)
+  stops it, as does the handle the launch returns; a second launch stops
+  the first. With an older Shiny the launch blocks as before and says
+  how to change that; `blocking = TRUE` keeps the old behaviour,
+  `blocking = FALSE` insists and is an error without Shiny 1.14.
+- While the app runs, a change to the object at the console
+  (`sce$cluster <- ...`, which rebinds the name) is kept: the app’s next
+  save sees that the global name no longer holds the object it last
+  wrote, refuses the write with a message naming
+  [`gatelabSync()`](https://david-priest.github.io/GateLabR/reference/gatelabSync.md),
+  and leaves the console’s object as it is. `gatelabSync("sce")` hands
+  the console’s object to the app, which then saves into it; the cells
+  must be the same, since the browser keeps the events it loaded. A
+  read, such as Colour by, never writes the object. Before, every save
+  assigned the app’s copy over the global name, which in a blocking
+  launch nothing else could have changed.
+- The embedded GateLab core is 0.9.0 (GateLab-dev 2acc33a), up from
+  master 8b1f206 in 1.5.1: pooled plots in the Illustration, Layout and
+  Strategy tabs, a Layout sheet drawn once per value of a metadata
+  column, an “All events” switch wherever a plot samples its events,
+  scatter axes that open linear (a saved workspace keeps its scale), the
+  agent link, and key names for the user’s keyboard. The browser app’s
+  walkthrough tutorial and its demo workspace are not shown under the
+  SCE host. Workspaces saved by 1.5.1 open unchanged.
+- When the app stops with no population memberships stored in the
+  object, or with memberships older than the workspace, the launcher
+  warns:
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  and
+  [`gatelabHierarchy()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  need an explicit “Save to SCE”, which autosaves do not replace.
+  Before, the refusal came only at the first read.
+- The embedded core must carry GateLab’s agent link (GateLab-dev
+  [\#374](https://github.com/david-priest/GateLabR/issues/374)) for
+  `agent` to connect; the embed is its own change.
+
 ## GateLabR 1.5.1
 
 - The embedded GateLab core is GateLab master 8b1f206, up from the 0.8.4

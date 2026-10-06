@@ -11,7 +11,7 @@ launchGatingApp, which is the single supported entry point."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,9 @@ adapter for a <code>SingleCellExperiment</code>. This is the interface started b
 <span>  sample_column <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  port <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  launch.browser <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  sce_name <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  sce_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  agent <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  blocking <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -87,10 +89,37 @@ the caller passed as <code>sce</code>. Delegating wrappers must forward the user
 symbol explicitly, because <code><a href="https://rdrr.io/r/base/substitute.html" class="external-link">substitute()</a></code> would otherwise resolve to
 the wrapper's own parameter name.</p></dd>
 
+
+<dt id="arg-agent">agent<a class="anchor" aria-label="anchor" href="#arg-agent"></a></dt>
+<dd><p>Open the tab connected to an agent's relay: <code>TRUE</code> reads the
+address the relay recorded in <code>~/.gatelab/agent-relay.json</code>, or give the
+<code>ws://</code> address itself. The agent then reads the gating as you see it
+and proposes gates, which appear in the tab with a badge; saving stays yours.
+<code>NULL</code> (the default) opens the tab as usual; the Agent menu in the
+header can connect it later.</p></dd>
+
+
+<dt id="arg-blocking">blocking<a class="anchor" aria-label="anchor" href="#arg-blocking"></a></dt>
+<dd><p>Whether the call returns only when the app stops. <code>NULL</code>
+(the default) returns at once when the installed Shiny can run an app in the
+background (<code><a href="https://rdrr.io/pkg/shiny/man/startApp.html" class="external-link">shiny::startApp()</a></code>, Shiny 1.14 and later) and otherwise
+blocks as before, saying so. <code>FALSE</code> insists on returning at once and
+is an error with an older Shiny; <code>TRUE</code> blocks.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly <code>NULL</code>; runs the Shiny app (blocking).</p>
+    <p>Invisibly the running app's handle when the call returns at once (its
+  <code>$stop()</code> stops the app, as does <code><a href="gatelabStop.html">gatelabStop</a></code>), otherwise
+  invisibly <code>NULL</code> once the app has stopped. The app is serviced while R
+  is idle at the prompt, so a long computation pauses it until the prompt
+  returns. While it runs, the console may change the object it was launched
+  on: the app then refuses to save over that change until
+  <code><a href="gatelabSync.html">gatelabSync</a></code> hands it the console's object. When the app
+  stops with no population memberships stored in the object, or with
+  memberships older than the workspace, a warning says so: the readers
+  (<code><a href="gatelabMemberships.html">gatelabPopulations</a></code>, <code><a href="gatelabMemberships.html">gatelabHierarchy</a></code>) need an
+  explicit "Save to SCE", which autosaves do not replace.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

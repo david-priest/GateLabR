@@ -6,6 +6,10 @@
   : Launch GateLabR
 - [`launchReactGateLab()`](https://david-priest.github.io/GateLabR/reference/launchReactGateLab.md)
   : Launch GateLabR with the canonical GateLab React interface
+- [`gatelabStop()`](https://david-priest.github.io/GateLabR/reference/gatelabStop.md)
+  : Stop the running GateLabR app
+- [`gatelabSync()`](https://david-priest.github.io/GateLabR/reference/gatelabSync.md)
+  : Hand the console's object to the running app
 
 ## Reading a saved workspace back in R
 

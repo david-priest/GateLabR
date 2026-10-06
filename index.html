@@ -24,7 +24,7 @@
 
     <a class="navbar-brand me-2" href="index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -227,7 +227,7 @@
 <span><span class="co"># Option B: launch with no SCE — the app scans the global environment</span></span>
 <span><span class="co">#           and lets you pick from any SingleCellExperiment objects present</span></span>
 <span><span class="fu"><a href="reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>The app opens in your default browser. <code><a href="reference/launchGatingApp.html">launchGatingApp()</a></code> is the single entry point and starts the shared React interface. The three-column layout is:</p>
+<p>The app opens in your default browser. <code><a href="reference/launchGatingApp.html">launchGatingApp()</a></code> is the single entry point and starts the shared React interface. With shiny 1.14 or later the call returns at once and the prompt is free while the tab is open (the app is serviced while R is idle); <code><a href="reference/gatelabStop.html">gatelabStop()</a></code> stops it. A change to the object at the console while the app runs is kept: the app refuses its next save until <code>gatelabSync("my_sce")</code> hands it the console’s object. With an older shiny the call blocks until the app is stopped. The three-column layout is:</p>
 <table class="table">
 <colgroup>
 <col width="40%">
