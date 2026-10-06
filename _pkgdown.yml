@@ -27,6 +27,8 @@ reference:
     contents:
       - launchGatingApp
       - launchReactGateLab
+      - gatelabStop
+      - gatelabSync
   - title: Reading a saved workspace back in R
     desc: >
       "Save to SCE" stores which events every population holds, so a gating result

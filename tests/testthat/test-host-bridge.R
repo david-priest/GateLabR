@@ -1548,3 +1548,98 @@ test_that("an assay named for its counts is linear, and an unnamed one is placed
   S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(scores = "linear")
   expect_no_match(GateLabR:::.gatelabr_assay_note(sce), "scores: linear (inferred", fixed = TRUE)
 })
+
+test_that("the host refuses to write over an object the console replaced, until it is handed over", {
+  sce_name <- ".gatelabr_write_guard_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+  live <- GateLabR:::.gatelabr_live
+  on.exit(rm(list = ls(live, all.names = TRUE), envir = live), add = TRUE)
+  sce <- make_host_bridge_sce()
+  assign(sce_name, sce, envir = .GlobalEnv)
+  sce_state <- shiny::reactiveVal(sce)
+  # The record as the launcher fills it: the object last written to the global name, and its
+  # address, which the guard compares against the binding before every write.
+  live$sce_name <- sce_name
+  live$set_sce <- function(object) sce_state(object)
+  live$get_sce <- function() shiny::isolate(sce_state())
+  live$written <- sce
+  live$address <- GateLabR:::.gatelabr_object_address(sce)
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce",
+    live = live
+  )
+  write <- function(request_id, expected_revision, client_revision) {
+    list(
+      requestId = request_id,
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = expected_revision,
+        clientRevision = client_revision,
+        reason = "autosave",
+        workspaceJson = canonical_host_workspace_json()
+      )
+    )
+  }
+  read <- list(
+    requestId = "read-1",
+    operation = "read-categorical-coldata",
+    payload = list(datasetId = "test-sce", contractVersion = 1L, columnName = "batch")
+  )
+  run <- function(request) {
+    messages <- character(0)
+    withCallingHandlers(
+      suppressWarnings(shiny::testServer(server, {
+        session$flushReact()
+        session$setInputs(gatelabr_host_request = request)
+        session$flushReact()
+      })),
+      message = function(condition) {
+        messages <<- c(messages, conditionMessage(condition))
+        invokeRestart("muffleMessage")
+      }
+    )
+    messages
+  }
+  revision <- function(object) {
+    GateLabR:::.gatelabr_canonical_workspace_record(object)$revision
+  }
+  global <- function() get(sce_name, envir = .GlobalEnv)
+
+  # The first save lands on the global object, as before.
+  run(write("write-1", 0L, 1L))
+  expect_identical(revision(global()), 1L)
+  expect_identical(live$address, GateLabR:::.gatelabr_object_address(global()))
+
+  # The console changes the object: a new colData column rebinds the name to a new object.
+  console <- global()
+  console$console_column <- c("a", "b", "c")
+  assign(sce_name, console, envir = .GlobalEnv)
+
+  # A read goes ahead and leaves the console's object where it is.
+  expect_length(run(read), 0L)
+  expect_identical(global(), console)
+
+  # A write is refused, said once at the console, and the app's own copy stays as it was: the
+  # browser's save failed rather than silently undoing the console's change.
+  messages <- run(write("write-2", 1L, 2L))
+  expect_match(messages, "gatelabSync(\".gatelabr_write_guard_test_sce\")", fixed = TRUE, all = FALSE)
+  expect_identical(global(), console)
+  expect_identical(revision(shiny::isolate(sce_state())), 1L)
+  expect_length(run(write("write-2b", 1L, 2L)), 0L)
+
+  # Handing the console's object over makes the next save land on it, with the column kept.
+  expect_message(GateLabR::gatelabSync(sce_name), "now works on")
+  expect_length(run(write("write-3", 1L, 3L)), 0L)
+  after <- global()
+  expect_identical(revision(after), 2L)
+  expect_true("console_column" %in% colnames(SummarizedExperiment::colData(after)))
+  expect_identical(shiny::isolate(sce_state()), after)
+})

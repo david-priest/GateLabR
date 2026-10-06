@@ -11,13 +11,27 @@
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny (default: auto-select).
 #' @param launch.browser Whether to open a browser window (default: \code{TRUE}).
-#' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
+#' @param agent Open the tab connected to an agent's relay: \code{TRUE} reads the
+#'   address the relay recorded in \code{~/.gatelab/agent-relay.json}, or give the
+#'   \code{ws://} address itself. See \code{\link{launchReactGateLab}}.
+#' @param blocking \code{NULL} (the default) returns at once when the installed
+#'   Shiny can run the app in the background (1.14 and later) and blocks
+#'   otherwise; \code{FALSE} insists on returning at once; \code{TRUE} blocks.
+#'   See \code{\link{launchReactGateLab}}.
+#' @return Invisibly the app's handle when the call returns at once
+#'   (\code{\link{gatelabStop}} stops the app, \code{\link{gatelabSync}} hands
+#'   it the object after a change at the console), otherwise invisibly
+#'   \code{NULL} once the app has stopped. Warns when the app stops with no
+#'   population memberships stored, or stale ones: the readers need an explicit
+#'   "Save to SCE".
 #' @export
 launchGatingApp <- function(
     sce = NULL,
     sample_column = NULL,
     port = NULL,
-    launch.browser = TRUE) {
+    launch.browser = TRUE,
+    agent = NULL,
+    blocking = NULL) {
   # Forward the caller's own symbol. substitute() resolves in THIS frame, so
   # without this the callee would only ever see the local parameter name `sce`
   # and would write every result back to a global called "sce" instead of the
@@ -28,7 +42,9 @@ launchGatingApp <- function(
     sample_column = sample_column,
     port = port,
     launch.browser = launch.browser,
-    sce_name = if (is.symbol(supplied)) deparse(supplied) else ""
+    sce_name = if (is.symbol(supplied)) deparse(supplied) else "",
+    agent = agent,
+    blocking = blocking
   )
 }
 
