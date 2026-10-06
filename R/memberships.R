@@ -694,3 +694,47 @@ gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", al
   out[unknown] <- NA
   out
 }
+
+# Whether the readers above would read this object now: "none" when no explicit save stored
+# memberships, "stale" when gates or populations changed since the save, "current" otherwise,
+# and "absent" when the object holds no workspace at all. Never stops: this is for a word at the
+# right moment, not a refusal.
+.gatelabr_memberships_status <- function(sce) {
+  if (!methods::is(sce, "SingleCellExperiment")) return("absent")
+  md <- S4Vectors::metadata(sce)
+  workspace <- md$gatelab_workspace
+  if (!is.list(workspace)) return("absent")
+  saves <- Filter(function(candidate) {
+    is.list(candidate) && is.list(candidate$memberships) &&
+      (identical(candidate$memberships$format, .gatelabr_memberships_format) ||
+        identical(candidate$memberships$format, .gatelabr_memberships_legacy_format))
+  }, unname(md[names(md) %in% "gatelab_workspace"]))
+  if (length(saves) == 0L) return("none")
+  saved <- .gatelabr_memberships_save(sce, saves)
+  current <- suppressWarnings(as.integer(saved$revision))
+  if (length(current) != 1L || is.na(current) || current < 0L) current <- 0L
+  if (identical(as.integer(saved$memberships$revision), current)) "current" else "stale"
+}
+
+# Said when the app stops: an autosave kept the gates, but the readers need the memberships an
+# explicit save stores, and nothing else in the app's closing says whether one happened.
+.gatelabr_warn_memberships_at_stop <- function(sce_name) {
+  sce <- tryCatch(get(sce_name, envir = .GlobalEnv), error = function(...) NULL)
+  status <- tryCatch(.gatelabr_memberships_status(sce), error = function(...) "absent")
+  if (status == "none") {
+    warning(
+      "GateLabR stopped with no population memberships stored in `", sce_name, "`: ",
+      "gatelabPopulations() and gatelabHierarchy() will refuse it. Autosaves keep gate ",
+      "geometry only; relaunch and press \"Save to SCE\" to store the memberships.",
+      call. = FALSE
+    )
+  } else if (status == "stale") {
+    warning(
+      "GateLabR stopped with population memberships older than the workspace in `", sce_name,
+      "`: gates or populations changed after the last \"Save to SCE\". Relaunch and save ",
+      "again, or read them as they were with allow_stale = TRUE.",
+      call. = FALSE
+    )
+  }
+  invisible(status)
+}

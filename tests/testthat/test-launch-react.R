@@ -18,13 +18,15 @@ test_that("launchGatingApp delegates to the shared React SCE launcher", {
         sample_column = NULL,
         port = NULL,
         launch.browser = TRUE,
-        sce_name = NULL) {
+        sce_name = NULL,
+        agent = NULL) {
       captured <<- list(
         sce = sce,
         sample_column = sample_column,
         port = port,
         launch.browser = launch.browser,
-        sce_name = sce_name
+        sce_name = sce_name,
+        agent = agent
       )
       invisible(NULL)
     },
@@ -43,7 +45,8 @@ test_that("launchGatingApp delegates to the shared React SCE launcher", {
     port = 3325,
     launch.browser = FALSE,
     # A literal is not a symbol, so there is no caller variable to write back to.
-    sce_name = ""
+    sce_name = "",
+    agent = NULL
   ))
 })
 
@@ -58,7 +61,8 @@ test_that("launchGatingApp forwards the caller's own symbol for SCE writeback", 
         sample_column = NULL,
         port = NULL,
         launch.browser = TRUE,
-        sce_name = NULL) {
+        sce_name = NULL,
+        agent = NULL) {
       captured <<- sce_name
       invisible(NULL)
     },

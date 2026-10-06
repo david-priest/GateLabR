@@ -753,3 +753,42 @@ test_that("memberships of a record version this version does not know are refuse
     )
   }
 })
+
+test_that("the memberships status says what the readers would do, and the stop-time warning uses it", {
+  status <- GateLabR:::.gatelabr_memberships_status
+  expect_identical(status(make_memberships_sce()), "absent")
+  # An autosave keeps the gates but no memberships: the readers refuse.
+  autosaved_only <- GateLabR:::.gatelabr_store_host_workspace(
+    make_memberships_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = memberships_workspace_json()
+  )$sce
+  expect_identical(status(autosaved_only), "none")
+  written <- store_with_memberships()
+  expect_identical(status(written$sce), "current")
+  moved <- GateLabR:::.gatelabr_store_host_workspace(
+    written$sce,
+    dataset_id = "test-sce",
+    expected_revision = 1L,
+    client_revision = 4L,
+    reason = "autosave",
+    workspace_json = memberships_workspace_json()
+  )$sce
+  expect_identical(status(moved), "stale")
+
+  # The warning at stop reads the object from the global environment by name, as the app wrote it.
+  name <- paste0("gatelabr_stop_test_", format(Sys.getpid()))
+  on.exit(rm(list = name, envir = .GlobalEnv), add = TRUE)
+  assign(name, autosaved_only, envir = .GlobalEnv)
+  expect_warning(GateLabR:::.gatelabr_warn_memberships_at_stop(name), "no population memberships stored")
+  assign(name, moved, envir = .GlobalEnv)
+  expect_warning(GateLabR:::.gatelabr_warn_memberships_at_stop(name), "older than the workspace")
+  assign(name, written$sce, envir = .GlobalEnv)
+  expect_no_warning(GateLabR:::.gatelabr_warn_memberships_at_stop(name))
+  assign(name, make_memberships_sce(), envir = .GlobalEnv)
+  expect_no_warning(GateLabR:::.gatelabr_warn_memberships_at_stop(name))
+  expect_identical(GateLabR:::.gatelabr_warn_memberships_at_stop("no_such_object_here"), "absent")
+})

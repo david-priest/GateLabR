@@ -1,3 +1,9 @@
+# GateLabR 1.5.1.9000 (development)
+
+- `launchGatingApp(sce, agent = TRUE)` opens the tab connected to an agent's relay (GateLab's `tools/agent-mcp/server.mjs`, an MCP server): the launcher reads the address the relay recorded in `~/.gatelab/agent-relay.json`, or takes a `ws://` address as `agent`, and puts it on the page's URL, so the tab connects as it opens. An agent then reads the gating as you see it and proposes gates, which appear in the tab with a badge; you adjust or undo them as any other, and saving stays yours. The Agent menu in the header connects a tab by hand.
+- When the app stops with no population memberships stored in the object, or with memberships older than the workspace, the launcher warns: `gatelabPopulations()` and `gatelabHierarchy()` need an explicit "Save to SCE", which autosaves do not replace. Before, the refusal came only at the first read.
+- The embedded core must carry GateLab's agent link (GateLab-dev #374) for `agent` to connect; the embed is its own change.
+
 # GateLabR 1.5.1
 
 - The embedded GateLab core is GateLab master 8b1f206, up from the 0.8.4 release: the pooled view follows the selection and is editable, and a mass cytometry SCE opens pooled; the files off the plot are gated in batches between paints, so an edit over hundreds of samples no longer waits on one render per sample; the composition chart orders sample groups numerically; and the header offers the SCE's assays by name, with `exprs` drawn as stored, as the next bullets describe. Open an SCE saved by this version with this version or later: a workspace saved into the SCE records the assay it was drawn from, which 1.5.0 ignores, drawing the linear counts assay, and refuses outright when the workspace holds a compensation profile.

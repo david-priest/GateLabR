@@ -15,14 +15,27 @@
 #'   the caller passed as \code{sce}. Delegating wrappers must forward the user's
 #'   symbol explicitly, because \code{substitute()} would otherwise resolve to
 #'   the wrapper's own parameter name.
-#' @return Invisibly \code{NULL}; runs the Shiny app (blocking).
+#' @param agent Open the tab connected to an agent's relay: \code{TRUE} reads the
+#'   address the relay recorded in \code{~/.gatelab/agent-relay.json}, or give the
+#'   \code{ws://} address itself. The agent then reads the gating as you see it
+#'   and proposes gates, which appear in the tab with a badge; saving stays yours.
+#'   \code{NULL} (the default) opens the tab as usual; the Agent menu in the
+#'   header can connect it later.
+#' @return Invisibly \code{NULL}; runs the Shiny app (blocking). When the app
+#'   stops with no population memberships stored in the object, or with
+#'   memberships older than the workspace, a warning says so: the readers
+#'   (\code{\link{gatelabPopulations}}, \code{\link{gatelabHierarchy}}) need an
+#'   explicit "Save to SCE", which autosaves do not replace.
 #' @export
 launchReactGateLab <- function(
     sce = NULL,
     sample_column = NULL,
     port = NULL,
     launch.browser = TRUE,
-    sce_name = NULL) {
+    sce_name = NULL,
+    agent = NULL) {
+  # Resolved before anything else: a bad address should fail the launch, not the browser.
+  relay_url <- .gatelabr_agent_relay_url(agent)
   # Resolve the global-environment name that gates, populations and colData are
   # written back to. substitute() only sees the CALLER's argument expression, so
   # a delegating wrapper (launchGatingApp) must forward the user's own symbol —
@@ -136,8 +149,15 @@ launchReactGateLab <- function(
   message(
     "GateLabR: launching the shared GateLab React interface\n",
     "  SCE: ", sce_name, "\n",
-    "  Core assets: ", assets
+    "  Core assets: ", assets,
+    if (is.null(relay_url)) "" else paste0("\n  Agent relay: ", relay_url)
   )
+  if (!is.null(relay_url) && isTRUE(launch.browser)) {
+    launch.browser <- .gatelabr_agent_browser(relay_url)
+  }
+  # Said once the app has stopped, whichever way: the memberships the readers need come only
+  # from an explicit save, and nothing in the app's closing says whether one happened.
+  on.exit(.gatelabr_warn_memberships_at_stop(sce_name), add = TRUE, after = TRUE)
   shiny::runApp(
     shiny::shinyApp(ui = ui, server = server),
     port = port,
