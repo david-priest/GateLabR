@@ -21,7 +21,18 @@
 #'   and proposes gates, which appear in the tab with a badge; saving stays yours.
 #'   \code{NULL} (the default) opens the tab as usual; the Agent menu in the
 #'   header can connect it later.
-#' @return Invisibly \code{NULL}; runs the Shiny app (blocking). When the app
+#' @param blocking Whether the call returns only when the app stops. \code{NULL}
+#'   (the default) returns at once when the installed Shiny can run an app in the
+#'   background (\code{shiny::startApp()}, Shiny 1.14 and later) and otherwise
+#'   blocks as before, saying so. \code{FALSE} insists on returning at once and
+#'   is an error with an older Shiny; \code{TRUE} blocks.
+#' @return Invisibly the running app's handle when the call returns at once (its
+#'   \code{$stop()} stops the app, as does \code{\link{gatelabStop}}), otherwise
+#'   invisibly \code{NULL} once the app has stopped. The app is serviced while R
+#'   is idle at the prompt, so a long computation pauses it until the prompt
+#'   returns. While it runs, the console may change the object it was launched
+#'   on: the app then refuses to save over that change until
+#'   \code{\link{gatelabSync}} hands it the console's object. When the app
 #'   stops with no population memberships stored in the object, or with
 #'   memberships older than the workspace, a warning says so: the readers
 #'   (\code{\link{gatelabPopulations}}, \code{\link{gatelabHierarchy}}) need an
@@ -33,9 +44,30 @@ launchReactGateLab <- function(
     port = NULL,
     launch.browser = TRUE,
     sce_name = NULL,
-    agent = NULL) {
+    agent = NULL,
+    blocking = NULL) {
   # Resolved before anything else: a bad address should fail the launch, not the browser.
   relay_url <- .gatelabr_agent_relay_url(agent)
+  start_app <- .gatelabr_start_app_fn()
+  if (!is.null(blocking) && !isTRUE(blocking) && !isFALSE(blocking)) {
+    stop("`blocking` must be NULL, TRUE or FALSE.", call. = FALSE)
+  }
+  if (isFALSE(blocking) && is.null(start_app)) {
+    stop(
+      "blocking = FALSE needs shiny 1.14.0 or later, which can run an app in the background ",
+      "(shiny::startApp()); shiny ", as.character(utils::packageVersion("shiny")), " is installed. ",
+      "Update it with install.packages(\"shiny\"), or launch with blocking = TRUE.",
+      call. = FALSE
+    )
+  }
+  blocking <- if (is.null(blocking)) is.null(start_app) else blocking
+  # One app at a time: a second launch stops the first, whose stop callbacks then run before the
+  # new app claims the live record below.
+  previous <- .gatelabr_live$handle
+  if (!is.null(previous)) {
+    message("GateLabR: stopping the app running on `", .gatelabr_live$sce_name, "`.")
+    previous$stop()
+  }
   # Resolve the global-environment name that gates, populations and colData are
   # written back to. substitute() only sees the CALLER's argument expression, so
   # a delegating wrapper (launchGatingApp) must forward the user's own symbol —
@@ -121,7 +153,6 @@ launchReactGateLab <- function(
     paste(sample(c(letters, 0:9), 8L, replace = TRUE), collapse = "")
   )
   shiny::addResourcePath(prefix, assets)
-  on.exit(shiny::removeResourcePath(prefix), add = TRUE)
 
   dataset_id <- paste0(
     "sce-",
@@ -134,16 +165,49 @@ launchReactGateLab <- function(
   # are served back to the reconnecting browser.
   sce_state <- shiny::reactiveVal(sce)
   compensation_backend <- .gatelabr_start_compensation_backend()
-  on.exit(
-    .gatelabr_stop_compensation_backend(compensation_backend),
-    add = TRUE
-  )
+  # The live record: what the console's gatelabStop() and gatelabSync() reach, and the address
+  # of the object the app last wrote to the global name, which the write-back guard compares
+  # against the binding before every save (live.R). The global object is still the one the
+  # caller launched on; the reconciled copy above reaches it at the first save.
+  live <- .gatelabr_live
+  live$token <- prefix
+  live$handle <- NULL
+  live$sce_name <- sce_name
+  live$set_sce <- function(object) sce_state(object)
+  live$get_sce <- function() shiny::isolate(sce_state())
+  live$written <- get0(sce_name, envir = .GlobalEnv, inherits = FALSE)
+  live$address <- .gatelabr_object_address(live$written)
+  live$refused_address <- NULL
   server <- .gatelabr_react_server(
     sce_state = sce_state,
     sce_name = sce_name,
     dataset_id = dataset_id,
     sample_column = sample_column,
-    absent_gates = absent_gates
+    absent_gates = absent_gates,
+    live = live
+  )
+  # Everything that must happen when the app stops, whichever way it stops and whether or not
+  # this call is still on the stack: the app registers it as its own stop callback. The
+  # memberships warning comes last, once the record is cleared: the memberships the readers
+  # need come only from an explicit save, and nothing in the app's closing says whether one
+  # happened.
+  cleaned <- FALSE
+  cleanup <- function() {
+    if (cleaned) return(invisible(NULL))
+    cleaned <<- TRUE
+    shiny::removeResourcePath(prefix)
+    .gatelabr_stop_compensation_backend(compensation_backend)
+    if (identical(live$token, prefix)) {
+      for (field in c("token", "handle", "sce_name", "set_sce", "get_sce", "written", "address", "refused_address")) {
+        live[[field]] <- NULL
+      }
+    }
+    .gatelabr_warn_memberships_at_stop(sce_name)
+  }
+  app <- shiny::shinyApp(
+    ui = ui,
+    server = server,
+    onStart = function() shiny::onStop(cleanup)
   )
 
   message(
@@ -155,14 +219,35 @@ launchReactGateLab <- function(
   if (!is.null(relay_url) && isTRUE(launch.browser)) {
     launch.browser <- .gatelabr_agent_browser(relay_url)
   }
-  # Said once the app has stopped, whichever way: the memberships the readers need come only
-  # from an explicit save, and nothing in the app's closing says whether one happened.
-  on.exit(.gatelabr_warn_memberships_at_stop(sce_name), add = TRUE, after = TRUE)
-  shiny::runApp(
-    shiny::shinyApp(ui = ui, server = server),
-    port = port,
-    launch.browser = launch.browser
+  if (blocking) {
+    if (!is.null(start_app)) {
+      message("GateLabR: blocking = TRUE, so the prompt returns when the app stops.")
+    } else {
+      message(
+        "GateLabR: the prompt returns when the app stops (press Escape or Ctrl-C). ",
+        "shiny 1.14.0 or later runs the app in the background instead: install.packages(\"shiny\")."
+      )
+    }
+    # A start that fails before onStart never registers the stop callback, so the resource path
+    # and backend are cleared here; after a normal stop the callback has already run it.
+    on.exit(cleanup(), add = TRUE)
+    shiny::runApp(app, port = port, launch.browser = launch.browser)
+    return(invisible(NULL))
+  }
+  handle <- tryCatch(
+    start_app(app, port = port, launch.browser = launch.browser),
+    error = function(cause) {
+      cleanup()
+      stop(cause)
+    }
   )
+  live$handle <- handle
+  message(
+    "GateLabR: the app is running at ", handle$url(), " and the prompt is yours. ",
+    "It is serviced while R is idle; gatelabStop() stops it, gatelabSync(\"", sce_name,
+    "\") hands it the object after you change it in the console."
+  )
+  invisible(handle)
 }
 
 .gatelabr_react_server <- function(
@@ -170,12 +255,20 @@ launchReactGateLab <- function(
     sce_name,
     dataset_id,
     sample_column = NULL,
-    absent_gates = NULL) {
+    absent_gates = NULL,
+    live = NULL) {
   force(sce_state)
   force(sce_name)
   force(dataset_id)
   force(sample_column)
+  # Without a live record (a server built on its own, as the tests do) every write goes
+  # straight to the global name, as it did before the console could change the object.
+  if (is.null(live)) {
+    live <- new.env(parent = emptyenv())
+    live$address <- NA_character_
+  }
   compensation_jobs <- .gatelabr_new_host_compensation_jobs()
+  compensation_jobs$live <- live
   # The gates on channels the SCE lacks that the console last named, at launch or at a save, so
   # that an autosave names them again only when they change.
   reported <- new.env(parent = emptyenv())
@@ -272,6 +365,14 @@ launchReactGateLab <- function(
       }
       response <- tryCatch(
         {
+          # A read leaves the global object alone. A write is refused before it is applied when
+          # the console replaced the object since the app last wrote it (live.R), so the app's
+          # copy never lands on top of a change made at the prompt.
+          writes <- is.character(request$operation) && !startsWith(request$operation, "read-")
+          if (writes) {
+            refused <- .gatelabr_check_write_back(live, sce_name)
+            if (!is.null(refused)) stop(refused, call. = FALSE)
+          }
           handled <- .gatelabr_handle_host_request(
             sce_state(),
             request,
@@ -280,7 +381,7 @@ launchReactGateLab <- function(
             session = session
           )
           sce_state(handled$sce)
-          assign(sce_name, handled$sce, envir = .GlobalEnv)
+          if (writes) .gatelabr_write_back(live, sce_name, handled$sce)
           if (identical(request$operation, "write-workspace")) {
             signature <- .gatelabr_absent_channel_signature(handled$absent_gates)
             if (!identical(signature, reported$signature)) {

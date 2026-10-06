@@ -155,7 +155,12 @@ launchGatingApp()
 ```
 
 The app opens in your default browser. `launchGatingApp()` is the single entry
-point and starts the shared React interface. The three-column layout is:
+point and starts the shared React interface. With shiny 1.14 or later the call
+returns at once and the prompt is free while the tab is open (the app is
+serviced while R is idle); `gatelabStop()` stops it. A change to the object at
+the console while the app runs is kept: the app refuses its next save until
+`gatelabSync("my_sce")` hands it the console's object. With an older shiny the
+call blocks until the app is stopped. The three-column layout is:
 
 | Panel | Content |
 |------|---------|

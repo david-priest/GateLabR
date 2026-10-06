@@ -9,7 +9,8 @@ launchGatingApp(
   sample_column = NULL,
   port = NULL,
   launch.browser = TRUE,
-  agent = NULL
+  agent = NULL,
+  blocking = NULL
 )
 }
 \arguments{
@@ -26,11 +27,19 @@ omitted, common sample columns such as \code{sample_id} are detected.}
 \item{agent}{Open the tab connected to an agent's relay: \code{TRUE} reads the
 address the relay recorded in \code{~/.gatelab/agent-relay.json}, or give the
 \code{ws://} address itself. See \code{\link{launchReactGateLab}}.}
+
+\item{blocking}{\code{NULL} (the default) returns at once when the installed
+Shiny can run the app in the background (1.14 and later) and blocks
+otherwise; \code{FALSE} insists on returning at once; \code{TRUE} blocks.
+See \code{\link{launchReactGateLab}}.}
 }
 \value{
-Invisibly \code{NULL}; runs the Shiny app (blocking). Warns when the
-  app stops with no population memberships stored, or stale ones: the readers
-  need an explicit "Save to SCE".
+Invisibly the app's handle when the call returns at once
+  (\code{\link{gatelabStop}} stops the app, \code{\link{gatelabSync}} hands
+  it the object after a change at the console), otherwise invisibly
+  \code{NULL} once the app has stopped. Warns when the app stops with no
+  population memberships stored, or stale ones: the readers need an explicit
+  "Save to SCE".
 }
 \description{
 Opens the canonical GateLab React interface with a thin

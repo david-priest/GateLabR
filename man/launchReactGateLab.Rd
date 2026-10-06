@@ -10,7 +10,8 @@ launchReactGateLab(
   port = NULL,
   launch.browser = TRUE,
   sce_name = NULL,
-  agent = NULL
+  agent = NULL,
+  blocking = NULL
 )
 }
 \arguments{
@@ -36,9 +37,21 @@ address the relay recorded in \code{~/.gatelab/agent-relay.json}, or give the
 and proposes gates, which appear in the tab with a badge; saving stays yours.
 \code{NULL} (the default) opens the tab as usual; the Agent menu in the
 header can connect it later.}
+
+\item{blocking}{Whether the call returns only when the app stops. \code{NULL}
+(the default) returns at once when the installed Shiny can run an app in the
+background (\code{shiny::startApp()}, Shiny 1.14 and later) and otherwise
+blocks as before, saying so. \code{FALSE} insists on returning at once and
+is an error with an older Shiny; \code{TRUE} blocks.}
 }
 \value{
-Invisibly \code{NULL}; runs the Shiny app (blocking). When the app
+Invisibly the running app's handle when the call returns at once (its
+  \code{$stop()} stops the app, as does \code{\link{gatelabStop}}), otherwise
+  invisibly \code{NULL} once the app has stopped. The app is serviced while R
+  is idle at the prompt, so a long computation pauses it until the prompt
+  returns. While it runs, the console may change the object it was launched
+  on: the app then refuses to save over that change until
+  \code{\link{gatelabSync}} hands it the console's object. When the app
   stops with no population memberships stored in the object, or with
   memberships older than the workspace, a warning says so: the readers
   (\code{\link{gatelabPopulations}}, \code{\link{gatelabHierarchy}}) need an

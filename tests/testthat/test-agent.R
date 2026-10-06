@@ -55,7 +55,8 @@ test_that("launchGatingApp forwards agent to the React launcher", {
         port = NULL,
         launch.browser = TRUE,
         sce_name = NULL,
-        agent = NULL) {
+        agent = NULL,
+        blocking = NULL) {
       captured <<- list(sce_name = sce_name, agent = agent)
       invisible(NULL)
     },
