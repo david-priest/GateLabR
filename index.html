@@ -58,10 +58,10 @@
 <img src="reference/figures/gatelabr-logo.png" alt="GateLabR" width="280">
 </h1></div>
 <p align="center">
-<b>Interactive manual gating for <code>SingleCellExperiment</code> objects in R.</b>
+<b>Gate a <code>SingleCellExperiment</code> by hand, from your R session.</b>
 </p>
 <p align="center">
-Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS import, fluorescence compensation, hierarchical population trees, and Gating-ML exchange, all persisted inside the object.
+Open the GateLab app on the object, draw gates on its samples, and read the populations back in R. The gating is stored in the object.
 </p>
 <p align="center">
 <a href="https://doi.org/10.5281/zenodo.20404387" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/license-MIT-1b2027" alt="License: MIT"></a> <img src="https://img.shields.io/badge/works_on-SingleCellExperiment-1b2027" alt="Works on SingleCellExperiment"><img src="https://img.shields.io/badge/exchanges-Gating--ML_2.0-1b2027" alt="Exchanges Gating-ML 2.0"></p>
@@ -71,9 +71,16 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <p align="center">
 <a href="https://david-priest.github.io/GateLabR"><b>Documentation</b></a> · <a href="#installation">Installation</a> · <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab in your browser</a>
 </p>
-<p>GateLabR runs the same TypeScript/React interface as GateLab, backed by a thin R host for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on <a href="https://bioconductor.org/packages/SingleCellExperiment/" class="external-link"><code>SingleCellExperiment</code></a> objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST, diffcyt) where the events already live in R as an SCE and you want a fast, reproducible alternative to round-tripping through FlowJo or Cytobank just to draw a few gates.</p>
-<p>Gates are drawn on an interactive D3.js canvas. Gates, populations, scales, assay bindings, compensation provenance and illustration settings persist in the SCE via <code>metadata()</code>, while explicit commands write panel labels to <code>rowData()</code> and population, division or sample annotations to <code>colData()</code>.</p>
-<p>For the same style of manual gating directly from FCS files without an R installation, see <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab</a>, the companion browser app. GateLabR is the better fit when data already live in a <code>SingleCellExperiment</code> or when gated populations need to return directly to <code>colData</code> for a Bioconductor pipeline.</p>
+<p>GateLabR opens the <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab</a> gating application on a <a href="https://bioconductor.org/packages/SingleCellExperiment/" class="external-link"><code>SingleCellExperiment</code></a> from an R session, for flow cytometry and mass cytometry (CyTOF) data. It does three things.</p>
+<p>The object is gated where it is. <code>launchGatingApp(sce)</code> opens a browser tab on its samples, one at a time or pooled, drawing the assay chosen in the header. Rectangle, polygon, ellipse and quadrant gates build one population tree for the object. The interface is GateLab’s, with its Strategy, Illustration, Layout, Plotting and Statistics tabs, and with shiny 1.14 or later the R prompt stays free while the tab is open.</p>
+<p>The gating is stored in the object. Gates, populations, scales, compensation records and figure settings are written to <code>metadata(sce)</code> as the work is done and restored when the object is opened again, so saving the object saves the gating.</p>
+<p>Populations come back to R as data. “Save to SCE” stores which events each population holds, read with <code><a href="reference/gatelabMemberships.html">gatelabPopulations()</a></code>, <code><a href="reference/gatelabMemberships.html">gatelabHierarchy()</a></code> and <code><a href="reference/gatelabMemberships.html">gatelabLeafPopulation()</a></code>. “Export populations to colData” writes a column per population for <code>diffcyt</code>, <code>CATALYST</code> or any other tool that reads the object.</p>
+<p>It exists because a Bioconductor cytometry analysis holds its events in a <code>SingleCellExperiment</code>, while manual gating is usually done in a separate program on FCS files, and a gate drawn there has to be exported and matched back to the object’s events. GateLabR gates the object itself, so a gated population is a column of the data the next step already uses.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"david-priest/GateLabR"</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://david-priest.github.io/GateLabR">GateLabR</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span></span></code></pre></div>
+<p>GateLabR starts from a <code>SingleCellExperiment</code> and does not read FCS files. To gate FCS files without R, use <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab</a> in the browser, which is the same application.</p>
 <div class="section level2">
 <h2 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
 </h2>
@@ -198,7 +205,6 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <p>On gate exchange: GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank, and it reads the gating strategy of a FlowJo workspace (<code>.wsp</code>). A population that excludes a gate is written with the schema’s <code>gating:use-as-complement</code> in the Cytobank format and through a NOT gate in the standard format, and both are read back, as is the <code>gating:complement</code> attribute GateLab wrote before; such a population has not been shown to cross to Cytobank. OR populations are not imported.</p>
 <p>On agents: an agent reaches the open tab through a relay on your computer, an MCP server kept in GateLab’s <code>tools/agent-mcp</code>, and <code>launchGatingApp(sce, agent = TRUE)</code> opens the tab connected to it. Its gates go through the same session as yours, and nothing is saved to the object until you save. What the agent reads (counts, histograms, medians, pictures of the plot) goes to the agent’s model provider; the object stays in your R session. In October 2026 we found no MCP server documented for FlowJo or Cytobank.</p>
 <p>FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent project and is not affiliated with or endorsed by BD or FlowJo.</p>
-<p>GateLabR suits two workflows. If your data already lives in R as a <code>SingleCellExperiment</code>, it lets you gate without round-tripping to FlowJo or Cytobank and hand populations straight to <code>diffcyt</code> / <code>CATALYST</code>. But it’s equally at home as a plain <strong>FCS-in → gate → FCS / stats / Gating-ML out</strong> tool: import <code>.fcs</code> files, gate interactively in the GUI, and export — no R fluency needed beyond the one line to launch it.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -207,7 +213,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <div class="section level3">
 <h3 id="option-a--install-as-a-package-recommended">Option A — install as a package (recommended)<a class="anchor" aria-label="anchor" href="#option-a--install-as-a-package-recommended"></a>
 </h3>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")            # if needed</span></span>
 <span><span class="co"># Bioconductor dependencies are resolved automatically; if you don't already</span></span>
 <span><span class="co"># have BiocManager, install it first: install.packages("BiocManager")</span></span>
@@ -219,7 +225,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <div class="section level3">
 <h3 id="option-b--clone-and-run-from-source">Option B — clone and run from source<a class="anchor" aria-label="anchor" href="#option-b--clone-and-run-from-source"></a>
 </h3>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 1. git clone https://github.com/david-priest/GateLabR.git</span></span>
 <span><span class="co"># 2. From an R session, install dependencies once (CRAN + Bioconductor):</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"path/to/GateLabR/install_dependencies.R"</span><span class="op">)</span></span>
@@ -241,7 +247,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Installed package:           Or from a clone:</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://david-priest.github.io/GateLabR">GateLabR</a></span><span class="op">)</span>              <span class="co"># source("path/to/GateLabR/launch.R")</span></span>
 <span></span>
@@ -292,7 +298,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <li><p>Export results for downstream work — populations as new <code>colData</code> columns on the SCE (<code>Export Population</code>, e.g. for <code>diffcyt</code>, <code>CATALYST</code>, or any SCE-aware analysis), or gated events back out as <code>.fcs</code>.</p></li>
 <li>
 <p>Press <code>Save to SCE</code>. Besides the workspace this stores which events every population holds, for every hierarchy, so the whole tree can be read in R:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/gatelabMemberships.html">gatelabHierarchy</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>                    <span class="co"># one row per population: parent, depth, path, gates, count</span></span>
 <span><span class="va">members</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gatelabMemberships.html">gatelabPopulations</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>       <span class="co"># logical matrix, events × populations</span></span>
 <span><span class="va">sce</span><span class="op">$</span><span class="va">population</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/gatelabMemberships.html">gatelabLeafPopulation</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>   <span class="co"># each event's deepest population, or "ungated"</span></span></code></pre></div>
@@ -306,7 +312,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <h2 id="data-persistence">Data persistence<a class="anchor" aria-label="anchor" href="#data-persistence"></a>
 </h2>
 <p>GateLabR stores its canonical workspace and host provenance inside the SCE:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">gatelab_workspace</span></span>
 <span><span class="co">#&gt; revisioned GateLab workspace JSON (gates, populations, scales and settings)</span></span>
 <span></span>
@@ -353,15 +359,15 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <p>Priest, D. G. (2026). <em>GateLabR: Interactive manual gating for SingleCellExperiment objects.</em> Version 1.0.0. Zenodo. <a href="https://doi.org/10.5281/zenodo.20404387" class="external-link uri">https://doi.org/10.5281/zenodo.20404387</a></p>
 </blockquote>
 <p>BibTeX:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">@software{priest_gatelabr_2026,</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">  author    = {Priest, David G.},</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">  title     = {GateLabR: Interactive manual gating for SingleCellExperiment objects},</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">  year      = {2026},</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">  version   = {1.0.0},</span></span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">  doi       = {10.5281/zenodo.20404387},</span></span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">  url       = {https://github.com/david-priest/GateLabR},</span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">  publisher = {Zenodo}</span></span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co">@software{priest_gatelabr_2026,</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">  author    = {Priest, David G.},</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">  title     = {GateLabR: Interactive manual gating for SingleCellExperiment objects},</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">  year      = {2026},</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">  version   = {1.0.0},</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">  doi       = {10.5281/zenodo.20404387},</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">  url       = {https://github.com/david-priest/GateLabR},</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">  publisher = {Zenodo}</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
 <p>GitHub’s “Cite this repository” button (powered by <a href="CITATION.cff"><code>CITATION.cff</code></a>) renders formatted citations in several styles.</p>
 </div>
 <div class="section level2">
@@ -379,7 +385,6 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <h2 id="issues-and-contributions">Issues and contributions<a class="anchor" aria-label="anchor" href="#issues-and-contributions"></a>
 </h2>
 <p>If you run into a bug, or there’s a feature you’d find useful, please <a href="https://github.com/david-priest/GateLabR/issues" class="external-link">open an issue</a> or get in touch — I’m happy to take a look and would be glad to implement it.</p>
-<p><strong>A note on <code>.fcs</code> import:</strong> import has been thoroughly tested on files from a BD spectral flow cytometer, but not yet on files from other vendors (Beckman Coulter, Cytek, Sony, Thermo, Miltenyi, …). Channel and instrument detection is designed to be vendor-agnostic, but if a file imports incorrectly — missing markers, wrong channels, or a mis-detected flow/CyTOF mode — please let me know (ideally with the file’s channel names) and I’ll get it sorted.</p>
 <p><strong>A note on compensation:</strong> embedded-<code>$SPILLOVER</code> compensation has been validated on conventional fluorescence data from a BD FACSAria III / FACSymphony S6, with compensated values matching <code><a href="https://rdrr.io/pkg/flowCore/man/compensation-class.html" class="external-link">flowCore::compensate</a></code>. It has not yet been exercised on embedded matrices from other vendors’ acquisition software; the matrix is read vendor-agnostically (<code><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">flowCore::spillover</a></code>), so if compensation looks wrong for a given file please send me its channel names and spillover keyword and I’ll take a look.</p>
 </div>
 
