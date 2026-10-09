@@ -1,7 +1,7 @@
 var $h = Object.defineProperty;
 var Kh = (n, e, t) => e in n ? $h(n, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : n[e] = t;
 var xe = (n, e, t) => Kh(n, typeof e != "symbol" ? e + "" : e, t);
-import { aJ as ko } from "./embed-BMJr0b2I.js";
+import { aK as ko } from "./embed-fvRO1MOo.js";
 function _e(n) {
   "@babel/helpers - typeof";
   return _e = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
@@ -8916,7 +8916,7 @@ endobj\r
   var d = c.getContext("2d");
   d.fillStyle = "#fff", d.fillRect(0, 0, c.width, c.height);
   var m = { ignoreMouse: !0, ignoreAnimation: !0, ignoreDimensions: !0 }, A = this;
-  return ($t.canvg ? Promise.resolve($t.canvg) : import("./index.es-Bd1TI-Fh.js")).catch(function(P) {
+  return ($t.canvg ? Promise.resolve($t.canvg) : import("./index.es-Dm5y3G4-.js")).catch(function(P) {
     return Promise.reject(new Error("Could not load canvg: " + P));
   }).then(function(P) {
     return P.default ? P.default : P;

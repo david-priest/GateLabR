@@ -1,5 +1,5 @@
-import { aI as At } from "./embed-BMJr0b2I.js";
-import { E as te, O as Tt, q as we, M as ke } from "./jspdf.es.min-CHQ-w6__.js";
+import { aJ as At } from "./embed-fvRO1MOo.js";
+import { E as te, O as Tt, q as we, M as ke } from "./jspdf.es.min-CKqstrgS.js";
 /*! https://mths.be/cssesc v3.0.0 by @mathias */
 var ct, Lt;
 function Me() {
@@ -368,7 +368,7 @@ function Ee() {
   }, vt;
 }
 var mt, Vt;
-function Ie() {
+function Be() {
   if (Vt) return mt;
   Vt = 1;
   var i = Math.PI * 2;
@@ -379,8 +379,8 @@ function Ie() {
   function t(n, s, a, o, l, u, f, c, p, h) {
     var g = h * (n - a) / 2 + p * (s - o) / 2, d = -p * (n - a) / 2 + h * (s - o) / 2, m = f * f, x = c * c, v = g * g, S = d * d, w = m * x - m * S - x * v;
     w < 0 && (w = 0), w /= m * S + x * v, w = Math.sqrt(w) * (l === u ? -1 : 1);
-    var y = w * f / c * d, k = w * -c / f * g, I = h * y - p * k + (n + a) / 2, _ = p * y + h * k + (s + o) / 2, P = (g - y) / f, T = (d - k) / c, D = (-g - y) / f, A = (-d - k) / c, R = e(1, 0, P, T), N = e(P, T, D, A);
-    return u === 0 && N > 0 && (N -= i), u === 1 && N < 0 && (N += i), [I, _, R, N];
+    var y = w * f / c * d, k = w * -c / f * g, B = h * y - p * k + (n + a) / 2, _ = p * y + h * k + (s + o) / 2, P = (g - y) / f, T = (d - k) / c, D = (-g - y) / f, A = (-d - k) / c, R = e(1, 0, P, T), N = e(P, T, D, A);
+    return u === 0 && N > 0 && (N -= i), u === 1 && N < 0 && (N += i), [B, _, R, N];
   }
   function r(n, s) {
     var a = 1.3333333333333333 * Math.tan(s / 4), o = Math.cos(n), l = Math.sin(n), u = Math.cos(n + s), f = Math.sin(n + s);
@@ -395,9 +395,9 @@ function Ie() {
     c = Math.abs(c), p = Math.abs(p);
     var v = m * m / (c * c) + x * x / (p * p);
     v > 1 && (c *= Math.sqrt(v), p *= Math.sqrt(v));
-    var S = t(s, a, o, l, u, f, c, p, g, d), w = [], y = S[2], k = S[3], I = Math.max(Math.ceil(Math.abs(k) / (i / 4)), 1);
-    k /= I;
-    for (var _ = 0; _ < I; _++)
+    var S = t(s, a, o, l, u, f, c, p, g, d), w = [], y = S[2], k = S[3], B = Math.max(Math.ceil(Math.abs(k) / (i / 4)), 1);
+    k /= B;
+    for (var _ = 0; _ < B; _++)
       w.push(r(y, k)), y += k;
     return w.map(function(P) {
       for (var T = 0; T < P.length; T += 2) {
@@ -411,7 +411,7 @@ function Ie() {
   }, mt;
 }
 var xt, jt;
-function Be() {
+function Ie() {
   if (jt) return xt;
   jt = 1;
   var i = 1e-10, e = Math.PI / 180;
@@ -443,7 +443,7 @@ var bt, Wt;
 function Ne() {
   if (Wt) return bt;
   Wt = 1;
-  var i = Pe(), e = Ee(), t = re(), r = Ie(), n = Be();
+  var i = Pe(), e = Ee(), t = re(), r = Be(), n = Ie();
   function s(a) {
     if (!(this instanceof s))
       return new s(a);
@@ -886,7 +886,7 @@ var O = (function() {
     }
     return a;
   }, i;
-})(), B = (function() {
+})(), I = (function() {
   function i(e) {
     this.color = e;
   }
@@ -906,7 +906,7 @@ var O = (function() {
     return e.xmlSpace = this.xmlSpace, e.whiteSpace = this.whiteSpace, e.fill = this.fill, e.fillOpacity = this.fillOpacity, e.fontFamily = this.fontFamily, e.fontSize = this.fontSize, e.fontStyle = this.fontStyle, e.fontWeight = this.fontWeight, e.opacity = this.opacity, e.stroke = this.stroke, e.strokeDasharray = this.strokeDasharray, e.strokeDashoffset = this.strokeDashoffset, e.strokeLinecap = this.strokeLinecap, e.strokeLinejoin = this.strokeLinejoin, e.strokeMiterlimit = this.strokeMiterlimit, e.strokeOpacity = this.strokeOpacity, e.strokeWidth = this.strokeWidth, e.textAnchor = this.textAnchor, e.alignmentBaseline = this.alignmentBaseline, e.visibility = this.visibility, e.color = this.color, e.fillRule = this.fillRule, e.contextFill = this.contextFill, e.contextStroke = this.contextStroke, e;
   }, i.default = function() {
     var e = new i();
-    return e.xmlSpace = "default", e.whiteSpace = "normal", e.fill = new B(new O("rgb(0, 0, 0)")), e.fillOpacity = 1, e.fontFamily = "times", e.fontSize = 16, e.fontStyle = "normal", e.fontWeight = "normal", e.opacity = 1, e.stroke = null, e.strokeDasharray = null, e.strokeDashoffset = 0, e.strokeLinecap = "butt", e.strokeLinejoin = "miter", e.strokeMiterlimit = 4, e.strokeOpacity = 1, e.strokeWidth = 1, e.alignmentBaseline = "baseline", e.textAnchor = "start", e.visibility = "visible", e.color = new O("rgb(0, 0, 0)"), e.fillRule = "nonzero", e.contextFill = null, e.contextStroke = null, e;
+    return e.xmlSpace = "default", e.whiteSpace = "normal", e.fill = new I(new O("rgb(0, 0, 0)")), e.fillOpacity = 1, e.fontFamily = "times", e.fontSize = 16, e.fontStyle = "normal", e.fontWeight = "normal", e.opacity = 1, e.stroke = null, e.strokeDasharray = null, e.strokeDashoffset = 0, e.strokeLinecap = "butt", e.strokeLinejoin = "miter", e.strokeMiterlimit = 4, e.strokeOpacity = 1, e.strokeWidth = 1, e.alignmentBaseline = "baseline", e.textAnchor = "start", e.visibility = "visible", e.color = new O("rgb(0, 0, 0)"), e.fillRule = "nonzero", e.contextFill = null, e.contextStroke = null, e;
   }, i.getContextColors = function(e, t) {
     t === void 0 && (t = !1);
     var r = {};
@@ -1133,7 +1133,7 @@ function lt(i, e) {
   }
   return f;
 }
-var It = (function() {
+var Bt = (function() {
   function i(e, t) {
     this.element = e, this.children = t, this.parent = null;
   }
@@ -1158,7 +1158,7 @@ var It = (function() {
   }, e.prototype.computeNodeTransformCore = function(t) {
     return t.pdf.unitMatrix;
   }, e;
-})(It), se = (function(i) {
+})(Bt), se = (function(i) {
   function e(t, r, n) {
     var s = i.call(this, r, n) || this;
     return s.pdfGradientType = t, s.contextColor = void 0, s;
@@ -1297,15 +1297,15 @@ function We(i, e) {
       if (u.length === 0) return null;
       if (u.length === 1) {
         var f = u[0].color, c = new O();
-        return c.ok = !0, c.r = f[0], c.g = f[1], c.b = f[2], c.a = u[0].opacity, new B(c);
+        return c.ok = !0, c.r = f[0], c.g = f[1], c.b = f[2], c.a = u[0].opacity, new I(c);
       }
       return new Ve(a, o);
-    })(r, n, e) : n && n instanceof ue ? new je(r, n) : new B(new O("rgb(0, 0, 0)"));
+    })(r, n, e) : n && n instanceof ue ? new je(r, n) : new I(new O("rgb(0, 0, 0)"));
   }
   var s = K(i, e.attributeState);
-  return s.ok ? new B(s) : null;
+  return s.ok ? new I(s) : null;
 }
-function Bt(i, e, t) {
+function It(i, e, t) {
   var r = t || e.element, n = b(r, i.styleSheets, "color");
   if (n) {
     var s = K(n, i.attributeState);
@@ -1327,9 +1327,9 @@ function Bt(i, e, t) {
   if (p) if (p === "none") i.attributeState.stroke = null;
   else {
     var h = K(p, i.attributeState);
-    h.ok && (i.attributeState.stroke = new B(h));
+    h.ok && (i.attributeState.stroke = new I(h));
   }
-  p && i.attributeState.stroke instanceof B && (i.attributeState.contextStroke = i.attributeState.stroke.color), o && i.attributeState.fill instanceof B && (i.attributeState.contextFill = i.attributeState.fill.color);
+  p && i.attributeState.stroke instanceof I && (i.attributeState.contextStroke = i.attributeState.stroke.color), o && i.attributeState.fill instanceof I && (i.attributeState.contextFill = i.attributeState.fill.color);
   var g = b(r, i.styleSheets, "stroke-linecap");
   g && (i.attributeState.strokeLinecap = g);
   var d = b(r, i.styleSheets, "stroke-linejoin");
@@ -1349,9 +1349,9 @@ function Bt(i, e, t) {
   y && (i.attributeState.fontWeight = y);
   var k = b(r, i.styleSheets, "font-style");
   k && (i.attributeState.fontStyle = k);
-  var I = b(r, i.styleSheets, "font-family");
-  if (I) {
-    var _ = Te.parse(I);
+  var B = b(r, i.styleSheets, "font-family");
+  if (B) {
+    var _ = Te.parse(B);
     i.attributeState.fontFamily = (function(W, ft, be) {
       var ye = ae(W.fontStyle, W.fontWeight), Se = be.pdf.getFontList(), at = "";
       return ft.some((function($) {
@@ -1377,13 +1377,13 @@ function Bt(i, e, t) {
 }
 function Nt(i, e, t) {
   var r = 1, n = 1;
-  r *= i.attributeState.fillOpacity, r *= i.attributeState.opacity, i.attributeState.fill instanceof B && i.attributeState.fill.color.a !== void 0 && (r *= i.attributeState.fill.color.a), n *= i.attributeState.strokeOpacity, n *= i.attributeState.opacity, i.attributeState.stroke instanceof B && i.attributeState.stroke.color.a !== void 0 && (n *= i.attributeState.stroke.color.a);
+  r *= i.attributeState.fillOpacity, r *= i.attributeState.opacity, i.attributeState.fill instanceof I && i.attributeState.fill.color.a !== void 0 && (r *= i.attributeState.fill.color.a), n *= i.attributeState.strokeOpacity, n *= i.attributeState.opacity, i.attributeState.stroke instanceof I && i.attributeState.stroke.color.a !== void 0 && (n *= i.attributeState.stroke.color.a);
   var s, a, o = r < 1, l = n < 1;
   if (z(t, "use") ? (o = !0, l = !0, r *= i.attributeState.fill ? 1 : 0, n *= i.attributeState.stroke ? 1 : 0) : i.withinUse && (i.attributeState.fill !== e.attributeState.fill ? (o = !0, r *= i.attributeState.fill ? 1 : 0) : o && !i.attributeState.fill && (r = 0), i.attributeState.stroke !== e.attributeState.stroke ? (l = !0, n *= i.attributeState.stroke ? 1 : 0) : l && !i.attributeState.stroke && (n = 0)), o || l) {
     var u = {};
     o && (u.opacity = r), l && (u["stroke-opacity"] = n), i.pdf.setGState(new Tt(u));
   }
-  if (i.attributeState.fill && i.attributeState.fill !== e.attributeState.fill && i.attributeState.fill instanceof B && i.attributeState.fill.color.ok && !z(t, "text") && i.pdf.setFillColor(i.attributeState.fill.color.r, i.attributeState.fill.color.g, i.attributeState.fill.color.b), i.attributeState.strokeWidth !== e.attributeState.strokeWidth && i.pdf.setLineWidth(i.attributeState.strokeWidth), i.attributeState.stroke !== e.attributeState.stroke && i.attributeState.stroke instanceof B && i.pdf.setDrawColor(i.attributeState.stroke.color.r, i.attributeState.stroke.color.g, i.attributeState.stroke.color.b), i.attributeState.strokeLinecap !== e.attributeState.strokeLinecap && i.pdf.setLineCap(i.attributeState.strokeLinecap), i.attributeState.strokeLinejoin !== e.attributeState.strokeLinejoin && i.pdf.setLineJoin(i.attributeState.strokeLinejoin), i.attributeState.strokeDasharray === e.attributeState.strokeDasharray && i.attributeState.strokeDashoffset === e.attributeState.strokeDashoffset || !i.attributeState.strokeDasharray || i.pdf.setLineDashPattern(i.attributeState.strokeDasharray, i.attributeState.strokeDashoffset), i.attributeState.strokeMiterlimit !== e.attributeState.strokeMiterlimit && i.pdf.setLineMiterLimit(i.attributeState.strokeMiterlimit), i.attributeState.fontFamily !== e.attributeState.fontFamily && (s = V.hasOwnProperty(i.attributeState.fontFamily) ? V[i.attributeState.fontFamily] : i.attributeState.fontFamily), i.attributeState.fill && i.attributeState.fill !== e.attributeState.fill && i.attributeState.fill instanceof B && i.attributeState.fill.color.ok) {
+  if (i.attributeState.fill && i.attributeState.fill !== e.attributeState.fill && i.attributeState.fill instanceof I && i.attributeState.fill.color.ok && !z(t, "text") && i.pdf.setFillColor(i.attributeState.fill.color.r, i.attributeState.fill.color.g, i.attributeState.fill.color.b), i.attributeState.strokeWidth !== e.attributeState.strokeWidth && i.pdf.setLineWidth(i.attributeState.strokeWidth), i.attributeState.stroke !== e.attributeState.stroke && i.attributeState.stroke instanceof I && i.pdf.setDrawColor(i.attributeState.stroke.color.r, i.attributeState.stroke.color.g, i.attributeState.stroke.color.b), i.attributeState.strokeLinecap !== e.attributeState.strokeLinecap && i.pdf.setLineCap(i.attributeState.strokeLinecap), i.attributeState.strokeLinejoin !== e.attributeState.strokeLinejoin && i.pdf.setLineJoin(i.attributeState.strokeLinejoin), i.attributeState.strokeDasharray === e.attributeState.strokeDasharray && i.attributeState.strokeDashoffset === e.attributeState.strokeDashoffset || !i.attributeState.strokeDasharray || i.pdf.setLineDashPattern(i.attributeState.strokeDasharray, i.attributeState.strokeDashoffset), i.attributeState.strokeMiterlimit !== e.attributeState.strokeMiterlimit && i.pdf.setLineMiterLimit(i.attributeState.strokeMiterlimit), i.attributeState.fontFamily !== e.attributeState.fontFamily && (s = V.hasOwnProperty(i.attributeState.fontFamily) ? V[i.attributeState.fontFamily] : i.attributeState.fontFamily), i.attributeState.fill && i.attributeState.fill !== e.attributeState.fill && i.attributeState.fill instanceof I && i.attributeState.fill.color.ok) {
     var f = i.attributeState.fill.color;
     i.pdf.setTextColor(f.r, f.g, f.b);
   }
@@ -1419,7 +1419,7 @@ var ce = (function(i) {
       return F(this, (function(o) {
         switch (o.label) {
           case 0:
-            return this.isVisible(t.attributeState.visibility !== "hidden", t) ? ((r = t.clone()).transform = r.pdf.matrixMult(this.computeNodeTransform(r), t.transform), Bt(r, this), n = b(this.element, r.styleSheets, "clip-path"), (s = n && n !== "none") ? (a = he(n, 0, r)) ? a.isVisible(!0, r) ? (r.pdf.saveGraphicsState(), [4, fe(this, a, r)]) : [3, 2] : [3, 4] : [3, 5]) : [2];
+            return this.isVisible(t.attributeState.visibility !== "hidden", t) ? ((r = t.clone()).transform = r.pdf.matrixMult(this.computeNodeTransform(r), t.transform), It(r, this), n = b(this.element, r.styleSheets, "clip-path"), (s = n && n !== "none") ? (a = he(n, 0, r)) ? a.isVisible(!0, r) ? (r.pdf.saveGraphicsState(), [4, fe(this, a, r)]) : [3, 2] : [3, 4] : [3, 5]) : [2];
           case 1:
             return o.sent(), [3, 3];
           case 2:
@@ -1436,7 +1436,7 @@ var ce = (function(i) {
       }));
     }));
   }, e;
-})(It), ut = (function(i) {
+})(Bt), ut = (function(i) {
   function e() {
     return i !== null && i.apply(this, arguments) || this;
   }
@@ -1523,8 +1523,8 @@ var ce = (function(i) {
           } else x instanceof Ft && (f = Q([y.x, y.y], [c.x, c.y]), w && (k = y instanceof E ? f : tt(st(u, f)), o.addMarker(new G(s, [y.x, y.y], Math.atan2(k[1], k[0])))), S && (k = tt(st(f, p)), o.addMarker(new G(a, [c.x, c.y], Math.atan2(k[1], k[0])))), u = f);
         else {
           c = x instanceof E && x;
-          var I = l[m + 1];
-          (I instanceof E || I instanceof U || I instanceof q) && (p = Q([c.x, c.y], [I.x, I.y]));
+          var B = l[m + 1];
+          (B instanceof E || B instanceof U || B instanceof q) && (p = Q([c.x, c.y], [B.x, B.y]));
         }
       }, d = 0; d < l.length; d++) g(d);
     }
@@ -1575,7 +1575,7 @@ var Ge = (function(i) {
       return F(this, (function(l) {
         switch (l.label) {
           case 0:
-            return this.isVisible(t.attributeState.visibility !== "hidden", t) ? ((r = t.clone()).transform = r.pdf.unitMatrix, Bt(r, this), n = b(this.element, r.styleSheets, "clip-path"), n && n !== "none" && (s = he(n, 0, r)) ? s.isVisible(!0, r) ? [4, fe(this, s, r)] : [3, 2] : [3, 3]) : [2];
+            return this.isVisible(t.attributeState.visibility !== "hidden", t) ? ((r = t.clone()).transform = r.pdf.unitMatrix, It(r, this), n = b(this.element, r.styleSheets, "clip-path"), n && n !== "none" && (s = he(n, 0, r)) ? s.isVisible(!0, r) ? [4, fe(this, s, r)] : [3, 2] : [3, 3]) : [2];
           case 1:
             return l.sent(), [3, 3];
           case 2:
@@ -1794,7 +1794,7 @@ var Mt = (function() {
               a = new Mt(this, b(x, n.styleSheets, "text-anchor") || n.attributeState.textAnchor, 0, y), s.push({ type: "x", chunk: a });
             }
             var k = n.clone();
-            Bt(k, t, x), this.processTSpans(t, x, k, s, a, o);
+            It(k, t, x), this.processTSpans(t, x, k, s, a, o);
           }
         }
       }
@@ -1802,13 +1802,13 @@ var Mt = (function() {
     return c;
   }, e.prototype.renderCore = function(t) {
     return C(this, void 0, void 0, (function() {
-      var r, n, s, a, o, l, u, f, c, p, h, g, d, m, x, v, S, w, y, k, I, _, P, T;
+      var r, n, s, a, o, l, u, f, c, p, h, g, d, m, x, v, S, w, y, k, B, _, P, T;
       return F(this, (function(D) {
         if (t.pdf.saveGraphicsState(), r = 0, n = 0, s = 1, a = t.pdf.getFontSize(), o = H(this.element.getAttribute("x"), a), l = H(this.element.getAttribute("y"), a), u = H(this.element.getAttribute("dx"), a), f = H(this.element.getAttribute("dy"), a), c = parseFloat(this.element.getAttribute("textLength") || "0"), p = t.attributeState.visibility, this.element.childElementCount === 0) h = this.element.textContent || "", g = (function(A, R) {
           return A = Kt(A = Qt(A)), R.xmlSpace === "preserve" || R.whiteSpace === "pre" || (A = Jt(A = A.trim())), A;
         })(h, t.attributeState), d = Zt(this.element, g, t), r = t.textMeasure.getTextOffset(d, t.attributeState), c > 0 && (m = t.textMeasure.measureTextWidth(d, t.attributeState), !(t.attributeState.xmlSpace === "preserve" || t.attributeState.whiteSpace === "pre") && h.match(/^\s/) && (s = 0), n = (c - m) / (d.length - s) || 0), p === "visible" && (x = t.attributeState.alignmentBaseline, v = ge(t.attributeState), t.pdf.text(d, o + u - r, l + f, { baseline: ne(x), angle: t.transform, renderingMode: v === "fill" ? void 0 : v, charSpace: n === 0 ? void 0 : n }), S = l + f + 0.1 * a, this.boundingBox = [o + u - r, S - a, t.textMeasure.measureTextWidth(d, t.attributeState), a]);
         else {
-          for (w = [], y = new Mt(this, t.attributeState.textAnchor, o + u, l + f), w.push({ type: "", chunk: y }), k = this.processTSpans(this, this.element, t, w, y, { prevText: " ", prevContext: t }), s = k ? 0 : 1, I = !0, _ = w.length - 1; _ >= 0; _--) I && (I = w[_].chunk.rightTrimText());
+          for (w = [], y = new Mt(this, t.attributeState.textAnchor, o + u, l + f), w.push({ type: "", chunk: y }), k = this.processTSpans(this, this.element, t, w, y, { prevText: " ", prevContext: t }), s = k ? 0 : 1, B = !0, _ = w.length - 1; _ >= 0; _--) B && (B = w[_].chunk.rightTrimText());
           c > 0 && (P = 0, T = 0, w.forEach((function(A) {
             var R = A.chunk;
             R.measureText(t), R.textMeasures.forEach((function(N) {
@@ -2005,7 +2005,7 @@ var Mt = (function() {
   }, e.prototype.isVisible = function(t, r) {
     return j(this, t, r);
   }, e;
-})(It), tr = (function(i) {
+})(Bt), tr = (function(i) {
   function e() {
     return i !== null && i.apply(this, arguments) || this;
   }
@@ -2017,9 +2017,9 @@ var Mt = (function() {
           case 0:
             r = this.computeNodeTransform(t), n = this.getBoundingBox(t), t.pdf.beginFormObject(n[0], n[1], n[2], n[3], r), s = J.getContextColors(t), (function(f) {
               var c = f.attributeState, p = f.pdf, h = 1, g = 1;
-              h *= c.fillOpacity, h *= c.opacity, c.fill instanceof B && c.fill.color.a !== void 0 && (h *= c.fill.color.a), g *= c.strokeOpacity, g *= c.opacity, c.stroke instanceof B && c.stroke.color.a !== void 0 && (g *= c.stroke.color.a);
+              h *= c.fillOpacity, h *= c.opacity, c.fill instanceof I && c.fill.color.a !== void 0 && (h *= c.fill.color.a), g *= c.strokeOpacity, g *= c.opacity, c.stroke instanceof I && c.stroke.color.a !== void 0 && (g *= c.stroke.color.a);
               var d, m = {};
-              if (m.opacity = h, m["stroke-opacity"] = g, p.setGState(new Tt(m)), c.fill && c.fill instanceof B && c.fill.color.ok ? p.setFillColor(c.fill.color.r, c.fill.color.g, c.fill.color.b) : p.setFillColor(0, 0, 0), p.setLineWidth(c.strokeWidth), c.stroke instanceof B ? p.setDrawColor(c.stroke.color.r, c.stroke.color.g, c.stroke.color.b) : p.setDrawColor(0, 0, 0), p.setLineCap(c.strokeLinecap), p.setLineJoin(c.strokeLinejoin), c.strokeDasharray ? p.setLineDashPattern(c.strokeDasharray, c.strokeDashoffset) : p.setLineDashPattern([], 0), p.setLineMiterLimit(c.strokeMiterlimit), d = V.hasOwnProperty(c.fontFamily) ? V[c.fontFamily] : c.fontFamily, c.fill && c.fill instanceof B && c.fill.color.ok) {
+              if (m.opacity = h, m["stroke-opacity"] = g, p.setGState(new Tt(m)), c.fill && c.fill instanceof I && c.fill.color.ok ? p.setFillColor(c.fill.color.r, c.fill.color.g, c.fill.color.b) : p.setFillColor(0, 0, 0), p.setLineWidth(c.strokeWidth), c.stroke instanceof I ? p.setDrawColor(c.stroke.color.r, c.stroke.color.g, c.stroke.color.b) : p.setDrawColor(0, 0, 0), p.setLineCap(c.strokeLinecap), p.setLineJoin(c.strokeLinejoin), c.strokeDasharray ? p.setLineDashPattern(c.strokeDasharray, c.strokeDashoffset) : p.setLineDashPattern([], 0), p.setLineMiterLimit(c.strokeMiterlimit), d = V.hasOwnProperty(c.fontFamily) ? V[c.fontFamily] : c.fontFamily, c.fill && c.fill instanceof I && c.fill.color.ok) {
                 var x = c.fill.color;
                 p.setTextColor(x.r, x.g, x.b);
               } else p.setTextColor(0, 0, 0);
