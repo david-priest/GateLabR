@@ -2,11 +2,9 @@
   <img src="man/figures/gatelabr-logo.png" alt="GateLabR" width="280">
 </h1>
 
-<p align="center"><b>Interactive manual gating for <code>SingleCellExperiment</code> objects in R.</b></p>
+<p align="center"><b>Gate a <code>SingleCellExperiment</code> by hand, from your R session.</b></p>
 
-<p align="center">
-  Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS import, fluorescence compensation, hierarchical population trees, and Gating-ML exchange, all persisted inside the object.
-</p>
+<p align="center">Open the GateLab app on the object, draw gates on its samples, and read the populations back in R. The gating is stored in the object.</p>
 
 <p align="center">
   <a href="https://doi.org/10.5281/zenodo.20404387"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a>
@@ -23,23 +21,23 @@
   <a href="https://david-priest.github.io/GateLabR"><b>Documentation</b></a> · <a href="#installation">Installation</a> · <a href="https://github.com/david-priest/GateLab">GateLab in your browser</a>
 </p>
 
-GateLabR runs the same TypeScript/React interface as GateLab, backed by a thin
-R host for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on
-[`SingleCellExperiment`](https://bioconductor.org/packages/SingleCellExperiment/)
-objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST,
-diffcyt) where the events already live in R as an SCE and you want a fast,
-reproducible alternative to round-tripping through FlowJo or Cytobank just to
-draw a few gates.
+GateLabR opens the [GateLab](https://github.com/david-priest/GateLab) gating application on a [`SingleCellExperiment`](https://bioconductor.org/packages/SingleCellExperiment/) from an R session, for flow cytometry and mass cytometry (CyTOF) data. It does three things.
 
-Gates are drawn on an interactive D3.js canvas. Gates, populations, scales,
-assay bindings, compensation provenance and illustration settings persist in
-the SCE via `metadata()`, while explicit commands write panel labels to
-`rowData()` and population, division or sample annotations to `colData()`.
+The object is gated where it is. `launchGatingApp(sce)` opens a browser tab on its samples, one at a time or pooled, drawing the assay chosen in the header. Rectangle, polygon, ellipse and quadrant gates build one population tree for the object. The interface is GateLab's, with its Strategy, Illustration, Layout, Plotting and Statistics tabs, and with shiny 1.14 or later the R prompt stays free while the tab is open.
 
-For the same style of manual gating directly from FCS files without an R installation,
-see [GateLab](https://github.com/david-priest/GateLab), the companion browser app.
-GateLabR is the better fit when data already live in a `SingleCellExperiment` or when
-gated populations need to return directly to `colData` for a Bioconductor pipeline.
+The gating is stored in the object. Gates, populations, scales, compensation records and figure settings are written to `metadata(sce)` as the work is done and restored when the object is opened again, so saving the object saves the gating.
+
+Populations come back to R as data. "Save to SCE" stores which events each population holds, read with `gatelabPopulations()`, `gatelabHierarchy()` and `gatelabLeafPopulation()`. "Export populations to colData" writes a column per population for `diffcyt`, `CATALYST` or any other tool that reads the object.
+
+It exists because a Bioconductor cytometry analysis holds its events in a `SingleCellExperiment`, while manual gating is usually done in a separate program on FCS files, and a gate drawn there has to be exported and matched back to the object's events. GateLabR gates the object itself, so a gated population is a column of the data the next step already uses.
+
+```r
+remotes::install_github("david-priest/GateLabR")
+library(GateLabR)
+launchGatingApp(sce)
+```
+
+GateLabR starts from a `SingleCellExperiment` and does not read FCS files. To gate FCS files without R, use [GateLab](https://github.com/david-priest/GateLab) in the browser, which is the same application.
 
 ## Features
 
@@ -113,13 +111,6 @@ On agents: an agent reaches the open tab through a relay on your computer, an MC
 
 FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent
 project and is not affiliated with or endorsed by BD or FlowJo.
-
-GateLabR suits two workflows. If your data already lives in R as a
-`SingleCellExperiment`, it lets you gate without round-tripping to FlowJo or
-Cytobank and hand populations straight to `diffcyt` / `CATALYST`. But it's equally
-at home as a plain **FCS-in → gate → FCS / stats / Gating-ML out** tool: import
-`.fcs` files, gate interactively in the GUI, and export — no R fluency needed
-beyond the one line to launch it.
 
 ## Installation
 
@@ -302,13 +293,6 @@ Built on top of the Bioconductor stack
 If you run into a bug, or there's a feature you'd find useful, please
 [open an issue](https://github.com/david-priest/GateLabR/issues) or get in
 touch — I'm happy to take a look and would be glad to implement it.
-
-**A note on `.fcs` import:** import has been thoroughly tested on files from a
-BD spectral flow cytometer, but not yet on files from other vendors (Beckman
-Coulter, Cytek, Sony, Thermo, Miltenyi, …). Channel and instrument detection
-is designed to be vendor-agnostic, but if a file imports incorrectly — missing
-markers, wrong channels, or a mis-detected flow/CyTOF mode — please let me
-know (ideally with the file's channel names) and I'll get it sorted.
 
 **A note on compensation:** embedded-`$SPILLOVER` compensation has been
 validated on conventional fluorescence data from a BD FACSAria III /
