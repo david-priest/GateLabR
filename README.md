@@ -5,8 +5,7 @@
 <p align="center"><b>Interactive manual gating for <code>SingleCellExperiment</code> objects in R.</b></p>
 
 <p align="center">
-  Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS import, fluorescence compensation,<br>
-  hierarchical population trees, and Gating-ML exchange, all persisted inside the object.
+  Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS import, fluorescence compensation, hierarchical population trees, and Gating-ML exchange, all persisted inside the object.
 </p>
 
 <p align="center">
