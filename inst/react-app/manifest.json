@@ -1,12 +1,12 @@
 {
   "../../../../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js": {
-    "file": "index.es-BYLQNE_x.js",
+    "file": "index.es-CBOnedfM.js",
     "name": "index.es",
     "src": "../../../../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-yoUAa8u0.js",
-      "_jspdf.es.min-DK7A5gNy.js"
+      "_embed-D9nrI8ky.js",
+      "_jspdf.es.min-B4w4X1JX.js"
     ]
   },
   "../../../../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs": {
@@ -22,31 +22,31 @@
     "isDynamicEntry": true
   },
   "../../../../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js": {
-    "file": "svg2pdf.es.min-Dtzcnvt_.js",
+    "file": "svg2pdf.es.min-uZV2-9-T.js",
     "name": "svg2pdf.es.min",
     "src": "../../../../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-yoUAa8u0.js",
-      "_jspdf.es.min-DK7A5gNy.js"
+      "_embed-D9nrI8ky.js",
+      "_jspdf.es.min-B4w4X1JX.js"
     ]
   },
-  "_embed-yoUAa8u0.js": {
-    "file": "embed-yoUAa8u0.js",
+  "_embed-D9nrI8ky.js": {
+    "file": "embed-D9nrI8ky.js",
     "name": "embed",
     "dynamicImports": [
       "../../../../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
-      "_jspdf.es.min-DK7A5gNy.js",
+      "_jspdf.es.min-B4w4X1JX.js",
       "src/ui/CompensationTab.tsx",
       "src/ui/LayoutTab.tsx"
     ]
   },
-  "_jspdf.es.min-DK7A5gNy.js": {
-    "file": "jspdf.es.min-DK7A5gNy.js",
+  "_jspdf.es.min-B4w4X1JX.js": {
+    "file": "jspdf.es.min-B4w4X1JX.js",
     "name": "jspdf.es.min",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-yoUAa8u0.js"
+      "_embed-D9nrI8ky.js"
     ],
     "dynamicImports": [
       "../../../../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
@@ -60,31 +60,31 @@
     "src": "src/embed.ts",
     "isEntry": true,
     "imports": [
-      "_embed-yoUAa8u0.js"
+      "_embed-D9nrI8ky.js"
     ]
   },
   "src/ui/CompensationTab.tsx": {
-    "file": "CompensationTab-ChXlemXq.js",
+    "file": "CompensationTab-C5WlpKT9.js",
     "name": "CompensationTab",
     "src": "src/ui/CompensationTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-yoUAa8u0.js"
+      "_embed-D9nrI8ky.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-DK7A5gNy.js"
+      "_jspdf.es.min-B4w4X1JX.js"
     ]
   },
   "src/ui/LayoutTab.tsx": {
-    "file": "LayoutTab-BWITQn-2.js",
+    "file": "LayoutTab-DcmN8P9u.js",
     "name": "LayoutTab",
     "src": "src/ui/LayoutTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-yoUAa8u0.js"
+      "_embed-D9nrI8ky.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-DK7A5gNy.js"
+      "_jspdf.es.min-B4w4X1JX.js"
     ]
   },
   "style.css": {
