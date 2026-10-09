@@ -43,9 +43,10 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
 
 ## Features
 
-- **Draw and edit gates interactively.** Polygon, rectangle and quadrant gates
-  on any pair of channels, with click-and-drag vertex editing, undo / redo, and
-  per-gate colour and label.
+- **Draw and edit gates interactively.** Polygon, rectangle, ellipse and quadrant
+  gates on any pair of channels, with click-and-drag vertex editing, undo / redo,
+  and per-gate colour and label. A gate can be fitted to the events it holds from
+  its right-click menu.
 - **Population trees.** Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent, and a population may exclude a gate (NOT); counts and percentages update live.
 - **Flow and CyTOF modes.** Auto-detects the instrument type from channel
   names. Flow uses per-channel logicle for fluorescence and arcsinh for
@@ -56,7 +57,9 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
   R, installs a revisioned full-size SCE assay atomically, preserves the
   original assay, and restores saved compensated assays without recomputation.
   Existing compensated SCE assays can be adopted directly.
-- **Cytobank-compatible Gating-ML 2.0 import / export.** Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, AND populations, and the Boolean NOT of a gate. A population's excluded gate is read from the Gating-ML 2.0 schema's `gating:use-as-complement="true"` on the gate's reference, which GateLab now writes in its Cytobank format, and from `gating:complement="true"`, an attribute outside the schema that GateLab and GateLabR wrote before. An OR population is left out, with everything beneath it, and named in a warning, and the rest of the file is imported; so is a population that uses a gate placed beneath a population that is not its ancestor, which GateLab cannot represent within one parent. Files containing other gate types, transformations GateLab does not read, or gates whose channels cannot be matched to the loaded data are refused before import. (FlowJo uses its own `.wsp` format and does not round-trip Gating-ML.)
+- **Cytobank-compatible Gating-ML 2.0 import / export.** Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, AND populations, and the Boolean NOT of a gate. A population's excluded gate is read from the Gating-ML 2.0 schema's `gating:use-as-complement="true"` on the gate's reference, which GateLab now writes in its Cytobank format, and from `gating:complement="true"`, an attribute outside the schema that GateLab and GateLabR wrote before. An OR population is left out, with everything beneath it, and named in a warning, and the rest of the file is imported; so is a population that uses a gate placed beneath a population that is not its ancestor, which GateLab cannot represent within one parent. Files containing other gate types, transformations GateLab does not read, or gates whose channels cannot be matched to the loaded data are refused before import. FlowJo workspaces are read separately (next item).
+- **FlowJo workspace import.** The gating strategy of a FlowJo workspace (`.wsp`) can be imported onto the object's samples from the Import menu, through the same core as GateLab. After an import, a report sets the event count FlowJo recorded for each population beside GateLabR's own, and says whether a difference arises at a population's own gate or is inherited from one above it.
+- **Agent access.** An AI agent (Claude Code, or anything that speaks [MCP](https://modelcontextprotocol.io)) can read the gating in the open session and propose gates, which appear in the tab at once as ordinary gates with a badge saying who made them and why. `launchGatingApp(sce, agent = TRUE)` opens the tab connected to the agent's relay; setting the relay up is described in [GateLab's README](https://github.com/david-priest/GateLab#agents-letting-an-ai-assistant-draw-gates). Saving stays yours.
 - **Workspace persistence.** Gates, populations, scales, active assay,
   compensation provenance and illustration settings are saved inside the SCE
   and re-loaded automatically.
@@ -79,12 +82,13 @@ gated populations need to return directly to `colData` for a Bioconductor pipeli
 - **Composition preview.** A Proportions tab for quick stacked-bar and boxplot
   previews of any `colData` composition (e.g. cluster or division proportions by
   condition), with per-sample averaging and faceting.
-- **Figure export.** Strategy and Illustration tabs render publication-style
-  multi-panel grids. Illustration includes biplot and histogram grids, stacked
-  ridgelines, and population-by-channel median / mean expression heatmaps with
-  per-channel, per-population or z-score scaling and three colour palettes. SVG
-  export uses `gridSVG` to produce Adobe Illustrator-friendly grouped vector
-  files (rasterised data, vector axes / gates / labels).
+- **Figure export.** Strategy, Illustration and Layout tabs render publication-style
+  panels. Strategy traces the gating path to one population or to several, with an
+  arrow from each gate to the plot of the population it makes. Illustration includes
+  biplot and histogram grids, stacked ridgelines, and population-by-channel median /
+  mean expression heatmaps with per-channel, per-population or z-score scaling and
+  three colour palettes. Layout places plots and text on a page. Figures export as
+  SVG, PDF or PNG.
 
 ## How GateLabR compares with other tools
 
@@ -94,15 +98,18 @@ instead of replacing it — while keeping full R access to the same object.
 
 | | GateLabR | FlowJo | Cytobank | CytoExploreR / flowGate |
 |---|---|---|---|---|
-| Interface | GUI (Shiny) **+** full R access | GUI (desktop, proprietary) | GUI (cloud, proprietary) | R, with interactive gating helpers |
+| Interface | GUI (the GateLab app in a browser tab, served from R) **+** full R access | GUI (desktop, proprietary) | GUI (cloud, proprietary) | R, with interactive gating helpers |
 | Data object | `SingleCellExperiment` (Bioconductor-native) | `.wsp` workspace | cloud workspace | `GatingSet` (flowWorkspace) |
 | Cost / licence | Free, MIT, open source | Commercial | Commercial | Free, open source |
 | Flow / CyTOF | Both (auto-detected) | Flow-focused | Both | Flow-focused |
 | Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
-| **Gating-ML 2.0 exchange** | **Yes (AND populations)** | **No** | **Yes** | Partial |
+| Gate exchange | Gating-ML 2.0 import and export (AND populations); FlowJo `.wsp` import | `.wsp` / `.wspt` workspace formats | Gating-ML 2.0 import and export | `flowWorkspace` / `CytoML` ecosystem |
+| Access for AI agents | An MCP server: an agent reads the gating and proposes gates in the open session | No MCP server documented | No MCP server documented | Scripted in R |
 | Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
 
-Note the **Gating-ML row**: of the two dominant GUIs, **only Cytobank** exchanges ISAC Gating-ML 2.0 — **FlowJo does not** (it uses its own `.wsp` format). GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank. A population that excludes a gate is written with the schema's `gating:use-as-complement` in the Cytobank format and through a NOT gate in the standard format, and both are read back, as is the `gating:complement` attribute GateLab wrote before; such a population has not been shown to cross to Cytobank. OR populations are not imported.
+On gate exchange: GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank, and it reads the gating strategy of a FlowJo workspace (`.wsp`). A population that excludes a gate is written with the schema's `gating:use-as-complement` in the Cytobank format and through a NOT gate in the standard format, and both are read back, as is the `gating:complement` attribute GateLab wrote before; such a population has not been shown to cross to Cytobank. OR populations are not imported.
+
+On agents: an agent reaches the open tab through a relay on your computer, an MCP server kept in GateLab's `tools/agent-mcp`, and `launchGatingApp(sce, agent = TRUE)` opens the tab connected to it. Its gates go through the same session as yours, and nothing is saved to the object until you save. What the agent reads (counts, histograms, medians, pictures of the plot) goes to the agent's model provider; the object stays in your R session. In October 2026 we found no MCP server documented for FlowJo or Cytobank.
 
 FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent
 project and is not affiliated with or endorsed by BD or FlowJo.
@@ -176,7 +183,7 @@ call blocks until the app is stopped. The three-column layout is:
 | Panel | Content |
 |------|---------|
 | Left | SCE samples and workspace / Gating-ML / FCS actions |
-| Centre | Interactive plot (tabs: Gating &#124; Strategy &#124; Illustration &#124; Statistics &#124; Panel) |
+| Centre | Interactive plot (tabs: Gating &#124; Strategy &#124; Illustration &#124; Layout &#124; Plotting &#124; Division &#124; Statistics &#124; Metadata &#124; Panel &#124; Scales &#124; Compensation) |
 | Right | Gates list, population tree, bulk-rename controls |
 
 ### Typical workflow
@@ -238,10 +245,10 @@ The established `metadata(sce)$gating_workspace` mirror remains available for co
 
 ## File formats supported
 
-- **Input:** `SingleCellExperiment` assays and Cytobank Gating-ML 2.0 XML.
+- **Input:** `SingleCellExperiment` assays, Cytobank Gating-ML 2.0 XML and FlowJo workspaces (`.wsp`).
 - **Output:** FCS, Gating-ML 2.0 (Cytobank-compatible *or* standard
   re-importable), SCE `.rds` / `.qs2` (with embedded workspace and assays),
-  per-population colData columns, CSV statistics, SVG / PDF figures.
+  per-population colData columns, CSV statistics, SVG / PDF / PNG figures.
 
 ## Related
 
