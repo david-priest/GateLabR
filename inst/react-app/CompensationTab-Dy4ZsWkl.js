@@ -1,4 +1,4 @@
-import { D as ns, r as br, l as yr, s as jr, z as wr, f as Nr, u as Be, a as w, j as e, b as xe, c as re, p as tn, v as dt, d as Cr, e as Sr, g as Mr, S as Ws, h as kr, i as Bt, k as qs, F as Gs, m as Er, n as Ar, o as Tr, C as $r, q as Fr } from "./embed-BIRLNTqU.js";
+import { D as ns, r as br, l as yr, s as jr, z as wr, f as Nr, u as Be, a as w, j as e, b as xe, c as re, p as tn, v as dt, d as Cr, e as Sr, g as Mr, S as Ws, h as kr, i as Bt, k as qs, F as Gs, m as Er, n as Ar, o as Tr, C as $r, q as Fr } from "./embed-DIqKqh0w.js";
 function Zt(t) {
   const i = t.trim().normalize("NFC"), a = i.match(/^([A-Z][a-z]?)(\d{2,3})(?:Di)?(?:$|[_\s(\-])/);
   if (a)
@@ -710,7 +710,7 @@ async function Hr(t, i, a, o) {
   if (l === 0) throw new Error("No compensation pairs are available to export.");
   const h = Ni(i.sampleName, i.populationName);
   if (a === "pdf") {
-    const { jsPDF: g } = await import("./jspdf.es.min-COV5huYu.js").then((S) => S.j), j = new g({ orientation: "landscape", unit: "pt", format: "a4", compress: !0 }), F = j.internal.pageSize.getWidth(), T = j.internal.pageSize.getHeight();
+    const { jsPDF: g } = await import("./jspdf.es.min-BDIRCphk.js").then((S) => S.j), j = new g({ orientation: "landscape", unit: "pt", format: "a4", compress: !0 }), F = j.internal.pageSize.getWidth(), T = j.internal.pageSize.getHeight();
     for (let S = 0; S < l; S++) {
       S > 0 && j.addPage("a4", "landscape");
       const A = t.slice(
