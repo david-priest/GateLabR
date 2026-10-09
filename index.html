@@ -79,7 +79,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 </h2>
 <ul>
 <li>
-<strong>Draw and edit gates interactively.</strong> Polygon, rectangle and quadrant gates on any pair of channels, with click-and-drag vertex editing, undo / redo, and per-gate colour and label.</li>
+<strong>Draw and edit gates interactively.</strong> Polygon, rectangle, ellipse and quadrant gates on any pair of channels, with click-and-drag vertex editing, undo / redo, and per-gate colour and label. A gate can be fitted to the events it holds from its right-click menu.</li>
 <li>
 <strong>Population trees.</strong> Build hierarchies of populations from gate references — each population is the intersection (AND) of its gates within its parent, and a population may exclude a gate (NOT); counts and percentages update live.</li>
 <li>
@@ -87,7 +87,11 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <li>
 <strong>Flow and CyTOF compensation.</strong> Inspect, edit, sweep and apply spill matrices in the shared Compensation tab. GateLabR performs the durable calculation in R, installs a revisioned full-size SCE assay atomically, preserves the original assay, and restores saved compensated assays without recomputation. Existing compensated SCE assays can be adopted directly.</li>
 <li>
-<strong>Cytobank-compatible Gating-ML 2.0 import / export.</strong> Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, AND populations, and the Boolean NOT of a gate. A population’s excluded gate is read from the Gating-ML 2.0 schema’s <code>gating:use-as-complement="true"</code> on the gate’s reference, which GateLab now writes in its Cytobank format, and from <code>gating:complement="true"</code>, an attribute outside the schema that GateLab and GateLabR wrote before. An OR population is left out, with everything beneath it, and named in a warning, and the rest of the file is imported; so is a population that uses a gate placed beneath a population that is not its ancestor, which GateLab cannot represent within one parent. Files containing other gate types, transformations GateLab does not read, or gates whose channels cannot be matched to the loaded data are refused before import. (FlowJo uses its own <code>.wsp</code> format and does not round-trip Gating-ML.)</li>
+<strong>Cytobank-compatible Gating-ML 2.0 import / export.</strong> Exchange gates and population trees with Cytobank and other ISAC Gating-ML 2.0 tools. Import is done by the embedded GateLab core in the browser, not in R: it reads rectangle, range, polygon and ellipse gates, AND populations, and the Boolean NOT of a gate. A population’s excluded gate is read from the Gating-ML 2.0 schema’s <code>gating:use-as-complement="true"</code> on the gate’s reference, which GateLab now writes in its Cytobank format, and from <code>gating:complement="true"</code>, an attribute outside the schema that GateLab and GateLabR wrote before. An OR population is left out, with everything beneath it, and named in a warning, and the rest of the file is imported; so is a population that uses a gate placed beneath a population that is not its ancestor, which GateLab cannot represent within one parent. Files containing other gate types, transformations GateLab does not read, or gates whose channels cannot be matched to the loaded data are refused before import. FlowJo workspaces are read separately (next item).</li>
+<li>
+<strong>FlowJo workspace import.</strong> The gating strategy of a FlowJo workspace (<code>.wsp</code>) can be imported onto the object’s samples from the Import menu, through the same core as GateLab. After an import, a report sets the event count FlowJo recorded for each population beside GateLabR’s own, and says whether a difference arises at a population’s own gate or is inherited from one above it.</li>
+<li>
+<strong>Agent access.</strong> An AI agent (Claude Code, or anything that speaks <a href="https://modelcontextprotocol.io" class="external-link">MCP</a>) can read the gating in the open session and propose gates, which appear in the tab at once as ordinary gates with a badge saying who made them and why. <code>launchGatingApp(sce, agent = TRUE)</code> opens the tab connected to the agent’s relay; setting the relay up is described in <a href="https://github.com/david-priest/GateLab#agents-letting-an-ai-assistant-draw-gates" class="external-link">GateLab’s README</a>. Saving stays yours.</li>
 <li>
 <strong>Workspace persistence.</strong> Gates, populations, scales, active assay, compensation provenance and illustration settings are saved inside the SCE and re-loaded automatically.</li>
 <li>
@@ -103,7 +107,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <li>
 <strong>Composition preview.</strong> A Proportions tab for quick stacked-bar and boxplot previews of any <code>colData</code> composition (e.g. cluster or division proportions by condition), with per-sample averaging and faceting.</li>
 <li>
-<strong>Figure export.</strong> Strategy and Illustration tabs render publication-style multi-panel grids. Illustration includes biplot and histogram grids, stacked ridgelines, and population-by-channel median / mean expression heatmaps with per-channel, per-population or z-score scaling and three colour palettes. SVG export uses <code>gridSVG</code> to produce Adobe Illustrator-friendly grouped vector files (rasterised data, vector axes / gates / labels).</li>
+<strong>Figure export.</strong> Strategy, Illustration and Layout tabs render publication-style panels. Strategy traces the gating path to one population or to several, with an arrow from each gate to the plot of the population it makes. Illustration includes biplot and histogram grids, stacked ridgelines, and population-by-channel median / mean expression heatmaps with per-channel, per-population or z-score scaling and three colour palettes. Layout places plots and text on a page. Figures export as SVG, PDF or PNG.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -128,7 +132,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <tbody>
 <tr>
 <td>Interface</td>
-<td>GUI (Shiny) <strong>+</strong> full R access</td>
+<td>GUI (the GateLab app in a browser tab, served from R) <strong>+</strong> full R access</td>
 <td>GUI (desktop, proprietary)</td>
 <td>GUI (cloud, proprietary)</td>
 <td>R, with interactive gating helpers</td>
@@ -166,11 +170,20 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 <code>GatingSet</code> on disk</td>
 </tr>
 <tr>
-<td><strong>Gating-ML 2.0 exchange</strong></td>
-<td><strong>Yes (AND populations)</strong></td>
-<td><strong>No</strong></td>
-<td><strong>Yes</strong></td>
-<td>Partial</td>
+<td>Gate exchange</td>
+<td>Gating-ML 2.0 import and export (AND populations); FlowJo <code>.wsp</code> import</td>
+<td>
+<code>.wsp</code> / <code>.wspt</code> workspace formats</td>
+<td>Gating-ML 2.0 import and export</td>
+<td>
+<code>flowWorkspace</code> / <code>CytoML</code> ecosystem</td>
+</tr>
+<tr>
+<td>Access for AI agents</td>
+<td>An MCP server: an agent reads the gating and proposes gates in the open session</td>
+<td>No MCP server documented</td>
+<td>No MCP server documented</td>
+<td>Scripted in R</td>
 </tr>
 <tr>
 <td>Downstream hand-off</td>
@@ -182,7 +195,8 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 </tr>
 </tbody>
 </table>
-<p>Note the <strong>Gating-ML row</strong>: of the two dominant GUIs, <strong>only Cytobank</strong> exchanges ISAC Gating-ML 2.0 — <strong>FlowJo does not</strong> (it uses its own <code>.wsp</code> format). GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank. A population that excludes a gate is written with the schema’s <code>gating:use-as-complement</code> in the Cytobank format and through a NOT gate in the standard format, and both are read back, as is the <code>gating:complement</code> attribute GateLab wrote before; such a population has not been shown to cross to Cytobank. OR populations are not imported.</p>
+<p>On gate exchange: GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank, and it reads the gating strategy of a FlowJo workspace (<code>.wsp</code>). A population that excludes a gate is written with the schema’s <code>gating:use-as-complement</code> in the Cytobank format and through a NOT gate in the standard format, and both are read back, as is the <code>gating:complement</code> attribute GateLab wrote before; such a population has not been shown to cross to Cytobank. OR populations are not imported.</p>
+<p>On agents: an agent reaches the open tab through a relay on your computer, an MCP server kept in GateLab’s <code>tools/agent-mcp</code>, and <code>launchGatingApp(sce, agent = TRUE)</code> opens the tab connected to it. Its gates go through the same session as yours, and nothing is saved to the object until you save. What the agent reads (counts, histograms, medians, pictures of the plot) goes to the agent’s model provider; the object stays in your R session. In October 2026 we found no MCP server documented for FlowJo or Cytobank.</p>
 <p>FlowJo is a trademark of Becton, Dickinson and Company. GateLabR is an independent project and is not affiliated with or endorsed by BD or FlowJo.</p>
 <p>GateLabR suits two workflows. If your data already lives in R as a <code>SingleCellExperiment</code>, it lets you gate without round-tripping to FlowJo or Cytobank and hand populations straight to <code>diffcyt</code> / <code>CATALYST</code>. But it’s equally at home as a plain <strong>FCS-in → gate → FCS / stats / Gating-ML out</strong> tool: import <code>.fcs</code> files, gate interactively in the GUI, and export — no R fluency needed beyond the one line to launch it.</p>
 </div>
@@ -254,7 +268,7 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 </tr>
 <tr>
 <td>Centre</td>
-<td>Interactive plot (tabs: Gating | Strategy | Illustration | Statistics | Panel)</td>
+<td>Interactive plot (tabs: Gating | Strategy | Illustration | Layout | Plotting | Division | Statistics | Metadata | Panel | Scales | Compensation)</td>
 </tr>
 <tr>
 <td>Right</td>
@@ -321,9 +335,9 @@ Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS
 </h2>
 <ul>
 <li>
-<strong>Input:</strong> <code>SingleCellExperiment</code> assays and Cytobank Gating-ML 2.0 XML.</li>
+<strong>Input:</strong> <code>SingleCellExperiment</code> assays, Cytobank Gating-ML 2.0 XML and FlowJo workspaces (<code>.wsp</code>).</li>
 <li>
-<strong>Output:</strong> FCS, Gating-ML 2.0 (Cytobank-compatible <em>or</em> standard re-importable), SCE <code>.rds</code> / <code>.qs2</code> (with embedded workspace and assays), per-population colData columns, CSV statistics, SVG / PDF figures.</li>
+<strong>Output:</strong> FCS, Gating-ML 2.0 (Cytobank-compatible <em>or</em> standard re-importable), SCE <code>.rds</code> / <code>.qs2</code> (with embedded workspace and assays), per-population colData columns, CSV statistics, SVG / PDF / PNG figures.</li>
 </ul>
 </div>
 <div class="section level2">
