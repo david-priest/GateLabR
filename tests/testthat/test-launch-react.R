@@ -266,3 +266,64 @@ test_that("with a background start the launcher returns the handle, and the cons
   expect_s3_class(record$run_app$app, "shiny.appobj")
   expect_identical(record$backend_stops, 3L)
 })
+
+test_that("the page tells the app which build it is, in the form a version or a commit takes", {
+  dir <- tempfile("gatelabr-core-")
+  dir.create(dir)
+  on.exit(unlink(dir, recursive = TRUE), add = TRUE)
+  writeLines(
+    '{"schemaVersion": 1, "sourceCommit": "89abcdef0123456789abcdef0123456789abcdef"}',
+    file.path(dir, "CORE_PROVENANCE.json")
+  )
+  build <- GateLabR:::.gatelabr_build_identity(dir)
+  expect_identical(build$coreCommit, "89abcdef0123456789abcdef0123456789abcdef")
+  expect_match(build$hostVersion, "^[0-9]+\\.[0-9]+\\.[0-9]+")
+  expect_match(GateLabR:::.gatelabr_build_label(build), "^GateLabR [0-9.]+.* GateLab core 89abcde$")
+
+  rendered <- htmltools::renderTags(GateLabR:::.gatelabr_react_ui("gatelabr-test-core", build))
+  expect_match(rendered$html, "createShinySceHost({\"build\":{", fixed = TRUE)
+  expect_match(rendered$html, "\"coreCommit\":\"89abcdef0123456789abcdef0123456789abcdef\"", fixed = TRUE)
+
+  # A record that is not a commit is left out, and a core with no record still launches.
+  writeLines('{"sourceCommit": "</script><script>alert(1)"}', file.path(dir, "CORE_PROVENANCE.json"))
+  expect_null(GateLabR:::.gatelabr_build_identity(dir)$coreCommit)
+  expect_null(GateLabR:::.gatelabr_build_identity(tempfile("absent-"))$coreCommit)
+  expect_match(GateLabR:::.gatelabr_build_label(list()), "version unknown.*commit unknown")
+  bare <- htmltools::renderTags(GateLabR:::.gatelabr_react_ui("gatelabr-test-core"))
+  expect_match(bare$html, "createShinySceHost()", fixed = TRUE)
+})
+
+test_that("the app keeps one port from session to session unless told otherwise", {
+  old <- options(gatelabr.port = NULL, shiny.port = NULL)
+  on.exit(options(old), add = TRUE)
+
+  # options(gatelabr.port = FALSE), or a port set for every Shiny app, leaves the choice to Shiny.
+  options(gatelabr.port = FALSE)
+  expect_null(GateLabR:::.gatelabr_default_port())
+  options(gatelabr.port = NULL, shiny.port = 5555L)
+  expect_null(GateLabR:::.gatelabr_default_port())
+  options(shiny.port = NULL)
+
+  testthat::local_mocked_bindings(.gatelabr_port_is_free = function(port) TRUE, .package = "GateLabR")
+  # Unset, it is 4283.
+  expect_identical(GateLabR:::.gatelabr_default_port(), 4283L)
+  options(gatelabr.port = 4411)
+  expect_identical(GateLabR:::.gatelabr_default_port(), 4411L)
+  options(gatelabr.port = "not a port")
+  expect_warning(expect_null(GateLabR:::.gatelabr_default_port()), "not a port number")
+
+  # In use, for instance by a second session: Shiny chooses, and the user is told why.
+  options(gatelabr.port = 4283L)
+  testthat::local_mocked_bindings(.gatelabr_port_is_free = function(port) FALSE, .package = "GateLabR")
+  expect_message(expect_null(GateLabR:::.gatelabr_default_port()), "port 4283 is in use")
+})
+
+test_that("a port is found in use by connecting to it", {
+  port <- 47283L
+  socket <- tryCatch(serverSocket(port), error = function(cause) NULL)
+  skip_if(is.null(socket), "the test's port is taken")
+  on.exit(try(close(socket), silent = TRUE), add = TRUE)
+  expect_false(GateLabR:::.gatelabr_port_is_free(port))
+  close(socket)
+  expect_true(GateLabR:::.gatelabr_port_is_free(port))
+})

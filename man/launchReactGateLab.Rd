@@ -21,7 +21,13 @@ the global environment is used.}
 \item{sample_column}{Optional \code{colData} column defining samples. When
 omitted, common sample columns such as \code{sample_id} are detected.}
 
-\item{port}{Port for Shiny (default: auto-select).}
+\item{port}{Port for Shiny. By default the app is served on one port from
+session to session (\code{getOption("gatelabr.port", 4283)}), because the
+browser keeps what the app remembers on its own account (the language, the
+gate edge mode, snapping) per address, and a port chosen afresh in each R
+session loses it. When that port is in use, for instance by a second
+GateLabR session, Shiny chooses one and a message says so.
+\code{options(gatelabr.port = FALSE)} always leaves the choice to Shiny.}
 
 \item{launch.browser}{Whether to open a browser window (default: \code{TRUE}).}
 

@@ -8,7 +8,13 @@
 #'   the global environment is used.
 #' @param sample_column Optional \code{colData} column defining samples. When
 #'   omitted, common sample columns such as \code{sample_id} are detected.
-#' @param port Port for Shiny (default: auto-select).
+#' @param port Port for Shiny. By default the app is served on one port from
+#'   session to session (\code{getOption("gatelabr.port", 4283)}), because the
+#'   browser keeps what the app remembers on its own account (the language, the
+#'   gate edge mode, snapping) per address, and a port chosen afresh in each R
+#'   session loses it. When that port is in use, for instance by a second
+#'   GateLabR session, Shiny chooses one and a message says so.
+#'   \code{options(gatelabr.port = FALSE)} always leaves the choice to Shiny.
 #' @param launch.browser Whether to open a browser window (default: \code{TRUE}).
 #' @param sce_name Optional name of the global-environment variable that gates,
 #'   populations and \code{colData} are written back to. Defaults to the symbol
@@ -146,6 +152,8 @@ launchReactGateLab <- function(
   }
 
   assets <- .gatelabr_react_asset_dir()
+  build <- .gatelabr_build_identity(assets)
+  if (is.null(port)) port <- .gatelabr_default_port()
   prefix <- paste0(
     "gatelabr-core-",
     Sys.getpid(),
@@ -158,7 +166,7 @@ launchReactGateLab <- function(
     "sce-",
     substr(gsub("[^A-Za-z0-9_-]", "-", sce_name), 1L, 48L)
   )
-  ui <- .gatelabr_react_ui(prefix)
+  ui <- .gatelabr_react_ui(prefix, build)
   # This state belongs to the running app, not to an individual browser
   # connection. A page reload creates a new Shiny session; keeping the state
   # outside the session closure ensures that saved workspace/colData changes
@@ -213,6 +221,7 @@ launchReactGateLab <- function(
   message(
     "GateLabR: launching the shared GateLab React interface\n",
     "  SCE: ", sce_name, "\n",
+    "  Build: ", .gatelabr_build_label(build), "\n",
     "  Core assets: ", assets,
     if (is.null(relay_url)) "" else paste0("\n  Agent relay: ", relay_url)
   )
@@ -447,7 +456,83 @@ launchReactGateLab <- function(
   )
 }
 
-.gatelabr_react_ui <- function(resource_prefix) {
+# Which build this is: the package's version, the commit it was installed from where the
+# installer recorded one (remotes and pak do, as RemoteSha), and the GateLab commit the embedded
+# core was built from, which tools/sync_gatelab_core.mjs writes beside the core. The app's own
+# version is the same from one embed to the next, so the core's commit is what tells an installed
+# GateLabR from a newer one. Only values in the form a version or a commit takes are kept: they
+# are written into the page.
+.gatelabr_build_identity <- function(asset_dir) {
+  keep <- function(value, pattern) {
+    if (is.character(value) && length(value) == 1L && !is.na(value) && grepl(pattern, value)) value else NULL
+  }
+  core <- tryCatch(
+    jsonlite::fromJSON(file.path(asset_dir, "CORE_PROVENANCE.json"))$sourceCommit,
+    error = function(cause) NULL,
+    warning = function(cause) NULL
+  )
+  description <- tryCatch(
+    suppressWarnings(utils::packageDescription("GateLabR")),
+    error = function(cause) NULL
+  )
+  if (!is.list(description)) description <- list()
+  Filter(Negate(is.null), list(
+    hostVersion = keep(description$Version, "^[0-9][0-9A-Za-z.-]{0,30}$"),
+    hostCommit = keep(description$RemoteSha, "^[0-9a-f]{7,40}$"),
+    coreCommit = keep(core, "^[0-9a-f]{7,40}$")
+  ))
+}
+
+.gatelabr_build_label <- function(build) {
+  short <- function(commit) substr(commit, 1L, 7L)
+  paste0(
+    "GateLabR ", if (is.null(build$hostVersion)) "(version unknown)" else build$hostVersion,
+    if (is.null(build$hostCommit)) "" else paste0(" (", short(build$hostCommit), ")"),
+    " \u00b7 GateLab core ", if (is.null(build$coreCommit)) "(commit unknown)" else short(build$coreCommit)
+  )
+}
+
+# The port the app is served on when none is asked for. The browser keeps what the app remembers
+# on its own account (language, gate edge mode, snapping) per address, so one port from session
+# to session keeps it, where Shiny's own choice, new in each R session, loses it.
+.gatelabr_default_port <- function() {
+  # A port the user set for every Shiny app is theirs to keep; so is "leave it to Shiny".
+  if (!is.null(getOption("shiny.port"))) return(NULL)
+  port <- getOption("gatelabr.port", 4283L)
+  if (isFALSE(port)) return(NULL)
+  port <- suppressWarnings(as.integer(port))
+  if (length(port) != 1L || is.na(port) || port < 1024L || port > 65535L) {
+    warning("options(gatelabr.port) is not a port number from 1024 to 65535; Shiny chooses the port.", call. = FALSE)
+    return(NULL)
+  }
+  if (.gatelabr_port_is_free(port)) return(port)
+  message(
+    "GateLabR: port ", port, " is in use (another GateLabR session?), so this one opens on a port ",
+    "of Shiny's choosing. The app's own preferences (language, gate edge mode) are kept per port."
+  )
+  NULL
+}
+
+# Free when nothing answers there. Asked by connecting, not by binding: a second listener can
+# bind the port on every interface while the app holds it on the loopback, so a bind succeeds on
+# a port that is taken.
+.gatelabr_port_is_free <- function(port) {
+  connection <- tryCatch(
+    suppressWarnings(socketConnection("127.0.0.1", port, open = "r+", blocking = TRUE, timeout = 1)),
+    error = function(cause) NULL
+  )
+  if (is.null(connection)) return(TRUE)
+  close(connection)
+  FALSE
+}
+
+.gatelabr_react_ui <- function(resource_prefix, build = list()) {
+  # The host adapter is told which build it is in; the header and the About card show it.
+  host_options <- if (length(build)) {
+    as.character(jsonlite::toJSON(list(build = build), auto_unbox = TRUE))
+  } else {
+    ""
+  }
   module <- sprintf(
     paste0(
       "import { mountGateLab, createShinySceHost } from '/%s/gatelab-embed.js';\n",
@@ -457,7 +542,7 @@ launchReactGateLab <- function(
       "  mounted = true;\n",
       "  const root = document.getElementById('gatelabr-react-root');\n",
       "  try {\n",
-      "    mountGateLab(root, { host: createShinySceHost() });\n",
+      "    mountGateLab(root, { host: createShinySceHost(%s) });\n",
       "  } catch (error) {\n",
       "    root.textContent = error instanceof Error ? error.message : String(error);\n",
       "    root.className = 'gatelabr-react-start-error';\n",
@@ -465,7 +550,8 @@ launchReactGateLab <- function(
       "};\n",
       "start();"
     ),
-    resource_prefix
+    resource_prefix,
+    host_options
   )
   # A bare page, not shiny::bootstrapPage(): Bootstrap's stylesheet reached the app, which brings
   # its own, and restyled it (bold labels, a disclosure triangle removed from <summary>, a 10 px
