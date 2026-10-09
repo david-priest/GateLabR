@@ -1,16 +1,28 @@
-# GateLabR
+<h1 align="center">
+  <img src="man/figures/gatelabr-logo.png" alt="GateLabR" width="280">
+</h1>
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg)](https://doi.org/10.5281/zenodo.20404387)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docs](https://img.shields.io/badge/docs-pkgdown-4b9fd5.svg)](https://david-priest.github.io/GateLabR)
+<p align="center"><b>Interactive manual gating for <code>SingleCellExperiment</code> objects in R.</b></p>
 
-**Interactive manual gating for `SingleCellExperiment` objects in R.**
+<p align="center">
+  Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS import, fluorescence compensation,<br>
+  hierarchical population trees, and Gating-ML exchange, all persisted inside the object.
+</p>
 
-*Open-source flow cytometry and CyTOF (mass cytometry) gating app for R —
-with FCS import, fluorescence compensation, hierarchical population trees, and
-Gating-ML exchange, all persisted inside the object.*
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.20404387"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-1b2027" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/works_on-SingleCellExperiment-1b2027" alt="Works on SingleCellExperiment">
+  <img src="https://img.shields.io/badge/exchanges-Gating--ML_2.0-1b2027" alt="Exchanges Gating-ML 2.0">
+</p>
 
-📖 **[Documentation & Getting Started](https://david-priest.github.io/GateLabR)**
+<p align="center">
+  <a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/Documentation-and_getting_started_%E2%86%92-ed4e19?style=for-the-badge&labelColor=ed4e19" alt="Documentation and getting started"></a>
+</p>
+
+<p align="center">
+  <a href="https://david-priest.github.io/GateLabR"><b>Documentation</b></a> · <a href="#installation">Installation</a> · <a href="https://github.com/david-priest/GateLab">GateLab in your browser</a>
+</p>
 
 GateLabR runs the same TypeScript/React interface as GateLab, backed by a thin
 R host for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on

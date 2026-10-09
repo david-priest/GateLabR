@@ -1,5 +1,5 @@
-import { aI as At } from "./embed-D9nrI8ky.js";
-import { E as te, O as Tt, q as we, M as ke } from "./jspdf.es.min-B4w4X1JX.js";
+import { aI as At } from "./embed-B-rwNMXB.js";
+import { E as te, O as Tt, q as we, M as ke } from "./jspdf.es.min-CDmEd3wX.js";
 /*! https://mths.be/cssesc v3.0.0 by @mathias */
 var ct, Lt;
 function Me() {
