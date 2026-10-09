@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "david-priest/GateLab-dev",
-  "sourceCommit": "daca95abf032f4b26324bcde0af1a9c193c2d032",
+  "sourceCommit": "de31a91390e13dde29a0ca30ec4a98211a8ee6dd",
   "buildCommand": "npm run build:embed",
   "hostContractVersion": 1,
   "datasetContractVersion": 1,
@@ -9,17 +9,17 @@
   "colDataContractVersion": 1,
   "compensationContractVersion": 1,
   "files": {
-    "CompensationTab-Dy4ZsWkl.js": "28b1751d12d981a3cd9b0f5583559d47",
-    "LayoutTab-B1F6FtSD.js": "b70f0a8c599cf2d48c925f13392c1f71",
+    "CompensationTab-DMBv084b.js": "f2ffdc2e8065cbfe4b30f08991e7234e",
+    "LayoutTab-DCKwjiPg.js": "8554fb99070818431a7865cdcbe4e381",
     "assets/compensation.worker-CLdvALZC.js": "e5ffa403388513c4de1cadd915b11f75",
-    "embed-DIqKqh0w.js": "9197e097856022b921a3d36419fcc00b",
-    "gatelab-embed.css": "40a26b28353dc34161deefe92db78530",
-    "gatelab-embed.js": "56f0e803c3b6dda1cd0922202cb0c9ab",
+    "embed-BMJr0b2I.js": "2b3ebed125ac382e54d253601e2aa361",
+    "gatelab-embed.css": "3574a8fb31d82bd8fc86d1b1b3031f40",
+    "gatelab-embed.js": "ec84984eaf44f6a8d13e5d31c3202c31",
     "html2canvas.esm-dgT_1dIT.js": "c32113e34feb4d1c04f779abe03b4ba2",
-    "index.es-Bcvn0Bi9.js": "a701f532ebd1140846c5de10694f05c3",
-    "jspdf.es.min-BDIRCphk.js": "ef3485b9922a986a16250d70639b8a71",
-    "manifest.json": "4121c80e7a04316d1d10a8edb23b1e50",
+    "index.es-Bd1TI-Fh.js": "e203ac46bafe7891c687be162d84980c",
+    "jspdf.es.min-CHQ-w6__.js": "0c093167b175c08014a877c6ce4f9304",
+    "manifest.json": "0c7ede6e19e610a523645055971ed4bd",
     "purify.es-_9WAe1aK.js": "8777299d4aaf72885b8dbec3a5b72d8b",
-    "svg2pdf.es.min-Bv8anuqr.js": "06a67f42e26ca6d5ad64066cd5129fd8"
+    "svg2pdf.es.min-BIbv12Hb.js": "a4956a483bcac1b9455d0b7194654f58"
   }
 }
