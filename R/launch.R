@@ -9,7 +9,10 @@
 #'   SCE in the global environment is used.
 #' @param sample_column Optional \code{colData} column defining samples. When
 #'   omitted, common sample columns such as \code{sample_id} are detected.
-#' @param port Port for Shiny (default: auto-select).
+#' @param port Port for Shiny. By default the app is served on one port from
+#'   session to session (\code{getOption("gatelabr.port", 4283)}), so that the
+#'   browser keeps what the app remembers on its own account (the language, the
+#'   gate edge mode, snapping); see \code{\link{launchReactGateLab}}.
 #' @param launch.browser Whether to open a browser window (default: \code{TRUE}).
 #' @param agent Open the tab connected to an agent's relay: \code{TRUE} reads the
 #'   address the relay recorded in \code{~/.gatelab/agent-relay.json}, or give the
