@@ -467,9 +467,12 @@ launchReactGateLab <- function(
     ),
     resource_prefix
   )
-  shiny::bootstrapPage(
-    title = "GateLabR",
+  # A bare page, not shiny::bootstrapPage(): Bootstrap's stylesheet reached the app, which brings
+  # its own, and restyled it (bold labels, a disclosure triangle removed from <summary>, a 10 px
+  # root font size). Shiny adds its own script and stylesheet to any page it serves.
+  shiny::tagList(
     shiny::tags$head(
+      shiny::tags$title("GateLabR"),
       shiny::tags$meta(
         name = "viewport",
         content = "width=device-width, initial-scale=1"

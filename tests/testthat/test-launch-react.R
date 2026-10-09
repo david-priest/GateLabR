@@ -10,6 +10,16 @@ test_that("React launcher UI mounts the shared GateLab module", {
   expect_match(html, "start\\(\\);")
 })
 
+test_that("React launcher UI brings no stylesheet but GateLab's own", {
+  rendered <- htmltools::renderTags(GateLabR:::.gatelabr_react_ui("gatelabr-test-core"))
+  dependencies <- vapply(rendered$dependencies, function(dep) dep$name, character(1))
+
+  # Bootstrap restyles the embedded app: labels, <summary>, the root font size.
+  expect_false("bootstrap" %in% dependencies)
+  expect_match(rendered$head, "<title>GateLabR</title>", fixed = TRUE)
+  expect_match(rendered$head, "/gatelabr-test-core/gatelab-embed.css", fixed = TRUE)
+})
+
 test_that("launchGatingApp delegates to the shared React SCE launcher", {
   captured <- NULL
   testthat::local_mocked_bindings(
