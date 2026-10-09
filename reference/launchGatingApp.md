@@ -32,7 +32,11 @@ launchGatingApp(
 
 - port:
 
-  Port for Shiny (default: auto-select).
+  Port for Shiny. By default the app is served on one port from session
+  to session (`getOption("gatelabr.port", 4283)`), so that the browser
+  keeps what the app remembers on its own account (the language, the
+  gate edge mode, snapping); see
+  [`launchReactGateLab`](https://david-priest.github.io/GateLabR/reference/launchReactGateLab.md).
 
 - launch.browser:
 

@@ -75,7 +75,13 @@ omitted, common sample columns such as <code>sample_id</code> are detected.</p><
 
 
 <dt id="arg-port">port<a class="anchor" aria-label="anchor" href="#arg-port"></a></dt>
-<dd><p>Port for Shiny (default: auto-select).</p></dd>
+<dd><p>Port for Shiny. By default the app is served on one port from
+session to session (<code>getOption("gatelabr.port", 4283)</code>), because the
+browser keeps what the app remembers on its own account (the language, the
+gate edge mode, snapping) per address, and a port chosen afresh in each R
+session loses it. When that port is in use, for instance by a second
+GateLabR session, Shiny chooses one and a message says so.
+<code>options(gatelabr.port = FALSE)</code> always leaves the choice to Shiny.</p></dd>
 
 
 <dt id="arg-launch-browser">launch.browser<a class="anchor" aria-label="anchor" href="#arg-launch-browser"></a></dt>

@@ -33,7 +33,13 @@ launchReactGateLab(
 
 - port:
 
-  Port for Shiny (default: auto-select).
+  Port for Shiny. By default the app is served on one port from session
+  to session (`getOption("gatelabr.port", 4283)`), because the browser
+  keeps what the app remembers on its own account (the language, the
+  gate edge mode, snapping) per address, and a port chosen afresh in
+  each R session loses it. When that port is in use, for instance by a
+  second GateLabR session, Shiny chooses one and a message says so.
+  `options(gatelabr.port = FALSE)` always leaves the choice to Shiny.
 
 - launch.browser:
 

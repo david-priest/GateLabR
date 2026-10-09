@@ -77,7 +77,10 @@ omitted, common sample columns such as <code>sample_id</code> are detected.</p><
 
 
 <dt id="arg-port">port<a class="anchor" aria-label="anchor" href="#arg-port"></a></dt>
-<dd><p>Port for Shiny (default: auto-select).</p></dd>
+<dd><p>Port for Shiny. By default the app is served on one port from
+session to session (<code>getOption("gatelabr.port", 4283)</code>), so that the
+browser keeps what the app remembers on its own account (the language, the
+gate edge mode, snapping); see <code><a href="launchReactGateLab.html">launchReactGateLab</a></code>.</p></dd>
 
 
 <dt id="arg-launch-browser">launch.browser<a class="anchor" aria-label="anchor" href="#arg-launch-browser"></a></dt>
