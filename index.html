@@ -54,13 +54,23 @@
   </div>
 </nav><div class="container template-home">
 <div class="row">
-  <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="gatelabr">GateLabR<a class="anchor" aria-label="anchor" href="#gatelabr"></a>
+  <main id="main" class="col-md-9"><div class="page-header"><h1 align="center">
+<img src="reference/figures/gatelabr-logo.png" alt="GateLabR" width="280">
 </h1></div>
-<p><a href="https://doi.org/10.5281/zenodo.20404387" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a> <a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/docs-pkgdown-4b9fd5.svg" alt="Docs"></a></p>
-<p><strong>Interactive manual gating for <code>SingleCellExperiment</code> objects in R.</strong></p>
-<p><em>Open-source flow cytometry and CyTOF (mass cytometry) gating app for R — with FCS import, fluorescence compensation, hierarchical population trees, and Gating-ML exchange, all persisted inside the object.</em></p>
-<p>📖 <strong><a href="https://david-priest.github.io/GateLabR">Documentation &amp; Getting Started</a></strong></p>
+<p align="center">
+<b>Interactive manual gating for <code>SingleCellExperiment</code> objects in R.</b>
+</p>
+<p align="center">
+Open-source flow cytometry and CyTOF (mass cytometry) gating app for R, with FCS import, fluorescence compensation,<br> hierarchical population trees, and Gating-ML exchange, all persisted inside the object.
+</p>
+<p align="center">
+<a href="https://doi.org/10.5281/zenodo.20404387" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/license-MIT-1b2027" alt="License: MIT"></a> <img src="https://img.shields.io/badge/works_on-SingleCellExperiment-1b2027" alt="Works on SingleCellExperiment"><img src="https://img.shields.io/badge/exchanges-Gating--ML_2.0-1b2027" alt="Exchanges Gating-ML 2.0"></p>
+<p align="center">
+<a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/Documentation-and_getting_started_%E2%86%92-ed4e19?style=for-the-badge&amp;labelColor=ed4e19" alt="Documentation and getting started"></a>
+</p>
+<p align="center">
+<a href="https://david-priest.github.io/GateLabR"><b>Documentation</b></a> · <a href="#installation">Installation</a> · <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab in your browser</a>
+</p>
 <p>GateLabR runs the same TypeScript/React interface as GateLab, backed by a thin R host for hand-gating flow cytometry and mass cytometry (CyTOF) data directly on <a href="https://bioconductor.org/packages/SingleCellExperiment/" class="external-link"><code>SingleCellExperiment</code></a> objects. It slots into Bioconductor-based analysis pipelines (e.g. CATALYST, diffcyt) where the events already live in R as an SCE and you want a fast, reproducible alternative to round-tripping through FlowJo or Cytobank just to draw a few gates.</p>
 <p>Gates are drawn on an interactive D3.js canvas. Gates, populations, scales, assay bindings, compensation provenance and illustration settings persist in the SCE via <code>metadata()</code>, while explicit commands write panel labels to <code>rowData()</code> and population, division or sample annotations to <code>colData()</code>.</p>
 <p>For the same style of manual gating directly from FCS files without an R installation, see <a href="https://github.com/david-priest/GateLab" class="external-link">GateLab</a>, the companion browser app. GateLabR is the better fit when data already live in a <code>SingleCellExperiment</code> or when gated populations need to return directly to <code>colData</code> for a Bioconductor pipeline.</p>
@@ -358,7 +368,7 @@
 <p><strong>A note on <code>.fcs</code> import:</strong> import has been thoroughly tested on files from a BD spectral flow cytometer, but not yet on files from other vendors (Beckman Coulter, Cytek, Sony, Thermo, Miltenyi, …). Channel and instrument detection is designed to be vendor-agnostic, but if a file imports incorrectly — missing markers, wrong channels, or a mis-detected flow/CyTOF mode — please let me know (ideally with the file’s channel names) and I’ll get it sorted.</p>
 <p><strong>A note on compensation:</strong> embedded-<code>$SPILLOVER</code> compensation has been validated on conventional fluorescence data from a BD FACSAria III / FACSymphony S6, with compensated values matching <code><a href="https://rdrr.io/pkg/flowCore/man/compensation-class.html" class="external-link">flowCore::compensate</a></code>. It has not yet been exercised on embedded matrices from other vendors’ acquisition software; the matrix is read vendor-agnostically (<code><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">flowCore::spillover</a></code>), so if compensation looks wrong for a given file please send me its channel names and spillover keyword and I’ll take a look.</p>
 </div>
-</div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
