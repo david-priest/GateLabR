@@ -43,9 +43,8 @@ gatelabPanelGrob(
 \code{color}, and \code{vertices} (two-column matrix, display units), \code{percent},
 \code{label_offset} and \code{label_placed} for an outlined gate, or \code{center},
 \code{quadrant_pcts} (four values, in the order top left, top right, bottom right, bottom
-left) and \code{quadrant_label_offsets} for a quadrant gate. Give each gate a
-\code{gate_id}: it names the gate's entry in the \code{anchors} attribute, and an outlined
-gate that has a name is an error without one.}
+left) and \code{quadrant_label_offsets} for a quadrant gate. A \code{gate_id} is
+optional: it names the gate's entry in the \code{anchors} attribute.}
 
 \item{plot_size}{Side of the panel in pixels, margins included.}
 

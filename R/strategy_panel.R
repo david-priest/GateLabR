@@ -30,9 +30,8 @@
 #'   \code{color}, and \code{vertices} (two-column matrix, display units), \code{percent},
 #'   \code{label_offset} and \code{label_placed} for an outlined gate, or \code{center},
 #'   \code{quadrant_pcts} (four values, in the order top left, top right, bottom right, bottom
-#'   left) and \code{quadrant_label_offsets} for a quadrant gate. Give each gate a
-#'   \code{gate_id}: it names the gate's entry in the \code{anchors} attribute, and an outlined
-#'   gate that has a name is an error without one.
+#'   left) and \code{quadrant_label_offsets} for a quadrant gate. A \code{gate_id} is
+#'   optional: it names the gate's entry in the \code{anchors} attribute.
 #' @param plot_size Side of the panel in pixels, margins included.
 #' @param contour_levels,contour_threshold,bandwidth Passed to \code{\link{gatelabContour}}.
 #' @param point_alpha Opacity of the outlier dots; the contour lines take 0.15 more.
@@ -168,7 +167,7 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
             grid::grobWidth(label) + inch(6), inch(1.117 * fs$gate + 2),
             r = inch(2), gp = grid::gpar(fill = grDevices::adjustcolor("#ffffff", backing), col = NA))
         labels[[length(labels) + 1L]] <- label
-        anchors[[paste0(gate$gate_id, "#", q)]] <- at[2] - 0.3465 * fs$gate
+        if (!is.null(gate$gate_id)) anchors[[paste0(gate$gate_id, "#", q)]] <- at[2] - 0.3465 * fs$gate
       }
       next
     }
@@ -202,7 +201,7 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
     }
     labels[[length(labels) + 1L]] <- name_grob
     if (!is.null(pct_grob)) labels[[length(labels) + 1L]] <- pct_grob
-    anchors[[gate$gate_id]] <- top + (box_top + box_bottom) / 2
+    if (!is.null(gate$gate_id)) anchors[[gate$gate_id]] <- top + (box_top + box_bottom) / 2
   }
   add(grid::rectGrob(nat(left), nat(top), inch(W), inch(H), just = c("left", "top"),
                      gp = grid::gpar(fill = NA, col = "#333333", lwd = scale)))

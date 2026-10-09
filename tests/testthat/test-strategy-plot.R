@@ -204,6 +204,9 @@ test_that("a panel follows the app's margins, ticks and label rules", {
                             title = "All Events (2,000)", gates = list(gate))
   expect_s3_class(panel, "gatelab_panel")
   expect_named(attr(panel, "anchors"), "g1")
+  # A gate given without an id is drawn all the same; it has no entry among the anchors.
+  unnamed <- gate; unnamed$gate_id <- NULL
+  expect_null(attr(gatelabPanelGrob(1, 1, xlim = c(-1, 7), ylim = c(-1, 7), gates = list(unnamed)), "anchors"))
   labels <- unlist(lapply(panel$children, function(child) if (inherits(child, "text")) child$label))
   expect_true(all(c("All Events (2,000)", "CD4", "CD8", "CD4_positive", "50.0%", "0", "2", "4", "6") %in% labels))
   # It draws on a real device.
