@@ -502,6 +502,9 @@
 #' @param ungated Label for events that fall in no population below the root.
 #' @param allow_stale Read memberships whose workspace revision is behind the stored workspace.
 #'
+#' @param by How the columns of \code{gatelabPopulations()} are named: by population name,
+#'   disambiguated by id where names repeat, or by the population's path from the root (the
+#'   node path on a GatingSet), which is unique by construction.
 #' @return \code{gatelabHierarchies}: a data frame with one row per hierarchy
 #'   (\code{hierarchy_id}, \code{hierarchy}, \code{active}, \code{populations}).
 #'
@@ -534,6 +537,36 @@
 #' }
 #' @name gatelabMemberships
 NULL
+
+#' The display transform of every channel, as the app drew it
+#'
+#' A \code{SingleCellExperiment} gated in the app carries, in
+#' \code{rowData(sce)$gatelab_transform}, the transform each channel was drawn on at the last
+#' save, as a GatingSet carries its transforms: a logicle with \code{T}, \code{W}, \code{M}
+#' and \code{A}, an arcsinh with its \code{cofactor}, or the identity. A GatingSet reports its
+#' own transforms. Use it to draw the object in R on the axes the app showed, or to build a
+#' \code{transformerList} for flowWorkspace.
+#'
+#' @param sce A \code{SingleCellExperiment} saved from the app, or a flowWorkspace
+#'   \code{GatingSet}.
+#' @return A named list, one entry per channel that states a transform: a list with
+#'   \code{kind} and the parameters of that kind.
+#' @export
+gatelabTransforms <- function(sce) {
+  if (.gatelabr_is_gatingset(sce)) {
+    channels <- .gatelabr_gatingset_channels(sce)$pnn
+    axes <- .gatelabr_gatingset_axes(sce, channels)
+    specs <- lapply(axes, `[[`, "spec")
+    return(Filter(Negate(is.null), specs))
+  }
+  if (!methods::is(sce, "SingleCellExperiment")) {
+    stop("sce must be a SingleCellExperiment or a flowWorkspace GatingSet.", call. = FALSE)
+  }
+  ids <- vapply(.gatelabr_channel_descriptors(sce), `[[`, character(1), "id")
+  specs <- .gatelabr_rowdata_transforms(sce)
+  names(specs) <- ids
+  Filter(Negate(is.null), specs)
+}
 
 #' @rdname gatelabMemberships
 #' @export
@@ -579,8 +612,10 @@ gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
 
 #' @rdname gatelabMemberships
 #' @export
-gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_stale = FALSE) {
-  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_populations(sce, populations))
+gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_stale = FALSE,
+                               by = c("name", "path")) {
+  by <- match.arg(by)
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_populations(sce, populations, by = by))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
@@ -619,7 +654,9 @@ gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_
     ncol = nrow(rows),
     dimnames = list(colnames(sce), NULL)
   )
-  labels <- rows$population
+  # A column is named by its population, disambiguated by id where names repeat, or by the
+  # population's path from the root, unique by construction as a GatingSet's node path is.
+  labels <- if (identical(by, "path")) rows$path else rows$population
   duplicated_names <- labels %in% labels[duplicated(labels)]
   labels[duplicated_names] <- paste0(labels[duplicated_names], " (", rows$population_id[duplicated_names], ")")
   colnames(out) <- labels

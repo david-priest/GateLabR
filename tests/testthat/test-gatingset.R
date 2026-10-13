@@ -946,3 +946,63 @@ test_that("a population excluding its one gate is written as that gate, negated"
   expect_true(flowWorkspace::gh_pop_is_negated(gs[[1]], "/not box"))
   expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[2]], "/not box")), masks[[2]])
 })
+
+test_that("the transforms a save was drawn on stay on the SCE's rows, as a GatingSet keeps its own", {
+  counts <- rbind(`FL1-H` = c(10, 400, 8000, 20), `FL2-H` = c(3, 70, 2, 1200), `FSC-H` = c(100, 101, 200, 201))
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts),
+    colData = S4Vectors::DataFrame(sample_id = c("D1", "D1", "D2", "D2")),
+    rowData = S4Vectors::DataFrame(pnn = rownames(counts), row.names = rownames(counts))
+  )
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  transforms <- list(`FL1-H` = logicle_spec(0.75), `FL2-H` = list(kind = "asinh", cofactor = 150), `FSC-H` = list(kind = "identity"))
+  json <- as.character(jsonlite::toJSON(
+    list(format = "gatelab-workspace", version = 2L, hostedAssayId = "counts", hostedChannelTransforms = transforms,
+         samples = list(list(sampleId = "sce-gs:sample-0", fileName = "D1", dataPath = "data/sce-1.fcs", logicleW = list(), compensationOn = FALSE),
+                        list(sampleId = "sce-gs:sample-1", fileName = "D2", dataPath = "data/sce-2.fcs", logicleW = list(), compensationOn = FALSE)),
+         activeSample = 0L,
+         gating = list(gates = list(), gate_order = list(),
+                       populations = list(`pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), gate_logic = "and",
+                                                            parent_id = NULL, children = list(), event_count = NULL, percent_of_parent = NULL)),
+                       root_population_id = "pop-root", active_population_id = "pop-root", selected_gate_id = NULL),
+         scales = list(globalScales = list()),
+         display = list(xChannel = "FL1-H", yChannel = "FL2-H", mode = "pseudocolor", maxEvents = 50000L, contourThreshold = 5L)),
+    auto_unbox = TRUE, null = "null", digits = NA
+  ))
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    sce, dataset_id = "sce-gs", expected_revision = 0L, client_revision = 1L, reason = "autosave",
+    workspace_json = json, sample_column = "sample_id"
+  )
+  sce <- stored$sce
+  column <- SummarizedExperiment::rowData(sce)$gatelab_transform
+  expect_identical(jsonlite::fromJSON(column[[1]])$kind, "logicle")
+  expect_identical(jsonlite::fromJSON(column[[1]])$W, 0.75)
+  expect_identical(jsonlite::fromJSON(column[[3]])$kind, "identity")
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "sce-gs")
+  expect_equal(descriptor$channels[[1]]$transform, logicle_spec(0.75))
+  expect_equal(descriptor$channels[[2]]$transform$cofactor, 150)
+  read <- GateLabR::gatelabTransforms(sce)
+  expect_identical(names(read), c("FL1-H", "FL2-H", "FSC-H"))
+  expect_identical(read[["FL2-H"]]$kind, "asinh")
+  # A GatingSet reports its own transforms the same way.
+  gs <- make_mixed_gatingset()
+  own <- GateLabR::gatelabTransforms(gs)
+  expect_identical(names(own), c("FL1-H", "FL2-H", "FL3-H", "FL4-H"))
+  expect_identical(own[["FL1-H"]], logicle_spec())
+  expect_identical(own[["FL4-H"]]$kind, "biex")
+  # A save that states no transforms leaves the rows as they were.
+  again <- GateLabR:::.gatelabr_store_host_workspace(
+    sce, dataset_id = "sce-gs", expected_revision = 1L, client_revision = 2L, reason = "autosave",
+    workspace_json = sub(",\"hostedChannelTransforms\":\\{[^}]*\\}\\}\\}", "", json), sample_column = "sample_id"
+  )
+  expect_identical(SummarizedExperiment::rowData(again$sce)$gatelab_transform, column)
+})
+
+test_that("populations can be read by path, which is unique, on both objects", {
+  gs <- add_every_node_kind(make_mixed_gatingset())
+  by_path <- GateLabR::gatelabPopulations(gs, by = "path")
+  expect_true(all(startsWith(colnames(by_path), "/")))
+  expect_true("/rect/poly" %in% colnames(by_path))
+  by_name <- GateLabR::gatelabPopulations(gs)
+  expect_identical(unname(by_name[, "poly"]), unname(by_path[, "/rect/poly"]))
+})

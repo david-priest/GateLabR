@@ -137,6 +137,8 @@ For conventional flow data carrying a spillover matrix, toggle **Apply
 compensation** to linearly compensate fluorescence channels from the embedded
 `$SPILLOVER`. (CyTOF and pre-compensated/spectral data don't need it.)
 
+On a `SingleCellExperiment` the matrix lives in `metadata(sce)$spillover`, a numeric matrix with the source channels as row names and the receiver channels as column names, as `flowCore::spillover()` returns it; that is the one name the app reads and writes (the older `spillover_matrix`, `spilloverMatrix` and `sm` are still read). A `GatingSet` carries its applied matrix itself (`gh_get_compensations()`).
+
 > 📸 *Screenshot: the compensation toggle + matrix viewer.* — add `man/figures/compensation.png`
 
 ## 8. Figures: Strategy & Illustration
@@ -161,6 +163,7 @@ Both export to **SVG** (vector, Illustrator-friendly) and **PNG**.
 - **FCS export** of gated events (defaults to the raw counts assay).
 - **Gating-ML 2.0** import/export to exchange gates with Cytobank. FlowJo does not read Gating-ML; it uses its own `.wsp` format.
 - **Workspace** is embedded in `metadata(sce)$gatelab_workspace`, with a `metadata(sce)$gating_workspace` mirror kept for the previous interface; `saveRDS()` the object (or export a portable `.rds`) and re-loading restores everything.
+- **Axes** are kept on the rows: `rowData(sce)$gatelab_transform` holds the transform each channel was drawn on at the last save (`gatelabTransforms(sce)` reads it), as a GatingSet keeps its transforms with its data.
 
 ```r
 saveRDS(sce, "gated.rds")   # gates, populations, scales — all preserved

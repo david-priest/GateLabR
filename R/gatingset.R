@@ -434,7 +434,8 @@
   paste0(rep(samples, counts), "_", unlist(lapply(counts, seq_len)))
 }
 
-.gatelabr_gatingset_populations <- function(gs, populations = NULL) {
+.gatelabr_gatingset_populations <- function(gs, populations = NULL, by = c("name", "path")) {
+  by <- match.arg(by)
   hierarchy <- .gatelabr_gatingset_hierarchy(gs)
   if (!is.null(populations)) {
     if (!is.character(populations) || length(populations) == 0L) {
@@ -460,7 +461,8 @@
   names <- .gatelabr_gatingset_event_names(gs)
   out <- matrix(FALSE, nrow = length(names), ncol = nrow(hierarchy),
                 dimnames = list(names, NULL))
-  labels <- hierarchy$population
+  # By path, a column is the node's full path, as flowWorkspace names it.
+  labels <- if (identical(by, "path")) hierarchy$population_id else hierarchy$population
   duplicated_names <- labels %in% labels[duplicated(labels)]
   labels[duplicated_names] <- paste0(labels[duplicated_names], " (", hierarchy$population_id[duplicated_names], ")")
   colnames(out) <- labels

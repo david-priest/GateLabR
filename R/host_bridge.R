@@ -122,6 +122,7 @@
 }
 
 .gatelabr_channel_descriptors <- function(sce) {
+  transforms <- .gatelabr_rowdata_transforms(sce)
   labels <- rownames(sce)
   if (is.null(labels)) labels <- rep("", nrow(sce))
   labels <- as.character(labels)
@@ -157,8 +158,45 @@
         nzchar(trimws(display_labels[[index]]))) {
       channel$displayLabel <- trimws(display_labels[[index]])
     }
+    transform <- transforms[[index]]
+    if (!is.null(transform)) channel$transform <- transform
     channel
   })
+}
+
+.gatelabr_transform_column <- "gatelab_transform"
+
+# The display transform each channel was drawn on, as the app last saved it, by channel: the
+# spec kept as JSON in rowData(sce)$gatelab_transform, what gh_get_transformations() gives a
+# GatingSet. A list the length of the rows, NULL where a row states none.
+.gatelabr_rowdata_transforms <- function(sce) {
+  rd <- SummarizedExperiment::rowData(sce)
+  column <- if (.gatelabr_transform_column %in% colnames(rd)) as.character(rd[[.gatelabr_transform_column]]) else NULL
+  lapply(seq_len(nrow(sce)), function(index) {
+    text <- if (is.null(column) || index > length(column)) NA_character_ else column[[index]]
+    if (is.na(text) || !nzchar(text)) return(NULL)
+    spec <- tryCatch(jsonlite::fromJSON(text, simplifyVector = TRUE), error = function(...) NULL)
+    if (!is.list(spec) || !is.character(spec$kind)) NULL else spec
+  })
+}
+
+# Keep the transforms a save states on the object, one JSON spec per row, by channel id.
+.gatelabr_write_rowdata_transforms <- function(sce, transforms) {
+  if (!is.list(transforms) || length(transforms) == 0L) return(sce)
+  ids <- vapply(.gatelabr_channel_descriptors(sce), `[[`, character(1), "id")
+  rd <- SummarizedExperiment::rowData(sce)
+  current <- if (.gatelabr_transform_column %in% colnames(rd)) as.character(rd[[.gatelabr_transform_column]]) else rep(NA_character_, nrow(sce))
+  next_column <- current
+  for (id in names(transforms)) {
+    position <- match(id, ids)
+    spec <- transforms[[id]]
+    if (is.na(position) || !is.list(spec) || !is.character(spec$kind)) next
+    next_column[[position]] <- as.character(jsonlite::toJSON(spec, auto_unbox = TRUE, digits = NA))
+  }
+  if (identical(next_column, current)) return(sce)
+  rd[[.gatelabr_transform_column]] <- next_column
+  SummarizedExperiment::rowData(sce) <- rd
+  sce
 }
 
 .gatelabr_rowdata_revision <- function(sce) {
@@ -337,6 +375,9 @@
 # CATALYST and related R pipelines leave the spillover matrix in metadata().
 # Finding it both proves compensation happened and supplies the matrix itself,
 # so a pre-compensated SCE need not be re-derived or hand-declared.
+# The matrix an SCE carries for the app: metadata(sce)$spillover, as flowCore::spillover()
+# returns one (sources as row names, receivers as column names), is the documented name; the
+# three others are read for objects that used them.
 .gatelabr_sce_spillover_matrix <- function(sce) {
   md <- S4Vectors::metadata(sce)
   for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
@@ -1432,6 +1473,8 @@
   # in progress. The canonical JSON above remains authoritative.
   md$gating_workspace <- validated$legacy
   S4Vectors::metadata(sce) <- md
+  # The axes the save was drawn on stay on the object's rows, as a GatingSet keeps its transforms.
+  sce <- .gatelabr_write_rowdata_transforms(sce, validated$parsed$hostedChannelTransforms)
   result <- list(
     revision = revision,
     clientRevision = client_revision,
