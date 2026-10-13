@@ -22283,7 +22283,7 @@ async function UE(e, t) {
   return new Blob([r], { type: "image/png" });
 }
 async function fD(e, t, n) {
-  const { svg2pdf: r } = await import("./svg2pdf.es.min-B4DJvWTQ.js"), a = document.createElement("div");
+  const { svg2pdf: r } = await import("./svg2pdf.es.min-DsnSmjoo.js"), a = document.createElement("div");
   a.style.cssText = "position:fixed;left:-100000px;top:0;visibility:hidden", a.appendChild(t), document.body.appendChild(a);
   try {
     return await r(t, e, { x: 0, y: 0, width: n.width, height: n.height }), !0;
@@ -47327,7 +47327,7 @@ async function lT(e, t) {
 async function IS(e, t, n = 300) {
   const r = c_(e, n);
   if (!r) return;
-  const a = r.width * 72 / 96, o = r.height * 72 / 96, { jsPDF: i } = await import("./jspdf.es.min-D664e57U.js").then((s) => s.j), l = new i({ orientation: a >= o ? "landscape" : "portrait", unit: "pt", format: [a, o], compress: !0 });
+  const a = r.width * 72 / 96, o = r.height * 72 / 96, { jsPDF: i } = await import("./jspdf.es.min-CYU6c2Lz.js").then((s) => s.j), l = new i({ orientation: a >= o ? "landscape" : "portrait", unit: "pt", format: [a, o], compress: !0 });
   if (!await fD(l, r.root, { width: a, height: o })) {
     const s = await lT(r, n);
     l.addImage(s, "PNG", 0, 0, a, o, void 0, "FAST");
@@ -57704,7 +57704,7 @@ function Fq({
     }
   ) });
 }
-const Rq = W.lazy(WT("CompensationTab", async () => ({ default: (await import("./CompensationTab-Dbrr-oDT.js")).CompensationTab }))), Oq = W.lazy(WT("LayoutTab", async () => ({ default: (await import("./LayoutTab-Dv9MjwNv.js")).LayoutTab }))), pw = { "application/octet-stream": [".fcs"] }, Lq = { "application/xml": [".xml", ".wsp"], "application/zip": [".cef"] }, iN = { "text/csv": [".csv", ".tsv", ".txt"] }, Dq = 0, zq = 5, Bq = (e) => {
+const Rq = W.lazy(WT("CompensationTab", async () => ({ default: (await import("./CompensationTab-J7UvbzvD.js")).CompensationTab }))), Oq = W.lazy(WT("LayoutTab", async () => ({ default: (await import("./LayoutTab-D8sYM0P0.js")).LayoutTab }))), pw = { "application/octet-stream": [".fcs"] }, Lq = { "application/xml": [".xml", ".wsp"], "application/zip": [".cef"] }, iN = { "text/csv": [".csv", ".tsv", ".txt"] }, Dq = 0, zq = 5, Bq = (e) => {
   const t = Math.pow(10, e), n = Math.pow(10, Math.floor(Math.log10(t)) - 2);
   return Math.max(1, Math.round(t / n) * n);
 }, Gq = (e) => e >= 1e4 ? `${(e / 1e3).toFixed(0)}K` : e >= 1e3 ? `${(e / 1e3).toFixed(1)}K` : `${Math.round(e)}`, Hq = 330, sN = 672, Wq = 12;
@@ -65095,7 +65095,17 @@ function Zq() {
                           children: "A"
                         }
                       )
-                    ] }) : /* @__PURE__ */ d.jsxs(d.Fragment, { children: [
+                    ] }) : O.fluorScale(M) === "biex" ? /* @__PURE__ */ d.jsx(
+                      "span",
+                      {
+                        className: "gl-scale-val",
+                        title: s("FlowJo's biexponential at the parameters the object or file declares: positive decades, negative decades, width basis and the axis maximum. It has no slider."),
+                        children: (() => {
+                          const q = O.fluorBiexParams(M);
+                          return q ? `pos ${q.pos} · neg ${q.neg} · width ${q.widthBasis} · max ${q.maxValue.toLocaleString()}` : "";
+                        })()
+                      }
+                    ) : /* @__PURE__ */ d.jsxs(d.Fragment, { children: [
                       /* @__PURE__ */ d.jsx(
                         "input",
                         {
