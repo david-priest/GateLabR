@@ -163,6 +163,13 @@
 .gatelabr_gatingset_write_populations <- function(gs, parsed, memberships) {
   prepared <- .gatelabr_gatingset_memberships(gs, memberships)
   tree <- .gatelabr_workspace_tree(parsed, prepared$active)
+  .gatelabr_gatingset_write_prepared(gs, tree, prepared)
+}
+
+# The write itself, from populations already prepared (parents before children, masks per
+# sample): what an explicit save brings, or what an SCE's stored memberships hold
+# (gatingset_export.R).
+.gatelabr_gatingset_write_prepared <- function(gs, tree, prepared) {
   gates <- if (is.list(tree)) tree$gates else list()
   tree_populations <- if (is.list(tree)) tree$populations else list()
   if (is.list(gates) && length(gates) && is.null(names(gates))) {

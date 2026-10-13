@@ -1006,3 +1006,93 @@ test_that("populations can be read by path, which is unique, on both objects", {
   by_name <- GateLabR::gatelabPopulations(gs)
   expect_identical(unname(by_name[, "poly"]), unname(by_path[, "/rect/poly"]))
 })
+
+# ── an SCE's gating as a GatingSet ────────────────────────────────────────────
+
+test_that("a gated SCE becomes a GatingSet whose nodes hold the stored memberships, with the object's transforms", {
+  fs <- gvhd()
+  raw <- lapply(1:2, function(index) flowCore::exprs(fs[[index]]))
+  counts <- t(rbind(raw[[1]], raw[[2]]))
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts),
+    colData = S4Vectors::DataFrame(sample_id = rep(c("D1", "D2"), c(nrow(raw[[1]]), nrow(raw[[2]]))), group = rep(c("treated", "control"), c(nrow(raw[[1]]), nrow(raw[[2]])))),
+    rowData = S4Vectors::DataFrame(pnn = rownames(counts), pns = c("", "", "CD15 FITC", "CD45 PE", "CD14 PerCP", "", "CD33 APC", ""), row.names = rownames(counts))
+  )
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  # The app's workspace: a rectangle in logicle space on FL1-H x FL2-H, a raw polygon on scatter
+  # under it, and the transforms each channel was drawn on.
+  logicle <- function(x) flowCore::logicleTransform(w = 0.5, t = 262144, m = 4.5, a = 0)@.Data(x)
+  gates <- list(
+    `g-box` = list(gate_id = "g-box", name = "box", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
+                   vertices = list(list(1.5, 1), list(3.5, 1), list(3.5, 3), list(1.5, 3)),
+                   space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec())),
+    `g-poly` = list(gate_id = "g-poly", name = "scatter", gate_type = "polygon", x_channel = "FSC-H", y_channel = "SSC-H",
+                    vertices = list(list(100, 50), list(900, 100), list(500, 700)))
+  )
+  populations <- list(
+    `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), gate_logic = "and", parent_id = NULL, children = list("pop-box"), event_count = NULL, percent_of_parent = NULL),
+    `pop-box` = list(population_id = "pop-box", name = "box cells", gate_refs = list(list(gate_id = "g-box", include = TRUE)), gate_logic = "and", parent_id = "pop-root", children = list("pop-sc"), event_count = NULL, percent_of_parent = NULL),
+    `pop-sc` = list(population_id = "pop-sc", name = "scatter", gate_refs = list(list(gate_id = "g-poly", include = TRUE)), gate_logic = "and", parent_id = "pop-box", children = list(), event_count = NULL, percent_of_parent = NULL)
+  )
+  transforms <- list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec(), `FSC-H` = list(kind = "identity"), `SSC-H` = list(kind = "identity"))
+  json <- as.character(jsonlite::toJSON(
+    list(format = "gatelab-workspace", version = 2L, hostedAssayId = "counts", hostedChannelTransforms = transforms,
+         samples = list(list(sampleId = "sce-gs:sample-0", fileName = "D1", dataPath = "data/sce-1.fcs", logicleW = list(), compensationOn = FALSE),
+                        list(sampleId = "sce-gs:sample-1", fileName = "D2", dataPath = "data/sce-2.fcs", logicleW = list(), compensationOn = FALSE)),
+         activeSample = 0L,
+         gating = list(gates = gates, gate_order = list("g-box", "g-poly"), populations = populations,
+                       root_population_id = "pop-root", active_population_id = "pop-root", selected_gate_id = NULL),
+         scales = list(globalScales = list()),
+         display = list(xChannel = "FSC-H", yChannel = "SSC-H", mode = "pseudocolor", maxEvents = 50000L, contourThreshold = 5L)),
+    auto_unbox = TRUE, null = "null", digits = NA
+  ))
+  masks <- lapply(raw, function(m) {
+    box <- logicle(m[, "FL1-H"]) >= 1.5 & logicle(m[, "FL1-H"]) <= 3.5 & logicle(m[, "FL2-H"]) >= 1 & logicle(m[, "FL2-H"]) <= 3
+    poly <- sp::point.in.polygon(m[, "FSC-H"], m[, "SSC-H"], c(100, 900, 500), c(50, 100, 700)) > 0
+    list(box = box, sc = box & poly)
+  })
+  packed <- function(index, name) base64enc::base64encode(GateLabR:::.gatelabr_pack_bits(masks[[index]][[name]]))
+  sample_masks <- function(name) lapply(1:2, function(index) list(sampleId = paste0("sample-", index - 1L), eventCount = nrow(raw[[index]]), membershipBitsBase64 = packed(index, name)))
+  memberships <- list(
+    hierarchies = list(list(id = "h1", name = "Main", active = TRUE, rootPopulationId = "pop-root")),
+    populations = list(
+      list(hierarchyId = "h1", populationId = "pop-root", populationName = "root", parentId = NULL, gateLogic = "and", gates = list(),
+           sampleMasks = lapply(1:2, function(index) list(sampleId = paste0("sample-", index - 1L), eventCount = nrow(raw[[index]]), membershipBitsBase64 = base64enc::base64encode(GateLabR:::.gatelabr_pack_bits(rep(TRUE, nrow(raw[[index]]))))))),
+      list(hierarchyId = "h1", populationId = "pop-box", populationName = "box cells", parentId = "pop-root", gateLogic = "and", gates = list(), sampleMasks = sample_masks("box")),
+      list(hierarchyId = "h1", populationId = "pop-sc", populationName = "scatter", parentId = "pop-box", gateLogic = "and", gates = list(), sampleMasks = sample_masks("sc"))
+    )
+  )
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    sce, dataset_id = "sce-gs", expected_revision = 0L, client_revision = 1L, reason = "explicit",
+    workspace_json = json, sample_column = "sample_id", memberships = memberships
+  )
+  sce <- stored$sce
+
+  gs <- NULL
+  expect_message(gs <- GateLabR::gatelabGatingSet(sce), "2 as flowWorkspace gates")
+  expect_true(GateLabR:::.gatelabr_is_gatingset(gs))
+  expect_identical(flowWorkspace::sampleNames(gs), c("D1", "D2"))
+  expect_identical(flowWorkspace::pData(gs)$group, c("treated", "control"))
+  expect_identical(unname(flowWorkspace::markernames(gs)[["FL1-H"]]), "CD15 FITC")
+  # The transforms the object stated are the GatingSet's.
+  own <- GateLabR::gatelabTransforms(gs)
+  expect_identical(own[["FL1-H"]], logicle_spec())
+  expect_null(own[["FSC-H"]])
+  # The nodes hold exactly the stored memberships, as gates.
+  expect_identical(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/box cells", "/box cells/scatter"))
+  expect_s4_class(flowWorkspace::gh_pop_get_gate(gs[[1]], "/box cells"), "rectangleGate")
+  expect_s4_class(flowWorkspace::gh_pop_get_gate(gs[[1]], "/box cells/scatter"), "polygonGate")
+  for (index in 1:2) {
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/box cells")), masks[[index]]$box)
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/box cells/scatter")), masks[[index]]$sc)
+  }
+  # The readers agree across the two objects, and the GatingSet opens in the host on the carried record.
+  expect_identical(unname(GateLabR::gatelabPopulations(gs)[, "scatter"]), unname(GateLabR::gatelabPopulations(sce)[, "scatter"]))
+  record <- GateLabR:::.gatelabr_gatingset_record(gs)
+  expect_identical(record$revision, 1L)
+  expect_true(isTRUE(record$hierarchy_written))
+  expect_identical(GateLabR:::.gatelabr_gatingset_workspace_envelope(gs, "gatingset-gs")$sourceFormat, "gatelab-workspace")
+  # Without a stored save there is nothing to export.
+  bare <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = counts))
+  expect_error(GateLabR::gatelabGatingSet(bare), "Save to SCE")
+})

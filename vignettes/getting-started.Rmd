@@ -196,6 +196,15 @@ What to expect:
 - A FlowJo-derived object's biexponential channels open on FlowJo's biexponential at the object's parameters (the Scales tab offers it beside logicle and arcsinh), built from cytolib's own table, so the axis and the gates are flowWorkspace's to five thousandths of a channel.
 - Only the active tree is written to the hierarchy; parked hierarchies stay in the GateLab record (the `GATELAB_WORKSPACE` keyword on every sample).
 
+The other direction is `gatelabGatingSet()`: an SCE gated in the app becomes a `GatingSet`, its samples as cytoframes from the assay the workspace was drawn on, its channels on the transforms the object states, and every population of the active hierarchy written as "Save to GatingSet" writes them, so flowWorkspace recomputes the gates, `ggcyto` draws them and CytoML exports them. The GateLab record goes along as the keyword, so `launchGatingApp()` on the result opens the same workspace.
+
+```r
+gs <- gatelabGatingSet(sce)                    # after "Save to SCE"
+gs_get_pop_paths(gs)                           # the SCE's populations as nodes
+gatelabPopulations(gs)                         # the same memberships as gatelabPopulations(sce)
+save_gs(gs, "from-sce/")
+```
+
 ## Feedback
 
 Found a bug or want a feature? Please
