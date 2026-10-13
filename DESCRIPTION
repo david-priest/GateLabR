@@ -48,6 +48,7 @@ Imports:
     xml2
 Suggests:
     BiocManager,
+    flowWorkspace,
     knitr,
     testthat (>= 3.0.0),
     rmarkdown,

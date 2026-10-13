@@ -15,8 +15,14 @@ launchReactGateLab(
 )
 }
 \arguments{
-\item{sce}{A \code{SingleCellExperiment}. If \code{NULL}, the first SCE in
-the global environment is used.}
+\item{sce}{A \code{SingleCellExperiment}, or a flowWorkspace \code{GatingSet},
+which is served through an SCE built from it: its samples, the compensated
+linear values its transforms are the inverse of, and the \code{pData()}
+columns as sample metadata; the workspace is kept as a keyword on every
+sample's cytoframe, and "Save to SCE" writes every population of the tree
+back as a node of the hierarchy, as its gate where flowWorkspace selects
+exactly the events GateLab did and as its per-sample membership otherwise.
+If \code{NULL}, the first SCE in the global environment is used.}
 
 \item{sample_column}{Optional \code{colData} column defining samples. When
 omitted, common sample columns such as \code{sample_id} are detected.}

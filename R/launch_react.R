@@ -4,8 +4,14 @@
 #' adapter for a \code{SingleCellExperiment}. This is the interface started by
 #' \code{\link{launchGatingApp}}, which is the single supported entry point.
 #'
-#' @param sce A \code{SingleCellExperiment}. If \code{NULL}, the first SCE in
-#'   the global environment is used.
+#' @param sce A \code{SingleCellExperiment}, or a flowWorkspace \code{GatingSet},
+#'   which is served through an SCE built from it: its samples, the compensated
+#'   linear values its transforms are the inverse of, and the \code{pData()}
+#'   columns as sample metadata; the workspace is kept as a keyword on every
+#'   sample's cytoframe, and "Save to SCE" writes every population of the tree
+#'   back as a node of the hierarchy, as its gate where flowWorkspace selects
+#'   exactly the events GateLab did and as its per-sample membership otherwise.
+#'   If \code{NULL}, the first SCE in the global environment is used.
 #' @param sample_column Optional \code{colData} column defining samples. When
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny. By default the app is served on one port from
@@ -67,6 +73,7 @@ launchReactGateLab <- function(
     )
   }
   blocking <- if (is.null(blocking)) is.null(start_app) else blocking
+  gatingset <- NULL
   # One app at a time: a second launch stops the first, whose stop callbacks then run before the
   # new app claims the live record below.
   previous <- .gatelabr_live$handle
@@ -100,18 +107,33 @@ launchReactGateLab <- function(
     }
     sce_name <- candidates[[1]]
     sce <- get(sce_name, envir = .GlobalEnv)
+  } else if (.gatelabr_is_gatingset(sce)) {
+    # A GatingSet is served through an SCE built from it (gatingset.R); the global name keeps
+    # the GatingSet, which every write reaches in place.
+    gatingset <- sce
+    if (!nzchar(sce_name) || identical(sce_name, "NULL")) sce_name <- "gatelabr_gs"
+    assign(sce_name, gatingset, envir = .GlobalEnv)
+    sce <- .gatelabr_gatingset_sce(gatingset)
   } else {
     if (!methods::is(sce, "SingleCellExperiment")) {
-      stop("sce must be a SingleCellExperiment.", call. = FALSE)
+      stop("sce must be a SingleCellExperiment or a flowWorkspace GatingSet.", call. = FALSE)
     }
     if (!nzchar(sce_name) || identical(sce_name, "NULL")) sce_name <- "gatelabr_sce"
     assign(sce_name, sce, envir = .GlobalEnv)
   }
   # Say it out loud: silent writeback to a guessed name is how work goes missing.
-  message(
-    "GateLabR will save gates, populations and colData back to `", sce_name,
-    "` in your global environment."
-  )
+  if (is.null(gatingset)) {
+    message(
+      "GateLabR will save gates, populations and colData back to `", sce_name,
+      "` in your global environment."
+    )
+  } else {
+    message(
+      "GateLabR will save the workspace to the GatingSet `", sce_name, "` (a keyword on every ",
+      "sample) and, on \"Save to SCE\", write every population of the tree back as a node of its ",
+      "hierarchy, in place."
+    )
+  }
   # Likewise for the assays: the user must know what the app draws, and from which assay,
   # before they gate on it.
   assay_note <- tryCatch(
@@ -181,6 +203,7 @@ launchReactGateLab <- function(
   live$token <- prefix
   live$handle <- NULL
   live$sce_name <- sce_name
+  live$gatingset <- gatingset
   live$set_sce <- function(object) sce_state(object)
   live$get_sce <- function() shiny::isolate(sce_state())
   live$written <- get0(sce_name, envir = .GlobalEnv, inherits = FALSE)
@@ -206,7 +229,7 @@ launchReactGateLab <- function(
     shiny::removeResourcePath(prefix)
     .gatelabr_stop_compensation_backend(compensation_backend)
     if (identical(live$token, prefix)) {
-      for (field in c("token", "handle", "sce_name", "set_sce", "get_sce", "written", "address", "refused_address")) {
+      for (field in c("token", "handle", "sce_name", "gatingset", "set_sce", "get_sce", "written", "address", "refused_address")) {
         live[[field]] <- NULL
       }
     }
@@ -220,7 +243,7 @@ launchReactGateLab <- function(
 
   message(
     "GateLabR: launching the shared GateLab React interface\n",
-    "  SCE: ", sce_name, "\n",
+    "  ", if (is.null(gatingset)) "SCE: " else "GatingSet: ", sce_name, "\n",
     "  Build: ", .gatelabr_build_label(build), "\n",
     "  Core assets: ", assets,
     if (is.null(relay_url)) "" else paste0("\n  Agent relay: ", relay_url)

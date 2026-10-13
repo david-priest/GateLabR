@@ -538,6 +538,11 @@ NULL
 #' @rdname gatelabMemberships
 #' @export
 gatelabHierarchies <- function(sce, allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) {
+    hierarchy <- .gatelabr_gatingset_hierarchy(sce)
+    return(data.frame(hierarchy_id = "gatingset", hierarchy = "GatingSet", active = TRUE,
+                      populations = nrow(hierarchy), stringsAsFactors = FALSE))
+  }
   record <- .gatelabr_memberships_record(sce, allow_stale)
   out <- record$hierarchies[, c("hierarchy_id", "hierarchy", "active")]
   out$populations <- vapply(
@@ -552,6 +557,7 @@ gatelabHierarchies <- function(sce, allow_stale = FALSE) {
 #' @rdname gatelabMemberships
 #' @export
 gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_hierarchy(sce))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
@@ -574,6 +580,7 @@ gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
 #' @rdname gatelabMemberships
 #' @export
 gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_populations(sce, populations))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
@@ -630,6 +637,7 @@ gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_
 #' @rdname gatelabMemberships
 #' @export
 gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_leaf_population(sce, ungated))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
@@ -700,6 +708,7 @@ gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", al
 # and "absent" when the object holds no workspace at all. Never stops: this is for a word at the
 # right moment, not a refusal.
 .gatelabr_memberships_status <- function(sce) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_memberships_status(sce))
   if (!methods::is(sce, "SingleCellExperiment")) return("absent")
   md <- S4Vectors::metadata(sce)
   workspace <- md$gatelab_workspace

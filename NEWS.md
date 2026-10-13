@@ -1,3 +1,7 @@
+# GateLabR (development version)
+
+- `launchGatingApp(gs)` accepts a flowWorkspace `GatingSet`. The app opens on its samples, drawing the compensated linear values its transforms are the inverse of (`gh_pop_get_data(gh, inverse.transform = TRUE)`), with the `pData()` columns as sample metadata. The workspace is kept as a keyword (`GATELAB_WORKSPACE`) on every sample's cytoframe, which `save_gs()` keeps, and "Save to SCE" writes every population of the tree back as a node of the hierarchy, in place: as its gate (`rectangleGate`, `polygonGate` or `ellipsoidGate` in the GatingSet's transformed space) when flowWorkspace then selects exactly the events GateLab did, and as its per-sample membership otherwise. `gatelabHierarchy()`, `gatelabPopulations()` and `gatelabLeafPopulation()` read a GatingSet's hierarchy; `gatelabSync()` takes a GatingSet. The hierarchy a GatingSet holds at launch is not yet shown in the app (next: the object's gates as Gating-ML at launch). flowWorkspace is a suggested package.
+
 # GateLabR 1.6.0
 
 - `launchGatingApp(sce, agent = TRUE)` opens the tab connected to an agent's relay (GateLab's `tools/agent-mcp/server.mjs`, an MCP server): the launcher reads the address the relay recorded in `~/.gatelab/agent-relay.json`, or takes a `ws://` address as `agent`, and puts it on the page's URL, so the tab connects as it opens. An agent then reads the gating as you see it and proposes gates, which appear in the tab with a badge; you adjust or undo them as any other, and saving stays yours. The Agent menu in the header connects a tab by hand.

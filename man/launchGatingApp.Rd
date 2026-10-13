@@ -14,8 +14,9 @@ launchGatingApp(
 )
 }
 \arguments{
-\item{sce}{Optional \code{SingleCellExperiment}. If \code{NULL}, the first
-SCE in the global environment is used.}
+\item{sce}{Optional \code{SingleCellExperiment}, or a flowWorkspace
+\code{GatingSet} (see \code{\link{launchReactGateLab}}). If \code{NULL},
+the first SCE in the global environment is used.}
 
 \item{sample_column}{Optional \code{colData} column defining samples. When
 omitted, common sample columns such as \code{sample_id} are detected.}
