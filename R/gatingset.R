@@ -280,7 +280,7 @@
   own <- axis$spec
   if (is.null(own)) return(is.null(spec) || identical(spec$kind, "identity"))
   if (!is.list(spec) || !identical(spec$kind, own$kind)) return(FALSE)
-  fields <- setdiff(names(own), c("kind", "standard", "tableChannels"))
+  fields <- setdiff(names(own), c("kind", "standard", "tableChannels", "spline"))
   all(vapply(fields, function(field) {
     a <- suppressWarnings(as.numeric(spec[[field]]))
     b <- suppressWarnings(as.numeric(own[[field]]))
