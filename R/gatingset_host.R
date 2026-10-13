@@ -386,11 +386,19 @@
   gsub("[[:space:]]+", "", text)
 }
 
-# The node a boolean term names, as a full path: a path as written, else the one node of that
-# name, else NULL (unknown or ambiguous).
-.gatelabr_gatingset_resolve_term <- function(term, paths) {
+# The node a boolean term names, as a full path. cytolib stores a term as a path relative to
+# the root without its leading slash (`debris`, `debris-/CD45/dead`), so that is tried first;
+# then a path as written, a path under the boolean's own parent, the one node of that name,
+# the one path ending in it; else NULL (unknown or ambiguous).
+.gatelabr_gatingset_resolve_term <- function(term, paths, parent = "root") {
   term <- gsub("^[\"']|[\"']$", "", term)
   if (startsWith(term, "/")) return(if (term %in% paths) term else NULL)
+  from_root <- paste0("/", term)
+  if (from_root %in% paths) return(from_root)
+  if (!identical(parent, "root")) {
+    under_parent <- paste0(parent, "/", term)
+    if (under_parent %in% paths) return(under_parent)
+  }
   by_name <- paths[basename(paths) == term]
   if (length(by_name) == 1L) return(by_name)
   by_suffix <- paths[endsWith(paths, paste0("/", term))]
@@ -400,7 +408,7 @@
 
 # A boolean node as the app's contract has it: an operator and references by path, or the
 # reason it cannot be described.
-.gatelabr_gatingset_boolean_node <- function(gate, paths) {
+.gatelabr_gatingset_boolean_node <- function(gate, paths, parent = "root") {
   text <- .gatelabr_gatingset_boolean_text(gate)
   if (!nzchar(text)) return(list(unsupported = "a boolean with no expression"))
   has_and <- grepl("&", text, fixed = TRUE)
@@ -415,7 +423,7 @@
     include <- !startsWith(term, "!")
     name <- sub("^!+", "", term)
     if (!nzchar(name)) return(list(unsupported = paste0("a boolean with an empty term (", text, ")")))
-    path <- .gatelabr_gatingset_resolve_term(name, paths)
+    path <- .gatelabr_gatingset_resolve_term(name, paths, parent)
     if (is.null(path)) {
       return(list(unsupported = paste0("a boolean naming '", name, "', which is not one node of the hierarchy")))
     }
@@ -579,7 +587,7 @@
       next
     }
     if (node$boolean) {
-      body <- .gatelabr_gatingset_boolean_node(node$gate, paths)
+      body <- .gatelabr_gatingset_boolean_node(node$gate, paths, node$parent)
       if (!is.null(body$unsupported)) {
         leave(node$path, body$unsupported)
         next

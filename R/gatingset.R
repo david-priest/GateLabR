@@ -332,6 +332,13 @@
       low <- to_object(min(vertices[, index]))
       high <- to_object(max(vertices[, index]))
       if (is.nan(low) || is.nan(high)) return(NULL)
+      # flowCore's rectangle holds an event on either edge; a GateLab rectangle drawn since
+      # 2026-09 is half-open (models.ts, RectangleBounds), its upper edge out. The object's
+      # closed upper bound is set just below the app's, so the two hold the same events
+      # wherever values tie on the edge; the recompute check after the write settles the rest.
+      if (identical(gate$bounds, "half-open") && is.finite(high)) {
+        high <- high - abs(high) * .Machine$double.eps - .Machine$double.xmin
+      }
       # A range gate repeats its channel on both axes (hostedHierarchy.ts, and the Gating-ML
       # importer): the object gets one dimension, over the two ranges' intersection.
       previous <- bounds[[channel]]

@@ -759,3 +759,43 @@ test_that("a launch with no argument finds a GatingSet, after any SingleCellExpe
   expect_identical(GateLabR:::.gatelabr_launch_candidates(env), c("an_sce", "my_gs"))
   expect_identical(GateLabR:::.gatelabr_launch_candidates(new.env()), character(0))
 })
+
+test_that("a boolean's terms resolve as cytolib stores them: relative to the root, then under the parent", {
+  paths <- c("/debris", "/R5", "/R5/debris", "/debris-", "/debris-/CD45", "/debris-/CD45/dead")
+  resolve <- GateLabR:::.gatelabr_gatingset_resolve_term
+  # Found by check C on a FlowJo workspace: `!debris` at the root with two nodes named debris.
+  expect_identical(resolve("debris", paths, "root"), "/debris")
+  expect_identical(resolve("debris-/CD45/dead", paths, "/debris-/CD45"), "/debris-/CD45/dead")
+  expect_identical(resolve("debris", paths, "/R5"), "/debris")
+  expect_identical(resolve("dead", paths, "/debris-/CD45"), "/debris-/CD45/dead")
+  expect_identical(resolve("/R5/debris", paths, "root"), "/R5/debris")
+  expect_identical(resolve("CD45", paths, "root"), "/debris-/CD45")
+  expect_null(resolve("nothere", paths, "root"))
+})
+
+test_that("a half-open rectangle is written closed just below its upper edge, so events on the edge stay out", {
+  gs <- make_gatingset()
+  # An edge exactly on a value many events share: FSC-H is integer-valued in GvHD.
+  edge <- as.numeric(stats::median(transformed_values(gs, 1)[, "FSC-H"]))
+  gates <- list(`g-half` = list(gate_id = "g-half", name = "half", gate_type = "rectangle", x_channel = "FSC-H", y_channel = "SSC-H",
+                                vertices = list(list(100, 0), list(edge, 0), list(edge, 1e4), list(100, 1e4)), bounds = "half-open"))
+  populations <- list(
+    `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), parent_id = NULL),
+    `pop-half` = list(population_id = "pop-half", name = "half", parent_id = "pop-root", gate_refs = list(list(gate_id = "g-half", include = TRUE)))
+  )
+  masks <- lapply(1:2, function(index) {
+    v <- transformed_values(gs, index)
+    v[, "FSC-H"] >= 100 & v[, "FSC-H"] < edge & v[, "SSC-H"] >= 0 & v[, "SSC-H"] < 1e4
+  })
+  expect_true(any(transformed_values(gs, 1)[, "FSC-H"] == edge))
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(workspace_json(gates, populations),
+                      memberships_payload(gs, list(list(id = "pop-half", name = "half", parent = "pop-root", masks = masks)))),
+    dataset_id = "gatingset-gs"
+  )
+  expect_identical(handled$report$gates, "half")
+  gate <- flowWorkspace::gh_pop_get_gate(gs[[1]], "/half")
+  expect_s4_class(gate, "rectangleGate")
+  expect_lt(unname(gate@max)[[1]], edge)
+  expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[1]], "/half")), masks[[1]])
+})
