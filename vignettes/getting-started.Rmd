@@ -166,6 +166,33 @@ Both export to **SVG** (vector, Illustrator-friendly) and **PNG**.
 saveRDS(sce, "gated.rds")   # gates, populations, scales — all preserved
 ```
 
+## 10. For flowWorkspace and openCyto users
+
+A `GatingSet` is gated in the same app, and everything stays in flowWorkspace's terms. The hierarchy the object holds opens as the app's gates, each evaluated in the transformed space the object evaluates it in (logicle, FlowJo's biexponential and log, arcsinh), with the same counts; the matrix the object carries is shown; `pData()` columns are the sample metadata and colour the plots. "Save to GatingSet" writes the populations back to the hierarchy, in place, and `save_gs()` keeps them.
+
+```r
+library(flowWorkspace)
+gs <- load_gs("gated/")                        # or CytoML::flowjo_to_gatingset(ws, name = 1),
+                                               # cytobank_to_gatingset(...), or a GatingSet(fs)
+                                               # you compensated and transformed yourself
+launchGatingApp(gs)                            # draw, then "R host ▸ Save to GatingSet"
+
+gs_get_pop_paths(gs)                           # the tree, the app's populations included
+gh_pop_get_count(gs[[1]], "/Lymphocytes/CD4")  # counts as flowWorkspace computes them
+gh_pop_get_gate(gs[[1]], "/Lymphocytes/CD4")   # a rectangleGate, polygonGate or ellipsoidGate
+ggcyto::autoplot(gs[[1]], "/Lymphocytes/CD4")  # drawn by ggcyto as any other node
+gatelabPopulations(gs)                         # or the GateLabR readers, as for an SCE
+save_gs(gs, "gated/")                          # the hierarchy and the GateLab record together
+```
+
+What to expect:
+
+- A rectangle drawn in the app returns as a `rectangleGate` whatever the axes' transforms; a polygon or ellipse returns as its gate when it was drawn in the object's own transform space (the app's axes take the object's transforms at the first open, so this is the usual case on a logicle or arcsinh object). A quadrant, a population excluding a gate, or a polygon drawn in another space returns as its exact per-sample membership: a `booleanFilter`-class node that `gh_pop_get_indices()` reads like any other, with GateLab's count. The console says which populations went which way.
+- Every gate written is recomputed by flowWorkspace and compared with the app's membership; one that selects other events is replaced by the membership, so a node never holds different events in R than it showed in the app.
+- The object is modified in place, as `gs_pop_add()` modifies it; a `GatingSet` from `load_gs()` is read-only on its data, so compensate and transform before launching. Compensation from the app is refused on a `GatingSet` for that reason, with the reason stated.
+- A FlowJo-derived object's biexponential axes are evaluated by parameters, to within a quarter of a channel in 4096 of flowWorkspace's spline; the app's display axis for such a channel is its logicle, while the object's gates keep their own space.
+- Only the active tree is written to the hierarchy; parked hierarchies stay in the GateLab record (the `GATELAB_WORKSPACE` keyword on every sample).
+
 ## Feedback
 
 Found a bug or want a feature? Please

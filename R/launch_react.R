@@ -17,7 +17,7 @@
 #'   place: as a flowWorkspace gate where the space allows (a rectangle under
 #'   any transforms; a polygon or ellipse when the app's space is the object's)
 #'   and as the exact per-sample membership otherwise. If \code{NULL}, the first
-#'   SCE in the global environment is used.
+#'   SCE in the global environment is used, else the first GatingSet.
 #' @param sample_column Optional \code{colData} column defining samples. When
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny. By default the app is served on one port from
@@ -98,22 +98,17 @@ launchReactGateLab <- function(
     sce_name <- if (is.symbol(supplied)) deparse(supplied) else ""
   }
   if (is.null(sce)) {
-    candidates <- ls(envir = .GlobalEnv)
-    candidates <- candidates[vapply(candidates, function(name) {
-      tryCatch(
-        methods::is(get(name, envir = .GlobalEnv), "SingleCellExperiment"),
-        error = function(...) FALSE
-      )
-    }, logical(1))]
+    candidates <- .gatelabr_launch_candidates()
     if (length(candidates) == 0L) {
       stop(
-        "No SingleCellExperiment was supplied or found in the global environment.",
+        "No SingleCellExperiment or GatingSet was supplied or found in the global environment.",
         call. = FALSE
       )
     }
     sce_name <- candidates[[1]]
     sce <- get(sce_name, envir = .GlobalEnv)
-  } else if (.gatelabr_is_gatingset(sce)) {
+  }
+  if (.gatelabr_is_gatingset(sce)) {
     # A GatingSet is served from its own parts and written in place (gatingset_host.R); the
     # global name keeps the object, which every write reaches.
     .gatelabr_require_gatingset_support()
@@ -293,6 +288,19 @@ launchReactGateLab <- function(
     "\") hands it the object after you change it in the console."
   )
   invisible(handle)
+}
+
+# The objects a launch with no argument may open on, by name: every SingleCellExperiment in the
+# environment first, then every GatingSet, each in the order ls() gives.
+.gatelabr_launch_candidates <- function(envir = .GlobalEnv) {
+  names <- ls(envir = envir)
+  classes <- vapply(names, function(name) {
+    object <- tryCatch(get(name, envir = envir), error = function(...) NULL)
+    if (methods::is(object, "SingleCellExperiment")) "sce"
+    else if (.gatelabr_is_gatingset(object)) "gatingset"
+    else ""
+  }, character(1))
+  unname(c(names[classes == "sce"], names[classes == "gatingset"]))
 }
 
 .gatelabr_react_server <- function(

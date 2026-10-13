@@ -28,7 +28,7 @@ GatingSet" writes every population of the tree back to the hierarchy in
 place: as a flowWorkspace gate where the space allows (a rectangle under
 any transforms; a polygon or ellipse when the app's space is the object's)
 and as the exact per-sample membership otherwise. If \code{NULL}, the first
-SCE in the global environment is used.}
+SCE in the global environment is used, else the first GatingSet.}
 
 \item{sample_column}{Optional \code{colData} column defining samples. When
 omitted, common sample columns such as \code{sample_id} are detected.}

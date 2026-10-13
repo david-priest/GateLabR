@@ -7,7 +7,7 @@
 #'
 #' @param sce Optional \code{SingleCellExperiment}, or a flowWorkspace
 #'   \code{GatingSet} (see \code{\link{launchReactGateLab}}). If \code{NULL},
-#'   the first SCE in the global environment is used.
+#'   the first SCE in the global environment is used, else the first GatingSet.
 #' @param sample_column Optional \code{colData} column defining samples. When
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny. By default the app is served on one port from

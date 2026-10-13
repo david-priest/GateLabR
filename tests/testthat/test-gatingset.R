@@ -748,3 +748,13 @@ test_that("a range gate, which the app holds on one channel twice, is written as
   expect_equal(unname(gate@max), 3.5)
   expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[2]], "/bright")), masks[[2]])
 })
+
+test_that("a launch with no argument finds a GatingSet, after any SingleCellExperiment", {
+  env <- new.env()
+  assign("notes", data.frame(x = 1), envir = env)
+  assign("my_gs", make_gatingset(), envir = env)
+  expect_identical(GateLabR:::.gatelabr_launch_candidates(env), "my_gs")
+  assign("an_sce", SingleCellExperiment::SingleCellExperiment(assays = list(counts = matrix(1:4, 2L))), envir = env)
+  expect_identical(GateLabR:::.gatelabr_launch_candidates(env), c("an_sce", "my_gs"))
+  expect_identical(GateLabR:::.gatelabr_launch_candidates(new.env()), character(0))
+})
