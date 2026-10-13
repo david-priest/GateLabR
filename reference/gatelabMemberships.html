@@ -9,7 +9,7 @@ population holds, for every hierarchy. These functions read that back without re
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,8 @@ population holds, for every hierarchy. These functions read that back without re
 <span>  <span class="va">sce</span>,</span>
 <span>  populations <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  hierarchy <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  allow_stale <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  allow_stale <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name"</span>, <span class="st">"path"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">gatelabLeafPopulation</span><span class="op">(</span></span>
@@ -86,6 +87,12 @@ the memberships were saved.</p></dd>
 <dt id="arg-populations">populations<a class="anchor" aria-label="anchor" href="#arg-populations"></a></dt>
 <dd><p>Population names (or ids) to return; <code>NULL</code> means every population of
 the hierarchy, root included.</p></dd>
+
+
+<dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
+<dd><p>How the columns of <code>gatelabPopulations()</code> are named: by population name,
+disambiguated by id where names repeat, or by the population's path from the root (the
+node path on a GatingSet), which is unique by construction.</p></dd>
 
 
 <dt id="arg-ungated">ungated<a class="anchor" aria-label="anchor" href="#arg-ungated"></a></dt>

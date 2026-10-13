@@ -22,8 +22,10 @@ launchGatingApp(
 
 - sce:
 
-  Optional `SingleCellExperiment`. If `NULL`, the first SCE in the
-  global environment is used.
+  Optional `SingleCellExperiment`, or a flowWorkspace `GatingSet` (see
+  [`launchReactGateLab`](https://david-priest.github.io/GateLabR/reference/launchReactGateLab.md)).
+  If `NULL`, the first SCE in the global environment is used, else the
+  first GatingSet.
 
 - sample_column:
 

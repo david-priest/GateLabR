@@ -1,7 +1,106 @@
 # Changelog
 
-## GateLabR (development version)
+## GateLabR 1.6.1
 
+- The embedded GateLab core is 0.9.1 (GateLab-dev 1bf63cd), up from
+  0.9.0: it reads a GatingSet’s hierarchy and a hosted channel’s
+  transform, shows FlowJo’s biexponential as an axis on a channel that
+  records one (its parameters stated in the Transforms panel), and keeps
+  a hosted sample’s arcsinh and biexponential when the sample joins the
+  workspace’s shared scales, which the 0.9.0 core lost, so an SCE’s row
+  transforms and a GatingSet’s arcsinh and biexponential channels open
+  as stated. Also from the core: FACSDiscover S8 cell images and a
+  Linear \$PnD honoured when reading the display an S8 file records.
+- `gatelabPopulations(by = "path")` names the columns by each
+  population’s path from the root, unique by construction (a GatingSet’s
+  node path), where the default names them by population and
+  disambiguates repeats with the id. `metadata(sce)$spillover` is the
+  documented name of the matrix an SCE carries for the app, as
+  [`flowCore::spillover()`](https://rdrr.io/pkg/flowCore/man/flowFrame-class.html)
+  returns one; the older names are still read.
+- The display transform each channel was drawn on is kept on the object:
+  every save from the app writes it to `rowData(sce)$gatelab_transform`
+  as a JSON spec per row (a logicle with T, W, M and A, an arcsinh with
+  its cofactor, FlowJo’s biexponential, or the identity), the way a
+  GatingSet keeps its transforms with its data, and
+  [`gatelabTransforms()`](https://david-priest.github.io/GateLabR/reference/gatelabTransforms.md)
+  reads it from either object. The app opens an SCE on those transforms
+  where it has no saved workspace, and an R plot can be drawn on the
+  axes the app showed.
+- `gatelabGatingSet(sce)` builds a flowWorkspace `GatingSet` from an SCE
+  gated in the app: each sample’s events from the assay the workspace
+  was drawn on (an arcsinh assay put back to linear through its
+  cofactor),
+  [`markernames()`](https://rdrr.io/pkg/flowCore/man/markernames.html)
+  from the rows,
+  [`pData()`](https://rdrr.io/pkg/Biobase/man/phenoData.html) from the
+  sample metadata, the channels on the transforms the object states, and
+  every population of the active hierarchy written as “Save to
+  GatingSet” writes them, a flowWorkspace gate where the space allows
+  and the exact per-sample membership otherwise, each gate recomputed
+  and checked against the stored membership. The GateLab record goes
+  along as the keyword, so
+  [`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+  on the result opens the same workspace, and
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  reads the same memberships from either object. flowWorkspace evaluates
+  the gates from there, `ggcyto` draws them and CytoML exports them.
+- `launchGatingApp(gs)` accepts a flowWorkspace `GatingSet`, and serves
+  it from the object itself: no SingleCellExperiment is built. The app
+  opens on the object’s samples with the
+  [`pData()`](https://rdrr.io/pkg/Biobase/man/phenoData.html) columns as
+  sample metadata, drawing each sample’s values read from its cytoframe
+  one channel at a time as the app asks for them and put back to linear
+  through the channel’s inverse transform (the values flowWorkspace
+  holds are compensated, so the app applies no matrix a second time; the
+  matrix it carries is shown). The hierarchy the object holds opens as
+  the app’s gates, each evaluated in the transformed space the object
+  evaluates it in: rectangles, polygons, ellipses, quadrant sets (as one
+  quadrant gate), negated nodes and `&`/`!` booleans over node names; an
+  OR node, or one whose channel is on a FlowJo calibration table, is
+  left out by name. The app’s axes take the object’s transforms: a
+  logicle is shown as the object’s own, an arcsinh at its cofactor; a
+  FlowJo-derived object’s biexponential channels open on that
+  biexponential, at the object’s parameters (the embedded core shows it
+  as an axis), and a FlowJo log channel keeps the app’s default axis,
+  its gates still exact through their own transforms. The biexponential
+  is flowWorkspace’s own: the app builds cytolib’s table from the
+  parameters, equal to five thousandths of a channel. The workspace is
+  kept as a keyword (`GATELAB_WORKSPACE`) on every sample’s cytoframe,
+  which
+  [`save_gs()`](https://rdrr.io/pkg/flowWorkspace/man/save_gs.html)
+  keeps, and “Save to GatingSet” writes every population of the tree
+  back to the hierarchy, in place: a rectangle as a `rectangleGate`
+  under any pair of transforms, a polygon or ellipse as its gate when
+  the app’s space is the object’s, and every other population as its
+  exact per-sample membership; each gate written is recomputed and
+  replaced by the membership if flowWorkspace selected other events. The
+  colData export dialog writes populations as nodes under the root; the
+  panel dialog writes
+  [`markernames()`](https://rdrr.io/pkg/flowCore/man/markernames.html);
+  a pData column colours plots. A spillover matrix applied in the app is
+  applied to the object in place with
+  [`flowWorkspace::compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html)
+  when the object is writable, uncompensated and untransformed, as a
+  GatingSet user compensates at the prompt: the object’s one assay
+  becomes `compensated`, the uncompensated values are gone from it as
+  they are after
+  [`compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html),
+  and the application is kept as a keyword so a reopened object restores
+  the app’s compensated layer; otherwise the matrix is refused with the
+  reason (a GatingSet from
+  [`load_gs()`](https://rdrr.io/pkg/flowWorkspace/man/save_gs.html) is
+  read-only on its data, a compensated one cannot be uncompensated,
+  compensation precedes transformation, and mass cytometry’s NNLS has no
+  in-place form).
+  [`gatelabHierarchy()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md),
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  and
+  [`gatelabLeafPopulation()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
+  read a GatingSet’s hierarchy;
+  [`gatelabSync()`](https://david-priest.github.io/GateLabR/reference/gatelabSync.md)
+  takes a GatingSet. flowWorkspace is a suggested package; the embedded
+  core is the one that reads a GatingSet’s hierarchy.
 - [`gatelabStrategyPlot()`](https://david-priest.github.io/GateLabR/reference/gatelabStrategyPlot.md)
   draws the gating strategy of a saved object in R as the Strategy tab
   draws it in its “Multiple pops” mode with the samples pooled: one
@@ -18,9 +117,8 @@
   geometry. The result is a grid drawing of a fixed size, in the app’s
   CSS pixels at 96 to the inch, which
   [`print()`](https://rdrr.io/r/base/print.html) and
-  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) draw on the
-  current device; its size in inches and a table of the counts are
-  attributes.
+  [`plot()`](https://rdrr.io/r/base/plot.html) draw on the current
+  device; its size in inches and a table of the counts are attributes.
   [`gatelabPanelGrob()`](https://david-priest.github.io/GateLabR/reference/gatelabPanelGrob.md)
   draws one such panel from events and gates given to it,
   [`gatelabContour()`](https://david-priest.github.io/GateLabR/reference/gatelabContour.md)
@@ -607,7 +705,10 @@
   linear versus display-coordinate contracts. Compensation Apply runs in
   a cancellable background R process and installs revisioned assays
   atomically. Panel labels, population memberships, division calls and
-  editable sample annotations have explicit `rowData()` / `colData()`
+  editable sample annotations have explicit
+  [`rowData()`](https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html)
+  /
+  [`colData()`](https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html)
   write-back actions, and canonical workspaces, compensation provenance
   and assay bindings persist inside the SCE and restore without
   recomputation.

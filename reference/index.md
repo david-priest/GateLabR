@@ -14,13 +14,19 @@
 ## Reading a saved workspace back in R
 
 “Save to SCE” stores which events every population holds, so a gating
-result can be read back without re-gating. These four read that record.
+result can be read back without re-gating. These read that record, the
+transforms the object was drawn on, and build a GatingSet from a gated
+SCE.
 
 - [`gatelabHierarchies()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
   [`gatelabHierarchy()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
   [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
   [`gatelabLeafPopulation()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
   : Population hierarchies stored in a gated SingleCellExperiment
+- [`gatelabTransforms()`](https://david-priest.github.io/GateLabR/reference/gatelabTransforms.md)
+  : The display transform of every channel, as the app drew it
+- [`gatelabGatingSet()`](https://david-priest.github.io/GateLabR/reference/gatelabGatingSet.md)
+  : Build a flowWorkspace GatingSet from a gated SingleCellExperiment
 
 ## Drawing a gating strategy in R
 

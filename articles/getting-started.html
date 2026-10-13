@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,27 +97,53 @@ it):</p>
 <div class="section level2">
 <h2 id="get-your-data-in">2. Get your data in<a class="anchor" aria-label="anchor" href="#get-your-data-in"></a>
 </h2>
-<p>Two entry points:</p>
-<ul>
-<li>
-<strong>Import <code>.fcs</code> files</strong> in the app — it
-builds the <code>SingleCellExperiment</code>, auto-detects flow vs
-CyTOF, and sets up the per-channel transforms.</li>
-<li>
-<strong>Pass an existing SCE</strong> — e.g. from CATALYST
-<code>prepData()</code> (CyTOF) or one you built with
-<code>flowCore</code> / your own pipeline:</li>
-</ul>
+<p>GateLabR opens on an R object, not on FCS files: a
+<code>SingleCellExperiment</code> or a flowWorkspace
+<code>GatingSet</code>. Pass the object, or call
+<code><a href="../reference/launchGatingApp.html">launchGatingApp()</a></code> with no argument to pick from the SCEs in
+your session.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">my_sce</span><span class="op">)</span>          <span class="co"># use a specific object</span></span>
-<span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="op">)</span>                <span class="co"># or pick from SCEs in your session / Import FCS</span></span></code></pre></div>
-<p>Flow data uses per-channel <strong>logicle</strong> for fluorescence
-and <strong>arcsinh</strong> for FSC/SSC scatter (editable W and
-cofactor); CyTOF uses arcsinh (cofactor 5).</p>
-<blockquote>
-<p>📸 <em>Screenshot: the FCS import dialog / SCE picker.</em> — add
-<code>man/figures/import.png</code></p>
-</blockquote>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">my_sce</span><span class="op">)</span>          <span class="co"># a SingleCellExperiment</span></span>
+<span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">my_gs</span><span class="op">)</span>           <span class="co"># a flowWorkspace GatingSet</span></span>
+<span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="op">)</span>                <span class="co"># pick from the SCEs in your session</span></span></code></pre></div>
+<p>A CyTOF <code>SingleCellExperiment</code> comes from CATALYST’s
+<code>prepData()</code>. FCS files from a flow cytometer are assembled
+into either object with flowCore and flowWorkspace:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">flowCore</span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">flowWorkspace</span><span class="op">)</span></span>
+<span><span class="va">fs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/read.flowSet.html" class="external-link">read.flowSet</a></span><span class="op">(</span>path <span class="op">=</span> <span class="st">"fcs/"</span>, pattern <span class="op">=</span> <span class="st">"\\.fcs$"</span>, truncate_max_range <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># A GatingSet keeps the files' events on disk, compensated and transformed in place.</span></span>
+<span><span class="co"># Compensate before transforming: a GatingSet cannot be uncompensated.</span></span>
+<span><span class="va">gs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/GatingSet-class.html" class="external-link">GatingSet</a></span><span class="op">(</span><span class="va">fs</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/compensation-class.html" class="external-link">compensate</a></span><span class="op">(</span><span class="va">gs</span>, <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">spillover</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">$</span><span class="va">SPILL</span><span class="op">)</span>                <span class="co"># the matrix the files record</span></span>
+<span><span class="va">fluor</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"-A$"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">fluor</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="va">fluor</span>, <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^(FSC|SSC)"</span>, <span class="va">fluor</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/transform.html" class="external-link">transform</a></span><span class="op">(</span><span class="va">gs</span>, <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/logicleTransform.html" class="external-link">estimateLogicle</a></span><span class="op">(</span><span class="va">gs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="va">fluor</span><span class="op">)</span><span class="op">)</span>          <span class="co"># logicle per channel, W from the data</span></span>
+<span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># A SingleCellExperiment holds the events as columns and the channels as rows. Keep the</span></span>
+<span><span class="co"># uncompensated values as `counts`; GateLabR compensates in the app and stores the result as</span></span>
+<span><span class="co"># a second assay.</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">SingleCellExperiment</span><span class="op">)</span></span>
+<span><span class="va">events</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/pkg/BiocGenerics/man/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">fs</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/exprs.html" class="external-link">exprs</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">sample_id</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/Biobase/man/featureNames.html" class="external-link">sampleNames</a></span><span class="op">(</span><span class="va">fs</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/fsApply.html" class="external-link">fsApply</a></span><span class="op">(</span><span class="va">fs</span>, <span class="va">nrow</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">sce</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/SingleCellExperiment/man/SingleCellExperiment.html" class="external-link">SingleCellExperiment</a></span><span class="op">(</span></span>
+<span>  assays <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>counts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">events</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  colData <span class="op">=</span> <span class="fu">DataFrame</span><span class="op">(</span>sample_id <span class="op">=</span> <span class="va">sample_id</span><span class="op">)</span>,</span>
+<span>  rowData <span class="op">=</span> <span class="fu">DataFrame</span><span class="op">(</span>channel_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">events</span><span class="op">)</span>,</span>
+<span>                      marker_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/markernames.html" class="external-link">markernames</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">events</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">spillover</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">spillover</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">$</span><span class="va">SPILL</span>     <span class="co"># offered in the Compensation tab</span></span>
+<span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span></span></code></pre></div>
+<p>On a <code>GatingSet</code>, the hierarchy it holds opens as the
+app’s gates, drawn in the transformed space the object evaluates them
+in, and “Save to GatingSet” writes the populations back to the hierarchy
+in place (see <code><a href="../reference/launchReactGateLab.html">?launchReactGateLab</a></code>). On an SCE, flow data is
+drawn on a per-channel <strong>logicle</strong> for fluorescence and
+linear scatter (editable W and cofactor); CyTOF uses arcsinh (cofactor
+5).</p>
 </div>
 <div class="section level2">
 <h2 id="the-layout">3. The layout<a class="anchor" aria-label="anchor" href="#the-layout"></a>
@@ -215,6 +241,15 @@ vice-versa).</p>
 <strong>Apply compensation</strong> to linearly compensate fluorescence
 channels from the embedded <code>$SPILLOVER</code>. (CyTOF and
 pre-compensated/spectral data don’t need it.)</p>
+<p>On a <code>SingleCellExperiment</code> the matrix lives in
+<code>metadata(sce)$spillover</code>, a numeric matrix with the source
+channels as row names and the receiver channels as column names, as
+<code><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">flowCore::spillover()</a></code> returns it; that is the one
+documented name, read first (the older <code>spillover_matrix</code>,
+<code>spilloverMatrix</code> and <code>sm</code> are still read after
+it); a matrix applied in the app is kept with the workspace record, not
+written back to this slot. A <code>GatingSet</code> carries its applied
+matrix itself (<code><a href="https://rdrr.io/pkg/flowWorkspace/man/gh_get_compensations.html" class="external-link">gh_get_compensations()</a></code>).</p>
 <blockquote>
 <p>📸 <em>Screenshot: the compensation toggle + matrix viewer.</em> —
 add <code>man/figures/compensation.png</code></p>
@@ -266,9 +301,86 @@ Cytobank. FlowJo does not read Gating-ML; it uses its own
 <code>metadata(sce)$gating_workspace</code> mirror kept for the previous
 interface; <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> the object (or export a portable
 <code>.rds</code>) and re-loading restores everything.</li>
+<li>
+<strong>Axes</strong> are kept on the rows:
+<code>rowData(sce)$gatelab_transform</code> holds the transform each
+channel was drawn on at the last save
+(<code>gatelabTransforms(sce)</code> reads it), as a GatingSet keeps its
+transforms with its data.</li>
 </ul>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">sce</span>, <span class="st">"gated.rds"</span><span class="op">)</span>   <span class="co"># gates, populations, scales — all preserved</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="for-flowworkspace-and-opencyto-users">10. For flowWorkspace and openCyto users<a class="anchor" aria-label="anchor" href="#for-flowworkspace-and-opencyto-users"></a>
+</h2>
+<p>A <code>GatingSet</code> is gated in the same app, and everything
+stays in flowWorkspace’s terms. The hierarchy the object holds opens as
+the app’s gates, each evaluated in the transformed space the object
+evaluates it in (logicle, FlowJo’s biexponential and log, arcsinh), with
+the same counts; the matrix the object carries is shown;
+<code><a href="https://rdrr.io/pkg/Biobase/man/phenoData.html" class="external-link">pData()</a></code> columns are the sample metadata and colour the
+plots. “Save to GatingSet” writes the populations back to the hierarchy,
+in place, and <code><a href="https://rdrr.io/pkg/flowWorkspace/man/save_gs.html" class="external-link">save_gs()</a></code> keeps them.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">flowWorkspace</span><span class="op">)</span></span>
+<span><span class="va">gs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/save_gs.html" class="external-link">load_gs</a></span><span class="op">(</span><span class="st">"gated/"</span><span class="op">)</span>                        <span class="co"># or CytoML::flowjo_to_gatingset(ws, name = 1),</span></span>
+<span>                                               <span class="co"># cytobank_to_gatingset(...), or a GatingSet(fs)</span></span>
+<span>                                               <span class="co"># you compensated and transformed yourself</span></span>
+<span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span>                            <span class="co"># draw, then "R host ▸ Save to GatingSet"</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/gs_get_pop_paths.html" class="external-link">gs_get_pop_paths</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span>                           <span class="co"># the tree, the app's populations included</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/gh_pop_get_proportion.html" class="external-link">gh_pop_get_count</a></span><span class="op">(</span><span class="va">gs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="st">"/Lymphocytes/CD4"</span><span class="op">)</span>  <span class="co"># counts as flowWorkspace computes them</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/gs_pop_get_gate.html" class="external-link">gh_pop_get_gate</a></span><span class="op">(</span><span class="va">gs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="st">"/Lymphocytes/CD4"</span><span class="op">)</span>   <span class="co"># a rectangleGate, polygonGate or ellipsoidGate</span></span>
+<span><span class="fu">ggcyto</span><span class="fu">::</span><span class="fu">autoplot</span><span class="op">(</span><span class="va">gs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="st">"/Lymphocytes/CD4"</span><span class="op">)</span>  <span class="co"># drawn by ggcyto as any other node</span></span>
+<span><span class="fu"><a href="../reference/gatelabMemberships.html">gatelabPopulations</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span>                         <span class="co"># or the GateLabR readers, as for an SCE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/save_gs.html" class="external-link">save_gs</a></span><span class="op">(</span><span class="va">gs</span>, <span class="st">"gated/"</span><span class="op">)</span>                          <span class="co"># the hierarchy and the GateLab record together</span></span></code></pre></div>
+<p>What to expect:</p>
+<ul>
+<li>A rectangle drawn in the app returns as a <code>rectangleGate</code>
+whatever the axes’ transforms; a polygon or ellipse returns as its gate
+when it was drawn in the object’s own transform space (the app’s axes
+take the object’s transforms at the first open, so this is the usual
+case on a logicle or arcsinh object). A quadrant, a population excluding
+a gate, or a polygon drawn in another space returns as its exact
+per-sample membership: a <code>booleanFilter</code>-class node that
+<code><a href="https://rdrr.io/pkg/flowWorkspace/man/gh_pop_get_indices.html" class="external-link">gh_pop_get_indices()</a></code> reads like any other, with GateLab’s
+count. The console says which populations went which way.</li>
+<li>Every gate written is recomputed by flowWorkspace and compared with
+the app’s membership; one that selects other events is replaced by the
+membership, so a node never holds different events in R than it showed
+in the app.</li>
+<li>The object is modified in place, as <code><a href="https://rdrr.io/pkg/flowWorkspace/man/gs_pop_add.html" class="external-link">gs_pop_add()</a></code>
+modifies it. A matrix applied in the app’s Compensation tab is applied
+with <code><a href="https://rdrr.io/pkg/flowCore/man/compensation-class.html" class="external-link">flowWorkspace::compensate()</a></code>, in place and to the whole
+object, when the object is writable, uncompensated and untransformed —
+the uncompensated values are then gone from it, as after
+<code><a href="https://rdrr.io/pkg/flowCore/man/compensation-class.html" class="external-link">compensate()</a></code> at the prompt. A <code>GatingSet</code> from
+<code><a href="https://rdrr.io/pkg/flowWorkspace/man/save_gs.html" class="external-link">load_gs()</a></code> is read-only on its data, and compensation
+precedes transformation, so for those compensate in R before launching;
+the app says which applies.</li>
+<li>A FlowJo-derived object’s biexponential channels open on FlowJo’s
+biexponential at the object’s parameters (the Scales tab offers it
+beside logicle and arcsinh), built from cytolib’s own table, so the axis
+and the gates are flowWorkspace’s to five thousandths of a channel.</li>
+<li>Only the active tree is written to the hierarchy; parked hierarchies
+stay in the GateLab record (the <code>GATELAB_WORKSPACE</code> keyword
+on every sample).</li>
+</ul>
+<p>The other direction is <code><a href="../reference/gatelabGatingSet.html">gatelabGatingSet()</a></code>: an SCE gated
+in the app becomes a <code>GatingSet</code>, its samples as cytoframes
+from the assay the workspace was drawn on, its channels on the
+transforms the object states, and every population of the active
+hierarchy written as “Save to GatingSet” writes them, so flowWorkspace
+recomputes the gates, <code>ggcyto</code> draws them and CytoML exports
+them. The GateLab record goes along as the keyword, so
+<code><a href="../reference/launchGatingApp.html">launchGatingApp()</a></code> on the result opens the same
+workspace.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">gs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/gatelabGatingSet.html">gatelabGatingSet</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span>                    <span class="co"># after "Save to SCE"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/gs_get_pop_paths.html" class="external-link">gs_get_pop_paths</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span>                           <span class="co"># the SCE's populations as nodes</span></span>
+<span><span class="fu"><a href="../reference/gatelabMemberships.html">gatelabPopulations</a></span><span class="op">(</span><span class="va">gs</span><span class="op">)</span>                         <span class="co"># the same memberships as gatelabPopulations(sce)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/flowWorkspace/man/save_gs.html" class="external-link">save_gs</a></span><span class="op">(</span><span class="va">gs</span>, <span class="st">"from-sce/"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="feedback">Feedback<a class="anchor" aria-label="anchor" href="#feedback"></a>

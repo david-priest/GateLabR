@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,7 +75,7 @@
       </dl></div><div class="section level2">
       <h2 id="reading-a-saved-workspace-back-in-r">Reading a saved workspace back in R<a class="anchor" aria-label="anchor" href="#reading-a-saved-workspace-back-in-r"></a></h2>
 
-      <div class="section-desc"><p>“Save to SCE” stores which events every population holds, so a gating result can be read back without re-gating. These four read that record.</p></div>
+      <div class="section-desc"><p>“Save to SCE” stores which events every population holds, so a gating result can be read back without re-gating. These read that record, the transforms the object was drawn on, and build a GatingSet from a gated SCE.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -88,6 +88,20 @@
 
         </dt>
         <dd>Population hierarchies stored in a gated SingleCellExperiment</dd>
+
+        <dt>
+
+          <code><a href="gatelabTransforms.html">gatelabTransforms()</a></code>
+
+        </dt>
+        <dd>The display transform of every channel, as the app drew it</dd>
+
+        <dt>
+
+          <code><a href="gatelabGatingSet.html">gatelabGatingSet()</a></code>
+
+        </dt>
+        <dd>Build a flowWorkspace GatingSet from a gated SingleCellExperiment</dd>
       </dl></div><div class="section level2">
       <h2 id="drawing-a-gating-strategy-in-r">Drawing a gating strategy in R<a class="anchor" aria-label="anchor" href="#drawing-a-gating-strategy-in-r"></a></h2>
 

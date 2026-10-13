@@ -15,7 +15,8 @@ gatelabPopulations(
   sce,
   populations = NULL,
   hierarchy = NULL,
-  allow_stale = FALSE
+  allow_stale = FALSE,
+  by = c("name", "path")
 )
 
 gatelabLeafPopulation(
@@ -47,6 +48,13 @@ gatelabLeafPopulation(
 
   Population names (or ids) to return; `NULL` means every population of
   the hierarchy, root included.
+
+- by:
+
+  How the columns of `gatelabPopulations()` are named: by population
+  name, disambiguated by id where names repeat, or by the population's
+  path from the root (the node path on a GatingSet), which is unique by
+  construction.
 
 - ungated:
 

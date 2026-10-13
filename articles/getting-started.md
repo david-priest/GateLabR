@@ -36,26 +36,61 @@ opens in your browser.
 
 ## 2. Get your data in
 
-Two entry points:
-
-- **Import `.fcs` files** in the app — it builds the
-  `SingleCellExperiment`, auto-detects flow vs CyTOF, and sets up the
-  per-channel transforms.
-- **Pass an existing SCE** — e.g. from CATALYST `prepData()` (CyTOF) or
-  one you built with `flowCore` / your own pipeline:
+GateLabR opens on an R object, not on FCS files: a
+`SingleCellExperiment` or a flowWorkspace `GatingSet`. Pass the object,
+or call
+[`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+with no argument to pick from the SCEs in your session.
 
 ``` r
 
-launchGatingApp(my_sce)          # use a specific object
-launchGatingApp()                # or pick from SCEs in your session / Import FCS
+launchGatingApp(my_sce)          # a SingleCellExperiment
+launchGatingApp(my_gs)           # a flowWorkspace GatingSet
+launchGatingApp()                # pick from the SCEs in your session
 ```
 
-Flow data uses per-channel **logicle** for fluorescence and **arcsinh**
-for FSC/SSC scatter (editable W and cofactor); CyTOF uses arcsinh
-(cofactor 5).
+A CyTOF `SingleCellExperiment` comes from CATALYST’s `prepData()`. FCS
+files from a flow cytometer are assembled into either object with
+flowCore and flowWorkspace:
 
-> 📸 *Screenshot: the FCS import dialog / SCE picker.* — add
-> `man/figures/import.png`
+``` r
+
+library(flowCore)
+library(flowWorkspace)
+fs <- read.flowSet(path = "fcs/", pattern = "\\.fcs$", truncate_max_range = FALSE)
+
+# A GatingSet keeps the files' events on disk, compensated and transformed in place.
+# Compensate before transforming: a GatingSet cannot be uncompensated.
+gs <- GatingSet(fs)
+compensate(gs, spillover(fs[[1]])$SPILL)                # the matrix the files record
+fluor <- grep("-A$", colnames(gs), value = TRUE)
+fluor <- setdiff(fluor, grep("^(FSC|SSC)", fluor, value = TRUE))
+transform(gs, estimateLogicle(gs[[1]], fluor))          # logicle per channel, W from the data
+launchGatingApp(gs)
+
+# A SingleCellExperiment holds the events as columns and the channels as rows. Keep the
+# uncompensated values as `counts`; GateLabR compensates in the app and stores the result as
+# a second assay.
+library(SingleCellExperiment)
+events <- do.call(rbind, lapply(seq_along(fs), function(i) exprs(fs[[i]])))
+sample_id <- rep(sampleNames(fs), fsApply(fs, nrow))
+sce <- SingleCellExperiment(
+  assays = list(counts = t(events)),
+  colData = DataFrame(sample_id = sample_id),
+  rowData = DataFrame(channel_name = colnames(events),
+                      marker_name = unname(markernames(fs[[1]])[colnames(events)]))
+)
+metadata(sce)$spillover <- spillover(fs[[1]])$SPILL     # offered in the Compensation tab
+launchGatingApp(sce)
+```
+
+On a `GatingSet`, the hierarchy it holds opens as the app’s gates, drawn
+in the transformed space the object evaluates them in, and “Save to
+GatingSet” writes the populations back to the hierarchy in place (see
+[`?launchReactGateLab`](https://david-priest.github.io/GateLabR/reference/launchReactGateLab.md)).
+On an SCE, flow data is drawn on a per-channel **logicle** for
+fluorescence and linear scatter (editable W and cofactor); CyTOF uses
+arcsinh (cofactor 5).
 
 ## 3. The layout
 
@@ -116,6 +151,17 @@ compensation** to linearly compensate fluorescence channels from the
 embedded `$SPILLOVER`. (CyTOF and pre-compensated/spectral data don’t
 need it.)
 
+On a `SingleCellExperiment` the matrix lives in
+`metadata(sce)$spillover`, a numeric matrix with the source channels as
+row names and the receiver channels as column names, as
+[`flowCore::spillover()`](https://rdrr.io/pkg/flowCore/man/flowFrame-class.html)
+returns it; that is the one documented name, read first (the older
+`spillover_matrix`, `spilloverMatrix` and `sm` are still read after it);
+a matrix applied in the app is kept with the workspace record, not
+written back to this slot. A `GatingSet` carries its applied matrix
+itself
+([`gh_get_compensations()`](https://rdrr.io/pkg/flowWorkspace/man/gh_get_compensations.html)).
+
 > 📸 *Screenshot: the compensation toggle + matrix viewer.* — add
 > `man/figures/compensation.png`
 
@@ -148,10 +194,101 @@ Both export to **SVG** (vector, Illustrator-friendly) and **PNG**.
   interface; [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) the
   object (or export a portable `.rds`) and re-loading restores
   everything.
+- **Axes** are kept on the rows: `rowData(sce)$gatelab_transform` holds
+  the transform each channel was drawn on at the last save
+  (`gatelabTransforms(sce)` reads it), as a GatingSet keeps its
+  transforms with its data.
 
 ``` r
 
 saveRDS(sce, "gated.rds")   # gates, populations, scales — all preserved
+```
+
+## 10. For flowWorkspace and openCyto users
+
+A `GatingSet` is gated in the same app, and everything stays in
+flowWorkspace’s terms. The hierarchy the object holds opens as the app’s
+gates, each evaluated in the transformed space the object evaluates it
+in (logicle, FlowJo’s biexponential and log, arcsinh), with the same
+counts; the matrix the object carries is shown;
+[`pData()`](https://rdrr.io/pkg/Biobase/man/phenoData.html) columns are
+the sample metadata and colour the plots. “Save to GatingSet” writes the
+populations back to the hierarchy, in place, and
+[`save_gs()`](https://rdrr.io/pkg/flowWorkspace/man/save_gs.html) keeps
+them.
+
+``` r
+
+library(flowWorkspace)
+gs <- load_gs("gated/")                        # or CytoML::flowjo_to_gatingset(ws, name = 1),
+                                               # cytobank_to_gatingset(...), or a GatingSet(fs)
+                                               # you compensated and transformed yourself
+launchGatingApp(gs)                            # draw, then "R host ▸ Save to GatingSet"
+
+gs_get_pop_paths(gs)                           # the tree, the app's populations included
+gh_pop_get_count(gs[[1]], "/Lymphocytes/CD4")  # counts as flowWorkspace computes them
+gh_pop_get_gate(gs[[1]], "/Lymphocytes/CD4")   # a rectangleGate, polygonGate or ellipsoidGate
+ggcyto::autoplot(gs[[1]], "/Lymphocytes/CD4")  # drawn by ggcyto as any other node
+gatelabPopulations(gs)                         # or the GateLabR readers, as for an SCE
+save_gs(gs, "gated/")                          # the hierarchy and the GateLab record together
+```
+
+What to expect:
+
+- A rectangle drawn in the app returns as a `rectangleGate` whatever the
+  axes’ transforms; a polygon or ellipse returns as its gate when it was
+  drawn in the object’s own transform space (the app’s axes take the
+  object’s transforms at the first open, so this is the usual case on a
+  logicle or arcsinh object). A quadrant, a population excluding a gate,
+  or a polygon drawn in another space returns as its exact per-sample
+  membership: a `booleanFilter`-class node that
+  [`gh_pop_get_indices()`](https://rdrr.io/pkg/flowWorkspace/man/gh_pop_get_indices.html)
+  reads like any other, with GateLab’s count. The console says which
+  populations went which way.
+- Every gate written is recomputed by flowWorkspace and compared with
+  the app’s membership; one that selects other events is replaced by the
+  membership, so a node never holds different events in R than it showed
+  in the app.
+- The object is modified in place, as
+  [`gs_pop_add()`](https://rdrr.io/pkg/flowWorkspace/man/gs_pop_add.html)
+  modifies it. A matrix applied in the app’s Compensation tab is applied
+  with
+  [`flowWorkspace::compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html),
+  in place and to the whole object, when the object is writable,
+  uncompensated and untransformed — the uncompensated values are then
+  gone from it, as after
+  [`compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html)
+  at the prompt. A `GatingSet` from
+  [`load_gs()`](https://rdrr.io/pkg/flowWorkspace/man/save_gs.html) is
+  read-only on its data, and compensation precedes transformation, so
+  for those compensate in R before launching; the app says which
+  applies.
+- A FlowJo-derived object’s biexponential channels open on FlowJo’s
+  biexponential at the object’s parameters (the Scales tab offers it
+  beside logicle and arcsinh), built from cytolib’s own table, so the
+  axis and the gates are flowWorkspace’s to five thousandths of a
+  channel.
+- Only the active tree is written to the hierarchy; parked hierarchies
+  stay in the GateLab record (the `GATELAB_WORKSPACE` keyword on every
+  sample).
+
+The other direction is
+[`gatelabGatingSet()`](https://david-priest.github.io/GateLabR/reference/gatelabGatingSet.md):
+an SCE gated in the app becomes a `GatingSet`, its samples as cytoframes
+from the assay the workspace was drawn on, its channels on the
+transforms the object states, and every population of the active
+hierarchy written as “Save to GatingSet” writes them, so flowWorkspace
+recomputes the gates, `ggcyto` draws them and CytoML exports them. The
+GateLab record goes along as the keyword, so
+[`launchGatingApp()`](https://david-priest.github.io/GateLabR/reference/launchGatingApp.md)
+on the result opens the same workspace.
+
+``` r
+
+gs <- gatelabGatingSet(sce)                    # after "Save to SCE"
+gs_get_pop_paths(gs)                           # the SCE's populations as nodes
+gatelabPopulations(gs)                         # the same memberships as gatelabPopulations(sce)
+save_gs(gs, "from-sce/")
 ```
 
 ## Feedback

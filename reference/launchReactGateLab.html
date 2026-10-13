@@ -11,7 +11,7 @@ launchGatingApp, which is the single supported entry point."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,8 +65,20 @@ adapter for a <code>SingleCellExperiment</code>. This is the interface started b
 
 
 <dl><dt id="arg-sce">sce<a class="anchor" aria-label="anchor" href="#arg-sce"></a></dt>
-<dd><p>A <code>SingleCellExperiment</code>. If <code>NULL</code>, the first SCE in
-the global environment is used.</p></dd>
+<dd><p>A <code>SingleCellExperiment</code>, or a flowWorkspace <code>GatingSet</code>,
+which is served from the object itself: its samples with the <code>pData()</code>
+columns as metadata, each sample's values read from its cytoframe as the
+app asks for them and put back to linear through the channel's inverse
+transform, and the hierarchy it holds opened as the app's gates, each in
+the transformed space the object evaluates it in. The app's axes take the
+object's transforms (a logicle as the object's own, an arcsinh at its
+cofactor). The workspace is kept as the keyword <code>GATELAB_WORKSPACE</code> on
+every sample's cytoframe, which <code>save_gs()</code> keeps, and "Save to
+GatingSet" writes every population of the tree back to the hierarchy in
+place: as a flowWorkspace gate where the space allows (a rectangle under
+any transforms; a polygon or ellipse when the app's space is the object's)
+and as the exact per-sample membership otherwise. If <code>NULL</code>, the first
+SCE in the global environment is used, else the first GatingSet.</p></dd>
 
 
 <dt id="arg-sample-column">sample_column<a class="anchor" aria-label="anchor" href="#arg-sample-column"></a></dt>

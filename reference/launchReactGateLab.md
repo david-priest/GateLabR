@@ -23,8 +23,21 @@ launchReactGateLab(
 
 - sce:
 
-  A `SingleCellExperiment`. If `NULL`, the first SCE in the global
-  environment is used.
+  A `SingleCellExperiment`, or a flowWorkspace `GatingSet`, which is
+  served from the object itself: its samples with the `pData()` columns
+  as metadata, each sample's values read from its cytoframe as the app
+  asks for them and put back to linear through the channel's inverse
+  transform, and the hierarchy it holds opened as the app's gates, each
+  in the transformed space the object evaluates it in. The app's axes
+  take the object's transforms (a logicle as the object's own, an
+  arcsinh at its cofactor). The workspace is kept as the keyword
+  `GATELAB_WORKSPACE` on every sample's cytoframe, which `save_gs()`
+  keeps, and "Save to GatingSet" writes every population of the tree
+  back to the hierarchy in place: as a flowWorkspace gate where the
+  space allows (a rectangle under any transforms; a polygon or ellipse
+  when the app's space is the object's) and as the exact per-sample
+  membership otherwise. If `NULL`, the first SCE in the global
+  environment is used, else the first GatingSet.
 
 - sample_column:
 
