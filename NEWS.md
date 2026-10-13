@@ -1,4 +1,4 @@
-# GateLabR (development version)
+# GateLabR 1.6.1
 
 - `gatelabPopulations(by = "path")` names the columns by each population's path from the root, unique by construction (a GatingSet's node path), where the default names them by population and disambiguates repeats with the id. `metadata(sce)$spillover` is the documented name of the matrix an SCE carries for the app, as `flowCore::spillover()` returns one; the older names are still read.
 - The display transform each channel was drawn on is kept on the object: every save from the app writes it to `rowData(sce)$gatelab_transform` as a JSON spec per row (a logicle with T, W, M and A, an arcsinh with its cofactor, FlowJo's biexponential, or the identity), the way a GatingSet keeps its transforms with its data, and `gatelabTransforms()` reads it from either object. The app opens an SCE on those transforms where it has no saved workspace, and an R plot can be drawn on the axes the app showed.
