@@ -13,11 +13,11 @@ var v_ = (e, t, n, r) => ({
     return Wo(e, t, r);
   }
 });
-var lU = typeof globalThis < "u" ? globalThis : typeof window < "u" ? window : typeof global < "u" ? global : typeof self < "u" ? self : {};
+var cU = typeof globalThis < "u" ? globalThis : typeof window < "u" ? window : typeof global < "u" ? global : typeof self < "u" ? self : {};
 function KT(e) {
   return e && e.__esModule && Object.prototype.hasOwnProperty.call(e, "default") ? e.default : e;
 }
-var C0 = { exports: {} }, Bm = {}, A0 = { exports: {} }, Nr = {};
+var C0 = { exports: {} }, Bm = {}, A0 = { exports: {} }, Er = {};
 /**
  * @license React
  * react.production.min.js
@@ -29,7 +29,7 @@ var C0 = { exports: {} }, Bm = {}, A0 = { exports: {} }, Nr = {};
  */
 var w_;
 function XT() {
-  if (w_) return Nr;
+  if (w_) return Er;
   w_ = 1;
   var e = Symbol.for("react.element"), t = Symbol.for("react.portal"), n = Symbol.for("react.fragment"), r = Symbol.for("react.strict_mode"), a = Symbol.for("react.profiler"), o = Symbol.for("react.provider"), i = Symbol.for("react.context"), l = Symbol.for("react.forward_ref"), s = Symbol.for("react.suspense"), c = Symbol.for("react.memo"), f = Symbol.for("react.lazy"), p = Symbol.iterator;
   function m(Q) {
@@ -139,7 +139,7 @@ function XT() {
   function O() {
     throw Error("act(...) is not supported in production builds of React.");
   }
-  return Nr.Children = { map: D, forEach: function(Q, ce, le) {
+  return Er.Children = { map: D, forEach: function(Q, ce, le) {
     D(Q, function() {
       ce.apply(this, arguments);
     }, le);
@@ -155,7 +155,7 @@ function XT() {
   }, only: function(Q) {
     if (!F(Q)) throw Error("React.Children.only expected to receive a single React element child.");
     return Q;
-  } }, Nr.Component = x, Nr.Fragment = n, Nr.Profiler = a, Nr.PureComponent = _, Nr.StrictMode = r, Nr.Suspense = s, Nr.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ne, Nr.act = O, Nr.cloneElement = function(Q, ce, le) {
+  } }, Er.Component = x, Er.Fragment = n, Er.Profiler = a, Er.PureComponent = _, Er.StrictMode = r, Er.Suspense = s, Er.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = ne, Er.act = O, Er.cloneElement = function(Q, ce, le) {
     if (Q == null) throw Error("React.cloneElement(...): The argument must be a React element, but you passed " + Q + ".");
     var ge = y({}, Q.props), te = Q.key, ye = Q.ref, be = Q._owner;
     if (ce != null) {
@@ -170,20 +170,20 @@ function XT() {
       ge.children = ue;
     }
     return { $$typeof: e, type: Q.type, key: te, ref: ye, props: ge, _owner: be };
-  }, Nr.createContext = function(Q) {
+  }, Er.createContext = function(Q) {
     return Q = { $$typeof: i, _currentValue: Q, _currentValue2: Q, _threadCount: 0, Provider: null, Consumer: null, _defaultValue: null, _globalName: null }, Q.Provider = { $$typeof: o, _context: Q }, Q.Consumer = Q;
-  }, Nr.createElement = N, Nr.createFactory = function(Q) {
+  }, Er.createElement = N, Er.createFactory = function(Q) {
     var ce = N.bind(null, Q);
     return ce.type = Q, ce;
-  }, Nr.createRef = function() {
+  }, Er.createRef = function() {
     return { current: null };
-  }, Nr.forwardRef = function(Q) {
+  }, Er.forwardRef = function(Q) {
     return { $$typeof: l, render: Q };
-  }, Nr.isValidElement = F, Nr.lazy = function(Q) {
+  }, Er.isValidElement = F, Er.lazy = function(Q) {
     return { $$typeof: f, _payload: { _status: -1, _result: Q }, _init: G };
-  }, Nr.memo = function(Q, ce) {
+  }, Er.memo = function(Q, ce) {
     return { $$typeof: c, type: Q, compare: ce === void 0 ? null : ce };
-  }, Nr.startTransition = function(Q) {
+  }, Er.startTransition = function(Q) {
     var ce = Y.transition;
     Y.transition = {};
     try {
@@ -191,36 +191,36 @@ function XT() {
     } finally {
       Y.transition = ce;
     }
-  }, Nr.unstable_act = O, Nr.useCallback = function(Q, ce) {
+  }, Er.unstable_act = O, Er.useCallback = function(Q, ce) {
     return Z.current.useCallback(Q, ce);
-  }, Nr.useContext = function(Q) {
+  }, Er.useContext = function(Q) {
     return Z.current.useContext(Q);
-  }, Nr.useDebugValue = function() {
-  }, Nr.useDeferredValue = function(Q) {
+  }, Er.useDebugValue = function() {
+  }, Er.useDeferredValue = function(Q) {
     return Z.current.useDeferredValue(Q);
-  }, Nr.useEffect = function(Q, ce) {
+  }, Er.useEffect = function(Q, ce) {
     return Z.current.useEffect(Q, ce);
-  }, Nr.useId = function() {
+  }, Er.useId = function() {
     return Z.current.useId();
-  }, Nr.useImperativeHandle = function(Q, ce, le) {
+  }, Er.useImperativeHandle = function(Q, ce, le) {
     return Z.current.useImperativeHandle(Q, ce, le);
-  }, Nr.useInsertionEffect = function(Q, ce) {
+  }, Er.useInsertionEffect = function(Q, ce) {
     return Z.current.useInsertionEffect(Q, ce);
-  }, Nr.useLayoutEffect = function(Q, ce) {
+  }, Er.useLayoutEffect = function(Q, ce) {
     return Z.current.useLayoutEffect(Q, ce);
-  }, Nr.useMemo = function(Q, ce) {
+  }, Er.useMemo = function(Q, ce) {
     return Z.current.useMemo(Q, ce);
-  }, Nr.useReducer = function(Q, ce, le) {
+  }, Er.useReducer = function(Q, ce, le) {
     return Z.current.useReducer(Q, ce, le);
-  }, Nr.useRef = function(Q) {
+  }, Er.useRef = function(Q) {
     return Z.current.useRef(Q);
-  }, Nr.useState = function(Q) {
+  }, Er.useState = function(Q) {
     return Z.current.useState(Q);
-  }, Nr.useSyncExternalStore = function(Q, ce, le) {
+  }, Er.useSyncExternalStore = function(Q, ce, le) {
     return Z.current.useSyncExternalStore(Q, ce, le);
-  }, Nr.useTransition = function() {
+  }, Er.useTransition = function() {
     return Z.current.useTransition();
-  }, Nr.version = "18.3.1", Nr;
+  }, Er.version = "18.3.1", Er;
 }
 var x_;
 function iy() {
@@ -1581,10 +1581,10 @@ function eF() {
         return 16;
     }
   }
-  var oa = null, Cr = null, pi = null;
+  var oa = null, Ar = null, pi = null;
   function gs() {
     if (pi) return pi;
-    var u, h = Cr, S = h.length, I, H = "value" in oa ? oa.value : oa.textContent, X = H.length;
+    var u, h = Ar, S = h.length, I, H = "value" in oa ? oa.value : oa.textContent, X = H.length;
     for (u = 0; u < S && h[u] === H[u]; u++) ;
     var me = S - u;
     for (I = 1; I <= me && h[S - I] === H[X - I]; I++) ;
@@ -1708,7 +1708,7 @@ function eF() {
   }), Qt = ko(Pt), Bn = [9, 13, 27, 32], fr = l && "CompositionEvent" in window, Fn = null;
   l && "documentMode" in document && (Fn = document.documentMode);
   var Gr = l && "TextEvent" in window && !Fn, ao = l && (!fr || Fn && 8 < Fn && 11 >= Fn), ma = " ", Qa = !1;
-  function Ar(u, h) {
+  function Mr(u, h) {
     switch (u) {
       case "keyup":
         return Bn.indexOf(h.keyCode) !== -1;
@@ -1739,7 +1739,7 @@ function eF() {
     }
   }
   function gy(u, h) {
-    if (Ui) return u === "compositionend" || !fr && Ar(u, h) ? (u = gs(), pi = Cr = oa = null, Ui = !1, u) : null;
+    if (Ui) return u === "compositionend" || !fr && Mr(u, h) ? (u = gs(), pi = Ar = oa = null, Ui = !1, u) : null;
     switch (u) {
       case "paste":
         return null;
@@ -2157,8 +2157,8 @@ function eF() {
           }
           rr = void 0;
         }
-        else Ui ? Ar(u, S) && (rr = "onCompositionEnd") : u === "keydown" && S.keyCode === 229 && (rr = "onCompositionStart");
-        rr && (ao && S.locale !== "ko" && (Ui || rr !== "onCompositionStart" ? rr === "onCompositionEnd" && Ui && (Jn = gs()) : (oa = Ut, Cr = "value" in oa ? oa.value : oa.textContent, Ui = !0)), Vn = zf(lt, rr), 0 < Vn.length && (rr = new xu(rr, u, null, S, Ut), Zt.push({ event: rr, listeners: Vn }), Jn ? rr.data = Jn : (Jn = yi(S), Jn !== null && (rr.data = Jn)))), (Jn = Gr ? o0(u, S) : gy(u, S)) && (lt = zf(lt, "onBeforeInput"), 0 < lt.length && (Ut = new xu("onBeforeInput", "beforeinput", null, S, Ut), Zt.push({ event: Ut, listeners: lt }), Ut.data = Jn));
+        else Ui ? Mr(u, S) && (rr = "onCompositionEnd") : u === "keydown" && S.keyCode === 229 && (rr = "onCompositionStart");
+        rr && (ao && S.locale !== "ko" && (Ui || rr !== "onCompositionStart" ? rr === "onCompositionEnd" && Ui && (Jn = gs()) : (oa = Ut, Ar = "value" in oa ? oa.value : oa.textContent, Ui = !0)), Vn = zf(lt, rr), 0 < Vn.length && (rr = new xu(rr, u, null, S, Ut), Zt.push({ event: rr, listeners: Vn }), Jn ? rr.data = Jn : (Jn = yi(S), Jn !== null && (rr.data = Jn)))), (Jn = Gr ? o0(u, S) : gy(u, S)) && (lt = zf(lt, "onBeforeInput"), 0 < lt.length && (Ut = new xu("onBeforeInput", "beforeinput", null, S, Ut), Zt.push({ event: Ut, listeners: lt }), Ut.data = Jn));
       }
       Gp(Zt, h);
     });
@@ -2848,7 +2848,7 @@ function eF() {
   function _a(u) {
     vn.current === u && (ia(_s), ia(vn));
   }
-  var _r = tc(0);
+  var Cr = tc(0);
   function Kf(u) {
     for (var h = u; h !== null; ) {
       if (h.tag === 13) {
@@ -3422,8 +3422,8 @@ Error generating stack: ` + X.message + `
     return { baseLanes: u, cachePool: null, transitions: null };
   }
   function Gu(u, h, S) {
-    var I = h.pendingProps, H = _r.current, X = !1, me = (h.flags & 128) !== 0, Fe;
-    if ((Fe = me) || (Fe = u !== null && u.memoizedState === null ? !1 : (H & 2) !== 0), Fe ? (X = !0, h.flags &= -129) : (u === null || u.memoizedState !== null) && (H |= 1), ca(_r, H & 1), u === null)
+    var I = h.pendingProps, H = Cr.current, X = !1, me = (h.flags & 128) !== 0, Fe;
+    if ((Fe = me) || (Fe = u !== null && u.memoizedState === null ? !1 : (H & 2) !== 0), Fe ? (X = !0, h.flags &= -129) : (u === null || u.memoizedState !== null) && (H |= 1), ca(Cr, H & 1), u === null)
       return Js(h), u = h.memoizedState, u !== null && (u = u.dehydrated, u !== null) ? ((h.mode & 1) === 0 ? h.lanes = 1 : u.data === "$!" ? h.lanes = 8 : h.lanes = 1073741824, null) : (me = I.children, u = I.fallback, X ? (I = h.mode, X = h.child, me = { mode: "hidden", children: me }, (I & 1) === 0 && X !== null ? (X.childLanes = 0, X.pendingProps = me) : X = Jd(me, I, 0, null), u = Jc(u, I, S, null), X.return = h, u.return = h, X.sibling = u, h.child = X, h.child.memoizedState = sh(S), h.memoizedState = Sl, u) : wm(h, me));
     if (H = u.memoizedState, H !== null && (Fe = H.dehydrated, Fe !== null)) return Qy(u, h, me, I, Fe, H, S);
     if (X) {
@@ -3502,7 +3502,7 @@ Error generating stack: ` + X.message + `
   }
   function Zy(u, h, S) {
     var I = h.pendingProps, H = I.revealOrder, X = I.tail;
-    if (ni(u, h, I.children, S), I = _r.current, (I & 2) !== 0) I = I & 1 | 2, h.flags |= 128;
+    if (ni(u, h, I.children, S), I = Cr.current, (I & 2) !== 0) I = I & 1 | 2, h.flags |= 128;
     else {
       if (u !== null && (u.flags & 128) !== 0) e: for (u = h.child; u !== null; ) {
         if (u.tag === 13) u.memoizedState !== null && lh(u, S, h);
@@ -3520,7 +3520,7 @@ Error generating stack: ` + X.message + `
       }
       I &= 1;
     }
-    if (ca(_r, I), (h.mode & 1) === 0) h.memoizedState = null;
+    if (ca(Cr, I), (h.mode & 1) === 0) h.memoizedState = null;
     else switch (H) {
       case "forwards":
         for (S = h.child, H = null; S !== null; ) u = S.alternate, u !== null && Kf(u) === null && (H = S), S = S.sibling;
@@ -3576,15 +3576,15 @@ Error generating stack: ` + X.message + `
         break;
       case 13:
         if (I = h.memoizedState, I !== null)
-          return I.dehydrated !== null ? (ca(_r, _r.current & 1), h.flags |= 128, null) : (S & h.child.childLanes) !== 0 ? Gu(u, h, S) : (ca(_r, _r.current & 1), u = Ms(u, h, S), u !== null ? u.sibling : null);
-        ca(_r, _r.current & 1);
+          return I.dehydrated !== null ? (ca(Cr, Cr.current & 1), h.flags |= 128, null) : (S & h.child.childLanes) !== 0 ? Gu(u, h, S) : (ca(Cr, Cr.current & 1), u = Ms(u, h, S), u !== null ? u.sibling : null);
+        ca(Cr, Cr.current & 1);
         break;
       case 19:
         if (I = (S & h.childLanes) !== 0, (u.flags & 128) !== 0) {
           if (I) return Zy(u, h, S);
           h.flags |= 128;
         }
-        if (H = h.memoizedState, H !== null && (H.rendering = null, H.tail = null, H.lastEffect = null), ca(_r, _r.current), I) break;
+        if (H = h.memoizedState, H !== null && (H.rendering = null, H.tail = null, H.lastEffect = null), ca(Cr, Cr.current), I) break;
         return null;
       case 22:
       case 23:
@@ -3867,7 +3867,7 @@ Error generating stack: ` + X.message + `
         }
         return zo(h), null;
       case 13:
-        if (ia(_r), I = h.memoizedState, u === null || u.memoizedState !== null && u.memoizedState.dehydrated !== null) {
+        if (ia(Cr), I = h.memoizedState, u === null || u.memoizedState !== null && u.memoizedState.dehydrated !== null) {
           if (Yr && an !== null && (h.mode & 1) !== 0 && (h.flags & 128) === 0) Uf(), vl(), h.flags |= 98560, X = !1;
           else if (X = Hr(h), I !== null && I.dehydrated !== null) {
             if (u === null) {
@@ -3879,7 +3879,7 @@ Error generating stack: ` + X.message + `
           } else ks !== null && (wh(ks), ks = null), X = !0;
           if (!X) return h.flags & 65536 ? h : null;
         }
-        return (h.flags & 128) !== 0 ? (h.lanes = S, h) : (I = I !== null, I !== (u !== null && u.memoizedState !== null) && I && (h.child.flags |= 8192, (h.mode & 1) !== 0 && (u === null || (_r.current & 1) !== 0 ? Ya === 0 && (Ya = 3) : Pm())), h.updateQueue !== null && (h.flags |= 4), zo(h), null);
+        return (h.flags & 128) !== 0 ? (h.lanes = S, h) : (I = I !== null, I !== (u !== null && u.memoizedState !== null) && I && (h.child.flags |= 8192, (h.mode & 1) !== 0 && (u === null || (Cr.current & 1) !== 0 ? Ya === 0 && (Ya = 3) : Pm())), h.updateQueue !== null && (h.flags |= 4), zo(h), null);
       case 4:
         return Xs(), bm(u, h), u === null && Dc(h.stateNode.containerInfo), zo(h), null;
       case 10:
@@ -3887,13 +3887,13 @@ Error generating stack: ` + X.message + `
       case 17:
         return Ga(h.type) && Pu(), zo(h), null;
       case 19:
-        if (ia(_r), X = h.memoizedState, X === null) return zo(h), null;
+        if (ia(Cr), X = h.memoizedState, X === null) return zo(h), null;
         if (I = (h.flags & 128) !== 0, me = X.rendering, me === null) if (I) Wu(X, !1);
         else {
           if (Ya !== 0 || u !== null && (u.flags & 128) !== 0) for (u = h.child; u !== null; ) {
             if (me = Kf(u), me !== null) {
               for (h.flags |= 128, Wu(X, !1), I = me.updateQueue, I !== null && (h.updateQueue = I, h.flags |= 4), h.subtreeFlags = 0, I = S, S = h.child; S !== null; ) X = S, u = I, X.flags &= 14680066, me = X.alternate, me === null ? (X.childLanes = 0, X.lanes = u, X.child = null, X.subtreeFlags = 0, X.memoizedProps = null, X.memoizedState = null, X.updateQueue = null, X.dependencies = null, X.stateNode = null) : (X.childLanes = me.childLanes, X.lanes = me.lanes, X.child = me.child, X.subtreeFlags = 0, X.deletions = null, X.memoizedProps = me.memoizedProps, X.memoizedState = me.memoizedState, X.updateQueue = me.updateQueue, X.type = me.type, u = me.dependencies, X.dependencies = u === null ? null : { lanes: u.lanes, firstContext: u.firstContext }), S = S.sibling;
-              return ca(_r, _r.current & 1 | 2), h.child;
+              return ca(Cr, Cr.current & 1 | 2), h.child;
             }
             u = u.sibling;
           }
@@ -3905,7 +3905,7 @@ Error generating stack: ` + X.message + `
           } else 2 * _n() - X.renderingStartTime > Vc && S !== 1073741824 && (h.flags |= 128, I = !0, Wu(X, !1), h.lanes = 4194304);
           X.isBackwards ? (me.sibling = h.child, h.child = me) : (S = X.last, S !== null ? S.sibling = me : h.child = me, X.last = me);
         }
-        return X.tail !== null ? (h = X.tail, X.rendering = h, X.tail = h.sibling, X.renderingStartTime = _n(), h.sibling = null, S = _r.current, ca(_r, I ? S & 1 | 2 : S & 1), h) : (zo(h), null);
+        return X.tail !== null ? (h = X.tail, X.rendering = h, X.tail = h.sibling, X.renderingStartTime = _n(), h.sibling = null, S = Cr.current, ca(Cr, I ? S & 1 | 2 : S & 1), h) : (zo(h), null);
       case 22:
       case 23:
         return xh(), I = h.memoizedState !== null, u !== null && u.memoizedState !== null !== I && (h.flags |= 8192), I && (h.mode & 1) !== 0 ? (bi & 1073741824) !== 0 && (zo(h), h.subtreeFlags & 6 && (h.flags |= 8192)) : zo(h), null;
@@ -3925,13 +3925,13 @@ Error generating stack: ` + X.message + `
       case 5:
         return _a(h), null;
       case 13:
-        if (ia(_r), u = h.memoizedState, u !== null && u.dehydrated !== null) {
+        if (ia(Cr), u = h.memoizedState, u !== null && u.dehydrated !== null) {
           if (h.alternate === null) throw Error(n(340));
           vl();
         }
         return u = h.flags, u & 65536 ? (h.flags = u & -65537 | 128, h) : null;
       case 19:
-        return ia(_r), null;
+        return ia(Cr), null;
       case 4:
         return Xs(), null;
       case 10:
@@ -4791,10 +4791,10 @@ Error generating stack: ` + X.message + `
           Xs();
           break;
         case 13:
-          ia(_r);
+          ia(Cr);
           break;
         case 19:
-          ia(_r);
+          ia(Cr);
           break;
         case 10:
           wl(I.type._context);
@@ -8759,7 +8759,7 @@ function Zh(e) {
   const n = Math.max(rE, Math.min(aE, t));
   return Number((Math.round(n / g1) * g1).toFixed(1));
 }
-function cU(e, t) {
+function uU(e, t) {
   const n = Number.isFinite(e) && e > 0 ? e : 1, r = Zh(t);
   return r > dp ? n * r / dp : n;
 }
@@ -10245,7 +10245,17 @@ class iu {
    */
   attachChannelScales(t) {
     this.channelScales = t;
-    for (let n = 0; n < this.channels.length; n++) this.invalidateChannel(n);
+    const n = this.workspaceScaleContextKey;
+    this.channels.forEach((r, a) => {
+      const o = r.key;
+      if (!o) return;
+      this.fluorArcsinh.has(a) && !t.isFluorArcsinh(n, o) && t.setFluorArcsinh(n, o, !0);
+      const i = this.fluorBiexOverride.get(a);
+      i && t.fluorBiexParams(n, o) === void 0 && t.setFluorBiex(n, o, i);
+      const l = this.scatterCofactorOverride.get(a);
+      l !== void 0 && t.scatterCofactor(n, o) === void 0 && t.setScatterCofactor(n, o, l);
+    });
+    for (let r = 0; r < this.channels.length; r++) this.invalidateChannel(r);
     return t.register(this), () => {
       t.unregister(this), this.channelScales === t && (this.channelScales = void 0);
     };
@@ -11910,7 +11920,7 @@ function wE(e, t, n, r) {
   }
   return null;
 }
-function uU(e, t, n, r, a, o) {
+function dU(e, t, n, r, a, o) {
   if (!e.length) return null;
   const i = e.map((g) => Math.max(0, g.gating.stats.event_count[g.populationId] ?? 0)), l = Number.isFinite(a.maxEvents) && a.maxEvents > 0 ? Ap(i, a.maxEvents) : i, s = (g) => `${g.populationId}|${t}`, c = [];
   if (e.forEach((g, y) => {
@@ -13256,7 +13266,7 @@ function ok(e) {
   const t = Kx(e);
   return { width: t.width * e.columns, height: t.height * e.rows };
 }
-function dU(e) {
+function fU(e) {
   const t = Kx(e), n = [];
   for (let r = 0; r < e.rows; r++)
     for (let a = 0; a < e.columns; a++)
@@ -13603,7 +13613,7 @@ function EE(e) {
   }
   return t;
 }
-function fU(e, t, n) {
+function hU(e, t, n) {
   const r = e.items.filter((i) => t.includes(i.id));
   if (!r.length) return;
   const a = EE(r), o = a.length > 1 ? zg(r) : Xx(e);
@@ -13634,7 +13644,7 @@ function fU(e, t, n) {
       f.x += s, f.y += c;
   }
 }
-function hU(e, t, n) {
+function pU(e, t, n) {
   const r = e.items.filter((y) => t.includes(y.id)), a = EE(r).map((y) => ({ unit: y, bounds: zg(y) }));
   if (a.length < 3) return;
   const o = (y) => n === "horizontal" ? y.width : y.height, i = (y) => n === "horizontal" ? y.x : y.y, l = [...a].sort((y, b) => i(y.bounds) - i(b.bounds)), s = l[0].bounds, c = l[l.length - 1].bounds, f = i(c) + o(c) - i(s), p = l.reduce((y, { bounds: b }) => y + o(b), 0), m = (f - p) / (l.length - 1);
@@ -13646,17 +13656,17 @@ function hU(e, t, n) {
     g += o(b) + m;
   }
 }
-function pU(e, t, n = crypto.randomUUID()) {
+function mU(e, t, n = crypto.randomUUID()) {
   const r = new Set(e.items.filter((a) => t.includes(a.id) && a.group).map((a) => a.group));
   for (const a of e.items)
     (t.includes(a.id) || a.group && r.has(a.group)) && (a.group = n);
   return n;
 }
-function mU(e, t) {
+function gU(e, t) {
   const n = new Set(e.items.filter((r) => t.includes(r.id) && r.group).map((r) => r.group));
   for (const r of e.items) r.group && n.has(r.group) && delete r.group;
 }
-function gU(e) {
+function yU(e) {
   const t = zg(e.items);
   if (!t) return;
   const n = hp(e.page.marginMm), r = t.x - n, a = t.y - n;
@@ -13673,7 +13683,7 @@ function gU(e) {
     rows: 1
   });
 }
-function yU(e) {
+function vU(e) {
   const t = zg(e.items);
   if (!t || t.width <= 0 || t.height <= 0) return;
   const n = Xx(e), r = Math.min(n.width / t.width, n.height / t.height), a = t.width * r, o = t.height * r, i = n.x + (n.width - a) / 2, l = n.y + (n.height - o) / 2;
@@ -21541,7 +21551,7 @@ function IL(e, t, n, r) {
   }
   return f || (f = 520), { width: Math.round(Math.min(f, a.width)), height: Math.round(Math.min(p, a.height)) };
 }
-function vU({
+function wU({
   recipe: e,
   files: t,
   sources: n,
@@ -22027,7 +22037,7 @@ function V0(e, t, n) {
   return r && r.length ? r : ZL;
 }
 const YL = new Intl.Collator(void 0, { numeric: !0, sensitivity: "base" });
-function wU(e, t) {
+function xU(e, t) {
   return YL.compare(e, t);
 }
 const Dl = "sample_id";
@@ -22273,7 +22283,7 @@ async function UE(e, t) {
   return new Blob([r], { type: "image/png" });
 }
 async function fD(e, t, n) {
-  const { svg2pdf: r } = await import("./svg2pdf.es.min-BOcz_NwN.js"), a = document.createElement("div");
+  const { svg2pdf: r } = await import("./svg2pdf.es.min-B4DJvWTQ.js"), a = document.createElement("div");
   a.style.cssText = "position:fixed;left:-100000px;top:0;visibility:hidden", a.appendChild(t), document.body.appendChild(a);
   try {
     return await r(t, e, { x: 0, y: 0, width: n.width, height: n.height }), !0;
@@ -22283,7 +22293,7 @@ async function fD(e, t, n) {
     a.remove();
   }
 }
-const xU = () => new Promise((e) => setTimeout(e, 0)), Bl = {};
+const bU = () => new Promise((e) => setTimeout(e, 0)), Bl = {};
 function la(e, t) {
   const [n, r] = W.useState(
     () => e in Bl ? Bl[e] : typeof t == "function" ? t() : t
@@ -31809,7 +31819,7 @@ function I8(e, t, n) {
   const r = Xx(n), a = t.hasFacet ? Math.max(1, new Set(t.perSample.map((g) => g.facet ?? "")).size) : 1, o = [...new Set(t.perSample.map((g) => g.group))], i = e.plotType === "stacked" ? o : t.catLevels, l = Qj(e.plotType, i, Math.max(1, o.length), e.fontTick), s = e.plotType === "stacked" ? t.catLevels.length : o.length, c = Math.min(4, Math.max(1, Math.ceil(s / 10))), f = Math.max(1, Math.ceil(s / c)), p = Math.max(360, c * 145, a * l.width + (a - 1) * 12) + 24, m = l.height - 240 + e.height + (e.legend ? 22 + f * (e.fontLegend + 9) : 0) + 24;
   return { width: Math.round(Math.min(p, r.width)), height: Math.round(Math.min(m, r.height)) };
 }
-function bU({
+function SU({
   recipe: e,
   samples: t,
   state: n,
@@ -33172,7 +33182,7 @@ var x6 = /* @__PURE__ */ (function() {
 function b6(e, t) {
   return sP(e, { i: 2 }, t && t.out, t && t.dictionary);
 }
-function SU(e, t) {
+function kU(e, t) {
   t || (t = {});
   var n = uP();
   n.p(e);
@@ -38526,14 +38536,14 @@ function kB(e) {
   return SB(e);
 }
 const Pl = "gatelab", Cf = "gatelab-workspace";
-function Er(e) {
+function _r(e) {
   return typeof e == "object" && e !== null && !Array.isArray(e);
 }
 function Ft(e) {
   throw new Error(`Invalid GateLab workspace: ${e}`);
 }
 function _B(e) {
-  if (!Er(e) || typeof e.label != "string") return !1;
+  if (!_r(e) || typeof e.label != "string") return !1;
   const { channels: t, matrix: n } = e;
   if (!Array.isArray(t) || t.length < 2 || !t.every((a) => typeof a == "string" && a.length > 0) || new Set(t).size !== t.length) return !1;
   const { leftOut: r } = e;
@@ -38543,30 +38553,34 @@ function ef(e) {
   return Array.isArray(e) && e.length === 2 && e.every((t) => typeof t == "number" && Number.isFinite(t));
 }
 function CB(e) {
-  return Er(e) && Object.entries(e).every(
+  return _r(e) && Object.entries(e).every(
     ([t, n]) => t.length > 0 && typeof n == "number" && Number.isFinite(n) && n > 0
   );
 }
 function AB(e) {
-  return Er(e) && Object.entries(e).every(([t, n]) => {
-    if (t.length === 0 || !Er(n)) return !1;
+  const t = /* @__PURE__ */ new Set(["identity", "asinh", "logicle", "biex", "wsplog", "flog", "flowjoChannels"]);
+  return _r(e) && Object.entries(e).every(([n, r]) => n.length > 0 && _r(r) && typeof r.kind == "string" && t.has(r.kind));
+}
+function MB(e) {
+  return _r(e) && Object.entries(e).every(([t, n]) => {
+    if (t.length === 0 || !_r(n)) return !1;
     const r = ["maxValue", "pos", "neg", "widthBasis", "channelRange"].every(
       (i) => typeof n[i] == "number" && Number.isFinite(n[i])
     ), a = n.tableChannels, o = n.spline;
     return r && (a === void 0 || typeof a == "number" && Number.isInteger(a) && a > 1) && (o === void 0 || typeof o == "boolean");
   });
 }
-const MB = /* @__PURE__ */ new Set([
+const NB = /* @__PURE__ */ new Set([
   "channelKey",
   "boundaries",
   "n",
   "colName",
   "coordinateBindingKey"
 ]);
-function NB(e, t) {
+function EB(e, t) {
   const n = `sample ${t + 1} division profile`;
-  Er(e) || Ft(`${n} is not an object.`);
-  const r = Object.keys(e).filter((o) => !MB.has(o));
+  _r(e) || Ft(`${n} is not an object.`);
+  const r = Object.keys(e).filter((o) => !NB.has(o));
   r.length > 0 && Ft(`${n} has unexpected fields: ${r.join(", ")}.`), (typeof e.channelKey != "string" || e.channelKey.trim().length === 0) && Ft(`${n} has an invalid channelKey.`), (typeof e.colName != "string" || e.colName.trim().length === 0) && Ft(`${n} has an invalid colName.`), (!Number.isInteger(e.n) || e.n < 1 || e.n > 11) && Ft(`${n} must have an integer n from 1 to 11.`), Array.isArray(e.boundaries) || Ft(`${n} boundaries must be an array.`);
   const a = e.boundaries;
   a.length !== e.n && Ft(`${n} boundary count must equal n.`);
@@ -38579,7 +38593,7 @@ function FM(e, t, n, r, a = "") {
     (typeof n != "string" || n.length === 0 || !t[n]) && Ft("root_population_id is missing or does not identify a population.");
     const o = Object.keys(t);
     for (const [f, p] of Object.entries(t)) {
-      Er(p) || Ft(`population "${f}" is not an object.`);
+      _r(p) || Ft(`population "${f}" is not an object.`);
       const m = p;
       m.population_id !== f && Ft(`population map key "${f}" does not match its population_id.`), (typeof m.name != "string" || m.name.trim().length === 0) && Ft(`population "${f}" has no name.`), m.gate_logic !== "and" && m.gate_logic !== "or" && Ft(`population "${f}" has invalid gate_logic.`), (!Array.isArray(m.children) || !m.children.every((g) => typeof g == "string")) && Ft(`population "${f}" has invalid children.`), new Set(m.children).size !== m.children.length && Ft(`population "${f}" lists a child more than once.`), Array.isArray(m.gate_refs) || Ft(`population "${f}" has invalid gate_refs.`), f === n ? (m.parent_id !== null && Ft("the root population must have parent_id = null."), m.gate_refs.length && Ft("the root population cannot contain gate references.")) : typeof m.parent_id != "string" || !t[m.parent_id] ? Ft(`population "${f}" has a missing parent.`) : m.parent_id === f && Ft(`population "${f}" cannot be its own parent.`);
       for (const g of m.children) {
@@ -38587,7 +38601,7 @@ function FM(e, t, n, r, a = "") {
         y || Ft(`population "${f}" refers to missing child "${g}".`), y.parent_id !== f && Ft(`parent/child links disagree for population "${g}".`);
       }
       for (const g of m.gate_refs)
-        (!Er(g) || typeof g.gate_id != "string" || !e[g.gate_id]) && Ft(`population "${f}" has a dangling gate reference.`), typeof g.include != "boolean" && Ft(`population "${f}" has a gate reference without a boolean include value.`), e[g.gate_id].gate_type === "quadrant" ? (!Number.isInteger(g.quadrant) || g.quadrant < 1 || g.quadrant > 4) && Ft(`population "${f}" has an invalid quadrant reference.`) : g.quadrant !== void 0 && g.quadrant !== null && Ft(`population "${f}" assigns a quadrant to a non-quadrant gate.`);
+        (!_r(g) || typeof g.gate_id != "string" || !e[g.gate_id]) && Ft(`population "${f}" has a dangling gate reference.`), typeof g.include != "boolean" && Ft(`population "${f}" has a gate reference without a boolean include value.`), e[g.gate_id].gate_type === "quadrant" ? (!Number.isInteger(g.quadrant) || g.quadrant < 1 || g.quadrant > 4) && Ft(`population "${f}" has an invalid quadrant reference.`) : g.quadrant !== void 0 && g.quadrant !== null && Ft(`population "${f}" assigns a quadrant to a non-quadrant gate.`);
     }
     for (const f of o) {
       if (f === n) continue;
@@ -38610,45 +38624,45 @@ function FM(e, t, n, r, a = "") {
 }
 function Nc(e) {
   var x;
-  Er(e) || Ft("the workspace payload is not an object."), (e.format !== Cf || e.version !== 2) && Ft("unsupported format or version."), e.workspaceId !== void 0 && (typeof e.workspaceId != "string" || e.workspaceId.trim().length === 0) && Ft("workspaceId must be a non-empty string when present."), (!Array.isArray(e.samples) || e.samples.length === 0) && Ft("at least one sample is required.");
+  _r(e) || Ft("the workspace payload is not an object."), (e.format !== Cf || e.version !== 2) && Ft("unsupported format or version."), e.workspaceId !== void 0 && (typeof e.workspaceId != "string" || e.workspaceId.trim().length === 0) && Ft("workspaceId must be a non-empty string when present."), (!Array.isArray(e.samples) || e.samples.length === 0) && Ft("at least one sample is required.");
   const t = /* @__PURE__ */ new Set(), n = /* @__PURE__ */ new Set();
   e.samples.forEach((v, _) => {
-    Er(v) || Ft(`sample ${_ + 1} is not an object.`), (typeof v.fileName != "string" || v.fileName.trim().length === 0) && Ft(`sample ${_ + 1} has no file name.`), (typeof v.dataPath != "string" || !v.dataPath.startsWith("data/") || v.dataPath.split("/").some((k) => k === "" || k === "..")) && Ft(`sample ${_ + 1} has an unsafe or empty dataPath.`), t.has(v.dataPath) && Ft(`duplicate sample dataPath "${v.dataPath}".`), t.add(v.dataPath), v.sampleId !== void 0 && ((typeof v.sampleId != "string" || v.sampleId.trim().length === 0) && Ft(`sample ${_ + 1} has an invalid sampleId.`), n.has(v.sampleId) && Ft(`duplicate sampleId "${v.sampleId}".`), n.add(v.sampleId)), (!Er(v.logicleW) || typeof v.compensationOn != "boolean") && Ft(`sample ${_ + 1} has invalid transform or compensation settings.`), v.scatterCofactor !== void 0 && !CB(v.scatterCofactor) && Ft(`sample ${_ + 1} has invalid scatter cofactors.`), v.scatterLinear !== void 0 && (!Array.isArray(v.scatterLinear) || !v.scatterLinear.every((k) => typeof k == "string")) && Ft(`sample ${_ + 1} has an invalid linear-scatter channel list.`), v.fluorArcsinh !== void 0 && (!Array.isArray(v.fluorArcsinh) || !v.fluorArcsinh.every((k) => typeof k == "string")) && Ft(`sample ${_ + 1} has an invalid arcsinh-fluorescence channel list.`), v.fluorBiex !== void 0 && !AB(v.fluorBiex) && Ft(`sample ${_ + 1} has an invalid biexponential channel list.`), v.cytofCofactor !== void 0 && (typeof v.cytofCofactor != "number" || !Number.isFinite(v.cytofCofactor) || v.cytofCofactor <= 0) && Ft(`sample ${_ + 1} has an invalid CyTOF cofactor.`), v.instrumentMode !== void 0 && v.instrumentMode !== "auto" && v.instrumentMode !== "flow" && v.instrumentMode !== "cytof" && Ft(`sample ${_ + 1} has an invalid instrument mode.`), v.division !== void 0 && NB(v.division, _), v.externalSpillover !== void 0 && !_B(v.externalSpillover) && Ft(`sample ${_ + 1} has an invalid spillover matrix.`);
-  }), (!Number.isInteger(e.activeSample) || e.activeSample < 0 || e.activeSample >= e.samples.length) && Ft("activeSample is outside the sample list."), ((x = e.illustration) == null ? void 0 : x.figure) !== void 0 && !S1(e.illustration.figure) && Ft("illustration figure settings are malformed."), e.illustrationPresets !== void 0 && (!Array.isArray(e.illustrationPresets) || e.illustrationPresets.some((v) => !Er(v) || !Er(v.config) || v.config.figure !== void 0 && !S1(v.config.figure))) && Ft("illustration preset settings are malformed."), e.hostedAssayId !== void 0 && (typeof e.hostedAssayId != "string" || !e.hostedAssayId) && Ft("hostedAssayId must be a non-empty string."), (!Er(e.scales) || !Er(e.scales.globalScales)) && Ft("shared scale settings are missing or invalid.");
+    _r(v) || Ft(`sample ${_ + 1} is not an object.`), (typeof v.fileName != "string" || v.fileName.trim().length === 0) && Ft(`sample ${_ + 1} has no file name.`), (typeof v.dataPath != "string" || !v.dataPath.startsWith("data/") || v.dataPath.split("/").some((k) => k === "" || k === "..")) && Ft(`sample ${_ + 1} has an unsafe or empty dataPath.`), t.has(v.dataPath) && Ft(`duplicate sample dataPath "${v.dataPath}".`), t.add(v.dataPath), v.sampleId !== void 0 && ((typeof v.sampleId != "string" || v.sampleId.trim().length === 0) && Ft(`sample ${_ + 1} has an invalid sampleId.`), n.has(v.sampleId) && Ft(`duplicate sampleId "${v.sampleId}".`), n.add(v.sampleId)), (!_r(v.logicleW) || typeof v.compensationOn != "boolean") && Ft(`sample ${_ + 1} has invalid transform or compensation settings.`), v.scatterCofactor !== void 0 && !CB(v.scatterCofactor) && Ft(`sample ${_ + 1} has invalid scatter cofactors.`), v.scatterLinear !== void 0 && (!Array.isArray(v.scatterLinear) || !v.scatterLinear.every((k) => typeof k == "string")) && Ft(`sample ${_ + 1} has an invalid linear-scatter channel list.`), v.fluorArcsinh !== void 0 && (!Array.isArray(v.fluorArcsinh) || !v.fluorArcsinh.every((k) => typeof k == "string")) && Ft(`sample ${_ + 1} has an invalid arcsinh-fluorescence channel list.`), v.fluorBiex !== void 0 && !MB(v.fluorBiex) && Ft(`sample ${_ + 1} has an invalid biexponential channel list.`), v.cytofCofactor !== void 0 && (typeof v.cytofCofactor != "number" || !Number.isFinite(v.cytofCofactor) || v.cytofCofactor <= 0) && Ft(`sample ${_ + 1} has an invalid CyTOF cofactor.`), v.instrumentMode !== void 0 && v.instrumentMode !== "auto" && v.instrumentMode !== "flow" && v.instrumentMode !== "cytof" && Ft(`sample ${_ + 1} has an invalid instrument mode.`), v.division !== void 0 && EB(v.division, _), v.externalSpillover !== void 0 && !_B(v.externalSpillover) && Ft(`sample ${_ + 1} has an invalid spillover matrix.`);
+  }), (!Number.isInteger(e.activeSample) || e.activeSample < 0 || e.activeSample >= e.samples.length) && Ft("activeSample is outside the sample list."), ((x = e.illustration) == null ? void 0 : x.figure) !== void 0 && !S1(e.illustration.figure) && Ft("illustration figure settings are malformed."), e.illustrationPresets !== void 0 && (!Array.isArray(e.illustrationPresets) || e.illustrationPresets.some((v) => !_r(v) || !_r(v.config) || v.config.figure !== void 0 && !S1(v.config.figure))) && Ft("illustration preset settings are malformed."), e.hostedAssayId !== void 0 && (typeof e.hostedAssayId != "string" || !e.hostedAssayId) && Ft("hostedAssayId must be a non-empty string."), e.hostedChannelTransforms !== void 0 && !AB(e.hostedChannelTransforms) && Ft("hostedChannelTransforms must map channel keys to transform specs."), (!_r(e.scales) || !_r(e.scales.globalScales)) && Ft("shared scale settings are missing or invalid.");
   for (const [v, _] of Object.entries(e.scales.globalScales))
     (!v || !ef(_) || _[1] <= _[0]) && Ft(`shared scale for "${v}" is invalid.`);
   if (e.scales.lockBetweenFiles !== void 0 && typeof e.scales.lockBetweenFiles != "boolean" && Ft("the scale-lock setting is invalid."), e.scales.perSampleGlobalScales !== void 0) {
-    Er(e.scales.perSampleGlobalScales) || Ft("per-sample scale settings are invalid.");
+    _r(e.scales.perSampleGlobalScales) || Ft("per-sample scale settings are invalid.");
     for (const [v, _] of Object.entries(e.scales.perSampleGlobalScales)) {
-      (!v || !Er(_)) && Ft("per-sample scale settings are invalid.");
+      (!v || !_r(_)) && Ft("per-sample scale settings are invalid.");
       for (const [k, A] of Object.entries(_))
         (!k || !ef(A) || A[1] <= A[0]) && Ft(`scale for "${k}" in sample "${v}" is invalid.`);
     }
   }
-  (!Er(e.display) || typeof e.display.xChannel != "string" || typeof e.display.yChannel != "string" || !["pseudocolor", "dots", "contour"].includes(e.display.mode) || !Number.isFinite(e.display.maxEvents) || e.display.maxEvents < 0 || !Number.isFinite(e.display.contourThreshold)) && Ft("display settings are missing or invalid."), e.display.fontSizes !== void 0 && (!Er(e.display.fontSizes) || !["tick", "axis", "title", "gate"].every((v) => {
+  (!_r(e.display) || typeof e.display.xChannel != "string" || typeof e.display.yChannel != "string" || !["pseudocolor", "dots", "contour"].includes(e.display.mode) || !Number.isFinite(e.display.maxEvents) || e.display.maxEvents < 0 || !Number.isFinite(e.display.contourThreshold)) && Ft("display settings are missing or invalid."), e.display.fontSizes !== void 0 && (!_r(e.display.fontSizes) || !["tick", "axis", "title", "gate"].every((v) => {
     var k;
     const _ = (k = e.display.fontSizes) == null ? void 0 : k[v];
     return typeof _ == "number" && Number.isFinite(_) && _ >= 6 && _ <= 72;
-  })) && Ft("gating font sizes are invalid."), Er(e.gating) || Ft("gating state is missing.");
+  })) && Ft("gating font sizes are invalid."), _r(e.gating) || Ft("gating state is missing.");
   const r = e.gating.gates, a = e.gating.populations;
-  Er(r) || Ft("gates must be an object keyed by gate_id."), Er(a) || Ft("populations must be an object keyed by population_id.");
+  _r(r) || Ft("gates must be an object keyed by gate_id."), _r(a) || Ft("populations must be an object keyed by population_id.");
   const o = Object.keys(r);
   for (const [v, _] of Object.entries(r)) {
-    Er(_) || Ft(`gate "${v}" is not an object.`);
+    _r(_) || Ft(`gate "${v}" is not an object.`);
     const k = _;
     k.gate_id !== v && Ft(`gate map key "${v}" does not match its gate_id.`), (typeof k.name != "string" || k.name.trim().length === 0) && Ft(`gate "${v}" has no name.`), (typeof k.x_channel != "string" || !k.x_channel || typeof k.y_channel != "string" || !k.y_channel) && Ft(`gate "${v}" has invalid channel identifiers.`);
     for (const A of Object.values(k.transforms ?? {})) {
-      if (!Er(A)) continue;
+      if (!_r(A)) continue;
       const C = A.tableChannels;
       (A.kind === "flowjoChannels" ? lp(A) === null : A.kind === "biex" && C !== void 0 && !(typeof C == "number" && Number.isInteger(C) && C > 1)) && Ft(`gate "${v}" has an invalid ${String(A.kind)} transform.`);
     }
     if (k.gate_type === "polygon" || k.gate_type === "rectangle") {
       const A = k.gate_type === "polygon" ? 3 : 2;
-      (!Array.isArray(k.vertices) || k.vertices.length < A || !k.vertices.every(ef)) && Ft(`${k.gate_type} gate "${v}" has invalid geometry.`), k.bounds !== void 0 && (k.gate_type !== "rectangle" || !sp(k.bounds)) && Ft(`${k.gate_type} gate "${v}" has an invalid bounds value.`), k.flowjo_vertices !== void 0 && (k.gate_type !== "polygon" || !Array.isArray(k.flowjo_vertices) || k.flowjo_vertices.length !== k.vertices.length || !k.flowjo_vertices.every(ef)) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo vertices.`), k.flowjo_axes !== void 0 && (k.gate_type !== "rectangle" || !Er(k.flowjo_axes) || !Object.values(k.flowjo_axes).every((j) => zl(j) !== null)) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo axes.`);
+      (!Array.isArray(k.vertices) || k.vertices.length < A || !k.vertices.every(ef)) && Ft(`${k.gate_type} gate "${v}" has invalid geometry.`), k.bounds !== void 0 && (k.gate_type !== "rectangle" || !sp(k.bounds)) && Ft(`${k.gate_type} gate "${v}" has an invalid bounds value.`), k.flowjo_vertices !== void 0 && (k.gate_type !== "polygon" || !Array.isArray(k.flowjo_vertices) || k.flowjo_vertices.length !== k.vertices.length || !k.flowjo_vertices.every(ef)) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo vertices.`), k.flowjo_axes !== void 0 && (k.gate_type !== "rectangle" || !_r(k.flowjo_axes) || !Object.values(k.flowjo_axes).every((j) => zl(j) !== null)) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo axes.`);
       const C = (j) => j === null || typeof j == "number" && Number.isFinite(j);
-      k.flowjo_bounds !== void 0 && (k.gate_type !== "rectangle" || !Er(k.flowjo_bounds) || !Object.values(k.flowjo_bounds).every((j) => Array.isArray(j) && j.length === 2 && j.every(C))) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo bounds.`);
+      k.flowjo_bounds !== void 0 && (k.gate_type !== "rectangle" || !_r(k.flowjo_bounds) || !Object.values(k.flowjo_bounds).every((j) => Array.isArray(j) && j.length === 2 && j.every(C))) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo bounds.`);
       const E = k.flowjo_polygon;
-      E !== void 0 && (k.gate_type !== "polygon" || !Er(E) || !Number.isInteger(E.quadId) || !(E.gateResolution === null || Number.isInteger(E.gateResolution))) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo polygon attributes.`);
+      E !== void 0 && (k.gate_type !== "polygon" || !_r(E) || !Number.isInteger(E.quadId) || !(E.gateResolution === null || Number.isInteger(E.gateResolution))) && Ft(`${k.gate_type} gate "${v}" has invalid FlowJo polygon attributes.`);
     } else if (k.gate_type === "quadrant")
       ef(k.center) || Ft(`quadrant gate "${v}" has an invalid center.`), k.curl !== void 0 && !Hx(k.curl) && Ft(`quadrant gate "${v}" has an invalid curl.`);
     else if (k.gate_type === "ellipse") {
@@ -38670,22 +38684,22 @@ function Nc(e) {
   if (p !== void 0) {
     Array.isArray(p) || Ft("groups must be a list.");
     for (const v of p)
-      (!Er(v) || typeof v.id != "string" || !v.id || typeof v.name != "string") && Ft("a group needs an id and a name.");
+      (!_r(v) || typeof v.id != "string" || !v.id || typeof v.name != "string") && Ft("a group needs an id and a name.");
   }
   const m = e.gating.hierarchies;
   if (m !== void 0) {
     (!Array.isArray(m) || m.length === 0) && Ft("hierarchies must be a non-empty list.");
     const v = /* @__PURE__ */ new Set();
     for (const C of m) {
-      if ((!Er(C) || typeof C.id != "string" || !C.id || typeof C.name != "string" || !C.name.trim()) && Ft("every hierarchy needs an id and a name."), v.has(C.id) && Ft(`hierarchy id "${C.id}" is listed twice.`), C.owner_sample_id !== void 0 && (typeof C.owner_sample_id != "string" || !C.owner_sample_id) && Ft(`hierarchy "${C.name}" has a malformed owner_sample_id.`), C.owner_sample_id !== void 0 && !n.has(C.owner_sample_id) && Ft(`hierarchy "${C.name}" names a file owner that is not in the workspace.`), C.structure_locked !== void 0 && typeof C.structure_locked != "boolean" && Ft(`hierarchy "${C.name}" has a malformed structure_locked flag.`), C.owner_group_id !== void 0 && (typeof C.owner_group_id != "string" || !C.owner_group_id) && Ft(`hierarchy "${C.name}" has a malformed owner_group_id.`), C.owner_group_id !== void 0 && !(e.gating.groups ?? []).some((E) => Er(E) && E.id === C.owner_group_id) && Ft(`hierarchy "${C.name}" names a group that is not in the workspace.`), C.owner_sample_id !== void 0 && C.owner_group_id !== void 0 && Ft(`hierarchy "${C.name}" cannot belong to both a file and a group.`), C.structure_locked === !0 && !C.owner_sample_id && !C.owner_group_id) {
-        const E = (e.gating.groups ?? []).find((j) => Er(j) && typeof j.name == "string" && typeof j.id == "string" && j.name.trim().toLowerCase() === C.name.trim().toLowerCase());
+      if ((!_r(C) || typeof C.id != "string" || !C.id || typeof C.name != "string" || !C.name.trim()) && Ft("every hierarchy needs an id and a name."), v.has(C.id) && Ft(`hierarchy id "${C.id}" is listed twice.`), C.owner_sample_id !== void 0 && (typeof C.owner_sample_id != "string" || !C.owner_sample_id) && Ft(`hierarchy "${C.name}" has a malformed owner_sample_id.`), C.owner_sample_id !== void 0 && !n.has(C.owner_sample_id) && Ft(`hierarchy "${C.name}" names a file owner that is not in the workspace.`), C.structure_locked !== void 0 && typeof C.structure_locked != "boolean" && Ft(`hierarchy "${C.name}" has a malformed structure_locked flag.`), C.owner_group_id !== void 0 && (typeof C.owner_group_id != "string" || !C.owner_group_id) && Ft(`hierarchy "${C.name}" has a malformed owner_group_id.`), C.owner_group_id !== void 0 && !(e.gating.groups ?? []).some((E) => _r(E) && E.id === C.owner_group_id) && Ft(`hierarchy "${C.name}" names a group that is not in the workspace.`), C.owner_sample_id !== void 0 && C.owner_group_id !== void 0 && Ft(`hierarchy "${C.name}" cannot belong to both a file and a group.`), C.structure_locked === !0 && !C.owner_sample_id && !C.owner_group_id) {
+        const E = (e.gating.groups ?? []).find((j) => _r(j) && typeof j.name == "string" && typeof j.id == "string" && j.name.trim().toLowerCase() === C.name.trim().toLowerCase());
         E ? C.owner_group_id = E.id : delete C.structure_locked;
       }
       for (const [E, j] of [
         ["source_gate_ids", C.source_gate_ids],
         ["source_population_ids", C.source_population_ids]
       ])
-        j !== void 0 && (!Er(j) || Object.entries(j).some(([N, P]) => !N || typeof P != "string" || !P)) && Ft(`hierarchy "${C.name}" has a malformed ${E}.`);
+        j !== void 0 && (!_r(j) || Object.entries(j).some(([N, P]) => !N || typeof P != "string" || !P)) && Ft(`hierarchy "${C.name}" has a malformed ${E}.`);
       (C.source_gate_ids !== void 0 || C.source_population_ids !== void 0) && !C.source_hierarchy_id && Ft(`hierarchy "${C.name}" has source correspondence without a source hierarchy.`), v.add(C.id);
     }
     for (const C of m)
@@ -38696,10 +38710,10 @@ function Nc(e) {
     Array.isArray(k) || Ft("stored_hierarchies must be a list.");
     const A = /* @__PURE__ */ new Set();
     for (const C of k) {
-      (!Er(C) || typeof C.id != "string" || !v.has(C.id) || C.id === _) && Ft("a stored hierarchy must be a listed, non-active hierarchy."), A.has(C.id) && Ft(`hierarchy "${C.id}" is stored twice.`), A.add(C.id), Er(C.populations) || Ft(`hierarchy "${C.name}" has no population map.`), C.gates !== void 0 && !Er(C.gates) && Ft(`hierarchy "${C.name}" has a malformed gate table.`);
+      (!_r(C) || typeof C.id != "string" || !v.has(C.id) || C.id === _) && Ft("a stored hierarchy must be a listed, non-active hierarchy."), A.has(C.id) && Ft(`hierarchy "${C.id}" is stored twice.`), A.add(C.id), _r(C.populations) || Ft(`hierarchy "${C.name}" has no population map.`), C.gates !== void 0 && !_r(C.gates) && Ft(`hierarchy "${C.name}" has a malformed gate table.`);
       const E = C.gates ?? r;
       for (const j of Object.values(E)) {
-        const N = Er(j) ? j.bounds : void 0;
+        const N = _r(j) ? j.bounds : void 0;
         N !== void 0 && (j.gate_type !== "rectangle" || !sp(N)) && Ft(`hierarchy "${C.name}": gate "${j.gate_id}" has an invalid bounds value.`);
       }
       FM(E, C.populations, C.root_population_id, C.active_population_id, `hierarchy "${C.name}": `);
@@ -38728,11 +38742,11 @@ function SI(e, t, n) {
 function kI(e) {
   return Nc(e), cl(JSON.stringify(Uk(e), null, 2));
 }
-function EB(e, t, n, r) {
+function jB(e, t, n, r) {
   return n === "bundle" ? SI(e, t, r) : kI(e);
 }
 function _I(e) {
-  if (!Er(e) || e.format !== Cf)
+  if (!_r(e) || e.format !== Cf)
     throw new Error("Unrecognized workspace format.");
   const t = e;
   if (t.version === 2 && t.requiredFeatures !== void 0) {
@@ -38771,7 +38785,7 @@ function _I(e) {
     display: t.display
   };
 }
-function jB(e) {
+function PB(e) {
   if (e[0] === 80 && e[1] === 75) {
     let t;
     try {
@@ -38793,11 +38807,11 @@ function CI(e) {
   const t = e["workspace.json"];
   if (!t) throw new Error("Not a GateLab workspace: workspace.json is missing.");
   const n = AI(gd(t));
-  if (!Er(n) || !Array.isArray(n.samples))
+  if (!_r(n) || !Array.isArray(n.samples))
     throw new Error("Not a GateLab workspace: sample declarations are missing.");
   const r = {}, a = [];
   for (const s of n.samples) {
-    if (!Er(s) || typeof s.fileName != "string" || typeof s.dataPath != "string")
+    if (!_r(s) || typeof s.fileName != "string" || typeof s.dataPath != "string")
       throw new Error("Not a GateLab workspace: a sample declaration is malformed.");
     e[s.dataPath] ? r[s.dataPath] = e[s.dataPath] : a.push(`${s.fileName} (${s.dataPath})`);
   }
@@ -38826,10 +38840,10 @@ function CI(e) {
     portableAssays: i
   };
 }
-async function PB(e) {
+async function IB(e) {
   const t = new Uint8Array(await e.slice(0, 2).arrayBuffer());
   if (t[0] !== 80 || t[1] !== 75)
-    return jB(new Uint8Array(await e.arrayBuffer()));
+    return PB(new Uint8Array(await e.arrayBuffer()));
   const n = /* @__PURE__ */ new Map(), r = Math.min(
     Number.MAX_SAFE_INTEGER,
     Math.max(512 * 1024 * 1024, e.size * 32)
@@ -38860,7 +38874,7 @@ function AI(e) {
     throw new Error("Not a GateLab workspace (unrecognized / corrupt file).");
   }
 }
-const Jk = "gatelab.compensation-matrix.v1", IB = "gatelab.compensation-profile.v1", Kk = "source-rows-receiver-columns", MI = 1e-8, TB = xd.conditionWarningThreshold, FB = new TextEncoder();
+const Jk = "gatelab.compensation-matrix.v1", TB = "gatelab.compensation-profile.v1", Kk = "source-rows-receiver-columns", MI = 1e-8, FB = xd.conditionWarningThreshold, RB = new TextEncoder();
 function Nx(e) {
   return e.trim().normalize("NFC");
 }
@@ -38878,7 +38892,7 @@ function Ex(e) {
     t.has(r) && n.add(r), t.add(r);
   return n;
 }
-function RB(e) {
+function OB(e) {
   try {
     return BR(e, xd);
   } catch (t) {
@@ -38889,7 +38903,7 @@ function RB(e) {
 function uo(e, t, n = {}) {
   return Object.freeze({ code: e, message: t, ...n });
 }
-function OB(e, t, n) {
+function LB(e, t, n) {
   const r = n.map((a) => Object.freeze(Array.from(a)));
   return Object.freeze({
     schema: Jk,
@@ -39026,13 +39040,13 @@ function t0(e, t) {
   let v = null;
   const _ = p.length === c.length && p.every((P) => P.length === f.length), k = p.every((P) => P.every(Number.isFinite));
   if (t === "flow-spillover" && x && _ && k) {
-    const P = RB(p);
+    const P = OB(p);
     v = (P == null ? void 0 : P.conditionInfinity) ?? null, P == null || P.stability === "unstable" ? n.push(
       uo(
         "singular-matrix",
         "The flow spillover matrix is singular or numerically unstable."
       )
-    ) : P.conditionInfinity > TB && r.push(
+    ) : P.conditionInfinity > FB && r.push(
       uo(
         "ill-conditioned-matrix",
         `The estimated matrix condition number is ${P.conditionInfinity.toExponential(3)}; preview and Apply require careful review.`
@@ -39054,7 +39068,7 @@ function t0(e, t) {
       warnings: Object.freeze(r),
       diagnostics: A
     });
-  const C = c.map((P, F) => ({ channel: P, index: F })).sort((P, F) => wp(P.channel, F.channel)), E = f.map((P, F) => ({ channel: P, index: F })).sort((P, F) => wp(P.channel, F.channel)), j = OB(
+  const C = c.map((P, F) => ({ channel: P, index: F })).sort((P, F) => wp(P.channel, F.channel)), E = f.map((P, F) => ({ channel: P, index: F })).sort((P, F) => wp(P.channel, F.channel)), j = LB(
     C.map(({ channel: P }) => P),
     E.map(({ channel: P }) => P),
     C.map(
@@ -39121,7 +39135,7 @@ async function jI(e) {
     throw new Error(
       "SHA-256 profile hashing requires Web Crypto in a secure browser context (HTTPS or localhost)."
     );
-  const t = await globalThis.crypto.subtle.digest("SHA-256", FB.encode(e));
+  const t = await globalThis.crypto.subtle.digest("SHA-256", RB.encode(e));
   return `sha256:${Array.from(
     new Uint8Array(t),
     (a) => a.toString(16).padStart(2, "0")
@@ -39130,7 +39144,7 @@ async function jI(e) {
 async function PI(e) {
   return jI(n0(e));
 }
-function LB(e, t) {
+function DB(e, t) {
   if (!Array.isArray(e) || e.some((r) => typeof r != "string"))
     throw new Error(`${t} must be an array of channel strings.`);
   const n = e.map(Nx);
@@ -39140,7 +39154,7 @@ function LB(e, t) {
     throw new Error(`${t} must contain unique channels.`);
   return n.sort(wp);
 }
-function DB(e, t) {
+function zB(e, t) {
   if (e == null || typeof e != "object" || Array.isArray(e))
     throw new Error("solverSettings must be an object.");
   const n = [], r = /* @__PURE__ */ new Set();
@@ -39185,7 +39199,7 @@ function DB(e, t) {
   }
   return n;
 }
-function zB(e) {
+function BB(e) {
   return e.map(({ key: t, value: n }) => typeof n == "number" ? [t, "number", NI(n)] : typeof n == "boolean" ? [t, "boolean", n] : [t, "string", n]);
 }
 function wS(e) {
@@ -39213,10 +39227,10 @@ function wS(e) {
     throw new Error("solverVersion must be a string.");
   const o = t.solverVersion.trim().normalize("NFC");
   if (!o) throw new Error("solverVersion is required.");
-  const i = DB(
+  const i = zB(
     t.solverSettings,
     n
-  ), l = e.kind === "cytof-spillover" ? LB(
+  ), l = e.kind === "cytof-spillover" ? DB(
     Array.isArray(e.includedChannels) ? e.includedChannels : [],
     "includedChannels"
   ) : [];
@@ -39227,7 +39241,7 @@ function wS(e) {
     if (!s.has(c))
       throw new Error(`Included channel '${c}' is not a matrix receiver channel.`);
   return Object.freeze({
-    schema: IB,
+    schema: TB,
     kind: e.kind,
     method: e.method,
     solverVersion: o,
@@ -39236,7 +39250,7 @@ function wS(e) {
     includedChannels: Object.freeze(l)
   });
 }
-async function BB(e) {
+async function GB(e) {
   const t = wS(e), n = await PI(t.matrix);
   return jI(
     JSON.stringify({
@@ -39244,7 +39258,7 @@ async function BB(e) {
       kind: t.kind,
       method: t.method,
       solverVersion: t.solverVersion,
-      solverSettings: zB(t.solverSettings),
+      solverSettings: BB(t.solverSettings),
       matrixHash: n,
       includedChannels: t.includedChannels
     })
@@ -39253,7 +39267,7 @@ async function BB(e) {
 function RM(e) {
   return e.trim().normalize("NFC");
 }
-function GB(e, t) {
+function HB(e, t) {
   const n = Array.from(e), r = Array.from(t), a = Math.min(n.length, r.length);
   for (let o = 0; o < a; o++) {
     const i = n[o].codePointAt(0) - r[o].codePointAt(0);
@@ -39262,7 +39276,7 @@ function GB(e, t) {
   return n.length - r.length;
 }
 function gg(e) {
-  return Array.from(new Set(e)).sort(GB);
+  return Array.from(new Set(e)).sort(HB);
 }
 function OM(e) {
   const t = /* @__PURE__ */ new Map();
@@ -39557,7 +39571,7 @@ function xp(e, t) {
     (i, l) => i === o[l] && xp(n[i], r[i])
   );
 }
-function HB(e) {
+function WB(e) {
   for (let t = 0; t < e.length; t++) {
     const n = e.charCodeAt(t);
     if (n >= 55296 && n <= 56319) {
@@ -39571,7 +39585,7 @@ function HB(e) {
 }
 function fy(e, t, n) {
   if (e.includes("\0")) throw new Error(`${t} must not contain NUL characters.`);
-  if (HB(e)) throw new Error(`${t} contains an unpaired Unicode surrogate.`);
+  if (WB(e)) throw new Error(`${t} contains an unpaired Unicode surrogate.`);
   if (Array.from(e).length > n)
     throw new Error(`${t} exceeds ${n} Unicode code points.`);
 }
@@ -39615,7 +39629,7 @@ function II(e, t, n) {
   const r = /* @__PURE__ */ new Date(0);
   return r.setUTCHours(0, 0, 0, 0), r.setUTCFullYear(e, t - 1, n), r.getUTCFullYear() === e && r.getUTCMonth() === t - 1 && r.getUTCDate() === n;
 }
-function WB(e, t) {
+function qB(e, t) {
   if (typeof e != "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e))
     throw new Error(`${t} must use YYYY-MM-DD.`);
   const [n, r, a] = e.split("-").map(Number);
@@ -39658,7 +39672,7 @@ function Zk(e) {
     throw new Error("createdAt must resolve to a four-digit UTC year between 0000 and 9999.");
   return x;
 }
-function qB(e) {
+function UB(e) {
   if (typeof e != "string" || !xS.test(e))
     throw new Error("Persisted createdAt must be canonical UTC RFC3339 with milliseconds.");
   if (Zk(e) !== e) throw new Error("Persisted createdAt is not canonical.");
@@ -39725,7 +39739,7 @@ function Yk(e) {
   }
   throw new Error(`Unsupported compensation profile origin '${String(t.type)}'.`);
 }
-function UB(e) {
+function VB(e) {
   if (e == null || typeof e != "object" || Array.isArray(e))
     throw new Error("estimationSoftware must be an object.");
   const t = e;
@@ -39753,14 +39767,14 @@ function $k(e) {
     "wasManuallyAdjustedBeforeImport",
     "applicabilityNote"
   ], "profile provenance");
-  const r = t.controlDate === void 0 ? void 0 : WB(t.controlDate, "controlDate"), a = Rl(
+  const r = t.controlDate === void 0 ? void 0 : qB(t.controlDate, "controlDate"), a = Rl(
     t.sourceDescription,
     "sourceDescription",
     !0
   ), o = Rl(t.controlType, "controlType"), i = Rl(t.instrument, "instrument"), l = Rl(t.panel, "panel"), s = Rl(t.reagentLot, "reagentLot"), c = Rl(t.fixation, "fixation"), f = Rl(
     t.estimationMethod,
     "estimationMethod"
-  ), p = t.estimationSoftware === void 0 ? void 0 : UB(t.estimationSoftware);
+  ), p = t.estimationSoftware === void 0 ? void 0 : VB(t.estimationSoftware);
   if (t.wasManuallyAdjustedBeforeImport !== void 0 && typeof t.wasManuallyAdjustedBeforeImport != "boolean")
     throw new Error("wasManuallyAdjustedBeforeImport must be a boolean when present.");
   const m = Rl(
@@ -39782,7 +39796,7 @@ function $k(e) {
     ...m !== void 0 ? { applicabilityNote: m } : {}
   });
 }
-function VB(e, t) {
+function JB(e, t) {
   const n = t0(
     {
       sourceChannels: e.sourceChannels,
@@ -39803,7 +39817,7 @@ function Px(e) {
   );
   return e.method === "matrix-inverse", t;
 }
-function JB(e) {
+function KB(e) {
   return e.kind === "flow-spillover" ? {
     kind: "flow-spillover",
     method: "matrix-inverse",
@@ -39820,7 +39834,7 @@ function JB(e) {
   };
 }
 function e_(e) {
-  const t = wS(e), n = VB(t.matrix, t.kind);
+  const t = wS(e), n = JB(t.matrix, t.kind);
   return wS(
     t.kind === "flow-spillover" ? {
       kind: "flow-spillover",
@@ -39841,7 +39855,7 @@ function e_(e) {
 async function r0(e) {
   const [t, n] = await Promise.all([
     PI(e.matrix),
-    BB(JB(e))
+    GB(KB(e))
   ]);
   return Object.freeze({ matrixHash: t, profileHash: n });
 }
@@ -39855,7 +39869,7 @@ function TI(e, t) {
 function Ix(e) {
   return Object.freeze(e);
 }
-function KB(e, t) {
+function XB(e, t) {
   if (e < t)
     throw new Error("A profile revision cannot predate its parent record.");
 }
@@ -39864,7 +39878,7 @@ async function FI(e, t, n, r) {
   if (a === e.profileId || a === e.baselineProfileId)
     throw new Error("A revision profileId must differ from its parent and baseline IDs.");
   const o = Zk(n.createdAt);
-  KB(o, e.createdAt);
+  XB(o, e.createdAt);
   const i = n.name === void 0 ? e.name : Xk(n.name), l = Qk(n.note), { matrixHash: s, profileHash: c } = await r0(t), f = Yk(e.origin), p = $k(e.provenance), m = {
     schema: Eg,
     recordType: "revision",
@@ -39906,7 +39920,7 @@ async function RI(e, t) {
     revisionReason: null
   });
 }
-async function kU(e, t, n) {
+async function _U(e, t, n) {
   const r = await mu(e), a = e_(t);
   if (a.kind !== r.scientific.kind || a.method !== r.scientific.method)
     throw new Error("A profile revision cannot change compensation kind or method.");
@@ -39919,7 +39933,7 @@ async function kU(e, t, n) {
     throw new Error("Use createResetToBaselineRevision() to restore baseline scientific state.");
   return FI(r, a, n, "edit");
 }
-async function _U(e, t, n) {
+async function CU(e, t, n) {
   const r = await mu(e), a = await mu(t);
   if (a.recordType !== "baseline")
     throw new Error("Reset requires the baseline profile record for this lineage.");
@@ -39940,10 +39954,10 @@ async function _U(e, t, n) {
     "reset-to-baseline"
   );
 }
-function XB(e, t) {
+function QB(e, t) {
   return typeof e != typeof t ? !1 : typeof e == "number" && typeof t == "number" && Object.is(e, -0) ? Object.is(t, -0) || t === 0 : e === t;
 }
-function QB(e) {
+function ZB(e) {
   if (e == null || typeof e != "object" || Array.isArray(e))
     throw new Error("Profile scientific state must be an object.");
   const t = e;
@@ -39990,7 +40004,7 @@ function QB(e) {
   n0(t.matrix);
   const l = i.solverSettings;
   if (n.length !== l.length || n.some(
-    ({ key: s, value: c }, f) => s !== l[f].key || !XB(c, l[f].value)
+    ({ key: s, value: c }, f) => s !== l[f].key || !QB(c, l[f].value)
   ) || t.solverVersion !== i.solverVersion || t.includedChannels.length !== i.includedChannels.length || t.includedChannels.some(
     (s, c) => s !== i.includedChannels[c]
   ))
@@ -40007,10 +40021,10 @@ async function mu(e) {
     throw new Error(`Unsupported profile recordType '${String(t.recordType)}'.`);
   const n = np(t.profileId, "profileId"), r = Xk(t.name);
   if (t.name !== r) throw new Error("Persisted profile name is not canonical.");
-  const a = qB(t.createdAt);
+  const a = UB(t.createdAt);
   if (t.note !== null && typeof t.note != "string")
     throw new Error("Persisted profile note must be a string or null.");
-  const o = Qk(t.note), i = QB(t.scientific), l = mf(t.matrixHash, "matrixHash"), s = mf(t.profileHash, "profileHash"), c = await r0(i);
+  const o = Qk(t.note), i = ZB(t.scientific), l = mf(t.matrixHash, "matrixHash"), s = mf(t.profileHash, "profileHash"), c = await r0(i);
   if (l !== c.matrixHash) throw new Error("Stored matrixHash does not match the matrix.");
   if (s !== c.profileHash)
     throw new Error("Stored profileHash does not match the scientific profile state.");
@@ -40072,7 +40086,7 @@ async function mu(e) {
     revisionReason: t.revisionReason
   });
 }
-class ZB extends Error {
+class YB extends Error {
   constructor(n, r, a = {}) {
     super(`Invalid compensation profile lineage: ${r}`);
     Jt(this, "code");
@@ -40085,7 +40099,7 @@ class ZB extends Error {
   }
 }
 function fo(e, t, n = {}) {
-  throw new ZB(e, t, n);
+  throw new YB(e, t, n);
 }
 function ey(e, t) {
   const n = Array.from(e), r = Array.from(t), a = Math.min(n.length, r.length);
@@ -40123,7 +40137,7 @@ function HM(e, t) {
     [e[r], e[n]] = [e[n], e[r]], n = r;
   }
 }
-function YB(e) {
+function $B(e) {
   const t = e[0], n = e.pop();
   if (e.length === 0) return t;
   e[0] = n;
@@ -40136,7 +40150,7 @@ function YB(e) {
   }
   return t;
 }
-function $B(e) {
+function eG(e) {
   const t = e[0] === e[e.length - 1] ? e.slice(0, -1) : Array.from(e);
   let n = 0;
   for (let a = 1; a < t.length; a++)
@@ -40152,7 +40166,7 @@ function WM(e, t) {
     { profileId: e.profileId, relatedProfileId: t.profileId }
   );
 }
-function eG(e, t, n) {
+function tG(e, t, n) {
   WM(e, t), WM(e, n);
   const r = vd(e.scientific, t.scientific), a = vd(e.scientific, n.scientific);
   if (e.revisionReason === "edit") {
@@ -40176,7 +40190,7 @@ function eG(e, t, n) {
     { profileId: e.profileId, relatedProfileId: t.profileId }
   );
 }
-async function tG(e) {
+async function nG(e) {
   Array.isArray(e) || fo(
     "invalid-lineage-container",
     "profile history must be a dense array of records."
@@ -40236,7 +40250,7 @@ async function tG(e) {
     for (; !l.has(b.profileId); ) {
       const x = y.get(b.profileId);
       if (x !== void 0) {
-        const v = $B([...g.slice(x), b.profileId]);
+        const v = eG([...g.slice(x), b.profileId]);
         fo("cycle", `profile history contains a cycle: ${v.join(" → ")}.`, {
           profileId: v[0],
           cycle: v
@@ -40261,7 +40275,7 @@ async function tG(e) {
   HM(f, o);
   const p = [];
   for (; f.length > 0; ) {
-    const m = YB(f);
+    const m = $B(f);
     p.push(m);
     for (const g of c.get(m.profileId)) HM(f, g);
   }
@@ -40289,7 +40303,7 @@ async function tG(e) {
       "axis-mismatch",
       `profile "${m.profileId}" changes the lineage source or receiver channel axes.`,
       { profileId: m.profileId, relatedProfileId: o.profileId }
-    ), eG(m, g, o);
+    ), tG(m, g, o);
   }
   return Object.freeze({
     baseline: o,
@@ -40297,7 +40311,7 @@ async function tG(e) {
   });
 }
 const Tx = "gatelab.workspace-compensation.v1", rp = "gatelab.sample-assay-binding.v1";
-class nG extends Error {
+class rG extends Error {
   constructor(n, r, a = {}) {
     super(`Invalid workspace compensation state: ${r}`);
     Jt(this, "code");
@@ -40308,7 +40322,7 @@ class nG extends Error {
   }
 }
 function Pr(e, t, n = {}) {
-  throw new nG(e, t, n);
+  throw new rG(e, t, n);
 }
 function bp(e) {
   return e != null && typeof e == "object" && !Array.isArray(e);
@@ -40326,7 +40340,7 @@ function OI(e, t, n = "invalid-assay-binding") {
     Object.prototype.hasOwnProperty.call(e, r) || Pr(n, `${t} must not contain sparse entries.`);
   return Array.from(e);
 }
-function rG(e, t) {
+function aG(e, t) {
   const n = Array.from(e), r = Array.from(t), a = Math.min(n.length, r.length);
   for (let o = 0; o < a; o++) {
     const i = n[o].codePointAt(0) - r[o].codePointAt(0);
@@ -40334,19 +40348,19 @@ function rG(e, t) {
   }
   return n.length - r.length;
 }
-function aG(e, t) {
+function oG(e, t) {
   return e.length === t.length && e.every((n, r) => n === t[r]);
 }
-function oG(e, t) {
+function iG(e, t) {
   for (const n of e.lineages) {
     const r = n.records.find((a) => a.profileId === t);
     if (r) return r;
   }
 }
-function iG(e, t) {
+function sG(e, t) {
   return e.pnn === t.pnn && e.fcsColumnIndex === t.fcsColumnIndex && e.matrixSourceIndex === t.matrixSourceIndex && e.matrixReceiverIndex === t.matrixReceiverIndex && e.included === t.included;
 }
-async function sG(e) {
+async function lG(e) {
   bp(e) || Pr("invalid-compensation-state", "compensation state must be an object.");
   const t = e;
   (Object.keys(t).length !== 2 || !Object.prototype.hasOwnProperty.call(t, "schema") || !Object.prototype.hasOwnProperty.call(t, "lineages")) && Pr(
@@ -40372,7 +40386,7 @@ async function sG(e) {
     );
     let s;
     try {
-      s = await tG(l.records);
+      s = await nG(l.records);
     } catch (c) {
       const f = c instanceof Error ? c.message : String(c);
       Pr("invalid-lineage-entry", `lineage ${o + 1} is invalid: ${f}`, {
@@ -40391,7 +40405,7 @@ async function sG(e) {
       })
     );
   }
-  r.sort((o, i) => rG(o.baselineProfileId, i.baselineProfileId));
+  r.sort((o, i) => aG(o.baselineProfileId, i.baselineProfileId));
   const a = /* @__PURE__ */ new Set();
   for (const o of r)
     for (const i of o.records)
@@ -40405,14 +40419,14 @@ async function sG(e) {
     lineages: Object.freeze(r)
   });
 }
-function lG() {
+function cG() {
   return Object.freeze({
     schema: rp,
     activeLayer: "original",
     compensatedLayer: null
   });
 }
-function cG(e, t, n) {
+function uG(e, t, n) {
   return (!bp(e) || typeof e.kind != "string") && Pr("transform-mismatch", "transformBinding must declare a supported transform.", {
     profileId: t.profileId
   }), t.scientific.kind === "flow-spillover" ? (ty(e, ["kind"], "flow transformBinding", "transform-mismatch"), e.kind !== "flow-linear" && Pr("transform-mismatch", "flow compensation requires flow-linear transform binding.", {
@@ -40432,7 +40446,7 @@ function cG(e, t, n) {
     { profileId: t.profileId }
   ), Object.freeze({ kind: "cytof-asinh", cofactor: e.cofactor }));
 }
-function uG(e, t, n) {
+function dG(e, t, n) {
   const r = OI(e, "channelBindings", "invalid-channel-binding"), a = t.scientific.matrix.sourceChannels, o = t.scientific.matrix.receiverChannels, i = new Set(n), l = /* @__PURE__ */ new Set(), s = /* @__PURE__ */ new Set(), c = /* @__PURE__ */ new Set(), f = [];
   for (let m = 0; m < r.length; m++) {
     bp(r[m]) || Pr("invalid-channel-binding", `channel binding ${m + 1} must be an object.`, {
@@ -40471,11 +40485,11 @@ function uG(e, t, n) {
     { profileId: t.profileId }
   ), Object.freeze(f);
 }
-function dG(e, t, n = {}) {
+function fG(e, t, n = {}) {
   bp(e) || Pr("invalid-assay-binding", "sample assay binding must be an object.");
   const r = e;
   if (ty(r, ["schema", "activeLayer", "compensatedLayer"], "sample assay binding"), r.schema !== rp && Pr("unsupported-assay-schema", `unsupported schema '${String(r.schema)}'.`), r.activeLayer !== "original" && r.activeLayer !== "compensated" && Pr("invalid-assay-binding", "activeLayer must be original or compensated."), r.compensatedLayer === null)
-    return r.activeLayer === "compensated" && Pr("active-layer-missing", "Compensated cannot be active without a persisted layer binding."), lG();
+    return r.activeLayer === "compensated" && Pr("active-layer-missing", "Compensated cannot be active without a persisted layer binding."), cG();
   bp(r.compensatedLayer) || Pr("invalid-assay-binding", "compensatedLayer must be an object or null.");
   const a = r.compensatedLayer;
   ty(
@@ -40492,7 +40506,7 @@ function dG(e, t, n = {}) {
     ],
     "compensatedLayer"
   ), typeof a.profileId != "string" && Pr("missing-profile", "compensatedLayer profileId must be a string.");
-  const o = oG(t, a.profileId);
+  const o = iG(t, a.profileId);
   o || Pr("missing-profile", `profile "${a.profileId}" is not stored in the workspace.`, {
     profileId: a.profileId
   }), (a.profileHash !== o.profileHash || a.matrixHash !== o.matrixHash || a.kind !== o.scientific.kind || a.method !== o.scientific.method) && Pr(
@@ -40509,7 +40523,7 @@ function dG(e, t, n = {}) {
     profileId: o.profileId
   });
   const l = i, s = o.scientific.kind === "flow-spillover" ? o.scientific.matrix.receiverChannels : o.scientific.includedChannels;
-  aG(l, s) || Pr(
+  oG(l, s) || Pr(
     "included-channels-mismatch",
     `includedPnns do not match profile "${o.profileId}".`,
     { profileId: o.profileId }
@@ -40528,7 +40542,7 @@ function dG(e, t, n = {}) {
     `restoring CyTOF profile "${o.profileId}" requires the sample's effective arcsinh cofactor.`,
     { profileId: o.profileId }
   );
-  const f = uG(a.channelBindings, o, l), p = cG(
+  const f = dG(a.channelBindings, o, l), p = uG(
     a.transformBinding,
     o,
     n.expectedCytofCofactor
@@ -40548,7 +40562,7 @@ function dG(e, t, n = {}) {
     "sample-mapping-incompatible",
     `profile "${o.profileId}" is not compatible with this sample: ${m.blockers.map(({ message: y }) => y).join(" ")}`,
     { profileId: o.profileId }
-  ), (f.length !== m.bindings.length || f.some((y, b) => !iG(y, m.bindings[b]))) && Pr(
+  ), (f.length !== m.bindings.length || f.some((y, b) => !sG(y, m.bindings[b]))) && Pr(
     "persisted-mapping-mismatch",
     `persisted channel bindings for profile "${o.profileId}" do not exactly match the parsed FCS file.`,
     { profileId: o.profileId }
@@ -40570,7 +40584,7 @@ function dG(e, t, n = {}) {
   });
 }
 const _i = 3;
-class fG extends Error {
+class hG extends Error {
   constructor(n, r, a = {}) {
     super(`Invalid GateLab workspace v3: ${r}`);
     Jt(this, "code");
@@ -40581,7 +40595,7 @@ class fG extends Error {
   }
 }
 function Ps(e, t, n = {}) {
-  throw new fG(e, t, n);
+  throw new hG(e, t, n);
 }
 function qM(e) {
   return e != null && typeof e == "object" && !Array.isArray(e);
@@ -40594,7 +40608,7 @@ function UM(e, t, n, r, a, o = {}) {
     o
   );
 }
-function hG(e) {
+function pG(e) {
   try {
     return JSON.parse(JSON.stringify(e));
   } catch (t) {
@@ -40612,7 +40626,7 @@ const LI = [
   "scales",
   "display",
   "compensation"
-], pG = [
+], mG = [
   ...LI,
   "workspaceId",
   "illustration",
@@ -40629,8 +40643,9 @@ const LI = [
   "requiredFeatures",
   // The SCE assay a hosted workspace was drawn from (workspace.ts). Left off this list, a hosted
   // workspace with a compensation lineage was refused on reopening and then overwritten.
-  "hostedAssayId"
-], DI = ["fileName", "dataPath", "logicleW", "assay"], mG = [
+  "hostedAssayId",
+  "hostedChannelTransforms"
+], DI = ["fileName", "dataPath", "logicleW", "assay"], gG = [
   ...DI,
   "sampleId",
   "scatterCofactor",
@@ -40658,7 +40673,7 @@ async function zI(e, t = {}) {
   ), UM(
     e,
     LI,
-    pG,
+    mG,
     "workspace",
     "invalid-workspace-v3"
   );
@@ -40670,7 +40685,7 @@ async function zI(e, t = {}) {
   (typeof e.savedAt != "string" || typeof e.app != "string") && Ps("invalid-workspace-v3", "savedAt and app must be strings."), Array.isArray(e.samples) || Ps("invalid-workspace-v3", "samples must be an array.");
   for (let g = 0; g < e.samples.length; g++)
     Object.prototype.hasOwnProperty.call(e.samples, g) || Ps("invalid-workspace-v3", "samples must not contain sparse entries.");
-  const n = hG(e), r = n.samples, a = [];
+  const n = pG(e), r = n.samples, a = [];
   for (let g = 0; g < r.length; g++) {
     qM(r[g]) || Ps("invalid-workspace-sample", `sample ${g + 1} must be an object.`, {
       sampleIndex: g
@@ -40679,7 +40694,7 @@ async function zI(e, t = {}) {
     UM(
       y,
       DI,
-      mG,
+      gG,
       `sample ${g + 1}`,
       "invalid-workspace-sample",
       { sampleIndex: g, dataPath: b }
@@ -40703,7 +40718,7 @@ async function zI(e, t = {}) {
   }
   let p;
   try {
-    p = await sG(n.compensation);
+    p = await lG(n.compensation);
   } catch (g) {
     const y = g instanceof Error ? g.message : String(g);
     Ps("invalid-compensation-state", y, { cause: g });
@@ -40717,7 +40732,7 @@ async function zI(e, t = {}) {
     );
     let v;
     try {
-      v = dG(
+      v = fG(
         y,
         p,
         x ? {
@@ -40757,7 +40772,7 @@ function BI(e) {
 function VM(e) {
   return BI(e), cl(JSON.stringify(Vk(e), null, 2));
 }
-async function gG(e, t, n, r = {}) {
+async function yG(e, t, n, r = {}) {
   BI(e);
   const a = await wB(e, t, r), o = [
     Object.freeze({
@@ -40827,7 +40842,7 @@ function n_(e) {
   }
   return e.vertices.map(([t, n]) => [t, n]);
 }
-const WI = ["--", "+-", "-+", "++"], tg = (e, t) => [[0, e], [1, e], [1, t], [0, t]], yG = [
+const WI = ["--", "+-", "-+", "++"], tg = (e, t) => [[0, e], [1, e], [1, t], [0, t]], vG = [
   {
     name: "Cells",
     gates: [
@@ -40888,20 +40903,20 @@ const WI = ["--", "+-", "-+", "++"], tg = (e, t) => [[0, e], [1, e], [1, t], [0,
     "++": [[1.5, 2.3], [2.3, 1.5], [6, 4], [6, 6], [4, 6]]
   },
   planes: {},
-  qc: yG,
+  qc: vG,
   source: "GateLab default (a lab CyTOF barcoding run, 2026-08: its QC chain, three planes averaged)"
 };
-function vG(e) {
+function wG(e) {
   if (!e || typeof e != "object") return !1;
   const t = e;
   if (t.format !== "gatelab-barcode-template" || t.version !== 1 || t.units !== "asinh" || typeof t.cofactor != "number" || typeof t.boundary != "number") return !1;
   const n = t.states;
   return !n || typeof n != "object" || !WI.every((r) => Array.isArray(n[r]) && n[r].length >= 3) ? !1 : t.qc === void 0 || Array.isArray(t.qc);
 }
-function wG(e) {
+function xG(e) {
   return { ...e, planes: e.planes ?? {}, qc: e.qc ?? [] };
 }
-function xG(e, t, n) {
+function bG(e, t, n) {
   const r = e.planes[`${t}x${n}`];
   if (r) return r.states;
   const a = e.planes[`${n}x${t}`];
@@ -40916,11 +40931,11 @@ function xG(e, t, n) {
   }
   return e.states;
 }
-function bG(e) {
+function SG(e) {
   const t = e.length || 1;
   return [e.reduce((n, r) => n + r[0], 0) / t, e.reduce((n, r) => n + r[1], 0) / t];
 }
-function SG(e, t, n) {
+function kG(e, t, n) {
   const { x: r, y: a } = hy(e, n, t);
   return n_(e).map(([o, i]) => [Sp(r, o, t), Sp(a, i, t)]);
 }
@@ -40946,7 +40961,7 @@ function qI(e, t, n, r) {
   }
   return o;
 }
-function kG(e, t, n, r) {
+function _G(e, t, n, r) {
   const a = hy(e, n, t), o = a.space === "display", i = (p, m) => p.kind === "identity" ? { kind: "identity", convert: (g) => g } : p.kind === "asinh" ? { kind: "asinh", cofactor: p.cofactor, convert: (g) => g } : (r.push(`${e.name}: its ${m} axis is ${x1(p)}, which the file cannot name; written in arcsinh units at cofactor ${t}, exact for a rectangle and approximate along a polygon's edges.`), { kind: "asinh", cofactor: t, convert: (g) => Sp(p, g, t) }), l = i(a.x, e.x_channel), s = i(a.y, e.y_channel), c = n_(e).map(([p, m]) => [l.convert(p), s.convert(m)]), f = { ...l.cofactor !== void 0 ? { x: l.cofactor } : {}, ...s.cofactor !== void 0 ? { y: s.cofactor } : {} };
   return {
     name: e.name,
@@ -40971,7 +40986,7 @@ function JM(e, t, n = "learned from the current workspace", r, a, o) {
   const l = [];
   for (const [x, v] of i) {
     if (v.length !== 4) continue;
-    const [_, k] = x.split(" "), A = v.map((U) => SG(U, t, o)), C = A.map(bG), E = C.reduce((U, D) => U + D[0], 0) / 4, j = C.reduce((U, D) => U + D[1], 0) / 4, N = {}, P = {}, F = {};
+    const [_, k] = x.split(" "), A = v.map((U) => kG(U, t, o)), C = A.map(SG), E = C.reduce((U, D) => U + D[0], 0) / 4, j = C.reduce((U, D) => U + D[1], 0) / 4, N = {}, P = {}, F = {};
     let T = !0;
     if (v.forEach((U, D) => {
       const G = `${C[D][0] > E ? "+" : "-"}${C[D][1] > j ? "+" : "-"}`;
@@ -41009,7 +41024,7 @@ function JM(e, t, n = "learned from the current workspace", r, a, o) {
             y.push(`${j.name}: a ${(F == null ? void 0 : F.gate_type) ?? "missing"} gate was not captured.`);
             continue;
           }
-          P.include || (N.excluded = [...N.excluded ?? [], F.name]), N.gates.push(kG(F, t, o, y));
+          P.include || (N.excluded = [...N.excluded ?? [], F.name]), N.gates.push(_G(F, t, o, y));
         }
         N.gates.length && b.push(N);
       }
@@ -41033,7 +41048,7 @@ function JM(e, t, n = "learned from the current workspace", r, a, o) {
     notes: y
   };
 }
-const SS = new Float32Array(1), KM = new Int32Array(SS.buffer), kS = new Float64Array(1), XM = new BigInt64Array(kS.buffer), UI = 1n << 63n, _G = UI - 1n, VI = {
+const SS = new Float32Array(1), KM = new Int32Array(SS.buffer), kS = new Float64Array(1), XM = new BigInt64Array(kS.buffer), UI = 1n << 63n, CG = UI - 1n, VI = {
   float32: {
     key(e) {
       SS[0] = e;
@@ -41051,7 +41066,7 @@ const SS = new Float32Array(1), KM = new Int32Array(SS.buffer), kS = new Float64
     key(e) {
       kS[0] = e;
       const t = XM[0];
-      return t >= 0n ? t : -(t & _G);
+      return t >= 0n ? t : -(t & CG);
     },
     value(e) {
       return XM[0] = e >= 0n ? e : BigInt.asIntN(64, -e | UI), kS[0];
@@ -41101,7 +41116,7 @@ function QM(e, t, n, r, a) {
   }, s = Eb((p) => i(p) >= t, l(t), o.maxKey), c = r === "half-open" ? Eb((p) => i(p) >= n, l(n), o.maxKey) : Eb((p) => i(p) > n, l(n), o.maxKey) - 1n, f = (p) => o.value(p < -o.maxKey ? -o.maxKey : p > o.maxKey ? o.maxKey : p);
   return [f(s), f(c)];
 }
-function CG(e, t) {
+function AG(e, t) {
   const n = VI[t], r = n.key(e) + 1n;
   return n.value(r > n.maxKey ? n.maxKey : r);
 }
@@ -41118,10 +41133,10 @@ function YM(e, t) {
   }
   return n.push(r), n.map((o) => o.trim());
 }
-function AG(e) {
+function MG(e) {
   return e.includes("	") ? "	" : !e.includes(",") && e.includes(";") ? ";" : ",";
 }
-function MG(e, t) {
+function NG(e, t) {
   const n = e.replace(/^#\s*planes?\s*:\s*/i, "").trim(), r = n.split(/\s*(?:x|×|\/|,)\s*/i).filter(Boolean);
   if (r.length !== 2)
     return `Line ${t}: a plane declaration names two channels separated by "x", as in "# plane: 195Pt x 194Pt" (got "${n}").`;
@@ -41132,7 +41147,7 @@ function MG(e, t) {
   return o.display && i.display ? `Line ${t}: both axes of a plane cannot be display-only.` : { x: o.name, y: i.name, xDisplay: o.display, yDisplay: i.display, line: t };
 }
 const yg = String.raw`[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?`;
-function NG(e, t) {
+function EG(e, t) {
   const n = e.replace(/\s*\(\s*([^)]*?)\s*\)/g, "($1)").split(/\s*[,;/]\s*|\s+/).map((o) => o.trim().toLowerCase()).filter(Boolean), r = (o) => {
     const i = new RegExp(String.raw`^(?:asinh|arcsinh|display)(?:\((${yg})\))?$`).exec(o);
     if (i) {
@@ -41157,7 +41172,7 @@ function NG(e, t) {
   }
   return `Line ${t}: the scale must be "raw", "asinh", "linear", "asinh(5)" naming the cofactor, or one per axis such as "linear, asinh(5)" (got "${e}").`;
 }
-function EG(e, t) {
+function jG(e, t) {
   const n = e.replace(/^#\s*gate\s*:\s*/i, "").trim(), r = n.split("|").map((E) => E.trim());
   if (r.length < 5)
     return `Line ${t}: a gate line has five fields separated by "|": name | rectangle or polygon | X x Y | scale | shape (got "${n}").`;
@@ -41167,7 +41182,7 @@ function EG(e, t) {
   if (!f) return `Line ${t}: gate "${a}" must be a rectangle or a polygon (got "${o}").`;
   const p = i.split(/\s+(?:x|×)\s+/i).map((E) => E.trim()).filter(Boolean);
   if (p.length !== 2) return `Line ${t}: gate "${a}" names two channels joined by "x", as in "Time x Center" (got "${i}").`;
-  const m = NG(l, t);
+  const m = EG(l, t);
   if (typeof m == "string") return m;
   const g = s.join(" ").trim();
   if (f === "polygon") {
@@ -41191,7 +41206,7 @@ function EG(e, t) {
   const _ = b === "full" ? { lo: 0, hi: 1 } : b, k = x === "full" ? { lo: 0, hi: 1 } : x, A = [[_.lo, k.lo], [_.hi, k.lo], [_.hi, k.hi], [_.lo, k.hi]], C = v.some((E) => E.halfOpen) ? "half-open" : "closed";
   return { name: a, gate_type: f, x: p[0], y: p[1], ...m, vertices: A, xFull: b === "full", yFull: x === "full", bounds: C, line: t };
 }
-function jG(e, t) {
+function PG(e, t) {
   const n = e.replace(/^#\s*(?:population|qc|parent)\s*:\s*/i, "").trim(), r = /^([^=]+?)\s*=\s*(.*)$/.exec(n);
   if (!r) return `Line ${t}: a population line reads "# population: Name = gate, gate, …" or "# population: Name < Parent = gate, …" (got "${n}").`;
   const a = r[1].trim(), o = /^(.+?)\s*(?:<|\bunder\b)\s*(.+)$/i.exec(a), i = (o ? o[1] : a).trim(), l = o ? o[2].trim() : null;
@@ -41208,7 +41223,7 @@ function jb(e) {
   const t = e.trim();
   return t.length >= 2 && t.startsWith('"') && t.endsWith('"') ? t.slice(1, -1).replace(/""/g, '"').trim() : t;
 }
-function PG(e) {
+function IG(e) {
   const t = e.replace(/^﻿/, "").split(/\r?\n/), n = [], r = [], a = [], o = [];
   let i = null;
   const l = (y, b) => {
@@ -41217,13 +41232,13 @@ function PG(e) {
       const v = x.replace(/^#\s*samples?\s+under\s*:\s*/i, "").trim();
       v ? i = v : n.push(`Line ${b}: "# samples under:" names no population.`);
     } else if (/^#\s*planes?\s*:/i.test(x)) {
-      const v = MG(x, b);
+      const v = NG(x, b);
       typeof v == "string" ? n.push(v) : r.push(v);
     } else if (/^#\s*gate\s*:/i.test(x)) {
-      const v = EG(x, b);
+      const v = jG(x, b);
       typeof v == "string" ? n.push(v) : a.some((_) => _.name === v.name) ? n.push(`Line ${b}: gate "${v.name}" is defined twice.`) : a.push(v);
     } else if (/^#\s*(?:population|qc|parent)\s*:/i.test(x)) {
-      const v = jG(x, b);
+      const v = PG(x, b);
       typeof v == "string" ? n.push(v) : o.some((_) => _.name === v.name) ? n.push(`Line ${b}: population "${v.name}" is declared twice.`) : o.push(v);
     }
   };
@@ -41253,7 +41268,7 @@ function PG(e) {
       delimiter: ","
     };
   }
-  const c = AG(t[s]), f = YM(t[s], c);
+  const c = MG(t[s]), f = YM(t[s], c);
   f.some((y) => !y) && n.push("Every column needs a header; one is blank.");
   const p = f.filter((y, b) => f.indexOf(y) !== b);
   p.length && n.push(`Duplicate column header(s): ${[...new Set(p)].join(", ")}.`);
@@ -41280,26 +41295,26 @@ const nw = {
   fileName: /^(file_name|filename|file|fcs|output|output_file)$/i,
   sampleId: /^(sample_id|sample|id)$/i,
   barcode: /^(barcode|barcodes|code)$/i
-}, IG = /* @__PURE__ */ new Set(["1", "+", "pos", "positive", "true", "yes", "y"]), TG = /* @__PURE__ */ new Set(["0", "-", "neg", "negative", "false", "no", "n", "−"]);
+}, TG = /* @__PURE__ */ new Set(["1", "+", "pos", "positive", "true", "yes", "y"]), FG = /* @__PURE__ */ new Set(["0", "-", "neg", "negative", "false", "no", "n", "−"]);
 function $M(e) {
   const t = e.trim().toLowerCase();
-  return IG.has(t) ? !0 : TG.has(t) ? !1 : null;
+  return TG.has(t) ? !0 : FG.has(t) ? !1 : null;
 }
 function kp(e, t) {
   const n = t.find((i) => i.key === e || i.pnn === e || i.marker === e);
   if (n) return { key: n.key };
   const r = a0(e);
-  if (!r) return FG(e, t);
+  if (!r) return RG(e, t);
   const a = t.filter((i) => Nb(r, i.pnn) || Nb(r, i.key) || (i.marker ? Nb(r, i.marker) : !1)), o = [...new Set(a.map((i) => i.key))];
   return o.length === 1 ? { key: o[0] } : { candidates: o };
 }
-function FG(e, t) {
+function RG(e, t) {
   const n = e.trim();
   if (!/^\d{2,3}[A-Z][a-z]?$/.test(n)) return { candidates: [] };
   const r = t.filter((o) => [o.key, o.pnn, o.marker].some((i) => !!i && HI(i) === n)), a = [...new Set(r.map((o) => o.key))];
   return a.length === 1 ? { key: a[0] } : { candidates: a };
 }
-function RG(e) {
+function OG(e) {
   const t = [], n = /(\d{2,3}[A-Z][a-z]?|\d{2,3})\s*([+\-−])/g;
   let r, a = 0;
   const o = e.trim();
@@ -41307,7 +41322,7 @@ function RG(e) {
     t.push({ token: r[1], state: r[2] === "+" }), a = n.lastIndex;
   return !t.length || o.slice(a).replace(/[\s,;]/g, "").length ? null : t;
 }
-function OG(e, t, n) {
+function LG(e, t, n) {
   const r = [], a = [], o = [], i = /* @__PURE__ */ new Set();
   if (n.length) {
     for (const s of n) {
@@ -41333,7 +41348,7 @@ function OG(e, t, n) {
   }
   return { planes: o, problems: r, notes: a };
 }
-function LG(e, t, n) {
+function DG(e, t, n) {
   const r = [...e.problems], a = [], o = e.headers, i = (C) => o.findIndex((E) => C.test(E)), l = i(nw.name), s = i(nw.fileName), c = i(nw.sampleId), f = i(nw.barcode), p = [], m = [];
   o.forEach((C, E) => {
     if ([l, s, c, f].includes(E)) return;
@@ -41359,7 +41374,7 @@ function LG(e, t, n) {
       z !== null && (N[L.key] = z);
     }
     if (f >= 0) {
-      const L = RG(C[f]);
+      const L = OG(C[f]);
       if (!L)
         r.push(`Row ${j}: barcode "${C[f]}" is not a sequence of mass tokens with signs.`);
       else
@@ -41390,7 +41405,7 @@ function LG(e, t, n) {
     E.length > 1 && r.push(`Rows ${E.join(", ")} share the same barcode combination (${C}); two populations would receive the same cells.`);
   const _ = y.map((C) => C.name), k = [...new Set(_.filter((C, E) => _.indexOf(C) !== E))];
   k.length && r.push(`Duplicate population name(s): ${k.join(", ")}.`);
-  const A = e.hierarchyOnly ? { planes: [], problems: [], notes: [] } : n ? { planes: n, problems: [], notes: [] } : OG(v, t, e.planeDeclarations);
+  const A = e.hierarchyOnly ? { planes: [], problems: [], notes: [] } : n ? { planes: n, problems: [], notes: [] } : LG(v, t, e.planeDeclarations);
   if (n) {
     const C = new Set(n.flatMap((N) => [N.xIsBarcode ? N.x : "", N.yIsBarcode ? N.y : ""])), E = v.filter((N) => !C.has(N));
     E.length && A.problems.push(`No plane draws ${E.join(", ")}.`);
@@ -41421,7 +41436,7 @@ function LG(e, t, n) {
     notes: [...a, ...A.notes]
   };
 }
-const DG = /* @__PURE__ */ new Set(["time", "center", "offset", "width", "residual", "amplitude", "eventlength"]);
+const zG = /* @__PURE__ */ new Set(["time", "center", "offset", "width", "residual", "amplitude", "eventlength"]);
 function Af(e, t) {
   const n = t.find((s) => s.key === e || s.pnn === e || s.marker === e);
   if (n) return n.key;
@@ -41442,14 +41457,14 @@ function Af(e, t) {
   if ("key" in i) return i.key;
   if (xf(e)) return Af("DNA", t);
   if (/198pt|pt198|cisplatin|live|viab/i.test(e)) return Af("Live", t);
-  if (!DG.has(r)) return null;
+  if (!zG.has(r)) return null;
   const l = t.filter((s) => a(s).some((c) => {
     const f = $h(c);
     return f.startsWith(r) || f.endsWith(r);
   }));
   return l.length === 1 ? l[0].key : null;
 }
-function zG(e) {
+function BG(e) {
   return {
     name: e.name,
     x: e.x,
@@ -41475,21 +41490,21 @@ function JI(e, t) {
     ...i.excluded.length ? { excluded: i.excluded } : {},
     gates: i.gates.flatMap((l) => {
       const s = r.get(l);
-      if (s) return [zG(s)];
+      if (s) return [BG(s)];
       const c = n.get(l);
       return c ? [c] : (a.push(`${i.name} / ${l}`), []);
     })
   })), source: "file", missing: a };
 }
-function BG(e, t, n) {
-  const r = JI(e, t), a = GG(r.chain, n);
+function GG(e, t, n) {
+  const r = JI(e, t), a = HG(r.chain, n);
   return {
     ...a,
     skipped: [...r.missing.map((o) => `${o}: no "# gate:" line in the file and no gate of that name in the template.`), ...a.skipped],
     source: r.source
   };
 }
-function GG(e, t) {
+function HG(e, t) {
   const n = [], r = [];
   for (const a of e) {
     const o = [];
@@ -41515,7 +41530,7 @@ const Pb = {
   "-+": "#4daf4a",
   "++": "#ff7f00"
 };
-function HG(e, t) {
+function WG(e, t) {
   const n = t.xIsBarcode ? e.states[t.x] ? "+" : "-" : null, r = t.yIsBarcode ? e.states[t.y] ? "+" : "-" : null;
   return n !== null && r !== null ? `${n}${r}` : n ?? r;
 }
@@ -41546,7 +41561,7 @@ function t2(e, t, n, r = {}) {
           Z.push(ge), Y.push({ name: ne.name, x: O, y: Q });
           continue;
         }
-        const te = WG(ne, O, Q, n, (U = r.ranges) == null ? void 0 : U[O]);
+        const te = qG(ne, O, Q, n, (U = r.ranges) == null ? void 0 : U[O]);
         te.color = l[s++ % l.length], a[te.gate_id] = te, o.push(te.gate_id), b.set(le, te.gate_id), Z.push(te.gate_id), Y.push({ name: te.name, x: O, y: Q });
       }
       Z.length ? (g.push(Z), y.push(G), c.populations.push({ name: G.name, ...G.parent ? { parent: G.parent } : {}, gates: Y })) : c.skipped.push(`${G.name}: none of its gates could be placed, so the population is left out.`);
@@ -41570,7 +41585,7 @@ function t2(e, t, n, r = {}) {
   for (const D of e.planes) {
     const G = Fx(D.x), Z = Fx(D.y), Y = ZM(D.x), ne = ZM(D.y), O = {};
     if (D.xIsBarcode && D.yIsBarcode) {
-      const Q = xG(t, G, Z);
+      const Q = bG(t, G, Z);
       for (const ce of ["--", "+-", "-+", "++"]) {
         const [le, ge] = ce.split(""), te = `${ne}${ge}${Y}${le}`, ye = m(te, D.x, D.y);
         if (ye) {
@@ -41637,7 +41652,7 @@ function t2(e, t, n, r = {}) {
   }
   for (const D of e.samples) {
     const G = i.map(({ plane: ne, gates: O }) => {
-      const Q = O[HG(D, ne)];
+      const Q = O[WG(D, ne)];
       if (!Q) throw new Error(`No gate for sample ${D.name} on plane ${ne.x} x ${ne.y}.`);
       return fs(Q, !0);
     }), Z = Fi(D.name, G, F.population_id, "and");
@@ -41670,7 +41685,7 @@ function t2(e, t, n, r = {}) {
     qc: c
   };
 }
-function WG(e, t, n, r, a) {
+function qG(e, t, n, r, a) {
   var p, m;
   const o = (g) => {
     var b, x;
@@ -41707,11 +41722,11 @@ function Ox(e, t, n) {
 function r2(e) {
   return /[",\n\r]/.test(e) ? `"${e.replace(/"/g, '""')}"` : e;
 }
-function qG(e, t, n, r, a = {}, o = "the current workspace", i) {
+function UG(e, t, n, r, a = {}, o = "the current workspace", i) {
   const l = r.template.cofactor, s = /* @__PURE__ */ new Map(), c = [];
   for (const D of r.planes) {
     c.push({ x: D.x, y: D.y, xIsBarcode: !0, yIsBarcode: !0, gateIds: Object.values(D.gateIds) });
-    for (const G of UG)
+    for (const G of VG)
       s.set(D.gateIds[G], [
         { channel: D.x, state: G[0] },
         { channel: D.y, state: G[1] }
@@ -41743,7 +41758,7 @@ function qG(e, t, n, r, a = {}, o = "the current workspace", i) {
   }
   _.length && v.push(`Left out ${_.length} population(s) that use some but not all planes: ${_.slice(0, 6).join(", ")}${_.length > 6 ? ", …" : ""}.`);
   const C = [...new Set(k.flatMap((D) => Object.keys(D.meta)))].filter(
-    (D) => !VG.has(D.toLowerCase()) && !y.some((G) => m(G) === D)
+    (D) => !JG.has(D.toLowerCase()) && !y.some((G) => m(G) === D)
   ), E = ["name", "file_name", ...C, ...y.map(m)], j = (D) => String(Number(D.toPrecision(7))), N = (D) => {
     var Q, ce, le, ge;
     const G = (te, ye) => te === "identity" ? "linear" : ye !== void 0 ? `asinh(${j(ye)})` : "asinh", Z = G((Q = D.transforms) == null ? void 0 : Q.x, (ce = D.cofactors) == null ? void 0 : ce.x), Y = G((le = D.transforms) == null ? void 0 : le.y, (ge = D.cofactors) == null ? void 0 : ge.y), ne = D.space === "raw" ? "raw" : Z === Y ? Z : `${Z}, ${Y}`, O = `${m(D.x)} x ${m(D.y)}`;
@@ -41752,7 +41767,7 @@ function qG(e, t, n, r, a = {}, o = "the current workspace", i) {
       return `# gate: ${D.name} | rectangle | ${O} | ${ne} | ${ue} | y ${Ox(Math.min(...ye), Math.max(...ye), be)}`;
     }
     return `# gate: ${D.name} | polygon | ${O} | ${ne} | ${D.vertices.map(([te, ye]) => `(${j(te)},${j(ye)})`).join(" ")}`;
-  }, P = r.template.qc.flatMap((D) => D.gates.map(N)), F = r.template.qc.map((D) => JG(D)), T = r.template.qc.length ? [`# samples under: ${r.template.qc[r.template.qc.length - 1].name}`] : [], L = new Map(e.map((D) => [D.gate_id, D])), z = c.flatMap((D) => D.gateIds.flatMap((G) => {
+  }, P = r.template.qc.flatMap((D) => D.gates.map(N)), F = r.template.qc.map((D) => KG(D)), T = r.template.qc.length ? [`# samples under: ${r.template.qc[r.template.qc.length - 1].name}`] : [], L = new Map(e.map((D) => [D.gate_id, D])), z = c.flatMap((D) => D.gateIds.flatMap((G) => {
     const Z = L.get(G);
     if (!Z || Z.gate_type !== "polygon" && Z.gate_type !== "rectangle") return [];
     const { x: Y, y: ne } = hy(Z, i, l), O = n_(Z).map(([Q, ce]) => [Sp(Y, Q, l), Sp(ne, ce, l)]);
@@ -41772,12 +41787,12 @@ function qG(e, t, n, r, a = {}, o = "the current workspace", i) {
   ].join(`
 `), nSamples: k.length, planeLabels: b, channels: y, notes: v };
 }
-const UG = ["--", "+-", "-+", "++"], VG = /* @__PURE__ */ new Set(["name", "file_name", "sample_id", "barcode"]);
-function JG(e) {
+const VG = ["--", "+-", "-+", "++"], JG = /* @__PURE__ */ new Set(["name", "file_name", "sample_id", "barcode"]);
+function KG(e) {
   const t = new Set(e.excluded ?? []), n = e.gates.map((r) => t.has(r.name) ? `not ${r.name}` : r.name).join(", ");
   return `# population: ${e.name}${e.parent ? ` < ${e.parent}` : ""} = ${n}`;
 }
-function KG(e, t, n, r = "the current workspace", a = {}) {
+function XG(e, t, n, r = "the current workspace", a = {}) {
   var b;
   const o = [], i = a.cofactor ?? Rx.cofactor, l = (x) => String(Number(x.toPrecision(7))), s = (x) => t_(x) ?? x, c = /* @__PURE__ */ new Map();
   for (const x of e) {
@@ -41803,7 +41818,7 @@ function KG(e, t, n, r = "the current workspace", a = {}) {
         }, [U, D] = [z(x.x_channel), z(x.y_channel)];
         let G = QM(Sa(v.x), Math.min(...T), Math.max(...T), A, U), Z = QM(Sa(v.y), Math.min(...L), Math.max(...L), A, D);
         if (_ = "raw", o.push(F ? `${x.name}: drawn on ${x1(F)}, which the file cannot name; written in raw units, which is exact for a rectangle.` : `${x.name}: drawn at arcsinh cofactor ${l(P.cofactor)}, not this file's ${l(i)}; written in raw units, which is exact for a rectangle.`), A === "closed" && (G[0] > G[1] || Z[0] > Z[1])) {
-          const Y = ([ne, O], Q) => ne > O ? [ne, ne] : [ne, CG(O, Q)];
+          const Y = ([ne, O], Q) => ne > O ? [ne, ne] : [ne, AG(O, Q)];
           [G, Z] = [Y(G, U), Y(Z, D)], A = "half-open", o.push(`${x.name}: a closed rectangle holding no value its channel can hold; written half-open, "lo..<lo", which holds the same: nothing.`);
         }
         k = [[G[0], Z[0]], [G[1], Z[0]], [G[1], Z[1]], [G[0], Z[1]]];
@@ -41850,7 +41865,7 @@ function KG(e, t, n, r = "the current workspace", a = {}) {
   ].join(`
 `), nGates: c.size, nPopulations: g, notes: o };
 }
-function XG() {
+function QG() {
   return [
     "# GateLab barcode scheme. One row per sample; one column per barcode channel with 1 or 0.",
     "# Optional: declare which channels are drawn together. Without these lines, channels are",
@@ -41874,12 +41889,12 @@ function XG() {
   ].join(`
 `);
 }
-const QG = 12;
+const ZG = 12;
 function a2(e, t) {
   const n = e.label.toLowerCase(), r = t.toLowerCase();
   return n === r ? 0 : n.startsWith(r) ? 1 : n.includes(r) ? 2 : 3;
 }
-function ZG(e, t) {
+function YG(e, t) {
   if (!t) return !0;
   const n = t.toLowerCase();
   return e.label.toLowerCase().includes(n) || (e.group ?? "").toLowerCase().includes(n);
@@ -41887,7 +41902,7 @@ function ZG(e, t) {
 function _p({ value: e, options: t, onChange: n, label: r, className: a = "", title: o }) {
   var j, N;
   const { t: i } = Yn(), [l, s] = W.useState(!1), [c, f] = W.useState(""), p = W.useRef(null), m = W.useRef(null), g = W.useRef(null), y = W.useRef(null), b = W.useId(), x = t.find((P) => P.value === e), v = W.useMemo(
-    () => t.filter((P) => ZG(P, c)),
+    () => t.filter((P) => YG(P, c)),
     [t, c]
   ), _ = c ? (j = [...v].sort((P, F) => a2(P, c) - a2(F, c))[0]) == null ? void 0 : j.value : v.some((P) => P.value === e) ? e : (N = v[0]) == null ? void 0 : N.value, k = W.useRef(!1), A = (P) => {
     var F;
@@ -41952,7 +41967,7 @@ function _p({ value: e, options: t, onChange: n, label: r, className: a = "", ti
         {
           ref: y,
           id: b,
-          size: Math.min(v.length + E.groups.length, QG),
+          size: Math.min(v.length + E.groups.length, ZG),
           value: _,
           "aria-label": r,
           onChange: (P) => C(P.currentTarget.value),
@@ -41969,7 +41984,7 @@ function _p({ value: e, options: t, onChange: n, label: r, className: a = "", ti
     ] })
   ] });
 }
-function YG({
+function $G({
   draft: e,
   scheme: t,
   channels: n,
@@ -42136,7 +42151,7 @@ function YG({
     ] })
   ] }) });
 }
-function $G({
+function e9({
   summary: e,
   onSave: t,
   onCancel: n
@@ -42208,23 +42223,23 @@ function o2({
     ] })
   ] }) });
 }
-const e9 = new TextEncoder(), t9 = new TextDecoder("latin1");
-function n9(e) {
-  return t9.decode(e9.encode(e));
-}
+const t9 = new TextEncoder(), n9 = new TextDecoder("latin1");
 function r9(e) {
+  return n9.decode(t9.encode(e));
+}
+function a9(e) {
   var a;
-  const t = (a = e.marker) == null ? void 0 : a.trim(), n = [e.pnn, ...t ? [`${t} (${e.pnn})`] : []], r = [...n, e.key].map(n9);
+  const t = (a = e.marker) == null ? void 0 : a.trim(), n = [e.pnn, ...t ? [`${t} (${e.pnn})`] : []], r = [...n, e.key].map(r9);
   return [.../* @__PURE__ */ new Set([...n, ...r])].filter((o) => o !== e.key);
 }
-function a9(e, t) {
+function o9(e, t) {
   const n = new Set(t.flatMap((a) => a.map((o) => o.key))), r = /* @__PURE__ */ new Map();
   for (const a of new Set(e)) {
     if (!a || n.has(a)) continue;
     const o = /* @__PURE__ */ new Set();
     let i = !1;
     for (const l of t) {
-      const s = l.filter((c) => r9(c).includes(a));
+      const s = l.filter((c) => a9(c).includes(a));
       s.length > 1 && (i = !0), s.length === 1 && o.add(s[0].key);
     }
     !i && o.size === 1 && r.set(a, [...o][0]);
@@ -42258,10 +42273,10 @@ function s2(e, t) {
   }
   return n ? r : e;
 }
-function o9(e, t) {
+function i9(e, t) {
   return Object.values(e).filter((n) => !t.has(n.x_channel) || !t.has(n.y_channel)).map((n) => n.name);
 }
-function i9(e, t) {
+function s9(e, t) {
   var l;
   const n = e.hierarchies ?? [];
   if (n.length === 0) return e.gates;
@@ -42274,7 +42289,7 @@ function i9(e, t) {
   for (const s of IN(o.populations)) e.gates[s] && (i[s] = e.gates[s]);
   return i;
 }
-function s9(e, t) {
+function l9(e, t) {
   const n = t ? e.find((r) => r.files.some((a) => a.fileId === t)) : void 0;
   return n || e.reduce((r, a) => a.files.length > r.files.length ? a : r, e[0]);
 }
@@ -42323,7 +42338,7 @@ function _S(e, t, n, r) {
 }
 function u2(e, t) {
   if (!e.length) throw new Error("planOneTreeImport needs at least one file");
-  const n = NF(e, t.leadFileId), r = s9(n, t.leadFileId), a = typeof t.name == "function" ? t.name(r.lead) : t.name, o = { id: t.templateId, name: a, tree: r.lead.tree, ...r.lead.detectors ? { detectors: r.lead.detectors } : {} }, i = _S(o, e, t.existing, new Set(r.files.map((l) => l.fileId)));
+  const n = NF(e, t.leadFileId), r = l9(n, t.leadFileId), a = typeof t.name == "function" ? t.name(r.lead) : t.name, o = { id: t.templateId, name: a, tree: r.lead.tree, ...r.lead.detectors ? { detectors: r.lead.detectors } : {} }, i = _S(o, e, t.existing, new Set(r.files.map((l) => l.fileId)));
   return { template: o, lead: r.lead, ...i };
 }
 function d2(e) {
@@ -42336,11 +42351,11 @@ function d2(e) {
 function Ib(e, t) {
   return Uw(e) === Uw(t);
 }
-const f2 = "coordinate-descent-qr-v1", l9 = "identity-backed-v1", CU = Object.freeze({
+const f2 = "coordinate-descent-qr-v1", c9 = "identity-backed-v1", AU = Object.freeze({
   tolerance: 1e-10,
   kktTolerance: 1e-9,
   maxIterations: 1e3,
-  adaptationVersion: l9
+  adaptationVersion: c9
 });
 class h2 extends Error {
   constructor(n, r) {
@@ -42399,7 +42414,7 @@ function g2(e) {
     "Apply transfer columns"
   ) : [];
 }
-const r_ = 64 * 1024 * 1024, a_ = 256 * 1024, c9 = 8192, u9 = 8192, d9 = 2e4, f9 = 64 * 1024 * 1024, h9 = 4, CS = 8, p9 = 5 * Float64Array.BYTES_PER_ELEMENT;
+const r_ = 64 * 1024 * 1024, a_ = 256 * 1024, u9 = 8192, d9 = 8192, f9 = 2e4, h9 = 64 * 1024 * 1024, p9 = 4, CS = 8, m9 = 5 * Float64Array.BYTES_PER_ELEMENT;
 class qn extends Error {
   constructor(n, r) {
     super(r);
@@ -42412,7 +42427,7 @@ class Io extends qn {
     super("cancelled", t), this.name = "CompensationCancelledError";
   }
 }
-function m9() {
+function g9() {
   return new Worker(
     new URL(
       /* @vite-ignore */
@@ -42422,15 +42437,15 @@ function m9() {
     { type: "module", name: "gatelab-compensation" }
   );
 }
-function g9() {
+function y9() {
   return new Promise((e) => setTimeout(e, 0));
 }
 function KI() {
   const e = typeof navigator > "u" || !Number.isFinite(navigator.hardwareConcurrency) ? 2 : Math.max(1, Math.floor(navigator.hardwareConcurrency));
   return Math.max(1, Math.min(CS, e - 1));
 }
-function y9() {
-  return Math.min(h9, KI());
+function v9() {
+  return Math.min(p9, KI());
 }
 function Ol(e, t) {
   if (!Number.isSafeInteger(e) || e <= 0)
@@ -42446,7 +42461,7 @@ function y2(e) {
     );
   return t;
 }
-function v9(e) {
+function w9(e) {
   if (!Number.isSafeInteger(e.totalEvents) || e.totalEvents < 0)
     throw new qn("invalid-event-count", "Compensation totalEvents must be a non-negative safe integer.");
   const t = Ol(e.channelCount, "Compensation channelCount"), n = Ol(
@@ -42465,7 +42480,7 @@ function v9(e) {
       `Compensation needs at least ${r + o} bytes for one event across ${t} channels.`
     );
   const i = Ol(
-    e.maxEventsPerChunk ?? u9,
+    e.maxEventsPerChunk ?? d9,
     "Compensation maximum events per chunk"
   ), l = Math.max(
     1,
@@ -42480,7 +42495,7 @@ function v9(e) {
     chunkCount: e.totalEvents === 0 ? 0 : Math.ceil(e.totalEvents / l)
   });
 }
-function w9(e) {
+function x9(e) {
   if (!Number.isSafeInteger(e.totalEvents) || e.totalEvents < 0)
     throw new qn("invalid-event-count", "Compensation totalEvents must be a non-negative safe integer.");
   const t = Ol(e.maxWorkers, "Compensation worker count"), n = Ol(
@@ -42496,7 +42511,7 @@ function w9(e) {
   for (; a >= 1; ) {
     const i = Math.floor(n / a);
     try {
-      const l = v9({
+      const l = w9({
         totalEvents: e.totalEvents,
         channelCount: e.channelCount,
         byteBudget: i,
@@ -42531,7 +42546,7 @@ function v2(e) {
     t.included
   ]));
 }
-function x9(e, t) {
+function b9(e, t) {
   if (e.channelIdentities.length !== t.channels.length) return !1;
   for (let n = 0; n < e.channelIdentities.length; n++) {
     const r = e.channelIdentities[n], a = t.channels[n];
@@ -42540,14 +42555,14 @@ function x9(e, t) {
   }
   return !0;
 }
-function b9(e, t) {
+function S9(e, t) {
   return e.pnn === t.pnn && e.fcsColumnIndex === t.fcsColumnIndex && e.matrixSourceIndex === t.matrixSourceIndex && e.matrixReceiverIndex === t.matrixReceiverIndex;
 }
 function td(e, t) {
   if (!Lx(e, t.length) || !Lx(t, e.length))
     return !1;
   for (let n = 0; n < e.length; n++)
-    if (!b9(e[n], t[n])) return !1;
+    if (!S9(e[n], t[n])) return !1;
   return !0;
 }
 function Lx(e, t) {
@@ -42556,7 +42571,7 @@ function Lx(e, t) {
     if (!Object.prototype.hasOwnProperty.call(e, n)) return !1;
   return !0;
 }
-function S9(e, t) {
+function k9(e, t) {
   if (!(e instanceof Float64Array) || e.length !== t) return !1;
   for (let n = 0; n < e.length; n++)
     if (!Number.isFinite(e[n])) return !1;
@@ -42593,7 +42608,7 @@ function Rb(e) {
     );
   return Object.freeze({ tolerance: n, kktTolerance: r, maxIterations: a, adaptationVersion: o });
 }
-function k9(e) {
+function _9(e) {
   return new qn(
     e.code,
     `Compensation worker ${e.scope} error: ${e.message}`
@@ -42622,7 +42637,7 @@ class w2 {
     Jt(this, "previewPrimeReservation", null);
     Jt(this, "activeApply", null);
     Jt(this, "preview", null);
-    this.workspaceKey = t.workspaceKey ?? "workspace:unbound", this.workerFactory = t.workerFactory ?? m9, this.defaultByteBudget = Ol(
+    this.workspaceKey = t.workspaceKey ?? "workspace:unbound", this.workerFactory = t.workerFactory ?? g9, this.defaultByteBudget = Ol(
       t.byteBudget ?? r_,
       "Compensation byte budget"
     );
@@ -42630,17 +42645,17 @@ class w2 {
     if (!Number.isSafeInteger(n) || n < 0)
       throw new qn("invalid-memory-budget", "Fixed workspace bytes must be a non-negative safe integer.");
     this.defaultFixedWorkspaceBytes = n, this.copySliceEvents = Ol(
-      t.copySliceEvents ?? c9,
+      t.copySliceEvents ?? u9,
       "Compensation copy slice"
     ), this.maxPreviewEvents = Ol(
-      t.maxPreviewEvents ?? d9,
+      t.maxPreviewEvents ?? f9,
       "Compensation preview event limit"
     ), this.previewByteBudget = Ol(
-      t.previewByteBudget ?? f9,
+      t.previewByteBudget ?? h9,
       "Compensation preview byte budget"
     ), this.maxApplyWorkers = y2(
-      t.workerPoolSize ?? (t.workerFactory ? 1 : y9())
-    ), this.yieldToEventLoop = t.yieldToEventLoop ?? g9;
+      t.workerPoolSize ?? (t.workerFactory ? 1 : v9())
+    ), this.yieldToEventLoop = t.yieldToEventLoop ?? y9;
   }
   /** Synchronous UI guard covering both validation/reservation and active worker phases. */
   get applyInProgress() {
@@ -42708,7 +42723,7 @@ class w2 {
     try {
       const l = await this.validateProfile(t.profile, "preview");
       this.assertPreviewPrimeCurrent(o);
-      const s = this.captureSampleSnapshot(n, l), c = r.byteLength + r.length * s.solveChannels.length * p9;
+      const s = this.captureSampleSnapshot(n, l), c = r.byteLength + r.length * s.solveChannels.length * m9;
       if (!Number.isSafeInteger(c) || c > this.previewByteBudget)
         throw new qn(
           "preview-memory-budget",
@@ -42976,7 +42991,7 @@ class w2 {
   }
   async solveApplyTarget(t, n, r, a, o, i, l, s) {
     var F;
-    const c = r.sample, f = r.solveChannels.length, p = w9({
+    const c = r.sample, f = r.solveChannels.length, p = x9({
       totalEvents: c.fcs.nEvents,
       channelCount: f,
       maxWorkers: this.maxApplyWorkers,
@@ -43330,7 +43345,7 @@ class w2 {
    */
   assertSnapshotIdentityCurrent(t) {
     const n = t.sample;
-    if (t.dataRevision !== n.dataRevision || t.layerRevision !== n.layerRevision || t.activeLayer !== n.activeLayer || !x9(t, n) || t.invalidationGeneration !== (this.sampleGenerations.get(n) ?? 0))
+    if (t.dataRevision !== n.dataRevision || t.layerRevision !== n.layerRevision || t.activeLayer !== n.activeLayer || !b9(t, n) || t.invalidationGeneration !== (this.sampleGenerations.get(n) ?? 0))
       throw new qn("stale-sample", "The Sample changed while compensation was running.");
   }
   assertApplyCurrent(t, n) {
@@ -43355,7 +43370,7 @@ class w2 {
       n.deltas
     ];
     if (n.eventCount !== t.eventCount || a.some(
-      (s) => !Lx(s, r.source.length) || s.some((c) => !S9(c, t.eventCount))
+      (s) => !Lx(s, r.source.length) || s.some((c) => !k9(c, t.eventCount))
     ))
       throw new qn(
         "invalid-worker-result",
@@ -43474,7 +43489,7 @@ class w2 {
       if (t.type === "worker-error") {
         let n = !1;
         for (const r of Array.from(this.waiters))
-          r.errorMatches(t) && (n = !0, this.waiters.delete(r), r.reject(k9(t)));
+          r.errorMatches(t) && (n = !0, this.waiters.delete(r), r.reject(_9(t)));
         if (n) return;
       }
       for (const n of this.waiters)
@@ -43518,15 +43533,15 @@ function Ob(e, t) {
   const r = e.identity ?? {}, a = [r.$DATE, r.$BTIM].filter((o) => o == null ? void 0 : o.trim()).join(" ");
   return a ? `${e.fileName} recorded ${a}` : `${e.fileName} saved at ${e.dataPath}`;
 }
-const _9 = ["$BTIM", "$ETIM", "GUID"];
-function C9(e) {
+const C9 = ["$BTIM", "$ETIM", "GUID"];
+function A9(e) {
   const t = /* @__PURE__ */ new Map();
   for (const a of e) {
     const o = gf(a.fileName);
     t.set(o, [...t.get(o) ?? [], a]);
   }
   const n = [], r = (a) => {
-    const o = a.identity ?? {}, i = _9.filter((l) => {
+    const o = a.identity ?? {}, i = C9.filter((l) => {
       var s;
       return (s = o[l]) == null ? void 0 : s.trim();
     });
@@ -43539,7 +43554,7 @@ function C9(e) {
   }
   return n;
 }
-function A9(e, t, n = () => null) {
+function M9(e, t, n = () => null) {
   var y, b, x;
   const r = /* @__PURE__ */ new Map(), a = [], o = [], i = [], l = [], s = /* @__PURE__ */ new Set(), c = (v, _) => gf(v.name) === gf(_.fileName), f = /* @__PURE__ */ new Map();
   for (const v of e) {
@@ -43617,7 +43632,7 @@ function A9(e, t, n = () => null) {
   }
   return { matches: r, missing: a, ambiguous: o, mismatched: i, unconfirmed: l };
 }
-const M9 = 120 * 1e3, N9 = 256, E9 = 7200 * 1e3, j9 = 2880 * 60 * 1e3, P9 = 336 * 60 * 60 * 1e3, XI = 3600 * 1e3, I9 = 24 * XI, T9 = "gatelab-workspace-history", F9 = 1, pu = "checkpoints", AS = "workspace-created", QI = {
+const N9 = 120 * 1e3, E9 = 256, j9 = 7200 * 1e3, P9 = 2880 * 60 * 1e3, I9 = 336 * 60 * 60 * 1e3, XI = 3600 * 1e3, T9 = 24 * XI, F9 = "gatelab-workspace-history", R9 = 1, pu = "checkpoints", AS = "workspace-created", QI = {
   automatic: "Automatic",
   "before-workspace-open": "Before another workspace was opened",
   "before-new-workspace": "Before a new workspace",
@@ -43653,7 +43668,7 @@ function ZI(e, t = Date.now()) {
 function YI(e) {
   return JSON.parse(JSON.stringify(e));
 }
-function R9() {
+function O9() {
   var e, t;
   return ((t = (e = globalThis.crypto) == null ? void 0 : e.randomUUID) == null ? void 0 : t.call(e)) ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
@@ -43661,7 +43676,7 @@ function x2(e) {
   const t = YI(e);
   return t.savedAt = "", JSON.stringify(t);
 }
-function O9(e, t, n, r = /* @__PURE__ */ new Date(), a = R9()) {
+function L9(e, t, n, r = /* @__PURE__ */ new Date(), a = O9()) {
   if (!e.trim()) throw new Error("A workspace ID is required for local history.");
   const o = YI(t);
   if (o.workspaceId = e, o.version === 2)
@@ -43683,7 +43698,7 @@ function O9(e, t, n, r = /* @__PURE__ */ new Date(), a = R9()) {
     }
   };
 }
-function L9(e, t = Date.now(), n = N9) {
+function D9(e, t = Date.now(), n = E9) {
   if (n <= 0) return /* @__PURE__ */ new Set();
   const r = [...e].filter((l) => Number.isFinite(Date.parse(l.createdAt))).sort((l, s) => Date.parse(s.createdAt) - Date.parse(l.createdAt));
   if (r.length === 0) return /* @__PURE__ */ new Set();
@@ -43691,13 +43706,13 @@ function L9(e, t = Date.now(), n = N9) {
   for (let l = 0; l < r.length; l++) {
     const s = r[l], c = Date.parse(s.createdAt), f = Math.max(0, t - c);
     let p = l === 0;
-    if (f <= E9)
+    if (f <= j9)
       p = !0;
-    else if (f <= j9) {
+    else if (f <= P9) {
       const m = Math.floor(c / XI);
       o.has(m) || (o.add(m), p = !0);
-    } else if (f <= P9) {
-      const m = Math.floor(c / I9);
+    } else if (f <= I9) {
+      const m = Math.floor(c / T9);
       i.has(m) || (i.add(m), p = !0);
     }
     p && a.push(s);
@@ -43710,19 +43725,19 @@ function $I() {
       t(new Error("IndexedDB is unavailable."));
       return;
     }
-    const n = indexedDB.open(T9, F9);
+    const n = indexedDB.open(F9, R9);
     n.onupgradeneeded = () => {
       const r = n.result.objectStoreNames.contains(pu) ? n.transaction.objectStore(pu) : n.result.createObjectStore(pu, { keyPath: "id" });
       r.indexNames.contains(AS) || r.createIndex(AS, ["workspaceId", "createdAt"], { unique: !1 });
     }, n.onsuccess = () => e(n.result), n.onerror = () => t(n.error ?? new Error("Could not open workspace history."));
   });
 }
-function D9(e) {
+function z9(e) {
   return IDBKeyRange.bound([e, ""], [e, "￿"]);
 }
 function MS(e, t) {
   return new Promise((n, r) => {
-    const o = e.transaction(pu, "readonly").objectStore(pu).index(AS).getAll(D9(t));
+    const o = e.transaction(pu, "readonly").objectStore(pu).index(AS).getAll(z9(t));
     o.onsuccess = () => {
       n(o.result.sort(
         (i, l) => Date.parse(l.createdAt) - Date.parse(i.createdAt)
@@ -43730,43 +43745,43 @@ function MS(e, t) {
     }, o.onerror = () => r(o.error ?? new Error("Could not read workspace history."));
   });
 }
-function z9(e, t) {
+function B9(e, t) {
   return new Promise((n, r) => {
     const a = e.transaction(pu, "readwrite");
     a.objectStore(pu).put(t), a.oncomplete = () => n(), a.onerror = () => r(a.error ?? new Error("Could not save workspace checkpoint.")), a.onabort = () => r(a.error ?? new Error("Workspace checkpoint save was aborted."));
   });
 }
-function B9(e, t) {
+function G9(e, t) {
   return t.length === 0 ? Promise.resolve() : new Promise((n, r) => {
     const a = e.transaction(pu, "readwrite"), o = a.objectStore(pu);
     for (const i of t) o.delete(i);
     a.oncomplete = () => n(), a.onerror = () => r(a.error ?? new Error("Could not prune workspace history.")), a.onabort = () => r(a.error ?? new Error("Workspace history pruning was aborted."));
   });
 }
-async function G9(e) {
+async function H9(e) {
   let t = null;
   try {
     t = await $I();
     const r = (await MS(t, e.workspaceId))[0];
     if (e.reason === "automatic" && r && x2(r.workspace) === x2(e.workspace))
       return "duplicate";
-    await z9(t, e);
-    const a = await MS(t, e.workspaceId), o = L9(a, Date.parse(e.createdAt));
-    return await B9(t, a.filter((i) => !o.has(i.id)).map((i) => i.id)), "saved";
+    await B9(t, e);
+    const a = await MS(t, e.workspaceId), o = D9(a, Date.parse(e.createdAt));
+    return await G9(t, a.filter((i) => !o.has(i.id)).map((i) => i.id)), "saved";
   } catch {
     return "unavailable";
   } finally {
     t == null || t.close();
   }
 }
-function H9(e, t, n, r = /* @__PURE__ */ new Date()) {
+function W9(e, t, n, r = /* @__PURE__ */ new Date()) {
   try {
-    return G9(O9(e, t, n, r));
+    return H9(L9(e, t, n, r));
   } catch {
     return Promise.resolve("unavailable");
   }
 }
-async function W9(e) {
+async function q9(e) {
   let t = null;
   try {
     return t = await $I(), await MS(t, e);
@@ -43776,7 +43791,7 @@ async function W9(e) {
     t == null || t.close();
   }
 }
-async function q9() {
+async function U9() {
   var e;
   try {
     return typeof navigator > "u" || !((e = navigator.storage) != null && e.persist) ? null : await navigator.storage.persist();
@@ -43784,7 +43799,7 @@ async function q9() {
     return null;
   }
 }
-function U9({ checkpoints: e, loading: t, onRevert: n, onCancel: r }) {
+function V9({ checkpoints: e, loading: t, onRevert: n, onCancel: r }) {
   var c;
   const { t: a } = Yn(), [o, i] = W.useState(null), l = e.find((f) => f.id === o) ?? null, s = (c = e.find((f) => f.reason === "after-workspace-open")) == null ? void 0 : c.id;
   return /* @__PURE__ */ d.jsx("div", { className: "gl-modal-backdrop", children: /* @__PURE__ */ d.jsxs("div", { className: "gl-modal gl-modal-history", children: [
@@ -43816,7 +43831,7 @@ function U9({ checkpoints: e, loading: t, onRevert: n, onCancel: r }) {
     ] })
   ] }) });
 }
-function V9({ state: e, derived: t, dispatch: n, labelForKey: r = (s) => s, badgeFor: a, countScope: o, tailoredGateIds: i, tailoredInFiles: l }) {
+function J9({ state: e, derived: t, dispatch: n, labelForKey: r = (s) => s, badgeFor: a, countScope: o, tailoredGateIds: i, tailoredInFiles: l }) {
   const { t: s } = Yn(), { gates: c, gate_order: f, selected_gate_id: p, selected_gate_ids: m } = e, g = new Set(m), y = f.length ? f : Object.keys(c);
   return y.length === 0 ? /* @__PURE__ */ d.jsx("div", { className: "gate-list-panel", children: /* @__PURE__ */ d.jsx("em", { style: { color: "#999", fontSize: 12 }, children: s("No gates. Draw one using the toolbar.") }) }) : /* @__PURE__ */ d.jsx("div", { className: "gate-list-panel", children: y.map((b) => {
     var T, L, z;
@@ -43930,7 +43945,7 @@ function Lb() {
   const e = document.getElementById("population_tree_container");
   e && e.focus({ preventScroll: !0 });
 }
-function J9(e, t) {
+function K9(e, t) {
   let n = e.find((a) => a.id === t);
   const r = /* @__PURE__ */ new Set();
   for (; n && il(n) && n.source_hierarchy_id && !r.has(n.id) && (r.add(n.id), n = e.find((a) => a.id === n.source_hierarchy_id) ?? n, !r.has(n.id)); )
@@ -43939,7 +43954,7 @@ function J9(e, t) {
 }
 function tT({ state: e, perFile: t }) {
   var m, g;
-  const { t: n } = Yn(), r = e.hierarchies ?? [], a = e.active_hierarchy_id ?? ((m = r[0]) == null ? void 0 : m.id) ?? "", o = r.filter((y) => !il(y)), i = J9(r, a), l = o.length > 1, s = Object.values(e.gates).some((y) => y.gate_type === "quadrant"), c = (t == null ? void 0 : t.editMode) !== "tree", f = n(c ? "Population names belong to the tree: choose Tree as the edit target first." : "Renames the four populations of every quadrant gate; the names shown in the Create quadrant gate dialog."), p = [
+  const { t: n } = Yn(), r = e.hierarchies ?? [], a = e.active_hierarchy_id ?? ((m = r[0]) == null ? void 0 : m.id) ?? "", o = r.filter((y) => !il(y)), i = K9(r, a), l = o.length > 1, s = Object.values(e.gates).some((y) => y.gate_type === "quadrant"), c = (t == null ? void 0 : t.editMode) !== "tree", f = n(c ? "Population names belong to the tree: choose Tree as the edit target first." : "Renames the four populations of every quadrant gate; the names shown in the Create quadrant gate dialog."), p = [
     { label: n("Rename the tree…"), className: "population-tree-rename", onClick: () => t == null ? void 0 : t.onRename() },
     ...t != null && t.onNameQuadrants && s ? [
       { label: n("Name quadrant populations DN, DP, SP"), className: "population-tree-name-quadrants-dndp", title: f, disabled: c, onClick: () => {
@@ -44069,7 +44084,7 @@ function tT({ state: e, perFile: t }) {
 function Vh(e) {
   return `${e.gate_id}:${e.quadrant ?? ""}`;
 }
-function K9(e) {
+function X9(e) {
   return [
     ...e.gate_order,
     ...Object.keys(e.gates).filter((n) => !e.gate_order.includes(n))
@@ -44099,7 +44114,7 @@ function K9(e) {
     });
   });
 }
-function X9({
+function Q9({
   state: e,
   derived: t,
   dispatch: n,
@@ -44114,7 +44129,7 @@ function X9({
 }) {
   const { t: p } = Yn(), { populations: m, root_population_id: g, active_population_id: y, selected_gate_id: b, selected_pop_ids: x, gates: v } = e, _ = e.hierarchies.some(
     (oe) => oe.id === e.active_hierarchy_id && oe.structure_locked === !0
-  ), k = t.stats, A = new Set(x), C = W.useMemo(() => K9(e), [e.gate_order, e.gates]), [E, j] = W.useState(null), [N, P] = W.useState(() => /* @__PURE__ */ new Set()), F = (oe) => P((Ne) => {
+  ), k = t.stats, A = new Set(x), C = W.useMemo(() => X9(e), [e.gate_order, e.gates]), [E, j] = W.useState(null), [N, P] = W.useState(() => /* @__PURE__ */ new Set()), F = (oe) => P((Ne) => {
     const Pe = new Set(Ne);
     return Pe.has(oe) ? Pe.delete(oe) : Pe.add(oe), Pe;
   }), [T, L] = W.useState([]), [z, U] = W.useState([]);
@@ -44530,7 +44545,7 @@ function b2(e, t) {
   const n = e.trim();
   return n.length === 0 ? t : new RegExp(`\\s*${t}$`, "i").test(n) ? n : `${n} ${t}`;
 }
-function Q9({
+function Z9({
   pending: e,
   sample: t,
   populations: n,
@@ -44559,7 +44574,7 @@ function Q9({
       return bP(k === void 0 ? void 0 : t.channels[k], _);
     }, x = b(e.x_channel), v = b(e.y_channel);
     return /* @__PURE__ */ d.jsx(
-      Z9,
+      Y9,
       {
         pending: e,
         xLabel: x,
@@ -44717,7 +44732,7 @@ function S2({
     ] })
   ] });
 }
-function Z9({
+function Y9({
   pending: e,
   xLabel: t,
   yLabel: n,
@@ -44779,7 +44794,7 @@ function ol({
     }
   );
 }
-function Y9({
+function $9({
   state: e,
   dispatch: t,
   onRename: n,
@@ -44806,7 +44821,7 @@ function Y9({
     )
   ] });
 }
-function $9({
+function e7({
   state: e,
   dispatch: t,
   onAdd: n,
@@ -44836,7 +44851,7 @@ function $9({
     )
   ] });
 }
-const e7 = "Either way, FlowJo's rule is not established for these, which are evaluated continuously: ellipses, curly quadrants, and polygons with no gate resolution or on a Time, FlowJo ArcSinh, Logicle or gained linear axis. A rectangle is not clamped on a Time, gained or compensated linear axis, and one lying wholly beyond where FlowJo clamps is counted as drawn. A polygon with a gate resolution other than 256 is put on a grid of that many channels, which has not been measured.", t7 = "Off: every gate is evaluated continuously on the geometry it was drawn with, as FlowKit and Cytobank evaluate gates. Biex axes are read on FlowJo's own table either way; FlowKit's differs from it where the width basis lies between −1 and −3.16.", n7 = "A polygon GateLab wrote into the workspace, and not moved in FlowJo since, comes back as GateLab held it, whichever way this is set.";
+const t7 = "Either way, FlowJo's rule is not established for these, which are evaluated continuously: ellipses, curly quadrants, and polygons with no gate resolution or on a Time, FlowJo ArcSinh, Logicle or gained linear axis. A rectangle is not clamped on a Time, gained or compensated linear axis, and one lying wholly beyond where FlowJo clamps is counted as drawn. A polygon with a gate resolution other than 256 is put on a grid of that many channels, which has not been measured.", n7 = "Off: every gate is evaluated continuously on the geometry it was drawn with, as FlowKit and Cytobank evaluate gates. Biex axes are read on FlowJo's own table either way; FlowKit's differs from it where the width basis lies between −1 and −3.16.", r7 = "A polygon GateLab wrote into the workspace, and not moved in FlowJo since, comes back as GateLab held it, whichever way this is set.";
 function aT({
   checked: e,
   onChange: t,
@@ -44861,36 +44876,36 @@ function aT({
         r("(polygons on FlowJo's 256-channel grid, rectangles clamped to the axis)")
       ] })
     ] }),
-    /* @__PURE__ */ d.jsx("div", { className: "gl-modal-note", style: { marginLeft: 22 }, children: r(t7) }),
+    /* @__PURE__ */ d.jsx("div", { className: "gl-modal-note", style: { marginLeft: 22 }, children: r(n7) }),
     /* @__PURE__ */ d.jsxs("details", { style: { marginLeft: 22 }, children: [
       /* @__PURE__ */ d.jsx("summary", { children: r("What either way leaves continuous") }),
       /* @__PURE__ */ d.jsxs("div", { className: "gl-modal-note", children: [
-        r(e7),
+        r(t7),
         " ",
-        r(n7)
+        r(r7)
       ] })
     ] })
   ] });
 }
-const r7 = [
+const a7 = [
   "population_id",
   "current_population",
   "new_population",
   "gate_names"
 ];
-function a7(e) {
+function o7(e) {
   return /[",\r\n]/.test(e) ? `"${e.replace(/"/g, '""')}"` : e;
 }
 function k2(e) {
   return e.replace(/\\/g, "\\\\").replace(/,/g, "\\,");
 }
-function o7(e) {
+function i7(e) {
   const t = /* @__PURE__ */ new Map();
   for (const n of Object.values(e))
     t.set(n.name, (t.get(n.name) ?? 0) + 1);
   return t;
 }
-function i7(e, t, n) {
+function s7(e, t, n) {
   const r = t[e.gate_id];
   if (!r) throw new Error(`Population references missing gate id "${e.gate_id}".`);
   if (!e.include)
@@ -44907,21 +44922,21 @@ function i7(e, t, n) {
     throw new Error(`Non-quadrant gate "${r.name}" has a quadrant reference.`);
   return k2(a);
 }
-function s7(e) {
-  const t = o7(e.gates), r = ka(e.populations, e.rootPopulationId).map(({ popId: a }) => {
-    const o = e.populations[a], i = o.gate_refs.map((l) => i7(l, e.gates, t)).join(", ");
+function l7(e) {
+  const t = i7(e.gates), r = ka(e.populations, e.rootPopulationId).map(({ popId: a }) => {
+    const o = e.populations[a], i = o.gate_refs.map((l) => s7(l, e.gates, t)).join(", ");
     return [
       a,
       o.name,
       o.name,
       i
-    ].map(a7).join(",");
+    ].map(o7).join(",");
   });
-  return `\uFEFF${[r7.join(","), ...r].join(`\r
+  return `\uFEFF${[a7.join(","), ...r].join(`\r
 `)}\r
 `;
 }
-function l7(e) {
+function c7(e) {
   let t = 0, n = 0, r = !1;
   for (let a = e.charCodeAt(0) === 65279 ? 1 : 0; a < e.length; a++) {
     const o = e[a];
@@ -44938,7 +44953,7 @@ function l7(e) {
     throw new Error("Population import needs a comma- or tab-delimited header row.");
   return n > t ? "	" : ",";
 }
-function c7(e, t) {
+function u7(e, t) {
   const n = [];
   let r = [], a = "", o = !1;
   const i = e.charCodeAt(0) === 65279 ? 1 : 0, l = () => {
@@ -44955,20 +44970,20 @@ function c7(e, t) {
   if (o) throw new Error("Population import contains an unterminated quoted field.");
   return (a.length > 0 || r.length > 0) && s(), n;
 }
-function u7(e) {
+function d7(e) {
   return e.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }
-function d7(e) {
+function f7(e) {
   const t = [];
   let n = "", r = !1;
   for (const a of e)
     r ? (n += a, r = !1) : a === "\\" ? r = !0 : a === "," ? (n.trim() && t.push(n.trim()), n = "") : n += a;
   return r && (n += "\\"), n.trim() && t.push(n.trim()), t;
 }
-function f7(e, t) {
+function h7(e, t) {
   return e.length === t.length && e.every((n, r) => n.gate_id === t[r].gate_id && n.include === t[r].include && n.quadrant === t[r].quadrant);
 }
-function h7(e, t, n) {
+function p7(e, t, n) {
   let r = e, a;
   const o = r.match(/\s+\[Q([1-4])\]$/i);
   o && (a = Number(o[1]), r = r.slice(0, o.index).trim());
@@ -45002,7 +45017,7 @@ function h7(e, t, n) {
     ...a === void 0 ? {} : { quadrant: a }
   };
 }
-function p7(e, t, n) {
+function m7(e, t, n) {
   var c, f;
   const r = t.indexOf("old_population"), a = t.indexOf("new_population"), o = /* @__PURE__ */ new Map();
   for (const p of Object.values(n.populations)) {
@@ -45037,13 +45052,13 @@ function p7(e, t, n) {
     legacyRenameOnly: !0
   };
 }
-function m7(e, t) {
+function g7(e, t) {
   var x, v, _, k;
-  const n = l7(e), r = c7(e, n);
+  const n = c7(e), r = u7(e, n);
   if (r.length === 0) throw new Error("Population import is empty.");
-  const a = r[0].map(u7);
+  const a = r[0].map(d7);
   if (a.includes("old_population") && a.includes("new_population") && !a.includes("population_id"))
-    return p7(r, a, t);
+    return m7(r, a, t);
   const o = (A) => {
     const C = a.indexOf(A);
     if (C < 0) throw new Error(`Population import is missing required column "${A}".`);
@@ -45068,12 +45083,12 @@ function m7(e, t) {
       throw new Error(
         `Row ${A + 1}: population "${E}" is now named "${j.name}", not "${N}". Download a fresh template.`
       );
-    const P = ((_ = C[s]) == null ? void 0 : _.trim()) || j.name, F = d7(C[c] ?? "");
+    const P = ((_ = C[s]) == null ? void 0 : _.trim()) || j.name, F = f7(C[c] ?? "");
     if (E === t.rootPopulationId && F.length > 0)
       throw new Error(`Row ${A + 1}: the root population cannot contain gate definitions.`);
     let T;
     try {
-      T = F.map((D) => h7(D, t.gates, f));
+      T = F.map((D) => p7(D, t.gates, f));
     } catch (D) {
       const G = D instanceof Error ? D.message : String(D);
       throw new Error(`Row ${A + 1}: ${G}`);
@@ -45087,7 +45102,7 @@ function m7(e, t) {
       }
       L.add(G);
     }
-    const z = P !== j.name, U = !f7(T, j.gate_refs);
+    const z = P !== j.name, U = !h7(T, j.gate_refs);
     z && g++, U && y++, !z && !U && b++, p.push({ popId: E, name: P, gateRefs: T });
   }
   if (p.length === 0) throw new Error("Population import contains no data rows.");
@@ -45101,7 +45116,7 @@ function m7(e, t) {
     legacyRenameOnly: !1
   };
 }
-const g7 = { "text/csv": [".csv", ".tsv", ".txt"] };
+const y7 = { "text/csv": [".csv", ".tsv", ".txt"] };
 function ql({ title: e, children: t }) {
   const { t: n } = Yn();
   return /* @__PURE__ */ d.jsx("div", { className: "gl-modal-backdrop", children: /* @__PURE__ */ d.jsxs("div", { className: "gl-modal", children: [
@@ -45109,13 +45124,13 @@ function ql({ title: e, children: t }) {
     t
   ] }) });
 }
-const y7 = {
+const v7 = {
   gatingml: "Import Gating-ML",
   flowjo: "Import FlowJo workspace",
   chorus: "Import FACSChorus gates",
   diva: "Import FACSDiva gates"
 };
-function v7({
+function w7({
   nGates: e,
   nPopulations: t,
   sourceLabel: n,
@@ -45145,7 +45160,7 @@ function v7({
   const { t: N } = Yn(), P = o && v === !0, F = P && !i ? "merge" : "replace", [T, L] = W.useState(null), z = T ?? F, [U, D] = W.useState(
     P && p && p.tailored > 0 && p.selected > 0 ? "selected" : "all"
   ), G = !!m && m.length > 1, Z = !!p && p.total > 1 && !G;
-  return /* @__PURE__ */ d.jsxs(ql, { title: N(y7[r]), children: [
+  return /* @__PURE__ */ d.jsxs(ql, { title: N(v7[r]), children: [
     /* @__PURE__ */ d.jsx("div", { className: "gl-modal-note", children: N("Parsed {gates} gates and {populations} populations from {source}.", { gates: e, populations: t, source: N(n) }) }),
     E && j && /* @__PURE__ */ d.jsx(aT, { checked: E.value, disabled: E.busy || _, onChange: j }),
     l && /* @__PURE__ */ d.jsx("div", { className: s ? "gl-modal-warning" : "gl-modal-note", role: s ? "alert" : void 0, children: l }),
@@ -45307,11 +45322,11 @@ function v7({
     ] })
   ] });
 }
-const w7 = (e) => /[\p{Cc}\p{Cf}\p{Cs}\p{Noncharacter_Code_Point}\p{White_Space}]/u.test(e) ? `U+${e.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}` : e;
-function x7(e, t) {
+const x7 = (e) => /[\p{Cc}\p{Cf}\p{Cs}\p{Noncharacter_Code_Point}\p{White_Space}]/u.test(e) ? `U+${e.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}` : e;
+function b7(e, t) {
   switch (e.kind) {
     case "characters":
-      return t("holds {characters}, which a file name cannot", { characters: e.characters.map(w7).join(" ") });
+      return t("holds {characters}, which a file name cannot", { characters: e.characters.map(x7).join(" ") });
     case "ends":
       return t('begins or ends with a space, "." or "~"');
     case "extension":
@@ -45324,7 +45339,7 @@ function x7(e, t) {
       return t('is empty, "." or ".."');
   }
 }
-function b7({
+function S7({
   files: e,
   plan: t,
   folder: n,
@@ -45385,7 +45400,7 @@ function b7({
             " → ",
             x.path,
             ": ",
-            x.problems.map((v) => x7(v, o)).join("; ")
+            x.problems.map((v) => b7(v, o)).join("; ")
           ] }, x.path)) })
         ] }),
         g.moved.length > 0 && /* @__PURE__ */ d.jsxs("div", { className: "gl-modal-note", children: [
@@ -45412,7 +45427,7 @@ function b7({
     ] })
   ] });
 }
-function S7({
+function k7({
   state: e,
   onCancel: t,
   onExport: n
@@ -45469,7 +45484,7 @@ function S7({
     ] })
   ] });
 }
-function k7({
+function _7({
   state: e,
   samples: t,
   combinedCompatibility: n,
@@ -45718,7 +45733,7 @@ function k7({
     ] })
   ] });
 }
-function _7({
+function C7({
   state: e,
   onCancel: t,
   onConfirm: n
@@ -45731,7 +45746,7 @@ function _7({
     i(null);
     let m;
     try {
-      m = s7(c);
+      m = l7(c);
     } catch (b) {
       i(b instanceof Error ? b.message : String(b));
       return;
@@ -45740,7 +45755,7 @@ function _7({
     y.href = g, y.download = "population_edit_template.csv", y.click(), setTimeout(() => URL.revokeObjectURL(g), 1e3);
   }, p = async (m) => {
     try {
-      s(m7(await m.text(), c)), i(null);
+      s(g7(await m.text(), c)), i(null);
     } catch (g) {
       s(null), i(g instanceof Error ? g.message : String(g));
     }
@@ -45777,7 +45792,7 @@ function _7({
     /* @__PURE__ */ d.jsxs("div", { className: "gl-modal-actions", children: [
       /* @__PURE__ */ d.jsx("button", { className: "gl-btn-ghost", onClick: f, children: r("Template ↧") }),
       /* @__PURE__ */ d.jsx("button", { className: "gl-btn-ghost", onClick: t, children: r("Cancel") }),
-      /* @__PURE__ */ d.jsx("button", { className: "gl-btn-ghost", onClick: () => void cd(a.current, g7, "Population edit table").then((m) => {
+      /* @__PURE__ */ d.jsx("button", { className: "gl-btn-ghost", onClick: () => void cd(a.current, y7, "Population edit table").then((m) => {
         m != null && m[0] && p(m[0]);
       }), children: r("Choose CSV/TSV…") }),
       /* @__PURE__ */ d.jsx(
@@ -45808,7 +45823,7 @@ function rw({
     ] })
   ] });
 }
-function C7({
+function A7({
   columns: e,
   preview: t,
   onConfirm: n,
@@ -45838,7 +45853,7 @@ function C7({
     ] })
   ] });
 }
-function A7({
+function M7({
   title: e,
   initial: t,
   onConfirm: n,
@@ -45868,7 +45883,7 @@ function A7({
     ] })
   ] });
 }
-function M7({
+function N7({
   state: e,
   popId: t,
   onConfirm: n,
@@ -46002,7 +46017,7 @@ function M7({
     ] })
   ] });
 }
-function N7({
+function E7({
   state: e,
   onConfirm: t,
   onCancel: n
@@ -46086,7 +46101,7 @@ function N7({
   ] });
 }
 const yf = 1;
-function E7(e) {
+function j7(e) {
   const t = new Uint8Array(Math.ceil(e.length / 8));
   for (let n = 0; n < e.length; n += 1)
     e[n] !== 0 && (t[n >> 3] |= 1 << (n & 7));
@@ -46175,7 +46190,7 @@ function oT(e, t, n, r, a) {
   return {
     sampleId: o.sampleId,
     eventCount: i.length,
-    membershipBitsBase64: Jw(E7(i))
+    membershipBitsBase64: Jw(j7(i))
   };
 }
 function _2(e) {
@@ -46230,7 +46245,7 @@ const l_ = [
   const n = Math.pow(10, t);
   return Math.round(e * n) / n;
 };
-function j7(e) {
+function P7(e) {
   const t = [...e].sort((a, o) => a - o), n = t.length;
   if (n === 0) return NaN;
   const r = Math.floor(n / 2);
@@ -46247,14 +46262,14 @@ function A2(e) {
   for (const a of e) r += (a - n) * (a - n);
   return Math.sqrt(r / (t - 1));
 }
-function P7(e) {
+function I7(e) {
   const t = e.filter((r) => r > 0);
   if (t.length === 0) return NaN;
   let n = 0;
   for (const r of t) n += Math.log(r);
   return Math.exp(n / t.length);
 }
-function I7(e, t, n, r, a, o, i, l) {
+function T7(e, t, n, r, a, o, i, l) {
   const s = ka(t, n), c = [];
   i.includes("count") && c.push({ key: "count", label: "Count" }), i.includes("pct_parent") && c.push({ key: "pct_parent", label: "% Parent" }), i.includes("pct_total") && c.push({ key: "pct_total", label: "% Total" });
   const f = l_.filter((y) => i.includes(y.key));
@@ -46264,7 +46279,7 @@ function I7(e, t, n, r, a, o, i, l) {
     const b = e.index(y);
     return b === void 0 ? null : l === "transformed" ? e.displayColumn(b) : e.rawColumnData(b);
   }), m = a[n] ?? e.fcs.nEvents, g = s.map(({ popId: y, depth: b, isLastPath: x }) => {
-    const v = t[y], _ = r[y] ?? null, k = a[y] ?? (_ ? T7(_) : e.fcs.nEvents), A = {};
+    const v = t[y], _ = r[y] ?? null, k = a[y] ?? (_ ? F7(_) : e.fcs.nEvents), A = {};
     if (i.includes("count") && (A.count = k), i.includes("pct_parent"))
       if (y === n || !(v != null && v.parent_id)) A.pct_parent = 100;
       else {
@@ -46290,9 +46305,9 @@ function I7(e, t, n, r, a, o, i, l) {
           continue;
         }
         let T;
-        if (P.key === "median") T = j7(N);
+        if (P.key === "median") T = P7(N);
         else if (P.key === "mean") T = NS(N);
-        else if (P.key === "geomean") T = P7(N);
+        else if (P.key === "geomean") T = I7(N);
         else if (P.key === "sd") T = A2(N);
         else {
           const L = NS(N), z = A2(N);
@@ -46304,7 +46319,7 @@ function I7(e, t, n, r, a, o, i, l) {
   });
   return { columns: c, rows: g };
 }
-function T7(e) {
+function F7(e) {
   let t = 0;
   for (let n = 0; n < e.length; n++) e[n] && t++;
   return t;
@@ -46320,7 +46335,7 @@ function ES(e, t) {
   );
   return e.toFixed(r).replace(/(?:\.0+|(\.\d*?[1-9])0+)$/, "$1");
 }
-function AU(e, t = !1, n = 3) {
+function MU(e, t = !1, n = 3) {
   if (t && e === 0) return "·";
   const r = e * 100;
   return `${ES(r, n)}%`;
@@ -46329,7 +46344,7 @@ function Db(e) {
   const t = Math.max(0, Math.min(255, e)) / 255;
   return t <= 0.04045 ? t / 12.92 : ((t + 0.055) / 1.055) ** 2.4;
 }
-function MU(e, t, n = !1) {
+function NU(e, t, n = !1) {
   if (n) return {};
   if (!Number.isFinite(e)) return { backgroundColor: "#ae3e3e", color: "#ffffff" };
   const r = t > 0 ? Math.min(1, Math.abs(e) / t) : 0;
@@ -46340,11 +46355,11 @@ function MU(e, t, n = !1) {
     color: l < 0.25 ? "#ffffff" : "#26384e"
   };
 }
-const F7 = [
+const R7 = [
   { key: "count", label: "Count" },
   { key: "pct_parent", label: "% Parent" },
   { key: "pct_total", label: "% Total" }
-], R7 = [...F7, ...l_.map((e) => ({ key: e.key, label: e.label }))], M2 = "__all__", O7 = [
+], O7 = [...R7, ...l_.map((e) => ({ key: e.key, label: e.label }))], M2 = "__all__", L7 = [
   { key: "count", label: "Count" },
   { key: "pct_parent", label: "% Parent" },
   { key: "pct_total", label: "% Total" }
@@ -46357,7 +46372,7 @@ function N2(e) {
   return e.map((n) => n.map(t).join(",") + `\r
 `).join("");
 }
-function L7({ samples: e, activeSampleId: t, state: n, derived: r, defaultChannels: a, dataRevisionKey: o, nominalLinearFrom: i = null, onDownload: l }) {
+function D7({ samples: e, activeSampleId: t, state: n, derived: r, defaultChannels: a, dataRevisionKey: o, nominalLinearFrom: i = null, onDownload: l }) {
   var be;
   const { t: s } = Yn(), [c, f] = W.useState(() => {
     var ue;
@@ -46393,7 +46408,7 @@ function L7({ samples: e, activeSampleId: t, state: n, derived: r, defaultChanne
     });
   }, U = W.useMemo(() => {
     if (C || !E) return null;
-    const ue = z([E])[0], je = I7(
+    const ue = z([E])[0], je = T7(
       E.sample,
       n.populations,
       L,
@@ -46476,14 +46491,14 @@ function L7({ samples: e, activeSampleId: t, state: n, derived: r, defaultChanne
       ] }),
       C ? /* @__PURE__ */ d.jsxs("section", { className: "gl-stats-opt-group", children: [
         /* @__PURE__ */ d.jsx("h3", { children: s("Metric") }),
-        O7.map((ue) => /* @__PURE__ */ d.jsxs("label", { className: "gl-check", children: [
+        L7.map((ue) => /* @__PURE__ */ d.jsxs("label", { className: "gl-check", children: [
           /* @__PURE__ */ d.jsx("input", { type: "radio", name: "cmp-metric", checked: v === ue.key, onChange: () => _(ue.key) }),
           s(ue.label)
         ] }, ue.key))
       ] }) : /* @__PURE__ */ d.jsxs(d.Fragment, { children: [
         /* @__PURE__ */ d.jsxs("section", { className: "gl-stats-opt-group", children: [
           /* @__PURE__ */ d.jsx("h3", { children: s("Statistics") }),
-          R7.map((ue) => /* @__PURE__ */ d.jsxs("label", { className: "gl-check", children: [
+          O7.map((ue) => /* @__PURE__ */ d.jsxs("label", { className: "gl-check", children: [
             /* @__PURE__ */ d.jsx("input", { type: "checkbox", checked: p.has(ue.key), onChange: () => Z(ue.key) }),
             s(ue.label)
           ] }, ue.key))
@@ -46550,31 +46565,31 @@ function L7({ samples: e, activeSampleId: t, state: n, derived: r, defaultChanne
     ] }) })
   ] });
 }
-const D7 = [
+const z7 = [
   "channel_pnn",
   "marker_pns",
   "display_name",
   "channel_key",
   "editable"
 ];
-function z7(e) {
+function B7(e) {
   return /[",\r\n]/.test(e) ? `"${e.replace(/"/g, '""')}"` : e;
 }
-function B7(e) {
+function G7(e) {
   return `\uFEFF${[
-    D7.join(","),
+    z7.join(","),
     ...e.map((n) => [
       n.pnn,
       n.marker ?? "",
       n.label,
       n.key,
       n.renamable ? "yes" : "no"
-    ].map(z7).join(","))
+    ].map(B7).join(","))
   ].join(`\r
 `)}\r
 `;
 }
-function G7(e) {
+function H7(e) {
   let t = 0, n = 0, r = !1;
   for (let a = e.charCodeAt(0) === 65279 ? 1 : 0; a < e.length; a++) {
     const o = e[a];
@@ -46590,7 +46605,7 @@ function G7(e) {
     throw new Error("Panel import needs a comma- or tab-delimited header row.");
   return n > t ? "	" : ",";
 }
-function H7(e, t) {
+function W7(e, t) {
   const n = [];
   let r = [], a = "", o = !1;
   const i = e.charCodeAt(0) === 65279 ? 1 : 0, l = () => {
@@ -46611,17 +46626,17 @@ function H7(e, t) {
   if (o) throw new Error("Panel import contains an unterminated quoted field.");
   return (a.length > 0 || r.length > 0) && s(), n;
 }
-function W7(e) {
+function q7(e) {
   return e.trim().toLowerCase().replace(/\$pnn/g, "pnn").replace(/\$pns/g, "pns").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 function zb(e, t) {
   return e.findIndex((n) => t.includes(n));
 }
-function q7(e, t) {
+function U7(e, t) {
   if (e.trim().length === 0) throw new Error("Panel import file is empty.");
-  const n = H7(e, G7(e));
+  const n = W7(e, H7(e));
   if (n.length < 2) throw new Error("Panel import file has no channel rows.");
-  const r = n[0].map(W7), a = zb(r, ["channel_key", "gatelab_channel_key", "key"]), o = zb(r, ["channel_pnn", "pnn", "channel_id"]), i = zb(r, ["display_name", "display", "label"]);
+  const r = n[0].map(q7), a = zb(r, ["channel_key", "gatelab_channel_key", "key"]), o = zb(r, ["channel_pnn", "pnn", "channel_id"]), i = zb(r, ["display_name", "display", "label"]);
   if (i < 0) throw new Error("Panel import needs a display_name column.");
   if (a < 0 && o < 0)
     throw new Error("Panel import needs a channel_key or channel_pnn column.");
@@ -46657,7 +46672,7 @@ function q7(e, t) {
     omittedCount: t.length - m.size
   };
 }
-function U7({
+function V7({
   sample: e,
   labelMode: t,
   onLabelModeChange: n,
@@ -46681,14 +46696,14 @@ function U7({
   }), k = (j, N) => {
     r(j, N), _(j);
   }, A = () => {
-    const j = URL.createObjectURL(new Blob([B7(x)], {
+    const j = URL.createObjectURL(new Blob([G7(x)], {
       type: "text/csv;charset=utf-8"
     })), N = document.createElement("a");
     N.href = j, N.download = "gatelab_panel_template.csv", document.body.appendChild(N), N.click(), N.remove(), setTimeout(() => URL.revokeObjectURL(j), 1e3);
   }, C = async (j) => {
     b(null), g(null);
     try {
-      g({ fileName: j.name, preview: q7(await j.text(), x) });
+      g({ fileName: j.name, preview: U7(await j.text(), x) });
     } catch (N) {
       b(N instanceof Error ? N.message : "Could not read the panel import file.");
     }
@@ -46919,7 +46934,7 @@ function E2({
     ] }) })
   ] });
 }
-function V7({
+function J7({
   samples: e,
   metadata: t,
   columns: n,
@@ -47002,7 +47017,7 @@ function V7({
     )
   ] });
 }
-const Bb = "__none__", J7 = (e, t, n) => {
+const Bb = "__none__", K7 = (e, t, n) => {
   const r = e.findIndex((a) => t.test(a));
   return r >= 0 ? r : n;
 };
@@ -47012,7 +47027,7 @@ function j2(e, t) {
   for (let a = 0; a < t; a++) n[a] = e[Math.round(a * (e.length - 1) / r)];
   return n;
 }
-function K7({
+function X7({
   sample: e,
   sampleName: t,
   derived: n,
@@ -47023,7 +47038,7 @@ function K7({
   hostWriteBusy: l = !1,
   dataRevision: s
 }) {
-  const { t: c } = Yn(), f = e.channels.map((ue) => ue.key), [p, m] = W.useState(() => J7(f, /CFSE|CTV|CellTrace|Violet|Tag/i, 0)), [g, y] = la("div.yMarker", ""), [b, x] = W.useState(6), [v, _] = la("div.bins", 120), [k, A] = la("div.subsample", 5e4), C = W.useRef(5e4);
+  const { t: c } = Yn(), f = e.channels.map((ue) => ue.key), [p, m] = W.useState(() => K7(f, /CFSE|CTV|CellTrace|Violet|Tag/i, 0)), [g, y] = la("div.yMarker", ""), [b, x] = W.useState(6), [v, _] = la("div.bins", 120), [k, A] = la("div.subsample", 5e4), C = W.useRef(5e4);
   W.useEffect(() => {
     k > 0 && (C.current = k);
   }, [k]);
@@ -47178,7 +47193,7 @@ function K7({
     /* @__PURE__ */ d.jsx("div", { id: "division-plot-container", ref: G, className: "gl-division-container", style: { maxWidth: 820, flex: "none", overflow: "visible" } })
   ] });
 }
-function X7({ sample: e, globalScales: t, onSetGlobalScale: n, lockedBetweenFiles: r }) {
+function Q7({ sample: e, globalScales: t, onSetGlobalScale: n, lockedBetweenFiles: r }) {
   const { t: a } = Yn();
   return /* @__PURE__ */ d.jsxs("div", { className: "gl-tab-panel gl-tab-fill", children: [
     /* @__PURE__ */ d.jsx("h2", { className: "gl-tab-title", children: a("Scales") }),
@@ -47242,7 +47257,7 @@ async function jS(e, t, n) {
   const a = await lT(r, n);
   sT(await UE(a, n), t + ".png");
 }
-function Q7(e, t, n) {
+function Z7(e, t, n) {
   const r = e.querySelector("canvas"), a = e.__miniPlotCfg;
   if (!a) return r ? r.toDataURL("image/png") : null;
   try {
@@ -47274,7 +47289,7 @@ function c_(e, t) {
     const g = c.querySelector("canvas");
     if (g) {
       const b = document.createElementNS(of, "image"), x = g.clientWidth || p.width, v = g.clientHeight || p.height;
-      b.setAttribute("x", "0"), b.setAttribute("y", "0"), b.setAttribute("width", String(x)), b.setAttribute("height", String(v)), b.setAttribute("href", Q7(c, t) ?? g.toDataURL("image/png")), m.appendChild(b);
+      b.setAttribute("x", "0"), b.setAttribute("y", "0"), b.setAttribute("width", String(x)), b.setAttribute("height", String(v)), b.setAttribute("href", Z7(c, t) ?? g.toDataURL("image/png")), m.appendChild(b);
     }
     const y = c.querySelector("svg");
     y && m.appendChild(y.cloneNode(!0)), RC(m, F1("panel", f + 1, sD(c))), a.appendChild(m);
@@ -47312,7 +47327,7 @@ async function lT(e, t) {
 async function IS(e, t, n = 300) {
   const r = c_(e, n);
   if (!r) return;
-  const a = r.width * 72 / 96, o = r.height * 72 / 96, { jsPDF: i } = await import("./jspdf.es.min-C6oONNCq.js").then((s) => s.j), l = new i({ orientation: a >= o ? "landscape" : "portrait", unit: "pt", format: [a, o], compress: !0 });
+  const a = r.width * 72 / 96, o = r.height * 72 / 96, { jsPDF: i } = await import("./jspdf.es.min-D664e57U.js").then((s) => s.j), l = new i({ orientation: a >= o ? "landscape" : "portrait", unit: "pt", format: [a, o], compress: !0 });
   if (!await fD(l, r.root, { width: a, height: o })) {
     const s = await lT(r, n);
     l.addImage(s, "PNG", 0, 0, a, o, void 0, "FAST");
@@ -47338,10 +47353,10 @@ function P2(e, t, n) {
   }
 }
 const cT = (e) => Math.round(e * 10) / 10;
-function Z7(e) {
+function Y7(e) {
   return e.gate_type === "quadrant" ? [] : e.gate_type === "ellipse" ? ll(e) : e.vertices;
 }
-function Y7(e, t, n, r) {
+function $7(e, t, n, r) {
   if (r.gate_type === "quadrant") return [];
   const a = (o, i) => [
     e.gateToDisplay(r, t, o),
@@ -47391,7 +47406,7 @@ function uT(e, t, n, r, a, o) {
           gate_id: F.gate_id,
           name: N.name || j,
           gate_type: T.gate_type,
-          vertices: Z7(T),
+          vertices: Y7(T),
           color: T.color,
           label_offset: T.label_offset,
           include: F.include
@@ -47536,7 +47551,7 @@ function dT(e, t, n, r, a, o, i) {
       });
       continue;
     }
-    const C = _ ? Y7(e, l, s, _) : v.vertices.map(([E, j]) => [
+    const C = _ ? $7(e, l, s, _) : v.vertices.map(([E, j]) => [
       e.gatingToDisplay(l, E),
       e.gatingToDisplay(s, j)
     ]);
@@ -47593,7 +47608,7 @@ function dT(e, t, n, r, a, o, i) {
     y_logicle_ticks: x
   };
 }
-function $7(e, t, n, r, a, o, i) {
+function eH(e, t, n, r, a, o, i) {
   return uT(e, t, n, r, a, o).map((l) => {
     const s = Vx(l.parentIdx, i.maxEvents), c = e.displayColumn(e.index(l.x_channel)), f = e.displayColumn(e.index(l.y_channel));
     return dT(
@@ -47612,7 +47627,7 @@ function $7(e, t, n, r, a, o, i) {
     );
   });
 }
-function eH(e, t) {
+function tH(e, t) {
   const n = Math.max(8, Math.min(24, (t.fontSizes.title || 10) + 1));
   return {
     containerId: "strategy-grid-container",
@@ -47657,7 +47672,7 @@ function fT(e, t) {
     return o;
   };
 }
-function tH(e, t) {
+function nH(e, t) {
   const n = fT(e, t), r = /* @__PURE__ */ new Set();
   for (const x of e) for (const v of n(x)) r.add(v);
   const a = /* @__PURE__ */ new Set(), o = /* @__PURE__ */ new Map(), i = (x) => {
@@ -47699,7 +47714,7 @@ function tH(e, t) {
   }
   return e.map((x) => ({ ...x, ...m.get(x) }));
 }
-function nH(e, t, n) {
+function rH(e, t, n) {
   const r = Math.max(1, Math.floor(t) || 1), a = fT(e, n), o = /* @__PURE__ */ new Set();
   for (const c of e) for (const f of a(c)) o.add(f);
   const i = [], l = /* @__PURE__ */ new Set(), s = (c) => {
@@ -47712,10 +47727,10 @@ function nH(e, t, n) {
   for (const c of e) s(c);
   return i.map((c, f) => ({ ...c, row: Math.floor(f / r), col: f % r }));
 }
-const rH = (e) => Math.round(e * 10) / 10, aH = { steps: [], drawn: [], omittedGates: [], leftOut: [] };
-function oH(e, t, n) {
+const aH = (e) => Math.round(e * 10) / 10, oH = { steps: [], drawn: [], omittedGates: [], leftOut: [] };
+function iH(e, t, n) {
   const r = e[0];
-  if (!r) return aH;
+  if (!r) return oH;
   const a = (m) => fE(
     m.sample,
     m.tree.gates,
@@ -47757,7 +47772,7 @@ function oH(e, t, n) {
   }
   return { steps: f, drawn: i, omittedGates: p, leftOut: s };
 }
-function iH(e, t, n, r, a) {
+function sH(e, t, n, r, a) {
   const o = e[0];
   if (!o) return { nodes: [], channels: [], drawn: [], omittedGates: [], leftOut: [] };
   const i = (y, b, x) => {
@@ -47817,7 +47832,7 @@ function iH(e, t, n, r, a) {
         }), F ? [{
           entry: E.entry,
           gateDef: E.gateDef,
-          pct: A > 0 ? rH(P / A * 100) : null,
+          pct: A > 0 ? aH(P / A * 100) : null,
           ...T ? { quadrantCounts: T } : {}
         }] : (m.add(E.entry.name), []);
       });
@@ -47829,9 +47844,9 @@ function iH(e, t, n, r, a) {
     leftOut: p
   };
 }
-const sH = /* @__PURE__ */ new Map();
+const lH = /* @__PURE__ */ new Map();
 function hT(e, t, n, r) {
-  const a = W.useRef(sH), [o, i] = W.useState({ key: "", sources: [], pending: t.length, error: null }), l = gu(n), s = JSON.stringify([
+  const a = W.useRef(lH), [o, i] = W.useState({ key: "", sources: [], pending: t.length, error: null }), l = gu(n), s = JSON.stringify([
     r,
     t.map((c) => {
       const f = e.find((m) => m.id === c), p = f && l[f.hierarchyId];
@@ -47895,8 +47910,8 @@ function hT(e, t, n, r) {
     current: o.key === s
   };
 }
-const lH = 12;
-function cH(e, t) {
+const cH = 12;
+function uH(e, t) {
   const n = [];
   let r = 0;
   for (; r < e.length; ) {
@@ -47911,7 +47926,7 @@ function cH(e, t) {
   }
   return n;
 }
-function uH({
+function dH({
   rows: e,
   populations: t,
   gates: n,
@@ -47927,7 +47942,7 @@ function uH({
   }, [t]), y = s.trim().toLowerCase(), b = y ? e.filter((A) => {
     var C;
     return (((C = t[A.popId]) == null ? void 0 : C.name) ?? "").toLowerCase().includes(y);
-  }) : e, x = e.length ? Math.min(...e.map((A) => A.depth)) : 1, v = y ? [[...b]] : cH(b, lH), _ = (A) => o(m.has(A) ? a.filter((C) => C !== A) : [...a, A]), k = (A) => {
+  }) : e, x = e.length ? Math.min(...e.map((A) => A.depth)) : 1, v = y ? [[...b]] : uH(b, cH), _ = (A) => o(m.has(A) ? a.filter((C) => C !== A) : [...a, A]), k = (A) => {
     var j, N;
     const C = (N = (j = t[A]) == null ? void 0 : j.gate_refs) == null ? void 0 : N[0], E = C ? n[C.gate_id] : void 0;
     return (E == null ? void 0 : E.color) ?? null;
@@ -48018,7 +48033,7 @@ function uH({
   ] });
 }
 const Dx = 6, zx = 7, pT = 16;
-function dH(e, t, n) {
+function fH(e, t, n) {
   if (t.row === e.row && t.col === e.col + 1) return "across";
   if (t.col === e.col && t.row === e.row + 1) return "down";
   if (t.row === e.row) return "under";
@@ -48026,7 +48041,7 @@ function dH(e, t, n) {
   for (let a = e.col + 1; a < t.col && !r; a++) n.has(`${t.row}|${a}`) && (r = !0);
   return r ? "over" : "side";
 }
-function fH(e, t) {
+function hH(e, t) {
   const n = /* @__PURE__ */ new Map();
   for (const s of e) n.set(s.parent_pop_id, [...n.get(s.parent_pop_id) ?? [], s]);
   const r = /* @__PURE__ */ new Map();
@@ -48045,26 +48060,26 @@ function fH(e, t) {
         if (m.gate_refs.some((g) => g.gate_id === f.gate_id))
           for (const g of n.get(p) ?? []) {
             if (g.node_id === s.node_id) continue;
-            const y = { row: s.row, col: s.col }, b = { row: g.row, col: g.col }, x = dH(y, b, a), v = `${s.node_id}|${f.gate_id}`, _ = { v: 0, h: 0, v2: 0 };
+            const y = { row: s.row, col: s.col }, b = { row: g.row, col: g.col }, x = fH(y, b, a), v = `${s.node_id}|${f.gate_id}`, _ = { v: 0, h: 0, v2: 0 };
             (x === "side" || x === "over" || x === "under") && (_.v = i(`v${y.col}`, v)), x === "over" && (_.h = i(`h${b.row}`, v)), x === "under" && (_.h = i(`h${y.row + 1}`, v), _.v2 = i(`v${b.col - 1}`, `to|${g.node_id}`)), l.push({ fromNodeId: s.node_id, gateId: f.gate_id, toNodeId: g.node_id, color: f.color, from: y, to: b, route: x, lanes: _ });
           }
   }
   return l;
 }
-function hH(e) {
+function pH(e) {
   let t = 0;
   for (const n of e) t = Math.max(t, n.lanes.v, n.lanes.v2);
   return Math.max(28, Dx + zx * t + pT);
 }
-const pH = 8;
-function mH(e) {
+const mH = 8;
+function gH(e) {
   let t = -1;
   for (const n of e)
     (n.route === "down" || n.route === "over" || n.route === "under") && (t = Math.max(t, n.lanes.h));
-  return t < 0 ? pH : Math.max(28, Dx + zx * t + pT);
+  return t < 0 ? mH : Math.max(28, Dx + zx * t + pT);
 }
 const I2 = (e, t, n) => Math.max(t, Math.min(n, e));
-function gH(e, t, n, r, a) {
+function yH(e, t, n, r, a) {
   const { gap: o } = r, i = r.rowGap ?? o, l = n.from.row, s = n.from.col, c = n.to.row, f = n.to.col;
   if (l === c && s === f) return null;
   const p = I2(a, e.top + 10, e.bottom - 10), m = t.top + 0.35 * (t.bottom - t.top), g = (t.left + t.right) / 2, y = (x, v, _) => {
@@ -48095,7 +48110,7 @@ function gH(e, t, n, r, a) {
     }
   }
 }
-function yH(e, t = 3, n = 7, r = 1.5) {
+function vH(e, t = 3, n = 7, r = 1.5) {
   if (e.length < 2) return null;
   const a = (j) => Math.round(j * 10) / 10, o = e.map(([j, N]) => [j, N]), i = o[o.length - 1], l = o[o.length - 2], s = i[0] - l[0], c = i[1] - l[1], f = Math.hypot(s, c) || 1, p = [i[0] - s / f * t, i[1] - c / f * t];
   o[o.length - 1] = p;
@@ -48115,7 +48130,7 @@ function yH(e, t = 3, n = 7, r = 1.5) {
   return { path: m, head: E };
 }
 const aw = "http://www.w3.org/2000/svg";
-function vH(e) {
+function wH(e) {
   const t = e.filter((o) => Number.isFinite(o[0]) && Number.isFinite(o[1]));
   if (!t.length) return null;
   let n = 0, r = 0, a = 0;
@@ -48125,22 +48140,22 @@ function vH(e) {
   }
   return Math.abs(n) < 1e-9 ? [t.reduce((o, i) => o + i[0], 0) / t.length, t.reduce((o, i) => o + i[1], 0) / t.length] : [r / (3 * n), a / (3 * n)];
 }
-function wH(e) {
+function xH(e) {
   return e.replace(/^M/, "").replace(/Z$/, "").split("L").map((t) => {
     const [n, r] = t.split(",").map(Number);
     return [n, r];
   }).filter((t) => Number.isFinite(t[0]) && Number.isFinite(t[1]));
 }
-function xH(e) {
+function bH(e) {
   const t = e.querySelector(".multi-strategy-grid");
   if (!t) return;
   const n = getComputedStyle(t), r = parseFloat(n.columnGap) || parseFloat(t.style.gap) || 8, a = parseFloat(n.rowGap) || parseFloat(t.style.rowGap) || r;
   t.style.paddingRight = `${r}px`, t.style.paddingBottom = `${a}px`;
 }
-function bH(e, t, n) {
+function SH(e, t, n) {
   const r = e.querySelector(".multi-strategy-grid");
   if (!r || (r.querySelectorAll("svg.gl-strategy-arrows").forEach((v) => v.remove()), !t.length)) return 0;
-  xH(e);
+  bH(e);
   const a = /* @__PURE__ */ new Map();
   r.querySelectorAll(".mini-plot-cell").forEach((v) => {
     const _ = v.getAttribute("data-plot-key");
@@ -48182,13 +48197,13 @@ function bH(e, t, n) {
     const j = A ? l(A) : null;
     let N = j && j.bottom > j.top ? (j.top + j.bottom) / 2 : (C.top + C.bottom) / 2;
     if (n.anchor === "gate") {
-      const D = Array.from(_.querySelectorAll("[data-gate-shape]")).find((ne) => ne.getAttribute("data-gate-shape") === v.gateId), G = D ? l(D) : null, Z = D ? wH(D.getAttribute("d") ?? "") : [], Y = vH(Z);
+      const D = Array.from(_.querySelectorAll("[data-gate-shape]")).find((ne) => ne.getAttribute("data-gate-shape") === v.gateId), G = D ? l(D) : null, Z = D ? xH(D.getAttribute("d") ?? "") : [], Y = wH(Z);
       if (G && Y && G.bottom > G.top) {
         const ne = Z.map((ce) => ce[1]), O = Math.min(...ne), Q = Math.max(...ne);
         N = Q > O ? G.top + (Y[1] - O) / (Q - O) * (G.bottom - G.top) : (G.top + G.bottom) / 2;
       }
     }
-    const P = gH(C, E, v, y, N), F = P ? yH(P, 3, 7, n.width) : null;
+    const P = yH(C, E, v, y, N), F = P ? vH(P, 3, 7, n.width) : null;
     if (!F) continue;
     const T = n.color ?? v.color, L = document.createElementNS(aw, "path");
     L.setAttribute("d", F.path), L.setAttribute("fill", "none"), L.setAttribute("stroke", T), L.setAttribute("stroke-width", String(n.width)), L.setAttribute("stroke-linecap", "round"), L.setAttribute("opacity", "0.85");
@@ -48226,7 +48241,7 @@ function mT({ value: e, onChange: t, disabled: n = !1, className: r = "" }) {
     }
   );
 }
-function SH({
+function kH({
   onFitChannels: e,
   sample: t,
   sampleName: n,
@@ -48341,12 +48356,12 @@ function SH({
           return (sa = Yt.current) == null ? void 0 : sa.call(Yt, r.active_hierarchy_id, zn, Xa, Na);
         } : void 0;
         if (P === "multi") {
-          const zn = un ? iH(un, z, r.active_hierarchy_id, Kt, { maxEvents: Ur, globalScales: o }) : null, Xa = zn ? zn.nodes : $7(t, r.gates, r.populations, j, a.masks, z, {
+          const zn = un ? sH(un, z, r.active_hierarchy_id, Kt, { maxEvents: Ur, globalScales: o }) : null, Xa = zn ? zn.nodes : eH(t, r.gates, r.populations, j, a.masks, z, {
             maxEvents: Ur,
             globalScales: o
-          }), Na = We === "flow" ? nH(Xa, je, r.populations) : tH(Xa, r.populations), sa = bt ? fH(Na, r.populations) : [], xr = bt ? hH(sa) : 8, So = bt ? mH(sa) : 8, Fr = Na.length ? Math.max(...Na.map((Cr) => Cr.col)) + 1 : 1, ra = nt && $t > 0 ? Math.max(120, Math.min(be, Math.floor(($t - 8 - xr * (Fr - 1)) / Fr))) : be, Jo = ra < be ? ra / be : 1, Ei = (Cr) => Math.max(5, Math.round(Cr * Jo * 10) / 10), br = Jo < 1 ? { tick: Ei(Gt.tick), axis_label: Ei(Gt.axis_label), gate_label: Ei(Gt.gate_label), title: Ei(Gt.title) } : Gt;
-          bn.current = Na.length ? { rows: Math.max(...Na.map((Cr) => Cr.row)) + 1, cols: Fr, plotSize: ra, fonts: br, gap: xr, rowGap: So } : null, On(ra);
-          const oa = eH(Na, {
+          }), Na = We === "flow" ? rH(Xa, je, r.populations) : nH(Xa, r.populations), sa = bt ? hH(Na, r.populations) : [], xr = bt ? pH(sa) : 8, So = bt ? gH(sa) : 8, Fr = Na.length ? Math.max(...Na.map((Ar) => Ar.col)) + 1 : 1, ra = nt && $t > 0 ? Math.max(120, Math.min(be, Math.floor(($t - 8 - xr * (Fr - 1)) / Fr))) : be, Jo = ra < be ? ra / be : 1, Ei = (Ar) => Math.max(5, Math.round(Ar * Jo * 10) / 10), br = Jo < 1 ? { tick: Ei(Gt.tick), axis_label: Ei(Gt.axis_label), gate_label: Ei(Gt.gate_label), title: Ei(Gt.title) } : Gt;
+          bn.current = Na.length ? { rows: Math.max(...Na.map((Ar) => Ar.row)) + 1, cols: Fr, plotSize: ra, fonts: br, gap: xr, rowGap: So } : null, On(ra);
+          const oa = tH(Na, {
             displayMode: Q,
             plotSize: ra,
             contourThreshold: It,
@@ -48368,12 +48383,12 @@ function SH({
             // The grid's title names what it draws, so an export says which file or pool it was.
             contextTitle: zn ? `${z.length} population${z.length === 1 ? "" : "s"} · ${zn.drawn.length} ${y ? "samples" : "files"} pooled` : `${z.length} population${z.length === 1 ? "" : "s"}${n ? ` · ${n}` : ""}`
           });
-          kf().renderMultiStrategyGrid("strategy-grid-container", oa), kn.current = new Map(Na.map((Cr) => [Cr.node_id, {
-            xKey: t.keyForLabel(Cr.x_channel),
-            yKey: t.keyForLabel(Cr.y_channel),
-            xr: Cr.x_range,
-            yr: Cr.y_range
-          }])), Rt.current && bH(Rt.current, sa, { color: oe ? "#444444" : null, width: Tt, anchor: Ue }), C.current = zn ? zn.channels : Na.flatMap((Cr) => Cr.gates.flatMap((pi) => {
+          kf().renderMultiStrategyGrid("strategy-grid-container", oa), kn.current = new Map(Na.map((Ar) => [Ar.node_id, {
+            xKey: t.keyForLabel(Ar.x_channel),
+            yKey: t.keyForLabel(Ar.y_channel),
+            xr: Ar.x_range,
+            yr: Ar.y_range
+          }])), Rt.current && SH(Rt.current, sa, { color: oe ? "#444444" : null, width: Tt, anchor: Ue }), C.current = zn ? zn.channels : Na.flatMap((Ar) => Ar.gates.flatMap((pi) => {
             const gs = r.gates[pi.gate_id];
             return gs ? [gs.x_channel, gs.y_channel] : [];
           })), tr(Na.length), yn(zn ? { drawn: zn.drawn.length, omittedGates: zn.omittedGates, leftOut: zn.leftOut } : null);
@@ -48381,7 +48396,7 @@ function SH({
         }
         let cr = Q;
         ne.includes("forward") && ne.includes("back") && cr === "pseudocolor" && (cr = "scatter");
-        const pa = un ? oH(un, Kt, { fullPath: Z, maxEvents: Ur }) : null, xo = pa ? pa.steps : cO(t, r.gates, r.populations, j, D, { fullPath: Z, maxEvents: Ur });
+        const pa = un ? iH(un, Kt, { fullPath: Z, maxEvents: Ur }) : null, xo = pa ? pa.steps : cO(t, r.gates, r.populations, j, D, { fullPath: Z, maxEvents: Ur });
         C.current = xo.flatMap((zn) => [zn.x_channel, zn.y_channel]);
         const ms = ne.includes("back"), yu = ms ? a.masks[D] ?? null : null, bo = pa ? pa.drawn.map((zn) => ({ sample: zn.sample, finalMask: ms ? zn.gating.masks[zn.populationId] ?? null : null })) : [], Oi = {
           gateView: ne,
@@ -48811,7 +48826,7 @@ function SH({
       ] })
     ] }),
     P === "multi" && /* @__PURE__ */ d.jsx(
-      uH,
+      dH,
       {
         rows: aa,
         populations: r.populations,
@@ -48839,7 +48854,7 @@ var nd = {}, tf = {};
  * LICENSE file in the root directory of this source tree.
  */
 var T2;
-function kH() {
+function _H() {
   if (T2) return tf;
   T2 = 1;
   var e = iy();
@@ -50069,7 +50084,7 @@ var ow = {};
  * LICENSE file in the root directory of this source tree.
  */
 var F2;
-function _H() {
+function CH() {
   if (F2) return ow;
   F2 = 1;
   var e = iy();
@@ -50816,7 +50831,7 @@ function _H() {
     }
     return V = V === br ? typeof se == "function" ? se() : se : ve !== void 0 ? ve(se) : se, zn.memoizedState = V, V = zn.queue = { last: null, dispatch: null }, V = V.dispatch = pi.bind(null, bo, V), [zn.memoizedState, V];
   }
-  function Cr(V, se) {
+  function Ar(V, se) {
     if (bo = Fr(), zn = Jo(), se = se === void 0 ? null : se, zn !== null) {
       var ve = zn.memoizedState;
       if (ve !== null && se !== null) {
@@ -50851,7 +50866,7 @@ function _H() {
     return V._currentValue;
   }, useContext: function(V) {
     return Fr(), V._currentValue;
-  }, useMemo: Cr, useReducer: oa, useRef: function(V) {
+  }, useMemo: Ar, useReducer: oa, useRef: function(V) {
     bo = Fr(), zn = Jo();
     var se = zn.memoizedState;
     return se === null ? (V = { current: V }, zn.memoizedState = V) : se;
@@ -50859,7 +50874,7 @@ function _H() {
     return oa(br, V);
   }, useInsertionEffect: mi, useLayoutEffect: function() {
   }, useCallback: function(V, se) {
-    return Cr(function() {
+    return Ar(function() {
       return V;
     }, se);
   }, useImperativeHandle: mi, useEffect: mi, useDebugValue: mi, useDeferredValue: function(V) {
@@ -51240,18 +51255,18 @@ function _H() {
         var Qa = ma[ot];
         e: {
           it = V, Pt = se;
-          var Ar = Qa.completedSegments;
-          for (Qt = 0; Qt < Ar.length; Qt++) if (!qi(
+          var Mr = Qa.completedSegments;
+          for (Qt = 0; Qt < Mr.length; Qt++) if (!qi(
             it,
             Pt,
             Qa,
-            Ar[Qt]
+            Mr[Qt]
           )) {
-            Qt++, Ar.splice(0, Qt);
+            Qt++, Mr.splice(0, Qt);
             var yi = !1;
             break e;
           }
-          Ar.splice(0, Qt), yi = !0;
+          Mr.splice(0, Qt), yi = !0;
         }
         if (!yi) {
           V.destination = null, ot++, ma.splice(0, ot);
@@ -51310,34 +51325,34 @@ function _H() {
   }, ow.version = "18.3.1", ow;
 }
 var R2;
-function CH() {
+function AH() {
   if (R2) return nd;
   R2 = 1;
   var e, t;
-  return e = kH(), t = _H(), nd.version = e.version, nd.renderToString = e.renderToString, nd.renderToStaticMarkup = e.renderToStaticMarkup, nd.renderToNodeStream = e.renderToNodeStream, nd.renderToStaticNodeStream = e.renderToStaticNodeStream, nd.renderToReadableStream = t.renderToReadableStream, nd;
+  return e = _H(), t = CH(), nd.version = e.version, nd.renderToString = e.renderToString, nd.renderToStaticMarkup = e.renderToStaticMarkup, nd.renderToNodeStream = e.renderToNodeStream, nd.renderToStaticNodeStream = e.renderToStaticNodeStream, nd.renderToReadableStream = t.renderToReadableStream, nd;
 }
-var AH = CH();
-const MH = 2, NH = 12;
+var MH = AH();
+const NH = 2, EH = 12;
 function u_(e, t) {
   return Object.values(e).reduce(
     (n, r) => n + +!!r[t],
     0
   );
 }
-function EH(e, t) {
+function jH(e, t) {
   const n = Object.keys(e).length, r = BE(e, t).length;
-  return r < MH || r > NH || u_(e, t) < n ? !1 : r < n;
+  return r < NH || r > EH || u_(e, t) < n ? !1 : r < n;
 }
 function gT(e, t, n) {
-  const r = n ? (a) => n.includes(a) : (a) => EH(e, a);
+  const r = n ? (a) => n.includes(a) : (a) => jH(e, a);
   return t.filter((a) => r(a.name)).map((a) => ({
     name: a.name,
-    values: jH(e, a),
+    values: PH(e, a),
     covered: u_(e, a.name),
     sampleCount: Object.keys(e).length
   })).filter((a) => a.values.length > 0);
 }
-function jH(e, t) {
+function PH(e, t) {
   const n = BE(e, t.name);
   return (t.levels ? t.levels.filter((a) => n.includes(a)) : n).map((a) => ({
     value: a,
@@ -51356,17 +51371,17 @@ function yT(e, t) {
     r ? n.add(a) : n.delete(a);
   return n;
 }
-function PH(e, t) {
+function IH(e, t) {
   return e.values.filter((n) => n.sampleIds.some((r) => !t.has(r))).map((n) => n.value);
 }
-function IH(e, t, n) {
+function TH(e, t, n) {
   const r = Object.keys(t).filter((a) => t[a].length > 0 && (!n || n.includes(a)));
   return r.length === 0 ? null : new Set(Object.keys(e).filter((a) => r.every((o) => {
     var i;
     return t[o].includes(((i = e[a]) == null ? void 0 : i[o]) ?? "");
   })));
 }
-function TH(e, t) {
+function FH(e, t) {
   return t ? e.map((n) => ({
     ...n,
     values: n.values.map((r) => ({
@@ -51375,7 +51390,7 @@ function TH(e, t) {
     }))
   })) : e;
 }
-function FH(e, t, n, r) {
+function RH(e, t, n, r) {
   const a = e.filter((l) => t.has(n(l)));
   if (!a.length) return [...e];
   const o = e.slice(0, r).filter((l) => !t.has(n(l))), i = e.slice(r).filter((l) => !t.has(n(l)));
@@ -51412,7 +51427,7 @@ function L2({ items: e, keyOf: t, labelOf: n, onReorder: r, label: a, sorts: o }
     const _ = c;
     if (f(null), _ === null) return;
     const k = m.size ? m : /* @__PURE__ */ new Set([v.dataTransfer.getData("text/plain")]);
-    r(FH(e, k, t, _));
+    r(RH(e, k, t, _));
   };
   return /* @__PURE__ */ d.jsxs("div", { className: "gl-order-list", children: [
     /* @__PURE__ */ d.jsxs("div", { className: "gl-order-list-actions", children: [
@@ -51523,7 +51538,7 @@ function js({ value: e, onCommit: t, min: n, max: r, step: a, integer: o, onKeyD
     }
   );
 }
-function RH(e) {
+function OH(e) {
   return e === "samples" ? "{sample}" : e === "populations" ? "{population}" : e === "plots" ? "{plot}" : e.startsWith("metadata:") ? `{meta:${e.slice(9)}}` : e.startsWith("popmeta:") ? `{popmeta:${e.slice(8)}}` : null;
 }
 const ea = (e) => JSON.stringify([e.hierarchyId, e.populationId]), Gb = (e) => e === "samples" ? "files / samples" : e.startsWith("popmeta:") ? `populations by ${e.slice(8)}` : e.replace("metadata:", "");
@@ -51531,7 +51546,7 @@ function Hb(e, t, n) {
   const r = [...e], a = t + n;
   return a >= 0 && a < e.length && ([r[t], r[a]] = [r[a], r[t]]), r;
 }
-function OH({
+function LH({
   samples: e,
   checkedSampleIds: t,
   state: n,
@@ -51696,7 +51711,7 @@ function OH({
       for (const dt of bn([Xe]))
         ie.push(dt), we.push({ row: B.indexOf(Xe.row), column: K.indexOf(Xe.column) });
     const xe = (Xe) => {
-      const dt = Xe.map((_t) => RH(_t.dimension));
+      const dt = Xe.map((_t) => OH(_t.dimension));
       return { text: Xe.map((_t) => _t.label).join(" · "), ...dt.every(Boolean) ? { template: dt.join(" · ") } : {} };
     }, ze = {
       columns: K.length > 1 && Ye ? K.map((Xe) => xe(Ye.columns[Xe] ?? [])) : [],
@@ -51967,7 +51982,7 @@ function OH({
         ), ie[dt.key].problem) throw new Error(ie[dt.key].problem);
       }
       const we = `figure-export-${crypto.randomUUID()}`, xe = M1(Ye, ie, ae);
-      K.innerHTML = AH.renderToStaticMarkup(
+      K.innerHTML = MH.renderToStaticMarkup(
         /* @__PURE__ */ d.jsx(
           N1,
           {
@@ -53622,23 +53637,23 @@ function iw(e) {
   var t;
   return Array.from(((t = e.dataTransfer) == null ? void 0 : t.types) ?? []).includes("Files");
 }
-function LH(e) {
+function DH(e) {
   var t;
   return Array.from(((t = e.dataTransfer) == null ? void 0 : t.items) ?? []).filter((n) => {
     var r, a;
     return (a = (r = n.webkitGetAsEntry) == null ? void 0 : r.call(n)) == null ? void 0 : a.isDirectory;
   }).length;
 }
-const DH = new Intl.Collator(void 0, { numeric: !0, sensitivity: "base" });
-function zH(e, t) {
-  return DH.compare(e, t);
+const zH = new Intl.Collator(void 0, { numeric: !0, sensitivity: "base" });
+function BH(e, t) {
+  return zH.compare(e, t);
 }
 function vT(e, t) {
   var r, a, o;
   const n = t.trim().toLocaleLowerCase();
   return n ? e.name.toLocaleLowerCase().includes(n) || (((a = (r = e.metadata) == null ? void 0 : r.sample_id) == null ? void 0 : a.toLocaleLowerCase().includes(n)) ?? !1) || (((o = e.sourcePath) == null ? void 0 : o.toLocaleLowerCase().includes(n)) ?? !1) : !0;
 }
-function BH({
+function GH({
   items: e,
   activeId: t,
   excludedIds: n,
@@ -53700,7 +53715,7 @@ function BH({
     var pe;
     if (!je || !iw(Ce)) return;
     Ce.preventDefault();
-    const Ue = LH(Ce), fe = Array.from(((pe = Ce.dataTransfer) == null ? void 0 : pe.files) ?? []);
+    const Ue = DH(Ce), fe = Array.from(((pe = Ce.dataTransfer) == null ? void 0 : pe.files) ?? []);
     Ot(), L == null || L(fe, Ue);
   }
   return /* @__PURE__ */ d.jsxs(
@@ -54060,7 +54075,7 @@ function wT({ title: e, children: t }) {
     t
   ] }) });
 }
-function GH({
+function HH({
   items: e,
   activeId: t,
   excludedIds: n,
@@ -54211,7 +54226,7 @@ function GH({
     ] })
   ] });
 }
-function HH({
+function WH({
   folderName: e,
   items: t,
   onCancel: n,
@@ -54291,7 +54306,7 @@ function HH({
     ] })
   ] });
 }
-function WH({
+function qH({
   requirements: e,
   found: t = /* @__PURE__ */ new Map(),
   folderSelectionAvailable: n,
@@ -54381,7 +54396,7 @@ function WH({
     }
   ) });
 }
-const xT = "recent-workspaces", qH = 8;
+const xT = "recent-workspaces", UH = 8;
 async function f_() {
   const e = await RP(xT);
   return Array.isArray(e) ? e.filter((t) => t && typeof t.name == "string" && t.handle) : [];
@@ -54389,7 +54404,7 @@ async function f_() {
 async function bT(e) {
   await pg(xT, e);
 }
-async function UH(e, t, n = Date.now()) {
+async function VH(e, t, n = Date.now()) {
   const r = await f_(), a = [];
   for (const o of r) {
     let i = o.name === t;
@@ -54401,12 +54416,12 @@ async function UH(e, t, n = Date.now()) {
       }
     i || a.push(o);
   }
-  await bT([{ name: t, at: n, handle: e }, ...a].slice(0, qH));
+  await bT([{ name: t, at: n, handle: e }, ...a].slice(0, UH));
 }
-async function VH() {
+async function JH() {
   return (await f_()).sort((e, t) => t.at - e.at);
 }
-async function JH(e) {
+async function KH(e) {
   await bT((await f_()).filter((t) => t.name !== e));
 }
 class Wb extends W.Component {
@@ -54456,39 +54471,39 @@ const py = {
   strokeLinecap: "round",
   strokeLinejoin: "round"
 };
-function KH() {
+function XH() {
   return /* @__PURE__ */ d.jsx("svg", { ...py, children: /* @__PURE__ */ d.jsx("path", { d: "M3 2l9 5-4 1.4L6.5 13 3 2z" }) });
 }
-function XH() {
+function QH() {
   return /* @__PURE__ */ d.jsx("svg", { ...py, children: /* @__PURE__ */ d.jsx("rect", { x: "2.5", y: "4", width: "11", height: "8", rx: "1" }) });
 }
-function QH() {
+function ZH() {
   return /* @__PURE__ */ d.jsx("svg", { ...py, children: /* @__PURE__ */ d.jsx("ellipse", { cx: "8", cy: "8", rx: "5.5", ry: "3.5" }) });
 }
-function ZH() {
+function YH() {
   return /* @__PURE__ */ d.jsx("svg", { ...py, children: /* @__PURE__ */ d.jsx("polygon", { points: "8,2 14,6.5 11.5,13.5 4.5,13.5 2,6.5" }) });
 }
-function YH() {
+function $H() {
   return /* @__PURE__ */ d.jsxs("svg", { ...py, children: [
     /* @__PURE__ */ d.jsx("rect", { x: "2.5", y: "2.5", width: "11", height: "11", rx: "1" }),
     /* @__PURE__ */ d.jsx("line", { x1: "8", y1: "2.5", x2: "8", y2: "13.5" }),
     /* @__PURE__ */ d.jsx("line", { x1: "2.5", y1: "8", x2: "13.5", y2: "8" })
   ] });
 }
-function $H(e) {
+function eW(e) {
   return JSON.stringify(e.map(({ id: t, sample: n }) => n.hostedAssayId ? [t, n.dataRevision, n.hostedAssayId] : [t, n.dataRevision]));
 }
-function eW(e) {
+function tW(e) {
   const t = W.useMemo(
     () => (r) => {
       const a = e.map(({ sample: o }) => o.subscribeDataRevision(r));
       return () => a.forEach((o) => o());
     },
     [e]
-  ), n = W.useMemo(() => () => $H(e), [e]);
+  ), n = W.useMemo(() => () => eW(e), [e]);
   return W.useSyncExternalStore(t, n, n);
 }
-function tW(e, t = 0) {
+function nW(e, t = 0) {
   const [n, r] = W.useState({}), a = W.useRef(/* @__PURE__ */ new Map()), o = W.useRef(null), i = W.useRef(null), l = W.useRef(null), s = W.useRef(t), c = W.useCallback((m) => {
     i.current = m;
   }, []), f = W.useCallback((m) => o.current === m ? n : a.current.get(m) ?? {}, [n]), p = W.useCallback(
@@ -54532,13 +54547,13 @@ function tW(e, t = 0) {
     replaceScalesForNextNamespace: p
   };
 }
-function nW(e) {
+function rW(e) {
   if (!Number.isFinite(e)) return "—";
   const t = Math.abs(e);
   return t >= 1e5 || t > 0 && t < 0.01 ? e.toExponential(1) : t >= 100 ? e.toFixed(0) : t >= 1 ? e.toFixed(1) : e.toFixed(2);
 }
 const z2 = 0.12;
-function rW(e) {
+function aW(e) {
   if (e.length <= 2) return e;
   const t = [e[0]];
   for (const r of e.slice(1))
@@ -54551,11 +54566,11 @@ function rW(e) {
   }
   return t;
 }
-function aW({ label: e, scale: t, palette: n, ticks: r, power: a }) {
+function oW({ label: e, scale: t, palette: n, ticks: r, power: a }) {
   var l, s;
-  const o = n.slice(1), i = rW(r != null && r.length ? r : Az(t, 3).map((c) => ({
+  const o = n.slice(1), i = aW(r != null && r.length ? r : Az(t, 3).map((c) => ({
     fraction: AP(c, t, a),
-    label: nW(c)
+    label: rW(c)
   })));
   return /* @__PURE__ */ d.jsxs("div", { className: "gl-marker-colour-bar", children: [
     /* @__PURE__ */ d.jsx("span", { className: "gl-marker-colour-bar-label", children: e }),
@@ -54580,7 +54595,7 @@ function aW({ label: e, scale: t, palette: n, ticks: r, power: a }) {
     ] })
   ] });
 }
-function oW({ value: e, onChange: t, disabled: n = !1, className: r = "" }) {
+function iW({ value: e, onChange: t, disabled: n = !1, className: r = "" }) {
   const { t: a } = Yn(), o = Vg(e);
   return /* @__PURE__ */ d.jsxs(
     "label",
@@ -54615,7 +54630,7 @@ function ST(e) {
     return null;
   }
 }
-function iW(e, t) {
+function sW(e, t) {
   const n = ST();
   if (!n) return null;
   try {
@@ -54627,7 +54642,7 @@ function iW(e, t) {
     return null;
   }
 }
-function sW(e, t) {
+function lW(e, t) {
   const n = ST();
   if (n)
     try {
@@ -54646,18 +54661,18 @@ const h_ = (e, t, n, r) => ({
 function p_(e, t = Date.now()) {
   return h_(e, 0, "active", t);
 }
-function lW(e, t, n = Date.now()) {
+function cW(e, t, n = Date.now()) {
   return !t || t.status === "done" ? p_(e, n) : { ...t, status: "active", updatedAt: n };
 }
 function B2(e, t, n = Date.now()) {
   const r = ay(e, t.stepId);
   return r < 0 ? p_(e, n) : r >= e.length - 1 ? { ...t, status: "done", updatedAt: n } : h_(e, r + 1, "active", n);
 }
-function cW(e, t, n = Date.now()) {
+function uW(e, t, n = Date.now()) {
   const r = ay(e, t.stepId);
   return h_(e, Math.max(0, r - 1), "active", n);
 }
-function uW(e, t = Date.now()) {
+function dW(e, t = Date.now()) {
   return { ...e, status: "paused", updatedAt: t };
 }
 const Bx = "gatelab-demo.gatelab", G2 = `demo/${Bx}`, Gx = {
@@ -54669,7 +54684,7 @@ const Bx = "gatelab-demo.gatelab", G2 = `demo/${Bx}`, Gx = {
   figure: "Supplementary Figure 10A",
   figureLegend: "Gating strategy for FACS sorting B cells for in vitro assay.",
   short: "Gating strategy of Priest et al., Nat Commun 15:6811 (2024), Supplementary Figure 10A."
-}, dW = [
+}, fW = [
   { id: "welcome", title: "Welcome" },
   { id: "gating", title: "Gating" },
   { id: "tree", title: "The tree" },
@@ -54684,7 +54699,7 @@ const Bx = "gatelab-demo.gatelab", G2 = `demo/${Bx}`, Gx = {
   { id: "scales", title: "Scales" },
   { id: "compensation", title: "Compensation" },
   { id: "finish", title: "Saving" }
-], FS = (e) => e.files.length > 0 && Object.keys(e.populations).length > 1, fW = {
+], FS = (e) => e.files.length > 0 && Object.keys(e.populations).length > 1, hW = {
   welcome: null,
   gating: "gating",
   tree: "gating",
@@ -54699,12 +54714,12 @@ const Bx = "gatelab-demo.gatelab", G2 = `demo/${Bx}`, Gx = {
   scales: "scales",
   compensation: "compensation",
   finish: null
-}, hW = /* @__PURE__ */ new Set(["welcome", "open-demo"]), yc = { tab: null };
-function pW(e) {
-  return { tab: fW[e.chapter] ?? null, workspace: !hW.has(e.id), ...e.needs };
+}, pW = /* @__PURE__ */ new Set(["welcome", "open-demo"]), yc = { tab: null };
+function mW(e) {
+  return { tab: hW[e.chapter] ?? null, workspace: !pW.has(e.id), ...e.needs };
 }
 function kT(e, t) {
-  const n = pW(e), r = {};
+  const n = mW(e), r = {};
   return n.workspace && !FS(t) && (r.workspace = !0), n.tab && t.activeTab !== n.tab && (r.tab = n.tab), n.compensationView && t.compensation.view !== n.compensationView && (r.compensationView = n.compensationView), Object.keys(r).length ? r : null;
 }
 function my(e) {
@@ -54718,7 +54733,7 @@ function my(e) {
   return e.rootId && n(e.rootId), t;
 }
 const qb = (e) => my(e)[0] ?? null;
-function mW(e, t) {
+function gW(e, t) {
   let n = 0;
   for (let r = t; r != null && r.parentId; r = e.populations[r.parentId]) n++;
   return n;
@@ -54727,7 +54742,7 @@ function _T(e) {
   let t = null, n = -1;
   for (const r of my(e)) {
     if (r.children.length) continue;
-    const a = mW(e, r);
+    const a = gW(e, r);
     a > n && (t = r, n = a);
   }
   return t;
@@ -54747,10 +54762,10 @@ const H2 = (e) => Object.values(e.populations).map((t) => `${t.id}>${t.parentId 
   }) ?? t[1] ?? t[0] ?? null;
 }, rd = (e) => Object.values(e.gates).find(
   (t) => t.x === e.axes.x && t.y === e.axes.y || t.x === e.axes.y && t.y === e.axes.x
-) ?? null, sw = (e) => Object.values(e.gates).map((t) => `${t.id}:${t.shape}`).join("|"), Xb = (e) => (!e.axes.xLinearOffered || e.axes.xScale === "linear") && (!e.axes.yLinearOffered || e.axes.yScale === "linear"), gW = (e) => (!e.axes.xLinearOffered || e.axes.xScale === "arcsinh") && (!e.axes.yLinearOffered || e.axes.yScale === "arcsinh"), W2 = (e, t) => {
+) ?? null, sw = (e) => Object.values(e.gates).map((t) => `${t.id}:${t.shape}`).join("|"), Xb = (e) => (!e.axes.xLinearOffered || e.axes.xScale === "linear") && (!e.axes.yLinearOffered || e.axes.yScale === "linear"), yW = (e) => (!e.axes.xLinearOffered || e.axes.xScale === "arcsinh") && (!e.axes.yLinearOffered || e.axes.yScale === "arcsinh"), W2 = (e, t) => {
   const n = e.axes.xLinearOffered && e.axes.xScale !== t ? "X" : e.axes.yLinearOffered && e.axes.yScale !== t ? "Y" : null;
   return n ? [`.gl-transforms select.gl-scatter-scale[aria-label^="${n} "]`, ".gl-transforms"] : ".gl-transforms";
-}, yW = (e) => e.workspaceName === Bx, ua = (e) => (t, n) => Nk(e.language ?? "en", t, n), CT = (e, t) => e.language === "ja" ? `「${t}」` : `“${t}”`, Yc = (e, t, n) => t ? CT(e, t.name) : ua(e)(n), qo = (e, t, n, r = !1) => ({ selector: t, text: ua(e)(n), exact: r }), vc = (e) => `[data-tour="tab-${e}"]`, lw = (e) => e.files.find((t) => !t.viewed) ?? null, cw = (e) => e ? { selector: ".pop-row-name", text: e.name, exact: !0 } : ".pop-row-name";
+}, vW = (e) => e.workspaceName === Bx, ua = (e) => (t, n) => Nk(e.language ?? "en", t, n), CT = (e, t) => e.language === "ja" ? `「${t}」` : `“${t}”`, Yc = (e, t, n) => t ? CT(e, t.name) : ua(e)(n), qo = (e, t, n, r = !1) => ({ selector: t, text: ua(e)(n), exact: r }), vc = (e) => `[data-tour="tab-${e}"]`, lw = (e) => e.files.find((t) => !t.viewed) ?? null, cw = (e) => e ? { selector: ".pop-row-name", text: e.name, exact: !0 } : ".pop-row-name";
 function q2(e, t) {
   const n = ua(e), r = t.length > 4 ? [...t.slice(0, 3), n("{count} more", { count: t.length - 3 })] : [...t];
   return e.language === "ja" ? r.join("、") : r.length < 2 ? r.join("") : `${r.slice(0, -1).join(", ")} and ${r[r.length - 1]}`;
@@ -54777,7 +54792,7 @@ const jg = [
     title: "The demo workspace",
     body: (e) => {
       const t = Gx, n = `${t.authors} ${t.title} ${t.journal} doi:${t.doi}`;
-      return yW(e) ? ua(e)("The demo is the gating strategy of {figure} of {reference} (“{legend}”), on its presort record and companion records. The Tutorial menu keeps this reference under “About the demo workspace”.", { figure: t.figure, reference: n, legend: t.figureLegend }) : ua(e)("The tutorial goes on with the workspace you opened. It was written for the demo: the gating strategy of {figure} of {reference}", { figure: t.figure, reference: n });
+      return vW(e) ? ua(e)("The demo is the gating strategy of {figure} of {reference} (“{legend}”), on its presort record and companion records. The Tutorial menu keeps this reference under “About the demo workspace”.", { figure: t.figure, reference: n, legend: t.figureLegend }) : ua(e)("The tutorial goes on with the workspace you opened. It was written for the demo: the gating strategy of {figure} of {reference}", { figure: t.figure, reference: n });
     }
   },
   // ── Gating ──
@@ -54804,7 +54819,7 @@ const jg = [
     // The axis still to change: X first, then Y once X is arcsinh.
     target: (e) => W2(e, "arcsinh"),
     pointer: "click",
-    done: gW
+    done: yW
   },
   {
     id: "gate-edges",
@@ -55385,23 +55400,23 @@ const jg = [
   }
 ];
 jg.length;
-function vW(e) {
-  return dW.find((t) => t.id === e.chapter) ?? { id: e.chapter, title: e.chapter };
+function wW(e) {
+  return fW.find((t) => t.id === e.chapter) ?? { id: e.chapter, title: e.chapter };
 }
 const ng = (e) => e.language === "ja" ? "" : " ";
-function wW(e, t) {
+function xW(e, t) {
   return ua(t)(e.title);
 }
-function xW(e, t) {
+function bW(e, t) {
   return typeof e.body == "function" ? e.body(t) : ua(t)(e.body);
 }
-function bW(e, t) {
+function SW(e, t) {
   return e.target ? typeof e.target == "function" ? e.target(t) : e.target : null;
 }
-const SW = 900, kW = 400, _W = 350, CW = 40;
-function AW(e, t, n = jg) {
-  const [r, a] = W.useState(() => iW(n)), [o, i] = W.useState(!1), [l, s] = W.useState(!1), [c, f] = W.useState(!1), p = W.useRef(r), m = W.useCallback((U) => {
-    p.current = U, a(U), sW(U);
+const kW = 900, _W = 400, CW = 350, AW = 40;
+function MW(e, t, n = jg) {
+  const [r, a] = W.useState(() => sW(n)), [o, i] = W.useState(!1), [l, s] = W.useState(!1), [c, f] = W.useState(!1), p = W.useRef(r), m = W.useCallback((U) => {
+    p.current = U, a(U), lW(U);
   }, []), g = W.useRef(e);
   g.current = e;
   const y = W.useRef(t);
@@ -55424,7 +55439,7 @@ function AW(e, t, n = jg) {
         const te = JSON.stringify(Y);
         te !== ne.unmetKey && (ne.unmetKey = te, ne.attempts = 0);
         const ye = Date.now();
-        ne.attempts >= CW ? (C.current = null, f(!1)) : ye - ne.lastAt >= _W && (ne.attempts += 1, ne.lastAt = ye, (Q = y.current) == null || Q.call(y, Y));
+        ne.attempts >= AW ? (C.current = null, f(!1)) : ye - ne.lastAt >= CW && (ne.attempts += 1, ne.lastAt = ye, (Q = y.current) == null || Q.call(y, Y));
       }
     if (((ce = v.current) == null ? void 0 : ce.stepId) !== G.id) {
       if (Y) return;
@@ -55434,21 +55449,21 @@ function AW(e, t, n = jg) {
     !G.done || _.current === G.id || k.current === G.id || G.done(Z, v.current.memo) && (_.current = G.id, i(!0), window.setTimeout(() => {
       const te = p.current;
       te && te.status === "active" && te.stepId === G.id ? E(B2(n, te), "forward") : i(!1);
-    }, SW));
+    }, kW));
   }, [n, E]);
   W.useEffect(() => {
     j();
   }), W.useEffect(() => {
     if (!x) return;
-    const U = window.setInterval(j, kW);
+    const U = window.setInterval(j, _W);
     return () => window.clearInterval(U);
   }, [x, j]);
-  const N = W.useCallback(() => E(p_(n), "forward"), [n, E]), P = W.useCallback(() => E(lW(n, p.current), "forward"), [n, E]), F = W.useCallback(() => {
-    p.current && (C.current = null, f(!1), m(uW(p.current)));
+  const N = W.useCallback(() => E(p_(n), "forward"), [n, E]), P = W.useCallback(() => E(cW(n, p.current), "forward"), [n, E]), F = W.useCallback(() => {
+    p.current && (C.current = null, f(!1), m(dW(p.current)));
   }, [m]), T = W.useCallback(() => {
     p.current && E(B2(n, p.current), "forward");
   }, [n, E]), L = W.useCallback(() => {
-    p.current && E(cW(n, p.current), "back");
+    p.current && E(uW(n, p.current), "back");
   }, [n, E]), z = W.useCallback(() => {
     const U = p.current;
     !U || U.status !== "active" || (C.current = { stepId: U.stepId, attempts: 0, lastAt: 0, unmetKey: "" }, f(!0), j());
@@ -55479,11 +55494,11 @@ function AT(e, t = document) {
   }
   return null;
 }
-const MW = (e) => {
+const NW = (e) => {
   const t = e.getBoundingClientRect();
   return { x: t.x, y: t.y, width: t.width, height: t.height };
-}, NW = (e, t) => e === t || !!e && !!t && Math.abs(e.x - t.x) < 1 && Math.abs(e.y - t.y) < 1 && Math.abs(e.width - t.width) < 1 && Math.abs(e.height - t.height) < 1, Qb = 340, rg = 16, V2 = 260;
-function EW() {
+}, EW = (e, t) => e === t || !!e && !!t && Math.abs(e.x - t.x) < 1 && Math.abs(e.y - t.y) < 1 && Math.abs(e.width - t.width) < 1 && Math.abs(e.height - t.height) < 1, Qb = 340, rg = 16, V2 = 260;
+function jW() {
   return typeof matchMedia == "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 function J2(e, t) {
@@ -55493,8 +55508,8 @@ function J2(e, t) {
     const l = () => {
       const c = AT(e);
       c && !i && (i = !0, typeof c.scrollIntoView == "function" && c.scrollIntoView({ block: "nearest", inline: "nearest" }));
-      const f = c ? MW(c) : null;
-      (o === void 0 || !NW(o, f)) && (o = f, r(f));
+      const f = c ? NW(c) : null;
+      (o === void 0 || !EW(o, f)) && (o = f, r(f));
     };
     l();
     const s = window.setInterval(l, 150);
@@ -55503,11 +55518,11 @@ function J2(e, t) {
     };
   }, [a, t]), n;
 }
-function jW({ kind: e, rect: t, from: n }) {
+function PW({ kind: e, rect: t, from: n }) {
   const r = W.useRef(null), a = W.useRef(null), o = `${e}|${Math.round(t.x)}|${Math.round(t.y)}|${Math.round(t.width)}|${Math.round(t.height)}|${Math.round(n.x)}|${Math.round(n.y)}`;
   return W.useEffect(() => {
     const i = r.current;
-    if (!i || typeof i.animate != "function" || EW()) return;
+    if (!i || typeof i.animate != "function" || jW()) return;
     const l = [], s = { x: t.x + t.width / 2, y: t.y + t.height / 2 };
     if (e === "click")
       l.push(i.animate(
@@ -55551,8 +55566,8 @@ function jW({ kind: e, rect: t, from: n }) {
     /* @__PURE__ */ d.jsx("div", { ref: r, className: "gl-tour-cursor", "aria-hidden": "true", children: /* @__PURE__ */ d.jsx("svg", { width: "22", height: "26", viewBox: "0 0 22 26", children: /* @__PURE__ */ d.jsx("path", { d: "M3 2 L3 20 L8 15.5 L11.5 23 L15 21.5 L11.5 14 L18 14 Z", fill: "#111827", stroke: "#ffffff", strokeWidth: "1.5", strokeLinejoin: "round" }) }) })
   ] });
 }
-function PW({ step: e, index: t, total: n, reached: r, held: a = !1, arriving: o = !1, ctx: i, tabLabels: l, onNext: s, onBack: c, onEnd: f, onArrive: p }) {
-  const { t: m } = Yn(), g = bW(e, i), y = JSON.stringify(g), b = o || r ? null : kT(e, i), x = b ? b.workspace ? { text: m("This step needs a workspace open."), action: m("Open the demo workspace") } : b.tab ? { text: m("This step is on the {tab} tab.", { tab: (l == null ? void 0 : l[b.tab]) ?? b.tab }), action: m("Take me there") } : { text: m("This step is on the Compensation tab's {view} view.", { view: b.compensationView === "global" ? m("Global inspector") : m("Matrix") }), action: m("Take me there") } : null, v = J2(g, e.id), _ = J2(e.pointerTarget ?? null, e.id) ?? v, k = vW(e), A = ep(wW(e, i)), C = ep(xW(e, i)), E = typeof window > "u" ? 1200 : window.innerWidth, j = typeof window > "u" ? 800 : window.innerHeight, N = !v || !(v.x + v.width > E - Qb - rg * 2 && v.y + v.height > j - V2 - rg * 2), P = {
+function IW({ step: e, index: t, total: n, reached: r, held: a = !1, arriving: o = !1, ctx: i, tabLabels: l, onNext: s, onBack: c, onEnd: f, onArrive: p }) {
+  const { t: m } = Yn(), g = SW(e, i), y = JSON.stringify(g), b = o || r ? null : kT(e, i), x = b ? b.workspace ? { text: m("This step needs a workspace open."), action: m("Open the demo workspace") } : b.tab ? { text: m("This step is on the {tab} tab.", { tab: (l == null ? void 0 : l[b.tab]) ?? b.tab }), action: m("Take me there") } : { text: m("This step is on the Compensation tab's {view} view.", { view: b.compensationView === "global" ? m("Global inspector") : m("Matrix") }), action: m("Take me there") } : null, v = J2(g, e.id), _ = J2(e.pointerTarget ?? null, e.id) ?? v, k = wW(e), A = ep(xW(e, i)), C = ep(bW(e, i)), E = typeof window > "u" ? 1200 : window.innerWidth, j = typeof window > "u" ? 800 : window.innerHeight, N = !v || !(v.x + v.width > E - Qb - rg * 2 && v.y + v.height > j - V2 - rg * 2), P = {
     x: N ? E - Qb / 2 - rg : Qb / 2 + rg,
     y: j - V2 / 2 - rg
   }, F = 6, T = 3, L = v ? (() => {
@@ -55579,7 +55594,7 @@ function PW({ step: e, index: t, total: n, reached: r, held: a = !1, arriving: o
       },
       `${e.id}|${y}`
     ),
-    _ && z !== "none" && !r && /* @__PURE__ */ d.jsx(jW, { kind: z, rect: _, from: P }),
+    _ && z !== "none" && !r && /* @__PURE__ */ d.jsx(PW, { kind: z, rect: _, from: P }),
     /* @__PURE__ */ d.jsxs(
       "aside",
       {
@@ -55638,7 +55653,7 @@ function PW({ step: e, index: t, total: n, reached: r, held: a = !1, arriving: o
     )
   ] });
 }
-function IW({ progress: e, onStart: t, onResume: n }) {
+function TW({ progress: e, onStart: t, onResume: n }) {
   const { t: r } = Yn(), [a, o] = W.useState(!1), i = (e == null ? void 0 : e.status) === "paused" ? ay(jg, e.stepId) : -1, l = i >= 0 ? [
     {
       label: r("Resume at step {index} of {total}: {title}", { index: i + 1, total: jg.length, title: r(jg[i].title) }),
@@ -55698,16 +55713,16 @@ function IW({ progress: e, onStart: t, onResume: n }) {
   ] });
 }
 const m_ = W.createContext(null);
-function TW({ host: e, children: t }) {
+function FW({ host: e, children: t }) {
   return /* @__PURE__ */ d.jsx(m_.Provider, { value: e, children: t });
 }
-function NU() {
+function EU() {
   const e = W.useContext(m_);
   if (!e)
     throw new Error("GateLab must be mounted inside a GateLabHostProvider.");
   return e;
 }
-function FW() {
+function RW() {
   return W.useContext(m_);
 }
 const oy = 1;
@@ -55775,7 +55790,7 @@ function LS(e, t, n) {
     return l;
   });
 }
-function RW(e, t) {
+function OW(e, t) {
   if (ET(
     e.byteLength,
     t,
@@ -55827,7 +55842,7 @@ function IT(e, t) {
   const n = e.assays.find(({ id: r }) => r === e.defaultAssayId);
   return n && Jh(n) ? n : jT(e);
 }
-function OW(e, t) {
+function LW(e, t) {
   if (!t || e.instrument === "cytof") return e;
   const n = e.channels.filter((r) => !Pa(r.key) && !Pa(r.pnn)).map((r) => r.key);
   e.applyFluorArcsinhKeys(n);
@@ -55845,7 +55860,7 @@ function TT(e) {
   }
   return t;
 }
-function LW(e, t) {
+function DW(e, t) {
   return e.channels.map((n, r) => {
     var i, l, s, c;
     const a = ((i = n.pnn) == null ? void 0 : i.trim()) || n.id, o = ((l = n.pns) == null ? void 0 : l.trim()) || (n.label.trim() !== a ? n.label.trim() : "");
@@ -55860,7 +55875,7 @@ function LW(e, t) {
     };
   });
 }
-function DW(e, t) {
+function zW(e, t) {
   if (!e || e.kind !== "logicle" || e.A !== 0) return {};
   const { T: n, W: r, M: a } = e;
   return !(n > 0) || !(a > 0) || !(r >= 0) || r > a / 2 ? {} : {
@@ -55869,7 +55884,7 @@ function DW(e, t) {
     [`P${t}MS`]: String(n / Math.pow(10, a - 2 * r))
   };
 }
-function zW(e, t) {
+function BW(e, t) {
   var a;
   if (e.instrument === "cytof" || !t.channels.some((o) => o.transform)) return;
   const n = t.channels.filter((o) => o.transform && !Pa(o.id) && !Pa(o.pnn ?? "")), r = n.flatMap((o) => {
@@ -55889,11 +55904,11 @@ function zW(e, t) {
     i !== void 0 && e.setFluorScale(i, "biex");
   }
 }
-function BW(e, t, n) {
-  return n || zW(e, t), e;
-}
 function GW(e, t, n) {
-  const r = LW(e, n), a = $N(
+  return n || BW(e, t), e;
+}
+function HW(e, t, n) {
+  const r = DW(e, n), a = $N(
     r.map(({ name: c, marker: f }) => f || c)
   ), o = e.instrument === "unknown" ? a : e.instrument, i = {
     $PAR: String(r.length),
@@ -55902,7 +55917,7 @@ function GW(e, t, n) {
     $SRC: t.label
   };
   r.forEach((c, f) => {
-    i[`$P${f + 1}N`] = c.name, c.marker && (i[`$P${f + 1}S`] = c.marker), i[`$P${f + 1}B`] = "32", i[`$P${f + 1}R`] = String(c.range), Object.assign(i, DW(e.channels[f].transform, f + 1));
+    i[`$P${f + 1}N`] = c.name, c.marker && (i[`$P${f + 1}S`] = c.marker), i[`$P${f + 1}B`] = "32", i[`$P${f + 1}R`] = String(c.range), Object.assign(i, zW(e.channels[f].transform, f + 1));
   });
   const l = e.compensationMatrix;
   let s = null;
@@ -55955,7 +55970,7 @@ async function Yb(e, t, n, r) {
           `'${a.id}' is in display space by its name but holds values up to ${Math.round(m).toLocaleString()}, which an arcsinh assay cannot. Declare its space in R: metadata(sce)$gatelabr_assay_coordinate_spaces <- list(${a.id} = "linear").`
         );
     }
-    const f = c ? s.map((m) => Float32Array.from(m, (g) => c.cofactor * Math.sinh(g))) : s, p = RW(
+    const f = c ? s.map((m) => Float32Array.from(m, (g) => c.cofactor * Math.sinh(g))) : s, p = OW(
       l,
       o.eventCount
     );
@@ -55965,9 +55980,9 @@ async function Yb(e, t, n, r) {
       name: o.label,
       assayId: a.id,
       assayRevision: a.revision,
-      sample: BW(
-        OW(
-          new iu(GW(t, o, f), {
+      sample: GW(
+        LW(
+          new iu(HW(t, o, f), {
             ...c ? { cytofCofactor: c.cofactor } : {},
             hostedAssay: { id: a.id, space: a.coordinateSpace },
             channelTransforms: Object.fromEntries(t.channels.flatMap((m) => m.transform ? [[m.id, m.transform]] : []))
@@ -55992,7 +56007,7 @@ function RT(e) {
     e.scientific.solverSettings.map(({ key: t, value: n }) => [t, n])
   );
 }
-async function HW(e) {
+async function WW(e) {
   const t = await mu(e), n = t.scientific.kind === "cytof-spillover" ? X2 : Q2;
   if (t.scientific.solverVersion === n) return t;
   const r = RT(t), a = t.scientific.kind === "cytof-spillover" ? {
@@ -56018,7 +56033,7 @@ async function HW(e) {
     ...t.provenance === null ? {} : { provenance: t.provenance }
   });
 }
-async function WW(e) {
+async function qW(e) {
   const t = await mu(e);
   if (t.scientific.solverVersion === $b) return t;
   const n = RT(t), r = t.scientific.kind === "cytof-spillover" ? {
@@ -56070,20 +56085,20 @@ function Tl(e, t) {
   if (typeof e == "object" || typeof e == "number" || typeof e == "string" || typeof e == "boolean") return [e];
   throw new Error(`The GatingSet hierarchy has a malformed ${t}.`);
 }
-function qW(e, t, n, r) {
+function UW(e, t, n, r) {
   const a = e ?? -na, o = t ?? na, i = n ?? -na, l = r ?? na;
   return [[a, i], [o, i], [o, l], [a, l]];
 }
 function uw(e, t) {
   return e == null ? null : Il(e, t);
 }
-function UW(e, t, n) {
+function VW(e, t, n) {
   const r = {};
   for (const a of e)
     r[a.channel] = a.transform === null ? { kind: "identity" } : t(a.transform, `transform of ${a.channel} on ${n}`);
   return r;
 }
-function VW(e, t, n) {
+function JW(e, t, n) {
   const r = Tl(e, `axes of ${t}`).map((a) => {
     const o = ad(a, `axis of ${t}`), i = o.transform === null || o.transform === void 0 ? null : n(o.transform, `transform of ${t}`);
     return { channel: sf(o.channel, `axis channel of ${t}`), transform: i };
@@ -56091,7 +56106,7 @@ function VW(e, t, n) {
   if (r.length < 1 || r.length > 2) throw new Error(`The GatingSet hierarchy has a malformed ${t}: ${r.length} axes.`);
   return r;
 }
-function JW(e, t, n) {
+function KW(e, t, n) {
   var k, A, C, E;
   const r = ad(e, "payload");
   if (r.contractVersion !== Z2)
@@ -56167,12 +56182,12 @@ function JW(e, t, n) {
       m(N, "neither a gate nor a boolean");
       continue;
     }
-    const z = ad(j.gate, `gate of ${T}`), U = z.kind, D = VW(z.axes, T, n), G = D.find((ce) => !a.has(ce.channel));
+    const z = ad(j.gate, `gate of ${T}`), U = z.kind, D = JW(z.axes, T, n), G = D.find((ce) => !a.has(ce.channel));
     if (G) {
       m(N, `on channel '${G.channel}', which the dataset does not have`);
       continue;
     }
-    const Z = UW(D, n, T), Y = D[0].channel, ne = (D[1] ?? D[0]).channel, O = {
+    const Z = VW(D, n, T), Y = D[0].channel, ne = (D[1] ?? D[0]).channel, O = {
       name: P,
       x_channel: Y,
       y_channel: ne,
@@ -56190,7 +56205,7 @@ function JW(e, t, n) {
         ...O,
         gate_id: N,
         gate_type: "rectangle",
-        vertices: qW(te, ye, be, ue),
+        vertices: UW(te, ye, be, ue),
         // flowCore's rectangleGate holds an event on either edge (models.ts, RectangleBounds).
         bounds: "closed"
       });
@@ -56362,7 +56377,7 @@ function LT(e, t) {
   }
   return o;
 }
-function KW(e, t) {
+function XW(e, t) {
   const n = e.space;
   if (n == null) return {};
   if (n !== "raw" && n !== "display")
@@ -56372,17 +56387,17 @@ function KW(e, t) {
     a[o] = LT(i, `transform for gate '${t}'`);
   return Object.keys(a).length > 0 ? { space: n, transforms: a } : { space: n };
 }
-function XW(e, t) {
+function QW(e, t) {
   if (!Array.isArray(e))
     throw new Error(`Saved GateLabR gate '${t}' has invalid vertices.`);
   return e.map((n) => Xh(n, `vertices for gate '${t}'`));
 }
-function QW(e, t) {
+function ZW(e, t) {
   if (e == null) return "closed";
   if (!sp(e)) throw new Error(`Saved GateLabR gate '${t}' has an invalid bounds value.`);
   return e;
 }
-function ZW(e, t, n) {
+function YW(e, t, n) {
   const r = wd(e, `gate '${t}'`), a = Ll(r.name, t), o = {
     gate_id: Ll(r.gate_id, t),
     name: a,
@@ -56401,7 +56416,7 @@ function ZW(e, t, n) {
       "#66c2a5"
     ][n % 10]),
     label_offset: r.label_offset === null || r.label_offset === void 0 ? null : Xh(r.label_offset, `label offset for gate '${a}'`),
-    ...KW(r, a)
+    ...XW(r, a)
   };
   if (r.gate_type === "quadrant") {
     const i = Hx(r.curl) ? { power: r.curl.power, kx: r.curl.kx, ky: r.curl.ky } : null;
@@ -56432,25 +56447,25 @@ function ZW(e, t, n) {
   return {
     ...o,
     gate_type: r.gate_type,
-    vertices: XW(r.vertices, a),
+    vertices: QW(r.vertices, a),
     // A rectangle keeps its edge rule through the R host (models.ts, RectangleBounds). One the
     // host stored without a rule was evaluated closed, by GateLab and by GateLabR's own engine,
     // and stays closed; an unknown value is refused rather than read as a default.
-    ...r.gate_type === "rectangle" ? { bounds: QW(r.bounds, a) } : {},
+    ...r.gate_type === "rectangle" ? { bounds: ZW(r.bounds, a) } : {},
     // A FlowJo grid polygon's raw vertices, which only the FlowJo export reads; membership never
     // does, so a malformed list is dropped rather than refusing the workspace.
-    ...r.gate_type === "polygon" ? tq(r.flowjo_vertices, r.vertices) : {},
-    ...r.gate_type === "polygon" ? YW(r.flowjo_polygon) : {},
-    ...r.gate_type === "rectangle" ? eq(r.flowjo_axes) : {},
-    ...r.gate_type === "rectangle" ? $W(r.flowjo_bounds) : {}
+    ...r.gate_type === "polygon" ? nq(r.flowjo_vertices, r.vertices) : {},
+    ...r.gate_type === "polygon" ? $W(r.flowjo_polygon) : {},
+    ...r.gate_type === "rectangle" ? tq(r.flowjo_axes) : {},
+    ...r.gate_type === "rectangle" ? eq(r.flowjo_bounds) : {}
   };
 }
-function YW(e) {
+function $W(e) {
   if (!e || typeof e != "object" || Array.isArray(e)) return {};
   const t = e, n = t.quadId, r = t.gateResolution;
   return typeof n != "number" || !Number.isInteger(n) ? {} : r === null || typeof r == "number" && Number.isInteger(r) ? { flowjo_polygon: { quadId: n, gateResolution: r } } : {};
 }
-function $W(e) {
+function eq(e) {
   if (!e || typeof e != "object" || Array.isArray(e)) return {};
   const t = (r) => r === null || typeof r == "number" && Number.isFinite(r), n = {};
   for (const [r, a] of Object.entries(e)) {
@@ -56459,7 +56474,7 @@ function $W(e) {
   }
   return Object.keys(n).length ? { flowjo_bounds: n } : {};
 }
-function eq(e) {
+function tq(e) {
   if (!e || typeof e != "object" || Array.isArray(e)) return {};
   const t = {};
   for (const [n, r] of Object.entries(e)) {
@@ -56469,7 +56484,7 @@ function eq(e) {
   }
   return Object.keys(t).length ? { flowjo_axes: t } : {};
 }
-function tq(e, t) {
+function nq(e, t) {
   if (!Array.isArray(e) || !Array.isArray(t) || e.length !== t.length) return {};
   const n = [];
   for (const r of e) {
@@ -56478,7 +56493,7 @@ function tq(e, t) {
   }
   return { flowjo_vertices: n };
 }
-function nq(e) {
+function rq(e) {
   const t = wd(e, "gate reference"), n = bf(t.quadrant);
   return {
     gate_id: Ll(t.gate_id),
@@ -56486,18 +56501,18 @@ function nq(e) {
     ...n !== null ? { quadrant: n } : {}
   };
 }
-function rq(e) {
+function aq(e) {
   if (e == null) return [];
   if (Array.isArray(e)) return e;
   if (typeof e == "object") return [e];
   throw new Error("Saved GateLabR workspace contains a malformed object list.");
 }
-function aq(e, t) {
+function oq(e, t) {
   const n = wd(e, `population '${t}'`), r = bf(n.event_count), a = bf(n.percent_of_parent), o = bf(n.colorSlot);
   return {
     population_id: Ll(n.population_id, t),
     name: Ll(n.name, t),
-    gate_refs: rq(n.gate_refs).map(nq),
+    gate_refs: aq(n.gate_refs).map(rq),
     gate_logic: n.gate_logic === "or" ? "or" : "and",
     parent_id: DS(n.parent_id),
     children: OT(n.children),
@@ -56506,7 +56521,7 @@ function aq(e, t) {
     ...o !== null && Number.isInteger(o) && o >= 0 ? { colorSlot: o } : {}
   };
 }
-function oq(e) {
+function iq(e) {
   const t = {};
   for (const [n, r] of Object.entries(
     g_(e, "global scale ranges")
@@ -56532,7 +56547,7 @@ function DT(e, t = []) {
     };
   });
 }
-function iq(e, t) {
+function sq(e, t) {
   const n = DT(t, e.samples), r = {
     ...e,
     samples: n,
@@ -56540,7 +56555,7 @@ function iq(e, t) {
   };
   return Nc(r), r;
 }
-function sq(e, t) {
+function lq(e, t) {
   const n = t.samples.map((r, a) => {
     const o = e.samples.find(
       (i) => i.sampleId === `${t.id}:${r.id}` || i.fileName === r.label
@@ -56566,20 +56581,20 @@ function sq(e, t) {
     )
   };
 }
-function lq(e, t) {
+function cq(e, t) {
   var y, b;
   const n = wd(e, "workspace payload"), r = {};
   Object.entries(g_(n.gates, "gate map")).forEach(
     ([x, v], _) => {
-      r[x] = ZW(v, x, _);
+      r[x] = YW(v, x, _);
     }
   );
   const a = {};
   for (const [x, v] of Object.entries(
     wd(n.populations, "population map")
   ))
-    a[x] = aq(v, x);
-  const o = Ll(n.root_population_id), i = ((y = t.channels[0]) == null ? void 0 : y.id) ?? "", l = ((b = t.channels[1]) == null ? void 0 : b.id) ?? i, s = oq(
+    a[x] = oq(v, x);
+  const o = Ll(n.root_population_id), i = ((y = t.channels[0]) == null ? void 0 : y.id) ?? "", l = ((b = t.channels[1]) == null ? void 0 : b.id) ?? i, s = iq(
     n.global_scale_ranges ?? n.cytof_axis_range
   ), c = DS(n.active_population_id), f = DS(n.selected_gate_id), p = DT(t), m = {
     format: Cf,
@@ -56614,7 +56629,7 @@ function lq(e, t) {
     sourceGateSpace: g === "raw" || g === "display" ? g : null
   };
 }
-async function cq(e, t, n = []) {
+async function uq(e, t, n = []) {
   var i, l;
   let r;
   try {
@@ -56623,9 +56638,9 @@ async function cq(e, t, n = []) {
     throw new Error("The SCE contains unreadable GateLab workspace metadata.");
   }
   if (e.sourceFormat === "gatelabr-legacy")
-    return lq(r, t);
+    return cq(r, t);
   if (e.sourceFormat === "gatingset-hierarchy") {
-    const s = JW(r, t, LT);
+    const s = KW(r, t, LT);
     return {
       workspace: s.workspace,
       sourceFormat: "gatingset-hierarchy",
@@ -56644,7 +56659,7 @@ async function cq(e, t, n = []) {
       }))
     ), f = await zI(r, c), p = (i = f.samples[0]) == null ? void 0 : i.instrumentMode;
     return {
-      workspace: sq(f, t),
+      workspace: lq(f, t),
       sourceFormat: "gatelab-workspace",
       sourceGateSpace: p === "flow" ? "raw" : p === "cytof" ? "display" : null
     };
@@ -56653,12 +56668,12 @@ async function cq(e, t, n = []) {
   Nc(a);
   const o = (l = a.samples[0]) == null ? void 0 : l.instrumentMode;
   return {
-    workspace: iq(a, t),
+    workspace: sq(a, t),
     sourceFormat: "gatelab-workspace",
     sourceGateSpace: o === "flow" ? "raw" : o === "cytof" ? "display" : null
   };
 }
-function uq(e, t, n) {
+function dq(e, t, n) {
   var c;
   const r = t.gatingSpace;
   if (n === null || n === r)
@@ -56692,7 +56707,7 @@ function uq(e, t, n) {
   };
   return s.version === 2 && Nc(s), s;
 }
-function dq(e) {
+function fq(e) {
   try {
     const t = JSON.parse(e);
     return typeof (t == null ? void 0 : t.hostedAssayId) == "string" && t.hostedAssayId ? t.hostedAssayId : void 0;
@@ -56700,7 +56715,7 @@ function dq(e) {
     return;
   }
 }
-const fq = 1, hq = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99], pq = 2e5;
+const hq = 1, pq = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99], mq = 2e5;
 function zS(e) {
   let t;
   try {
@@ -56711,7 +56726,7 @@ function zS(e) {
   return t.protocol !== "ws:" && t.protocol !== "wss:" ? null : t;
 }
 var xc, Ts, ap, op, ip, Ni, od, Dw, zT;
-class mq {
+class gq {
   constructor(t) {
     Zd(this, Ni);
     Zd(this, xc, null);
@@ -56738,7 +56753,7 @@ class mq {
       return;
     }
     Nl(this, xc, r), Nl(this, ap, 0), Nl(this, op, null), el(this, Ni, od).call(this, { state: "connecting", url: t }), r.onopen = () => {
-      el(this, Ni, Dw).call(this, { kind: "hello", protocol: fq, info: this.options.info() }), Nl(this, ip, this.options.handler.revision()), el(this, Ni, od).call(this, { state: "connected", url: t, writer: null, requests: 0 });
+      el(this, Ni, Dw).call(this, { kind: "hello", protocol: hq, info: this.options.info() }), Nl(this, ip, this.options.handler.revision()), el(this, Ni, od).call(this, { state: "connected", url: t, writer: null, requests: 0 });
     }, r.onmessage = (a) => {
       el(this, Ni, zT).call(this, a.data);
     }, r.onclose = (a) => {
@@ -56965,10 +56980,10 @@ function ig(e, t) {
     return e;
   }
 }
-function gq(e, t) {
+function yq(e, t) {
   return e.isScatterAxis(t) ? "scatter" : e.instrument === "cytof" ? e.isFluorChannel(t) ? "cytof" : "other" : e.isFluorChannel(t) ? "fluorescence" : "other";
 }
-function yq(e) {
+function vq(e) {
   const t = {
     id: e.gate_id,
     name: e.name,
@@ -56987,7 +57002,7 @@ function yq(e) {
   }
   return { ...t, vertices: e.vertices.map((n) => [...n]), ...e.bounds ? { bounds: e.bounds } : {} };
 }
-function vq(e, t) {
+function wq(e, t) {
   const n = e.root_population_id;
   if (!n) return [];
   const r = t.reduce((a, o) => a + o.events, 0);
@@ -57007,9 +57022,9 @@ function vq(e, t) {
     };
   });
 }
-function wq(e) {
+function xq(e) {
   const t = {}, n = e.length - 1;
-  for (const r of hq) {
+  for (const r of pq) {
     if (n < 0) {
       t[String(r)] = NaN;
       continue;
@@ -57029,9 +57044,9 @@ function nN(e, t, n, r, a) {
     const b = n[y];
     g += b, !(b < s || b > c) && p[Math.min(r - 1, Math.floor((b - s) * m))]++;
   }
-  return { channel: e, transform: t, min: i, max: l, edges: f, counts: p, quantiles: wq(o), mean: n.length ? g / n.length : NaN, valleys: xq(p, f) };
+  return { channel: e, transform: t, min: i, max: l, edges: f, counts: p, quantiles: xq(o), mean: n.length ? g / n.length : NaN, valleys: bq(p, f) };
 }
-function xq(e, t) {
+function bq(e, t) {
   const n = e.length;
   if (n < 5) return [];
   const r = e.map((i, l) => l === 0 || l === n - 1 ? e[l] : (e[l - 1] + e[l] + e[l + 1]) / 3), a = [];
@@ -57046,17 +57061,17 @@ function xq(e, t) {
   }
   return o.sort((i, l) => l.depth - i.depth).slice(0, 3).map((i) => i.at);
 }
-function bq(e) {
+function Sq(e) {
   let t = null, n = 0;
   const r = () => {
     const P = e.state();
     return P !== t && (t = P, n++), n;
-  }, a = () => e.samples().map((P) => ({ view: P, gating: P.gating(), events: P.sample.fcs.nEvents })), o = (P) => ({ id: P.view.id, name: P.view.name, events: P.events, viewed: P.view.viewed, checked: P.view.checked, metadata: { ...P.view.metadata } }), i = (P, F) => vq(P, F.map((T) => ({ id: T.view.id, gating: T.gating, events: T.events }))), l = (P) => (P.gate_order.length ? P.gate_order : Object.keys(P.gates)).map((F) => P.gates[F]).filter(Boolean).map(yq), s = (P) => P.find((F) => F.view.viewed) ?? P[0] ?? null, c = (P) => P.channels.map((F, T) => ({
+  }, a = () => e.samples().map((P) => ({ view: P, gating: P.gating(), events: P.sample.fcs.nEvents })), o = (P) => ({ id: P.view.id, name: P.view.name, events: P.events, viewed: P.view.viewed, checked: P.view.checked, metadata: { ...P.view.metadata } }), i = (P, F) => wq(P, F.map((T) => ({ id: T.view.id, gating: T.gating, events: T.events }))), l = (P) => (P.gate_order.length ? P.gate_order : Object.keys(P.gates)).map((F) => P.gates[F]).filter(Boolean).map(vq), s = (P) => P.find((F) => F.view.viewed) ?? P[0] ?? null, c = (P) => P.channels.map((F, T) => ({
     key: F.key,
     label: P.channelLabel(T),
     pnn: F.pnn,
     marker: F.marker,
-    kind: gq(P, T),
+    kind: yq(P, T),
     transform: P.transformSpec(F.key)
   })), f = (P, F, T) => {
     const L = s(F), z = new Set(L ? L.view.sample.channels.map((G) => G.key) : []);
@@ -57180,7 +57195,7 @@ function bq(e) {
       for (const le of O) {
         let ge = 0;
         for (const ue of le.parts) ge += ue.gating.stats.event_count[ce] ?? 0;
-        const te = Math.max(1, Math.ceil(ge / pq)), ye = {}, be = {};
+        const te = Math.max(1, Math.ceil(ge / mq)), ye = {}, be = {};
         for (const ue of ne) {
           const je = [], Ve = D[ue];
           let nt = 0, ct = 0, et = 0;
@@ -57323,20 +57338,20 @@ function bq(e) {
   };
 }
 const BT = "gatelab.agent.url", rN = "claude mcp add --scope user gatelab -- node /path/to/GateLab/tools/agent-mcp/server.mjs";
-function Sq() {
+function kq() {
   try {
     return localStorage.getItem(BT) ?? "";
   } catch {
     return "";
   }
 }
-function kq(e) {
+function _q(e) {
   try {
     localStorage.setItem(BT, e);
   } catch {
   }
 }
-function _q({ status: e, onConnect: t, onDisconnect: n }) {
+function Cq({ status: e, onConnect: t, onDisconnect: n }) {
   const { t: r } = Yn(), [a, o] = W.useState(!1), [i, l] = W.useState(""), [s, c] = W.useState(null), [f, p] = W.useState(!1), m = (v) => {
     var _;
     (_ = navigator.clipboard) == null || _.writeText(v).then(() => {
@@ -57345,7 +57360,7 @@ function _q({ status: e, onConnect: t, onDisconnect: n }) {
     });
   };
   W.useEffect(() => {
-    a && (l(e.state === "idle" ? Sq() : e.url), c(null));
+    a && (l(e.state === "idle" ? kq() : e.url), c(null));
   }, [a, e]);
   const g = W.useRef(null);
   W.useEffect(() => {
@@ -57368,7 +57383,7 @@ function _q({ status: e, onConnect: t, onDisconnect: n }) {
       c(r("That is not a ws:// address. Copy the one the agent's session printed."));
       return;
     }
-    kq(v.toString()), o(!1), t(v.toString());
+    _q(v.toString()), o(!1), t(v.toString());
   };
   return /* @__PURE__ */ d.jsxs(d.Fragment, { children: [
     /* @__PURE__ */ d.jsx(
@@ -57428,20 +57443,20 @@ function _q({ status: e, onConnect: t, onDisconnect: n }) {
     ] }) })
   ] });
 }
-const Cq = ["stroke", "stroke-width", "stroke-opacity", "stroke-dasharray", "stroke-linejoin", "fill", "fill-opacity", "opacity", "font-size", "font-family", "font-weight", "text-anchor", "visibility"];
-function Aq(e) {
+const Aq = ["stroke", "stroke-width", "stroke-opacity", "stroke-dasharray", "stroke-linejoin", "fill", "fill-opacity", "opacity", "font-size", "font-family", "font-weight", "text-anchor", "visibility"];
+function Mq(e) {
   const t = e.cloneNode(!0), n = e.querySelectorAll("*"), r = t.querySelectorAll("*");
   return n.forEach((a, o) => {
     const i = r[o];
     if (!i) return;
     const l = getComputedStyle(a);
-    for (const s of Cq) {
+    for (const s of Aq) {
       const c = l.getPropertyValue(s);
       c && !i.getAttribute(s) && i.setAttribute(s, c);
     }
   }), t.setAttribute("xmlns", "http://www.w3.org/2000/svg"), t;
 }
-async function Mq(e, t = {}) {
+async function Nq(e, t = {}) {
   const n = e.querySelector("canvas"), r = e.querySelector("svg");
   if (!r) throw new Error("There is no plot to render.");
   const a = Number(r.getAttribute("width")) || r.clientWidth || (n == null ? void 0 : n.width) || 0, o = Number(r.getAttribute("height")) || r.clientHeight || (n == null ? void 0 : n.height) || 0;
@@ -57453,7 +57468,7 @@ async function Mq(e, t = {}) {
   const f = c.getContext("2d");
   if (!f) throw new Error("No 2-D context for the render.");
   f.fillStyle = "#ffffff", f.fillRect(0, 0, l, s), n && f.drawImage(n, 0, 0, n.width, n.height, 0, 0, l, s);
-  const p = new XMLSerializer().serializeToString(Aq(r)), m = new Blob([p], { type: "image/svg+xml;charset=utf-8" }), g = URL.createObjectURL(m);
+  const p = new XMLSerializer().serializeToString(Mq(r)), m = new Blob([p], { type: "image/svg+xml;charset=utf-8" }), g = URL.createObjectURL(m);
   try {
     const y = await new Promise((b, x) => {
       const v = new Image();
@@ -57465,7 +57480,7 @@ async function Mq(e, t = {}) {
   }
   return { png: c.toDataURL("image/png"), width: l, height: s };
 }
-const GT = 1, Nq = 1;
+const GT = 1, Eq = 1;
 class HT extends Error {
   constructor(n, r) {
     super(n);
@@ -57476,7 +57491,7 @@ class HT extends Error {
 function aN(e) {
   return typeof e == "number" && Number.isInteger(e) && e >= 0 ? e : null;
 }
-function Eq(e, t) {
+function jq(e, t) {
   if (e !== "workspace-revision-conflict" || !t || typeof t != "object") return null;
   const n = t, r = aN(n.currentRevision), a = aN(n.expectedRevision);
   if (r === null || a === null) return null;
@@ -57498,7 +57513,7 @@ function WT(e, t) {
       }
       return r;
     } catch (r) {
-      if (!jq(r)) throw r;
+      if (!Pq(r)) throw r;
       let a = !0;
       try {
         a = sessionStorage.getItem(n) === "1", a || sessionStorage.setItem(n, "1");
@@ -57511,15 +57526,15 @@ function WT(e, t) {
     }
   };
 }
-function jq(e) {
+function Pq(e) {
   const t = e instanceof Error ? `${e.name} ${e.message}` : String(e);
   return /dynamically imported module|Importing a module script failed|error loading dynamically imported module|Failed to fetch|ChunkLoadError|CSS chunk/i.test(t);
 }
-const Pq = " / ";
+const Iq = " / ";
 function oN(e, t) {
   return e.length === t.length && e.every((n, r) => n === t[r]);
 }
-function Iq(e) {
+function Tq(e) {
   const t = /* @__PURE__ */ new Map();
   for (const o of e) {
     const i = t.get(o.path[0]);
@@ -57533,7 +57548,7 @@ function Iq(e) {
       const c = o.filter((p) => !oN(p.path, s));
       let f = 0;
       for (; f < i && c.some((p) => oN(p.path.slice(0, f + 1), s.slice(0, f + 1))); ) f += 1;
-      n.set(l, s.slice(0, f + 1).reverse().join(Pq));
+      n.set(l, s.slice(0, f + 1).reverse().join(Iq));
     }
   }
   const r = /* @__PURE__ */ new Map(), a = /* @__PURE__ */ new Set();
@@ -57548,7 +57563,7 @@ function Iq(e) {
   }
   return Object.fromEntries(r);
 }
-function Tq({
+function Fq({
   state: e,
   existingColumns: t,
   initialPopulationIds: n,
@@ -57566,7 +57581,7 @@ function Tq({
   }, [i, e.populations]), [s, c] = W.useState(
     () => new Set(n.filter((j) => j !== i))
   ), [f, p] = W.useState(
-    () => Iq(l)
+    () => Tq(l)
   ), [m, g] = W.useState("TRUE"), [y, b] = W.useState("FALSE"), [x, v] = W.useState(!1), _ = l.filter(({ popId: j }) => s.has(j)).map(({ popId: j, name: N }) => ({
     populationId: j,
     populationName: N,
@@ -57689,10 +57704,10 @@ function Tq({
     }
   ) });
 }
-const Fq = W.lazy(WT("CompensationTab", async () => ({ default: (await import("./CompensationTab-DY79n9-o.js")).CompensationTab }))), Rq = W.lazy(WT("LayoutTab", async () => ({ default: (await import("./LayoutTab-Ypw3swuo.js")).LayoutTab }))), pw = { "application/octet-stream": [".fcs"] }, Oq = { "application/xml": [".xml", ".wsp"], "application/zip": [".cef"] }, iN = { "text/csv": [".csv", ".tsv", ".txt"] }, Lq = 0, Dq = 5, zq = (e) => {
+const Rq = W.lazy(WT("CompensationTab", async () => ({ default: (await import("./CompensationTab-Dbrr-oDT.js")).CompensationTab }))), Oq = W.lazy(WT("LayoutTab", async () => ({ default: (await import("./LayoutTab-Dv9MjwNv.js")).LayoutTab }))), pw = { "application/octet-stream": [".fcs"] }, Lq = { "application/xml": [".xml", ".wsp"], "application/zip": [".cef"] }, iN = { "text/csv": [".csv", ".tsv", ".txt"] }, Dq = 0, zq = 5, Bq = (e) => {
   const t = Math.pow(10, e), n = Math.pow(10, Math.floor(Math.log10(t)) - 2);
   return Math.max(1, Math.round(t / n) * n);
-}, Bq = (e) => e >= 1e4 ? `${(e / 1e3).toFixed(0)}K` : e >= 1e3 ? `${(e / 1e3).toFixed(1)}K` : `${Math.round(e)}`, Gq = 330, sN = 672, Hq = 12;
+}, Gq = (e) => e >= 1e4 ? `${(e / 1e3).toFixed(0)}K` : e >= 1e3 ? `${(e / 1e3).toFixed(1)}K` : `${Math.round(e)}`, Hq = 330, sN = 672, Wq = 12;
 function lN(e, t) {
   if (e.gates)
     return {
@@ -57717,7 +57732,7 @@ function cN(e, t, n = 1) {
     return (i = o.externalSpillover) == null ? void 0 : i.differsFromEmbedded;
   }) ? !0 : t.root_population_id === null ? !1 : cg({ ...t, root_population_id: t.root_population_id });
 }
-function Wq(e, t) {
+function qq(e, t) {
   if (!t) return e;
   const n = / · (\d+) note\(s\)$/.exec(e);
   return n ? `${e.slice(0, n.index)} · ${Number(n[1]) + t} note(s)` : `${e} · ${t} note(s)`;
@@ -57725,7 +57740,7 @@ function Wq(e, t) {
 function BS(e, t, n) {
   return t ? e.spillover !== null && Yh(e.spillover, t) > 1e-6 && n === "file" ? null : t : null;
 }
-function qq(e, t, n, r, a = "workspace", o = null) {
+function Uq(e, t, n, r, a = "workspace", o = null) {
   const i = e.entryId ? n.find((g) => g.id === e.entryId) ?? null : null, l = i && i.id !== r ? i : null, s = l ? l.sample : t, c = {};
   for (const g of s.channels) c[g.pnn] = g.key;
   const f = e.spillover && s.instrument === "flow" ? s.externalSpilloverPreview(e.spillover.matrix) : null, p = Fw(
@@ -57777,7 +57792,7 @@ const e1 = (e, t, n) => tl(e, new Blob([t], { type: n })), sg = () => {
   var e, t;
   return ((t = (e = globalThis.crypto) == null ? void 0 : e.randomUUID) == null ? void 0 : t.call(e)) ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }, qT = "gatelab.compensation.applyWorkers";
-function Uq(e) {
+function Vq(e) {
   var n;
   const t = Math.min(4, e);
   try {
@@ -57797,12 +57812,12 @@ function t1(e, t) {
 class uN extends Error {
 }
 const dN = [
-  { id: "navigate", Icon: KH, title: "Navigate (pan / zoom)" },
-  { id: "draw-rect", Icon: XH, title: "Rectangle gate — drag a box" },
-  { id: "draw-poly", Icon: ZH, title: "Polygon gate — click vertices, double-click to close" },
-  { id: "draw-ellipse", Icon: QH, title: "Ellipse gate — drag from the centre outward" },
-  { id: "draw-quadrant", Icon: YH, title: "Quadrant gate — click the crosshair centre" }
-], Vq = ".saved-gate, .gate-label, .cytof-xlabel, .cytof-ylabel", fN = "To import one of them alone, import the workspace onto the viewed file again and choose that tree.", hN = [
+  { id: "navigate", Icon: XH, title: "Navigate (pan / zoom)" },
+  { id: "draw-rect", Icon: QH, title: "Rectangle gate — drag a box" },
+  { id: "draw-poly", Icon: YH, title: "Polygon gate — click vertices, double-click to close" },
+  { id: "draw-ellipse", Icon: ZH, title: "Ellipse gate — drag from the centre outward" },
+  { id: "draw-quadrant", Icon: $H, title: "Quadrant gate — click the crosshair centre" }
+], Jq = ".saved-gate, .gate-label, .cytof-xlabel, .cytof-ylabel", fN = "To import one of them alone, import the workspace onto the viewed file again and choose that tree.", hN = [
   { id: "pseudocolor", label: "Pseudocolor" },
   { id: "dots", label: "Dots" },
   { id: "contour", label: "Contour" }
@@ -57820,7 +57835,7 @@ const dN = [
   // Compensation, the tab used least often once a matrix is settled, sits at the end.
   { id: "scales", label: "Scales" },
   { id: "compensation", label: "Compensation" }
-], Jq = Object.fromEntries(GS.map((e) => [e.id, e.label]));
+], Kq = Object.fromEntries(GS.map((e) => [e.id, e.label]));
 function pN(e) {
   if (!(e != null && e.length)) return "";
   const t = e.slice(0, 3).join(" "), n = e.length - 3;
@@ -57829,7 +57844,7 @@ function pN(e) {
 function mN(e) {
   return Object.fromEntries(Object.entries(e).map(([t, n]) => [n, t]));
 }
-function Kq(e, t, n, r) {
+function Xq(e, t, n, r) {
   if (!t.root_population_id || !t.populations[t.root_population_id])
     return { copies: [], assignments: {}, populationIdMaps: [] };
   const a = [...r], o = [], i = {}, l = [];
@@ -57864,7 +57879,7 @@ function df(e, t, n, r) {
 function lg(e, t) {
   return JSON.stringify([e, t]);
 }
-function Xq(e, t) {
+function Qq(e, t) {
   const n = Object.keys(e), r = Object.keys(t);
   return n.length === r.length && n.every((a) => {
     const o = e[a], i = t[a];
@@ -57915,9 +57930,9 @@ function wN(e) {
 function xN(e, t) {
   return e.colors ?? pd(t, e.levels.length);
 }
-function Qq() {
+function Zq() {
   var Wt, Sn, Nn, In, Ra, at, Ze, st, nn, Rn, Vn, Jn, rr, co;
-  const e = FW(), t = W.useMemo(() => MT(), []), n = e ?? t, r = n.kind === "r-sce", a = n.build, o = a != null && a.coreCommit ? a.coreCommit.slice(0, 7) : "", { language: i, setLanguage: l, t: s } = Yn(), [c, f] = W.useState([]), p = eW(c), [m, g] = W.useState(null), [y, b] = W.useState(null), [x, v] = W.useState(null), [_, k] = W.useState(!1), [A, C] = W.useState(null), [E, j] = W.useState(null), [N, P] = W.useState(null), F = W.useRef(/* @__PURE__ */ new Set()), T = W.useRef([]), L = W.useRef([]), z = W.useRef(null), [U, D] = W.useState(/* @__PURE__ */ new Set()), [G, Z] = W.useState(!1), Y = W.useMemo(() => {
+  const e = RW(), t = W.useMemo(() => MT(), []), n = e ?? t, r = n.kind === "r-sce", a = n.build, o = a != null && a.coreCommit ? a.coreCommit.slice(0, 7) : "", { language: i, setLanguage: l, t: s } = Yn(), [c, f] = W.useState([]), p = tW(c), [m, g] = W.useState(null), [y, b] = W.useState(null), [x, v] = W.useState(null), [_, k] = W.useState(!1), [A, C] = W.useState(null), [E, j] = W.useState(null), [N, P] = W.useState(null), F = W.useRef(/* @__PURE__ */ new Set()), T = W.useRef([]), L = W.useRef([]), z = W.useRef(null), [U, D] = W.useState(/* @__PURE__ */ new Set()), [G, Z] = W.useState(!1), Y = W.useMemo(() => {
     if (!y) return [];
     const w = new Set(c.map((R) => R.name.toLocaleLowerCase())), M = `${y.folderName}/`;
     return y.candidates.map((R) => {
@@ -57931,14 +57946,14 @@ function Qq() {
       };
     });
   }, [y, c]), ne = c.find((w) => w.id === m) ?? null, O = (ne == null ? void 0 : ne.sample) ?? null, Q = (O == null ? void 0 : O.dataRevision) ?? 0, ce = (O == null ? void 0 : O.compensationEnabled) ?? !1, le = (ne == null ? void 0 : ne.name) ?? "", [ge, te] = W.useState(null), [ye, be] = W.useState([]), ue = W.useCallback(() => {
-    is() && VH().then(be).catch(() => {
+    is() && JH().then(be).catch(() => {
     });
   }, []);
   W.useEffect(() => {
     ue();
   }, [ue]);
   const je = W.useCallback((w, M) => {
-    !w || !is() || UH(w, M).then(ue).catch(() => {
+    !w || !is() || VH(w, M).then(ue).catch(() => {
     });
   }, [ue]), [Ve, nt] = W.useState(""), [ct, et] = W.useState("reference"), [wt, gt] = W.useState(sg), [Mt, It] = W.useState(() => tw()), Ot = (O == null ? void 0 : O.compensatedLayerStatus()) ?? null, Re = W.useMemo(() => !Ot || Ot.state === "missing" || Ot.metadata.runtimeIdentity !== "profile" ? null : t1(
     Mt,
@@ -57947,7 +57962,7 @@ function Qq() {
     Mt,
     Re.baselineProfileId
   ) : null, [Re, Mt]), bt = O !== null && O.hostedAssaySpace !== "display" && ((Ot == null ? void 0 : Ot.state) === "ready" || (Ot == null ? void 0 : Ot.state) === "missing" && O.instrument === "flow" && O.spillover !== null), xt = KI(), [Tt, Ce] = W.useState(
-    () => Uq(xt)
+    () => Vq(xt)
   ), Ue = W.useRef(null);
   Ue.current === null && (Ue.current = new w2({
     workspaceKey: wt,
@@ -57974,13 +57989,13 @@ function Qq() {
     [Yt, ir, c]
   ), _n = W.useRef(Promise.resolve()), tr = W.useRef(-1), hn = W.useRef(null), xn = W.useRef(null);
   xn.current === null && (xn.current = crypto.randomUUID());
-  const [$t, Zn] = W.useState(0), [ln, nr] = W.useState(1), [lr, aa] = W.useState("pseudocolor"), [Xr, ro] = W.useState(null), Ka = Xr ?? lr, [Qr, gr] = W.useState(!1), [ho, Aa] = W.useState(!1), [ae, B] = W.useState([]), [K, ie] = W.useState(null), [we, xe] = W.useState(null), [ze, Xe] = W.useState(null), [dt, _t] = W.useState("navigate"), [dn, Ln] = W.useState(0), $n = W.useRef(null), ht = W.useRef(/* @__PURE__ */ new Map()), cn = W.useRef(/* @__PURE__ */ new Set()), [Cn, er] = W.useState(0), [tn, Pn] = W.useState(null), [sr, Gt] = W.useState(null), [Ur, Ma] = W.useState(null), [cr, pa] = W.useState(null), [xo, ms] = W.useState(Gq), [yu, bo] = W.useState(sN);
+  const [$t, Zn] = W.useState(0), [ln, nr] = W.useState(1), [lr, aa] = W.useState("pseudocolor"), [Xr, ro] = W.useState(null), Ka = Xr ?? lr, [Qr, gr] = W.useState(!1), [ho, Aa] = W.useState(!1), [ae, B] = W.useState([]), [K, ie] = W.useState(null), [we, xe] = W.useState(null), [ze, Xe] = W.useState(null), [dt, _t] = W.useState("navigate"), [dn, Ln] = W.useState(0), $n = W.useRef(null), ht = W.useRef(/* @__PURE__ */ new Map()), cn = W.useRef(/* @__PURE__ */ new Set()), [Cn, er] = W.useState(0), [tn, Pn] = W.useState(null), [sr, Gt] = W.useState(null), [Ur, Ma] = W.useState(null), [cr, pa] = W.useState(null), [xo, ms] = W.useState(Hq), [yu, bo] = W.useState(sN);
   oF();
   const [Oi, Li] = W.useState(!0), [zn, Xa] = W.useState(0), Na = W.useRef(0), [sa, xr] = W.useState(null), [So, Fr] = W.useState(null), [ra, Jo] = W.useState(5e4), Ei = W.useRef(5e4);
   W.useEffect(() => {
     ra > 0 && (Ei.current = ra);
   }, [ra]);
-  const [br, oa] = W.useState("gating"), Cr = AW(Zt, Ut), pi = W.useRef({ layoutExports: 0, statsDownloads: 0, workspaceSaves: 0 }), gs = W.useRef("idle"), mi = `${wt}:${m ?? "none"}`, [Ec, Ul] = W.useState(null);
+  const [br, oa] = W.useState("gating"), Ar = MW(Zt, Ut), pi = W.useRef({ layoutExports: 0, statsDownloads: 0, workspaceSaves: 0 }), gs = W.useRef("idle"), mi = `${wt}:${m ?? "none"}`, [Ec, Ul] = W.useState(null);
   W.useEffect(() => {
     if (br === "compensation") {
       Ul(mi);
@@ -57992,7 +58007,7 @@ function Qq() {
     Bi(Zh(w));
   }, []), [zs, Vl] = W.useState({ ...Gh }), Hi = W.useRef(null), Bs = W.useRef(null), [Fo, Gs] = W.useState([]), [vu, wu] = W.useState(0), [gi, Wi] = W.useState(
     () => ex()
-  ), [Ef, xu] = W.useState("original"), [bu, Pc] = W.useState("split"), [jf, Pf] = W.useState(0), [qi, Jl] = W.useState(!1), [Ic, V] = W.useState(null), [se, ve] = W.useState(null), [Ee, it] = W.useState(!1), [ot, Pt] = W.useState(!1), [Qt, Bn] = W.useState(null), [fr, Fn] = W.useState(null), [Gr, ao] = W.useState("tree"), [ma, Qa] = W.useState(null), [Ar, yi] = W.useState(null), Ui = W.useRef(!1), [o0, gy] = W.useState(!1), [i0, Ep] = W.useState(!1), [po, Ko] = W.useState(null), [Tc, If] = W.useState(null), bd = W.useRef(null), [Xo, Sd] = W.useState(null), [Tf, Kl] = W.useState(null), [oo, Su] = W.useState(null), [jp, kd] = W.useState(null), [Hs, Ff] = W.useState(null), [mo, ku] = W.useState(null), Ro = W.useMemo(() => {
+  ), [Ef, xu] = W.useState("original"), [bu, Pc] = W.useState("split"), [jf, Pf] = W.useState(0), [qi, Jl] = W.useState(!1), [Ic, V] = W.useState(null), [se, ve] = W.useState(null), [Ee, it] = W.useState(!1), [ot, Pt] = W.useState(!1), [Qt, Bn] = W.useState(null), [fr, Fn] = W.useState(null), [Gr, ao] = W.useState("tree"), [ma, Qa] = W.useState(null), [Mr, yi] = W.useState(null), Ui = W.useRef(!1), [o0, gy] = W.useState(!1), [i0, Ep] = W.useState(!1), [po, Ko] = W.useState(null), [Tc, If] = W.useState(null), bd = W.useRef(null), [Xo, Sd] = W.useState(null), [Tf, Kl] = W.useState(null), [oo, Su] = W.useState(null), [jp, kd] = W.useState(null), [Hs, Ff] = W.useState(null), [mo, ku] = W.useState(null), Ro = W.useMemo(() => {
     const w = [];
     for (const M of c)
       if (qA(M.sample.fcs.keywords))
@@ -58216,7 +58231,7 @@ function Qq() {
     preserveScalesForContext: Pu,
     scalesForContext: wy,
     replaceScalesForNextNamespace: Up
-  } = tW(Ba, Xt), [Vr, yl] = W.useState({}), [Ea, Us] = W.useState([]), [Nd, xy] = W.useState(void 0), [Vp, nc] = W.useState({}), [xs, vi] = W.useState({}), [Iu, Vs] = W.useState([]), [Co, Yo] = W.useState({}), Ao = W.useMemo(
+  } = nW(Ba, Xt), [Vr, yl] = W.useState({}), [Ea, Us] = W.useState([]), [Nd, xy] = W.useState(void 0), [Vp, nc] = W.useState({}), [xs, vi] = W.useState({}), [Iu, Vs] = W.useState([]), [Co, Yo] = W.useState({}), Ao = W.useMemo(
     () => Object.fromEntries(Object.entries(Co).filter(([w, M]) => {
       const R = c.find((q) => q.id === w);
       if (!R) return !1;
@@ -58315,7 +58330,7 @@ function Qq() {
       var $e, At;
       if ($o.current.drawMode !== "navigate") return;
       const Me = Se.target;
-      if (($e = Me.closest) != null && $e.call(Me, Vq) || (At = Me.closest) != null && At.call(Me, ".gl-fit-panel, .gl-menu-popover")) return;
+      if (($e = Me.closest) != null && $e.call(Me, Jq) || (At = Me.closest) != null && At.call(Me, ".gl-fit-panel, .gl-menu-popover")) return;
       const Ae = R();
       if (!Ae) return;
       const Be = M(), { xr: Qe, yr: Oe } = Ae;
@@ -58515,10 +58530,10 @@ function Qq() {
     const w = Object.keys(Vr).length;
     return w === 0 ? [] : ji.filter((M) => u_(Vr, M) < w);
   }, [Vr, ji]), wl = W.useMemo(
-    () => IH(Vr, Vp, ji),
+    () => TH(Vr, Vp, ji),
     [Vr, Vp, ji]
   ), Qp = W.useMemo(
-    () => TH(Fu, wl),
+    () => FH(Fu, wl),
     [Fu, wl]
   ), Ru = W.useMemo(() => wl ? c.filter(
     (w) => !U.has(w.id) && !wl.has(w.id)
@@ -58535,7 +58550,7 @@ function Qq() {
       const R = { ...M };
       if (R[w])
         return delete R[w], R;
-      const q = Fu.find((re) => re.name === w), J = q ? PH(q, U) : [];
+      const q = Fu.find((re) => re.name === w), J = q ? IH(q, U) : [];
       return J.length === 0 ? M : (R[w] = J, R);
     });
   }
@@ -58568,7 +58583,7 @@ function Qq() {
       return Promise.reject(new uN(q instanceof Error ? q.message : String(q)));
     }
     const R = $i.current;
-    return !M || !R ? Promise.resolve() : H9(R, M, w).then(() => {
+    return !M || !R ? Promise.resolve() : W9(R, M, w).then(() => {
     });
   }, Ou = (w) => {
     w instanceof uN && xe(w.message);
@@ -58590,10 +58605,10 @@ function Qq() {
     Ue.current.resetWorkspace(M), f([]), g(null), D(/* @__PURE__ */ new Set()), Z(!1), ao("tree"), Aa(!1), B([]), b(null), ie(null), gt(M), It(tw()), Pe.current = !1, We(null), te(null), nt(""), et("reference"), Zn(0), nr(1), xr(null), Fr(null), aa("pseudocolor"), Jo(5e4), Hf(5), zi(0.4), Bi(dp), Vl({ ...Gh }), _t("navigate"), oa("gating"), vs("auto"), $n.current = null, jt(!1), tt((R) => R + 1), Ga({}), bl.clear(), ht.current.clear(), cn.current.clear(), Ln((R) => R + 1), er((R) => R + 1), Yl("none"), Ki(null), qf("default"), Hi.current = null, Bs.current = null, Gs([]), wu((R) => R + 1), Wi(ex()), yl({}), Us([]), vi({}), Vs([]), Yo({}), Xe(null), yi(null), Jl(!1), Eu(!1), xu("original"), Pc("active"), xe(w), an({ type: "newWorkspace" }), De(!1), Gt("New workspace ready · add an FCS file to begin."), gr(!1);
   }
   W.useEffect(() => {
-    q9();
+    U9();
     const w = window.setInterval(() => {
       io("automatic").catch(Ou);
-    }, M9);
+    }, N9);
     return () => window.clearInterval(w);
   }, []), W.useEffect(() => {
     Ks && io(Ks.reason).catch(Ou);
@@ -58613,9 +58628,9 @@ function Qq() {
     var R, q;
     const M = vn != null && vn.owner_group_id ? ((R = $.groups.find((J) => J.id === vn.owner_group_id)) == null ? void 0 : R.name) ?? "the group" : ((q = c.find((J) => J.id === (vn == null ? void 0 : vn.owner_sample_id))) == null ? void 0 : q.name) ?? "this file";
     return s("{what} was added to the tree, for every file. Move it here to tailor it for {target}.", { what: w, target: M });
-  }, _a = m ? $.groups.find((w) => w.id === $.file_groups[m]) ?? null : null, _r = _a ? $.hierarchies.find((w) => w.owner_group_id === _a.id) ?? null : null, Kf = !!_r && _r.source_hierarchy_id !== void 0 && (() => {
-    const w = oc(_r.id);
-    return !!w && Hm(w, Qi(_r.source_hierarchy_id)).size > 0;
+  }, _a = m ? $.groups.find((w) => w.id === $.file_groups[m]) ?? null : null, Cr = _a ? $.hierarchies.find((w) => w.owner_group_id === _a.id) ?? null : null, Kf = !!Cr && Cr.source_hierarchy_id !== void 0 && (() => {
+    const w = oc(Cr.id);
+    return !!w && Hm(w, Qi(Cr.source_hierarchy_id)).size > 0;
   })(), $p = (w) => {
     if (!O) return;
     const M = (q) => {
@@ -58766,7 +58781,7 @@ function Qq() {
     }
   }
   function em() {
-    _r && (an({ type: "revertCopyToSource", id: _r.id }), Ye(), Fn(`"${(_a == null ? void 0 : _a.name) ?? ""}" follows the tree again; its tailoring is dropped. Undo is available.`));
+    Cr && (an({ type: "revertCopyToSource", id: Cr.id }), Ye(), Fn(`"${(_a == null ? void 0 : _a.name) ?? ""}" follows the tree again; its tailoring is dropped. Undo is available.`));
   }
   function tm(w) {
     w !== "tree" && Z(!1), ao(w);
@@ -58838,7 +58853,7 @@ function Qq() {
     if (q.owner_sample_id === w) return q.id;
     const re = oc(R);
     if (!re || !re.root_population_id) return null;
-    const ee = Kq(q, re, [J], $.hierarchies);
+    const ee = Xq(q, re, [J], $.hierarchies);
     return ee.copies.length ? (an({ type: "addHierarchyCopies", copies: ee.copies, activeHierarchyId: ee.assignments[w], keepBrowsingPosition: !0, assignments: ee.assignments, silent: !0 }), vi((de) => {
       const he = { ...de };
       for (const ke of ee.populationIdMaps)
@@ -58907,7 +58922,7 @@ function Qq() {
   }
   async function am(w) {
     if (!O || !m) return;
-    const M = await w.text(), R = PG(M), q = $.active_population_id && $.populations[$.active_population_id] ? $.active_population_id : $.root_population_id ?? "";
+    const M = await w.text(), R = IG(M), q = $.active_population_id && $.populations[$.active_population_id] ? $.active_population_id : $.root_population_id ?? "";
     Ko({
       fileName: w.name,
       table: R,
@@ -58922,9 +58937,9 @@ function Qq() {
       reuse: !0
     }), xe(null);
   }
-  const Cs = W.useMemo(() => !po || !O ? null : LG(po.table, O.channels, po.planes ?? void 0), [po, O]), jy = W.useMemo(() => {
+  const Cs = W.useMemo(() => !po || !O ? null : DG(po.table, O.channels, po.planes ?? void 0), [po, O]), jy = W.useMemo(() => {
     if (!po || !Cs || !O) return null;
-    const w = BG(Cs, po.template, O.channels);
+    const w = GG(Cs, po.template, O.channels);
     return w.source === "none" ? null : w;
   }, [po, Cs, O]), Zs = W.useMemo(() => !po || !O ? null : JM(Object.values($.gates), O.arcsinhCofactor, "learned from the current workspace", $.populations, $.root_population_id, O), [po, O, $.gates, $.populations, $.root_population_id]), Py = W.useMemo(() => {
     if (!po || !Cs || !O || Cs.problems.length) return null;
@@ -58943,8 +58958,8 @@ function Qq() {
   async function Yf(w) {
     try {
       const M = JSON.parse(await w.text());
-      if (!vG(M)) throw new Error("not a GateLab barcode template");
-      const R = wG(M);
+      if (!wG(M)) throw new Error("not a GateLab barcode template");
+      const R = xG(M);
       Ko((q) => q && { ...q, template: R, templateLabel: w.name });
     } catch (M) {
       xe(`Could not read ${w.name} as a barcode template: ${M instanceof Error ? M.message : String(M)}`);
@@ -58962,7 +58977,7 @@ function Qq() {
       O
     );
     if (!M) {
-      const J = KG(Object.values($.gates), $.populations, $.root_population_id, w, { context: O, cofactor: O.arcsinhCofactor });
+      const J = XG(Object.values($.gates), $.populations, $.root_population_id, w, { context: O, cofactor: O.arcsinhCofactor });
       If({
         learned: null,
         csv: J.csv,
@@ -58970,7 +58985,7 @@ function Qq() {
       }), xe(null);
       return;
     }
-    const R = qG(Object.values($.gates), $.populations, $.root_population_id, M, xs, w, O);
+    const R = UG(Object.values($.gates), $.populations, $.root_population_id, M, xs, w, O);
     If({
       learned: M,
       csv: R.csv,
@@ -59562,8 +59577,8 @@ function Qq() {
       de.forEach((Vt, gn) => {
         const En = Kn.get(zt[gn].id);
         En && ee.set(`pending:${w.pending.indexOf(Vt)}`, En.id);
-        const Mr = Et.get(zt[gn].id);
-        Mr !== void 0 && ke.push(`${Vt.name} could not be loaded, so no tree was imported onto it: ${Mr}`);
+        const Nr = Et.get(zt[gn].id);
+        Nr !== void 0 && ke.push(`${Vt.name} could not be loaded, so no tree was imported onto it: ${Nr}`);
       });
     }
     const Se = (zt) => ee.get(zt) ?? null, Me = [...c, ...Le], Ae = new Map(Me.map((zt) => [zt.name, zt.sample.fcs.nEvents])), Be = Le.some((zt) => Uo(zt.name) !== null);
@@ -59609,8 +59624,8 @@ function Qq() {
     const Lt = Oe.sample ?? R, rn = Qe.resolutions.find((zt) => zt.sampleIndex === Lt.index);
     if (!Oe.target && ((Jr = rn == null ? void 0 : rn.tiedWith) != null && Jr.length)) {
       const zt = rn.tiedWith[0], Kn = w.samples.filter((gn) => {
-        var En, Mr;
-        return (Mr = (En = Qe.resolutions.find((xa) => xa.sampleIndex === gn.index)) == null ? void 0 : En.tiedWith) == null ? void 0 : Mr.includes(zt);
+        var En, Nr;
+        return (Nr = (En = Qe.resolutions.find((xa) => xa.sampleIndex === gn.index)) == null ? void 0 : En.tiedWith) == null ? void 0 : Nr.includes(zt);
       }), Et = rn.tiedWith.length === 1 ? `${zt}, which holds` : `${rn.tiedWith.slice(0, -1).join(", ")} or ${rn.tiedWith[rn.tiedWith.length - 1]}, each holding`, Vt = $e.find((gn) => gn.name === zt);
       Lc({
         text: w.text,
@@ -59908,7 +59923,7 @@ function Qq() {
     }
   }
   async function As(w) {
-    const M = Ar;
+    const M = Mr;
     if (!O || !(M != null && M.missingMatrix)) return;
     const R = (q) => yi((J) => J && J.missingMatrix ? { ...J, missingMatrix: { ...J.missingMatrix, error: `${w.name}: ${q}` } } : J);
     try {
@@ -59993,7 +60008,7 @@ function Qq() {
         if (qr.unreadable !== void 0)
           return Kr ? (Wr.push(`${ar}: its strategy could not be read, so it follows the imported tree without tailoring. ${Sr(qr.unreadable)}`), qr.fileName && Oa.push({ name: qr.fileName, entryId: qr.entryId ?? null, reason: "unreadable" }), []) : [];
         try {
-          const vo = qq(qr, O, c, m, Gn, BS(O, Qe, Gn));
+          const vo = Uq(qr, O, c, m, Gn, BS(O, Qe, Gn));
           return pr && Kr && Wr.push(`${ar}:${pr}`), [vo];
         } catch (vo) {
           return Kr ? (kr += 1, Wr.push(`${ar}: its tree could not be applied to it, so it follows the imported tree without tailoring. ${Sr(vo instanceof Error ? vo.message : String(vo))}`), qr.fileName && Oa.push({ name: qr.fileName, entryId: qr.entryId ?? null, reason: "unapplied" }), []) : [];
@@ -60058,13 +60073,13 @@ function Qq() {
             "This file declares FCS compensation but does not contain GateLab's exact matrix record. Import will use the spillover matrix embedded in the loaded FCS. Continue only if compensation was enabled when these gates were drawn."
           ) : O.compensationEnabled && (Kr = s("This file declares uncompensated dimensions, so importing will disable the current compensation setting."));
         return Kr;
-      }, gn = Vt(Hn), Mr = !re && (Qe !== null && (on == null ? void 0 : on.differsFromEmbedded) === !0 || ut.some((Gn) => {
+      }, gn = Vt(Hn), Nr = !re && (Qe !== null && (on == null ? void 0 : on.differsFromEmbedded) === !0 || ut.some((Gn) => {
         var Kr;
         return (Kr = Gn.externalSpillover) == null ? void 0 : Kr.differsFromEmbedded;
-      })) ? $e("file") : null, xa = Mr ? vt(Mr) : null, Eo = Mr && xa ? {
+      })) ? $e("file") : null, xa = Nr ? vt(Nr) : null, Eo = Nr && xa ? {
         workspace: { result: At, siblingTrees: ut, compensation: Hn, mergeBlockedReason: Kn, compensationNote: gn },
         file: {
-          result: Mr,
+          result: Nr,
           siblingTrees: qa("file", !1),
           compensation: xa,
           mergeBlockedReason: zt(xa),
@@ -60082,7 +60097,7 @@ function Qq() {
         ...de ? { primaryOrigin: de } : {},
         mergeBlockedReason: Kn,
         compensationNote: gn,
-        sourceNote: Wq(M, kr) + ur,
+        sourceNote: qq(M, kr) + ur,
         externalSpillover: on,
         // Defaulting to the workspace's, because that is the compensation the gates were drawn
         // under -- but it is offered as a choice, not asserted as the correct answer.
@@ -60106,11 +60121,11 @@ function Qq() {
     }
   }
   W.useEffect(() => {
-    Ar && (cN(Ar, $, c.length) || Od("replace", "all"));
-  }, [Ar]);
+    Mr && (cN(Mr, $, c.length) || Od("replace", "all"));
+  }, [Mr]);
   async function Od(w, M = "all") {
     var de, he, ke, Le;
-    const R = Ar;
+    const R = Mr;
     if (!O || !R || R.sampleId !== m) {
       yi(null), xe("The active sample changed before Gating-ML import could be applied. Please import the file again.");
       return;
@@ -60139,7 +60154,7 @@ function Qq() {
       w === "replace" && await io("before-gatingml-replace");
       for (const Et of R.siblingTrees ?? []) {
         if (!Et.sampleId || !Et.compensation) continue;
-        const Vt = c.find((Mr) => Mr.id === Et.sampleId);
+        const Vt = c.find((Nr) => Nr.id === Et.sampleId);
         if (!Vt) continue;
         const gn = Vt.sample, En = Et.compensation;
         if (re.push({ sample: gn, snapshot: gn.spilloverSnapshot() }), En.target === !0 && Et.externalSpillover && !(Et.externalSpillover.differsFromEmbedded && R.matrixChoice === "file") && gn.installExternalSpillover(
@@ -60195,7 +60210,7 @@ function Qq() {
         }
       const kr = (R.unreadFiles ?? []).flatMap(({ name: Et, entryId: Vt, reason: gn }) => {
         const En = on(Vt);
-        return En && !ur.some((Mr) => Mr.fileId === En) ? [{ id: En, name: Et, reason: gn ?? "unreadable" }] : [];
+        return En && !ur.some((Nr) => Nr.fileId === En) ? [{ id: En, name: Et, reason: gn ?? "unreadable" }] : [];
       }), Oa = (R.followFiles ?? []).flatMap(({ name: Et, entryId: Vt }) => {
         const gn = on(Vt);
         return gn && !ur.some((En) => En.fileId === gn) && !kr.some((En) => En.id === gn) ? [{ id: gn, name: Et }] : [];
@@ -60217,7 +60232,7 @@ function Qq() {
         }).filter(Boolean), En = rn.filter((ar) => {
           var jo, vo;
           return ar.sampleId && ((jo = ar.externalSpillover) == null ? void 0 : jo.differsFromEmbedded) && ((vo = ar.compensation) == null ? void 0 : vo.target) === !0;
-        }).map((ar) => _o(ar.fileName ?? ar.name, ar.entryId)), Mr = _o(Et.lead.fileName, Et.lead.fileId), xa = Et.differing.map((ar) => ({ ...ar, fileName: _o(ar.fileName, ar.fileId) }));
+        }).map((ar) => _o(ar.fileName ?? ar.name, ar.entryId)), Nr = _o(Et.lead.fileName, Et.lead.fileId), xa = Et.differing.map((ar) => ({ ...ar, fileName: _o(ar.fileName, ar.fileId) }));
         an({
           type: "importGating",
           gates: Et.template.tree.gates,
@@ -60233,7 +60248,7 @@ function Qq() {
         };
         Et.copies.length ? an({ type: "addHierarchyCopies", copies: Et.copies, activeHierarchyId: J, assignments: Eo }) : an({ type: "assignFileHierarchies", assignments: Eo });
         const Ho = kr.length, Gn = Oa.length, Kr = R.sourceKind === "flowjo" ? " as in the workspace" : R.sourceKind === "diva" || R.sourceKind === "chorus" ? " as in the experiment" : "", qr = (ar) => kr.filter((jo) => jo.reason === ar), pr = (ar, jo) => ar.length ? ` ${ar.map((vo) => _o(vo.name, vo.id)).join(", ")} ${ar.length === 1 ? "follows" : "follow"} it without tailoring: ${jo(ar.length === 1)}.` : "";
-        qa = `Imported one tree, "${Vt}", from ${Mr} for ${ur.length + Ho + Gn} files: ${Et.following + Ho + Gn} ${Et.following + Ho + Gn === 1 ? "follows" : "follow"} it${Ho || Gn ? "" : Kr}, ${Et.copies.length} tailored.` + pr(qr("unreadable"), (ar) => `${ar ? "its strategy" : "their strategies"} could not be read`) + pr(qr("unapplied"), (ar) => `${ar ? "its tree" : "their trees"} could not be applied to ${ar ? "it" : "them"}`) + (xa.length ? ` ${xa.length} file${xa.length === 1 ? "" : "s"} carried a different tree: ${d2(xa)}.` : "") + (gn.length ? ` ${gn.join(", ")} ${gn.length === 1 ? "labels" : "label"} a detector differently from ${Mr}, or ${gn.length === 1 ? "draws" : "draw"} a gate as another kind, and ${gn.length === 1 ? "keeps its own" : "keep their own"} there; edits to the tree do not reach ${gn.length === 1 ? "that file" : "those files"}.` : "") + (En.length ? ` ${En.join(", ")} ${En.length === 1 ? "carries" : "carry"} a matrix that differs from ${En.length === 1 ? "its" : "their"} sample's in the workspace; ${R.matrixChoice === "file" ? "the file's own" : "the workspace's"} was used, as chosen.` : "");
+        qa = `Imported one tree, "${Vt}", from ${Nr} for ${ur.length + Ho + Gn} files: ${Et.following + Ho + Gn} ${Et.following + Ho + Gn === 1 ? "follows" : "follow"} it${Ho || Gn ? "" : Kr}, ${Et.copies.length} tailored.` + pr(qr("unreadable"), (ar) => `${ar ? "its strategy" : "their strategies"} could not be read`) + pr(qr("unapplied"), (ar) => `${ar ? "its tree" : "their trees"} could not be applied to ${ar ? "it" : "them"}`) + (xa.length ? ` ${xa.length} file${xa.length === 1 ? "" : "s"} carried a different tree: ${d2(xa)}.` : "") + (gn.length ? ` ${gn.join(", ")} ${gn.length === 1 ? "labels" : "label"} a detector differently from ${Nr}, or ${gn.length === 1 ? "draws" : "draw"} a gate as another kind, and ${gn.length === 1 ? "keeps its own" : "keep their own"} there; edits to the tree do not reach ${gn.length === 1 ? "that file" : "those files"}.` : "") + (En.length ? ` ${En.join(", ")} ${En.length === 1 ? "carries" : "carry"} a matrix that differs from ${En.length === 1 ? "its" : "their"} sample's in the workspace; ${R.matrixChoice === "file" ? "the file's own" : "the workspace's"} was used, as chosen.` : "");
       } else if (M !== "all" && c.length > 1 && $.root_population_id) {
         const Et = { gates: $.gates, gate_order: $.gate_order, populations: $.populations, root_population_id: $.root_population_id };
         if (!Ib(Et, Se))
@@ -60241,8 +60256,8 @@ function Qq() {
         const Vt = M === "viewed" ? m ? [m] : [] : Or.map((xa) => xa.id), gn = Vt.flatMap((xa) => {
           const Eo = c.find((Ho) => Ho.id === xa);
           return Eo ? [{ fileId: xa, fileName: Eo.name, tree: Se }] : [];
-        }), En = _S({ id: J, name: (vn == null ? void 0 : vn.name) ?? "", tree: Et }, gn, $.hierarchies, new Set(Vt)), Mr = m ? (he = En.copies.find((xa) => xa.owner_sample_id === m)) == null ? void 0 : he.id : void 0;
-        Mr && ao("file"), En.copies.length ? an({ type: "addHierarchyCopies", copies: En.copies, activeHierarchyId: Mr ?? J, assignments: En.assignments }) : Object.keys(En.assignments).length && an({ type: "assignFileHierarchies", assignments: En.assignments }), ut = En.copies.length;
+        }), En = _S({ id: J, name: (vn == null ? void 0 : vn.name) ?? "", tree: Et }, gn, $.hierarchies, new Set(Vt)), Nr = m ? (he = En.copies.find((xa) => xa.owner_sample_id === m)) == null ? void 0 : he.id : void 0;
+        Nr && ao("file"), En.copies.length ? an({ type: "addHierarchyCopies", copies: En.copies, activeHierarchyId: Nr ?? J, assignments: En.assignments }) : Object.keys(En.assignments).length && an({ type: "assignFileHierarchies", assignments: En.assignments }), ut = En.copies.length;
       } else {
         an({
           type: "importGating",
@@ -60255,11 +60270,11 @@ function Qq() {
         });
         const Et = (En) => {
           var Eo;
-          let Mr = zr(En);
+          let Nr = zr(En);
           const xa = /* @__PURE__ */ new Set();
-          for (; Mr && !xa.has(Mr); ) {
-            if (Mr === J) return !0;
-            xa.add(Mr), Mr = ((Eo = $.hierarchies.find((Ho) => Ho.id === Mr)) == null ? void 0 : Eo.source_hierarchy_id) ?? void 0;
+          for (; Nr && !xa.has(Nr); ) {
+            if (Nr === J) return !0;
+            xa.add(Nr), Nr = ((Eo = $.hierarchies.find((Ho) => Ho.id === Nr)) == null ? void 0 : Eo.source_hierarchy_id) ?? void 0;
           }
           return !1;
         };
@@ -60278,9 +60293,9 @@ function Qq() {
         ) : null;
         if (gn) {
           Object.assign(kt, gn.assignments);
-          const En = gn.copies.map((Mr) => {
+          const En = gn.copies.map((Nr) => {
             var xa;
-            return ((xa = c.find((Eo) => Eo.id === Mr.owner_sample_id)) == null ? void 0 : xa.name) ?? "";
+            return ((xa = c.find((Eo) => Eo.id === Nr.owner_sample_id)) == null ? void 0 : xa.name) ?? "";
           }).filter(Boolean);
           fn = En.length ? ` · Cytobank's tailored gates applied to ${En.length === 1 ? "the file" : `the ${En.length} files`} they were tailored for: ${En.join(", ")}` : "";
         } else (R.cytobankTailoring ?? []).length && w !== "replace" && (fn = " · Cytobank's per-file tailoring was not applied: it applies when the tree is replaced, not merged");
@@ -60694,7 +60709,7 @@ function Qq() {
       };
       let Le;
       if (r && n.compensation) {
-        const Be = R ? await WW(w) : await HW(w), Qe = await Promise.all(J.map(
+        const Be = R ? await qW(w) : await WW(w), Qe = await Promise.all(J.map(
           ({ sample: Lt }) => q.prepareExternalApplyBinding(
             Be,
             Lt
@@ -61393,7 +61408,7 @@ function Qq() {
           throw new Error(ci("GateLabR did not provide a SingleCellExperiment dataset."));
         const re = J[0];
         Un(re);
-        const ee = await ((M = n.workspaces) == null ? void 0 : M.readWorkspace(re.id)) ?? null, de = ee ? dq(ee.workspaceJson) : void 0, he = de ? re.assays.find(({ id: Nt }) => Nt === de) : void 0, ke = K2(re) ? Zb(re) : null, Le = ee !== null && ee.sourceFormat !== "gatelabr-legacy" && ke !== null;
+        const ee = await ((M = n.workspaces) == null ? void 0 : M.readWorkspace(re.id)) ?? null, de = ee ? fq(ee.workspaceJson) : void 0, he = de ? re.assays.find(({ id: Nt }) => Nt === de) : void 0, ke = K2(re) ? Zb(re) : null, Le = ee !== null && ee.sourceFormat !== "gatelabr-legacy" && ke !== null;
         let Se = (he && Jh(he) ? he : void 0) ?? (Le ? ke : IT(re)), Me = de && Se.id !== de ? ` · ${s("the saved workspace was drawn from {assay}, which the SCE no longer has or cannot be drawn; drawing {drawn}", { assay: de, drawn: Se.id })}` : "", Ae;
         try {
           Ae = await Yb(n.datasets, re, w.signal, Se.id);
@@ -61436,11 +61451,11 @@ function Qq() {
         const At = (ee == null ? void 0 : ee.revision) ?? 0;
         if (mn(At), pt.current = At, Ge(ee ? "saved" : "unsaved"), ee && (tr.current = 0), ee && !w.signal.aborted)
           try {
-            const Nt = await cq(
+            const Nt = await uq(
               ee,
               re,
               Be.map(({ sample: vt }) => vt)
-            ), mt = uq(
+            ), mt = dq(
               Nt.workspace,
               Be[0].sample,
               Nt.sourceGateSpace
@@ -61662,7 +61677,7 @@ function Qq() {
   const w0 = W.useCallback((w) => {
     f((M) => {
       if (M.length < 2) return M;
-      const R = [...M].sort((q, J) => zH(q.name, J.name));
+      const R = [...M].sort((q, J) => BH(q.name, J.name));
       return w === "desc" && R.reverse(), R;
     }), Ye();
   }, [Ye]);
@@ -61792,7 +61807,11 @@ function Qq() {
       workspaceId: wt,
       savedAt: (/* @__PURE__ */ new Date()).toISOString(),
       app: "GateLab",
-      ...r && ir ? { hostedAssayId: ir } : {},
+      ...r && ir ? {
+        hostedAssayId: ir,
+        // The axes as drawn, for R to keep on the object (rowData(sce)$gatelab_transform).
+        hostedChannelTransforms: Object.fromEntries(O.channels.map((he) => [he.key, O.transformSpec(he.key)]))
+      } : {},
       samples: c.map((he, ke) => ({
         sampleId: he.id,
         fileName: he.name,
@@ -62041,7 +62060,7 @@ function Qq() {
       }
   }
   async function ai(w) {
-    return Gt("Preparing portable workspace · hashing source data"), gG(
+    return Gt("Preparing portable workspace · hashing source data"), yG(
       w,
       hh(w),
       Uc(),
@@ -62072,7 +62091,7 @@ function Qq() {
               });
             });
           } else {
-            const M = w.version === _i ? VM(w) : EB(w, uc(w), ct, Uc());
+            const M = w.version === _i ? VM(w) : jB(w, uc(w), ct, Uc());
             await iM(ge, M);
           }
           await Ya(), De(!1), Gt(`Saved ${ct === "bundle" ? "bundle" : "workspace"} · ${Ve}`), pi.current.workspaceSaves++;
@@ -62182,7 +62201,7 @@ function Qq() {
       const M = await w.handle.getFile();
       await Si(M, w.handle, M.name);
     } catch (M) {
-      await JH(w.name).catch(() => {
+      await KH(w.name).catch(() => {
       }), ue(), xe(`${w.name} could not be opened: ${M instanceof Error ? M.message : String(M)}`);
     }
   }
@@ -62250,7 +62269,7 @@ function Qq() {
       const Be = await Dv(Ae.file);
       Be && de.set(Ae, wo(Be));
     }
-    const ke = A9(J, ee, (Ae) => de.get(Ae) ?? null);
+    const ke = M9(J, ee, (Ae) => de.get(Ae) ?? null);
     j(null);
     const Le = (Ae) => re === "selected files" ? Ae.relativePath : `${re}/${Ae.relativePath}`;
     L.current = [
@@ -62585,7 +62604,7 @@ function Qq() {
         }), Gt(null);
         return;
       }
-      const J = await PB(w);
+      const J = await IB(w);
       await oi(J, M, R);
     } catch (J) {
       xe(J instanceof Error ? J.message : String(J));
@@ -62617,7 +62636,7 @@ function Qq() {
           ...qt.identity ? { identity: qt.identity } : {}
         });
       }
-      const Wr = C9(Sr);
+      const Wr = A9(Sr);
       if (Wr.length > 0)
         throw new Error(
           `This linked workspace contains multiple FCS files with the same filename (${Wr.join(", ")}), and nothing saved with them tells them apart, so GateLab cannot safely distinguish them by folder matching. Open the original files and save a portable workspace instead.`
@@ -62693,7 +62712,7 @@ function Qq() {
           ...Object.keys(qt.fluorBiex ?? {}),
           ...Object.keys(qt.labels ?? {})
         ])
-      ]), Vt = a9(Et, vt.map((qt) => qt.sample.channels)), gn = (qt) => Vt.get(qt) ?? qt, En = (qt) => Object.fromEntries(Object.entries(qt).map(([Wn, vr]) => [gn(Wn), vr]));
+      ]), Vt = o9(Et, vt.map((qt) => qt.sample.channels)), gn = (qt) => Vt.get(qt) ?? qt, En = (qt) => Object.fromEntries(Object.entries(qt).map(([Wn, vr]) => [gn(Wn), vr]));
       Vt.size > 0 && (kt = {
         ...kt,
         gating: {
@@ -62702,7 +62721,7 @@ function Qq() {
           stored_hierarchies: (ee = kt.gating.stored_hierarchies) == null ? void 0 : ee.map((qt) => qt.gates ? { ...qt, gates: s2(qt.gates, Vt) } : qt)
         }
       });
-      const Mr = [];
+      const Nr = [];
       for (let qt = 0; qt < kt.samples.length; qt++) {
         const Wn = kt.samples[qt], vr = vt[qt];
         for (const [La, Ca] of Object.entries(En(Wn.logicleW ?? {}))) {
@@ -62730,9 +62749,9 @@ function Qq() {
             );
           }
         }
-        kt.version === 2 && "compensationOn" in Wn && Wn.compensationOn && (vr.sample.setCompensation(!0), !vr.sample.compensationEnabled && vr.sample.spillover === null && Mr.push(vr));
+        kt.version === 2 && "compensationOn" in Wn && Wn.compensationOn && (vr.sample.setCompensation(!0), !vr.sample.compensationEnabled && vr.sample.spillover === null && Nr.push(vr));
       }
-      F.current = new Set(Mr.map((qt) => qt.id)), await io("before-workspace-open");
+      F.current = new Set(Nr.map((qt) => qt.id)), await io("before-workspace-open");
       const xa = kt.workspaceId ?? sg();
       if (Ue.current.resetWorkspace(xa), q = !0, kt.version === _i)
         if (w.portableAssays) {
@@ -62836,18 +62855,18 @@ function Qq() {
         (L.current.length ? ` · relinked without confirmation: ${L.current.map((qt) => `${qt.path} as ${qt.fileName}, chosen over ${qt.setAside.join(", ")}: ` + (qt.agree.length ? `it agrees with what it was saved with on ${qt.agree.join(", ")} only, which does not confirm it` : "its keywords could not be compared with what it was saved with")).join("; ")}` : "")
       ), T.current = [], L.current = [];
       const hv = kt.samples.flatMap((qt, Wn) => {
-        const vr = o9(
-          i9(kt.gating, qt.hierarchyId),
+        const vr = i9(
+          s9(kt.gating, qt.hierarchyId),
           new Set(vt[Wn].sample.channelNames())
         );
         return vr.length > 0 ? [`${vt[Wn].name}: ${vr.join(", ")}`] : [];
       }), pv = [];
       if (hv.length > 0 && pv.push(
         `${hv.length} sample${hv.length === 1 ? " is" : "s are"} missing channels used by existing gates: ${hv.join("; ")}. Those gates match no events in the affected samples.`
-      ), Mr.length > 0) {
-        const qt = Mr.length;
+      ), Nr.length > 0) {
+        const qt = Nr.length;
         pv.push(
-          `Compensation was on for ${qt} sample${qt === 1 ? "" : "s"} when the workspace was saved, but no spillover matrix is available for ${qt === 1 ? "it" : "them"} now: ${Mr.map((Wn) => Wn.name).join(", ")}. The matrix came from a FlowJo workspace or a Gating-ML file, and workspaces saved by GateLab 0.8.3 and earlier did not keep it. The counts are uncompensated until the matrix is supplied again (import the gating file's matrix, or apply one in the Compensation tab); saving keeps compensation on for these files meanwhile.`
+          `Compensation was on for ${qt} sample${qt === 1 ? "" : "s"} when the workspace was saved, but no spillover matrix is available for ${qt === 1 ? "it" : "them"} now: ${Nr.map((Wn) => Wn.name).join(", ")}. The matrix came from a FlowJo workspace or a Gating-ML file, and workspaces saved by GateLab 0.8.3 and earlier did not keep it. The counts are uncompensated until the matrix is supplied again (import the gating file's matrix, or apply one in the Compensation tab); saving keeps compensation on for these files meanwhile.`
         );
       }
       return pv.length > 0 && xe(pv.join(" ")), !0;
@@ -62859,7 +62878,7 @@ function Qq() {
   }
   async function ov() {
     ve({ checkpoints: [], loading: !0 });
-    const w = await W9($i.current);
+    const w = await q9($i.current);
     ve({ checkpoints: w, loading: !1 });
   }
   async function Em(w) {
@@ -62986,7 +63005,7 @@ function Qq() {
     render: async (w) => {
       const M = bs.current;
       if (!M) throw new Error("The Gating tab's plot is not on screen.");
-      return Mq(M, w);
+      return Nq(M, w);
     },
     workspaceJson: () => {
       const w = Ha();
@@ -62995,7 +63014,7 @@ function Qq() {
   };
   const ns = W.useRef(null);
   if (!ns.current) {
-    const w = bq({
+    const w = Sq({
       info: () => li.current.info(),
       state: () => li.current.state(),
       samples: () => li.current.samples(),
@@ -63010,7 +63029,7 @@ function Qq() {
       clearPan: () => li.current.clearPan(),
       reload: () => li.current.reload()
     });
-    ns.current = new mq({ handler: w, info: () => li.current.info(), onStatus: lv });
+    ns.current = new gq({ handler: w, info: () => li.current.info(), onStatus: lv });
   }
   W.useEffect(() => {
     var w;
@@ -63062,7 +63081,7 @@ function Qq() {
             } catch (Le) {
               xe(Le instanceof Error ? Le.message : String(Le));
             }
-          } while (re < J.length && performance.now() - he < Hq);
+          } while (re < J.length && performance.now() - he < Wq);
           de.length > 0 && (Pm((ke) => ke + 1), bh((ke) => {
             const Le = new Set(ke);
             for (const Se of de) Le.delete(Se);
@@ -63720,7 +63739,7 @@ function Qq() {
     if (!O || !Lr || !Ba) return;
     const w = $n.current;
     if (w) {
-      if (w.contextKey !== Ba || !Xq(Zr, w.ranges)) return;
+      if (w.contextKey !== Ba || !Qq(Zr, w.ranges)) return;
       $n.current = null;
     }
     const M = (ke) => {
@@ -64110,7 +64129,7 @@ function Qq() {
               {
                 label: s("Import gating (GatingML / FlowJo / FACSChorus)…"),
                 title: "Import Gating-ML 2.0 (.xml), a FlowJo workspace (.wsp) or a FACSChorus experiment (.cef), then choose whether to merge into the current hierarchy or replace the current strategy. A workspace carries population names, which FlowJo's own Gating-ML export omits; a Chorus experiment carries the gates as they are now and a snapshot per sort.",
-                onClick: () => void cd(Lu.current, Oq, "Gating-ML or FlowJo workspace").then((w) => {
+                onClick: () => void cd(Lu.current, Lq, "Gating-ML or FlowJo workspace").then((w) => {
                   w != null && w[0] && Ry(w[0]);
                 })
               },
@@ -64305,14 +64324,14 @@ function Qq() {
           ]
         }
       ),
-      /* @__PURE__ */ d.jsx(_q, { status: sv, onConnect: (w) => {
+      /* @__PURE__ */ d.jsx(Cq, { status: sv, onConnect: (w) => {
         var M;
         return (M = ns.current) == null ? void 0 : M.connect(w);
       }, onDisconnect: () => {
         var w;
         return (w = ns.current) == null ? void 0 : w.disconnect();
       } }),
-      !r && /* @__PURE__ */ d.jsx(IW, { progress: Cr.progress, onStart: Cr.start, onResume: Cr.resume }),
+      !r && /* @__PURE__ */ d.jsx(TW, { progress: Ar.progress, onStart: Ar.start, onResume: Ar.resume }),
       /* @__PURE__ */ d.jsxs("label", { className: "gl-header-language", children: [
         /* @__PURE__ */ d.jsx("span", { children: s("Language") }),
         /* @__PURE__ */ d.jsx(
@@ -64381,7 +64400,7 @@ function Qq() {
       /* @__PURE__ */ d.jsxs("aside", { className: "gl-left", style: { width: xo, display: ["illustration", "layout", "proportions", "statistics", "compensation"].includes(br) ? "none" : void 0 }, "aria-label": "Samples and workspace", children: [
         /* @__PURE__ */ d.jsx("div", { className: "gl-left-resize", onMouseDown: by, title: "Drag to resize samples panel" }),
         /* @__PURE__ */ d.jsx(
-          BH,
+          GH,
           {
             items: Jp,
             activeId: hr ? null : m,
@@ -64944,7 +64963,7 @@ function Qq() {
                       ]
                     }
                   ),
-                  /* @__PURE__ */ d.jsx(oW, { value: ia, onChange: ca, disabled: Rr !== "channel" }),
+                  /* @__PURE__ */ d.jsx(iW, { value: ia, onChange: ca, disabled: Rr !== "channel" }),
                   /* @__PURE__ */ d.jsxs(
                     "span",
                     {
@@ -65083,16 +65102,16 @@ function Qq() {
                           type: "range",
                           "aria-label": `${w} arcsinh cofactor`,
                           title: s("Arcsinh cofactor — where the linear region around zero gives way to log. Raise it to pack the near-zero and negative noise into a tighter band; lower it to spread that noise out and make the axis behave like a log scale."),
-                          min: Lq,
-                          max: Dq,
+                          min: Dq,
+                          max: zq,
                           step: 0.02,
                           value: Math.log10(
                             Dd[O.channels[M].key] ?? O.currentFluorCofactor(M)
                           ),
-                          onChange: (q) => bm(M, zq(+q.target.value))
+                          onChange: (q) => bm(M, Bq(+q.target.value))
                         }
                       ),
-                      /* @__PURE__ */ d.jsx("span", { className: "gl-scale-val", children: Bq(
+                      /* @__PURE__ */ d.jsx("span", { className: "gl-scale-val", children: Gq(
                         Dd[O.channels[M].key] ?? O.currentFluorCofactor(M)
                       ) }),
                       /* @__PURE__ */ d.jsx(
@@ -65326,7 +65345,7 @@ function Qq() {
               ),
               /* @__PURE__ */ d.jsxs("div", { className: "gl-plot-legend-slot", children: [
                 Wa && /* @__PURE__ */ d.jsx(
-                  aW,
+                  oW,
                   {
                     label: Wa.label,
                     scale: Wa.scale,
@@ -65352,7 +65371,7 @@ function Qq() {
         ) }),
         /* @__PURE__ */ d.jsxs(Wb, { label: br, children: [
           br === "statistics" && /* @__PURE__ */ d.jsx(
-            L7,
+            D7,
             {
               samples: d0,
               activeSampleId: m,
@@ -65382,7 +65401,7 @@ function Qq() {
             }
           ),
           br === "division" && /* @__PURE__ */ d.jsx(
-            K7,
+            X7,
             {
               sample: O,
               sampleName: le,
@@ -65397,7 +65416,7 @@ function Qq() {
             m ?? "none"
           ),
           br === "metadata" && /* @__PURE__ */ d.jsx(
-            V7,
+            J7,
             {
               samples: c,
               metadata: Vr,
@@ -65419,7 +65438,7 @@ function Qq() {
             }
           ),
           br === "panel" && /* @__PURE__ */ d.jsx(
-            U7,
+            V7,
             {
               labelMode: Gu,
               onLabelModeChange: wm,
@@ -65433,7 +65452,7 @@ function Qq() {
             Cn
           ),
           br === "scales" && /* @__PURE__ */ d.jsx(
-            X7,
+            Q7,
             {
               sample: O,
               globalScales: Zr,
@@ -65442,7 +65461,7 @@ function Qq() {
             }
           ),
           br === "strategy" && /* @__PURE__ */ d.jsx(
-            SH,
+            kH,
             {
               sampleName: (at = c.find((w) => w.id === m)) == null ? void 0 : at.name,
               onFitChannels: S,
@@ -65473,7 +65492,7 @@ function Qq() {
             vu
           ),
           br === "illustration" && /* @__PURE__ */ d.jsx(
-            OH,
+            LH,
             {
               populationMetadata: xs,
               samples: c.map((w) => ({ ...w, fileName: w.name, name: cf(w.name, Vr[w.id]), hierarchyId: zr(w.id), metadata: Vr[w.id] })),
@@ -65502,7 +65521,7 @@ function Qq() {
             vu
           ),
           br === "layout" && /* @__PURE__ */ d.jsx(W.Suspense, { fallback: /* @__PURE__ */ d.jsx("div", { className: "gl-empty", children: s("Loading Layout editor…") }), children: /* @__PURE__ */ d.jsx(
-            Rq,
+            Oq,
             {
               workspace: gi,
               onChange: Wi,
@@ -65538,7 +65557,7 @@ function Qq() {
           ) })
         ] }, br),
         ko && /* @__PURE__ */ d.jsx(Wb, { label: "compensation", children: /* @__PURE__ */ d.jsx(W.Suspense, { fallback: /* @__PURE__ */ d.jsx("div", { className: "gl-empty", children: s("Loading compensation tools…") }), children: /* @__PURE__ */ d.jsx(
-          Fq,
+          Rq,
           {
             sample: O,
             sampleName: le,
@@ -65573,7 +65592,7 @@ function Qq() {
           },
           mi
         ) }) })
-      ] }) : /* @__PURE__ */ d.jsx(iz, { brand: r ? "GateLabR" : "GateLab", tutorial: r ? null : { paused: ((Ze = Cr.progress) == null ? void 0 : Ze.status) === "paused", onStart: Cr.start, onResume: Cr.resume } }),
+      ] }) : /* @__PURE__ */ d.jsx(iz, { brand: r ? "GateLabR" : "GateLab", tutorial: r ? null : { paused: ((Ze = Ar.progress) == null ? void 0 : Ze.status) === "paused", onStart: Ar.start, onResume: Ar.resume } }),
       /* @__PURE__ */ d.jsxs(
         "aside",
         {
@@ -65605,7 +65624,7 @@ function Qq() {
                   }
                 ),
                 /* @__PURE__ */ d.jsx(
-                  Y9,
+                  $9,
                   {
                     state: $,
                     dispatch: an,
@@ -65618,7 +65637,7 @@ function Qq() {
                 )
               ] }),
               !qs && /* @__PURE__ */ d.jsx(
-                V9,
+                J9,
                 {
                   state: $,
                   derived: Dm,
@@ -65690,7 +65709,7 @@ function Qq() {
                   }
                 ),
                 /* @__PURE__ */ d.jsx(
-                  $9,
+                  e7,
                   {
                     state: $,
                     dispatch: an,
@@ -65724,7 +65743,7 @@ function Qq() {
                     ));
                   },
                   children: /* @__PURE__ */ d.jsx(
-                    X9,
+                    Q9,
                     {
                       state: $,
                       derived: cv,
@@ -65747,7 +65766,7 @@ function Qq() {
       )
     ] }),
     x && /* @__PURE__ */ d.jsx(
-      WH,
+      qH,
       {
         requirements: x.requirements,
         found: new Map([...x.found].map(([w, M]) => [
@@ -65766,7 +65785,7 @@ function Qq() {
       }
     ),
     ho && /* @__PURE__ */ d.jsx(
-      GH,
+      HH,
       {
         items: Jp,
         activeId: m,
@@ -65787,7 +65806,7 @@ function Qq() {
       }
     ),
     y && /* @__PURE__ */ d.jsx(
-      HH,
+      WH,
       {
         folderName: y.folderName,
         items: Y,
@@ -65799,7 +65818,7 @@ function Qq() {
       }
     ),
     ze && O && $.root_population_id && /* @__PURE__ */ d.jsx(
-      Q9,
+      Z9,
       {
         gateSpace: (O == null ? void 0 : O.instrument) === "cytof" ? null : Nu,
         pending: ze.gate,
@@ -65819,7 +65838,7 @@ function Qq() {
       }
     ),
     (tn == null ? void 0 : tn.kind) === "createPop" && /* @__PURE__ */ d.jsx(
-      N7,
+      E7,
       {
         state: $,
         onCancel: () => Pn(null),
@@ -65829,7 +65848,7 @@ function Qq() {
       }
     ),
     (tn == null ? void 0 : tn.kind) === "renameGate" && /* @__PURE__ */ d.jsx(
-      A7,
+      M7,
       {
         title: "Rename Gate",
         initial: tn.initial,
@@ -65840,7 +65859,7 @@ function Qq() {
       }
     ),
     (tn == null ? void 0 : tn.kind) === "editPop" && /* @__PURE__ */ d.jsx(
-      M7,
+      N7,
       {
         state: $,
         popId: tn.id,
@@ -65861,7 +65880,7 @@ function Qq() {
       }
     ),
     se && /* @__PURE__ */ d.jsx(
-      U9,
+      V9,
       {
         checkpoints: se.checkpoints,
         loading: se.loading,
@@ -65893,7 +65912,7 @@ function Qq() {
       }
     ),
     (tn == null ? void 0 : tn.kind) === "bulkRename" && /* @__PURE__ */ d.jsx(
-      _7,
+      C7,
       {
         state: $,
         onCancel: () => Pn(null),
@@ -66082,7 +66101,7 @@ function Qq() {
         var fn, Hn, Jr, zt, Kn, Et;
         const vt = q.find((Vt) => Vt.sampleIndex === ut.index);
         if (ss(vt)) {
-          const Vt = vt.fileKey.startsWith("loaded:") ? s("already open") : s("found"), gn = vt.status === "chosen" ? ` · ${s("chosen as this sample")}` : vt.comparison && (vt.comparison.verdict === "confirmed" || vt.comparison.verdict === "weak") ? ` · ${Q0(vt.comparison, s)}` : "", En = (fn = vt.copies) != null && fn.length ? ` · ${s("and {files}, the same acquisition", { files: vt.copies.map((Mr) => $e(Mr.fileKey, Mr.fileName)).join(", ") })}` : "";
+          const Vt = vt.fileKey.startsWith("loaded:") ? s("already open") : s("found"), gn = vt.status === "chosen" ? ` · ${s("chosen as this sample")}` : vt.comparison && (vt.comparison.verdict === "confirmed" || vt.comparison.verdict === "weak") ? ` · ${Q0(vt.comparison, s)}` : "", En = (fn = vt.copies) != null && fn.length ? ` · ${s("and {files}, the same acquisition", { files: vt.copies.map((Nr) => $e(Nr.fileKey, Nr.fileName)).join(", ") })}` : "";
           return `${Vt}: ${$e(vt.fileKey, vt.fileName)}${gn}${En}`;
         }
         if (vt != null && vt.near && vt.status === "contradicted")
@@ -66617,7 +66636,7 @@ function Qq() {
       }
     ) }),
     po && Cs && O && /* @__PURE__ */ d.jsx(
-      YG,
+      $G,
       {
         draft: po,
         scheme: Cs,
@@ -66639,13 +66658,13 @@ function Qq() {
           });
         },
         onTemplateFile: (w) => void Yf(w),
-        onDownloadTemplateCsv: () => tl("barcode-scheme-template.csv", new Blob([XG()], { type: "text/csv;charset=utf-8" })),
+        onDownloadTemplateCsv: () => tl("barcode-scheme-template.csv", new Blob([QG()], { type: "text/csv;charset=utf-8" })),
         onCancel: () => Ko(null),
         onImport: om
       }
     ),
     (ma == null ? void 0 : ma.mode) === "fromMetadata" && /* @__PURE__ */ d.jsx(
-      C7,
+      A7,
       {
         columns: ji,
         preview: Bu,
@@ -66708,48 +66727,48 @@ function Qq() {
     Ee && vn && (vn.owner_sample_id || vn.owner_group_id) && /* @__PURE__ */ d.jsx(
       rw,
       {
-        title: vn.owner_group_id ? "Use this group's gates for the tree?" : _a && vn.source_hierarchy_id === (_r == null ? void 0 : _r.id) ? `Use this file's gates for ${_a.name}?` : "Use this file's gates for the tree?",
-        message: `${vn.owner_group_id ? "The tree" : _a && vn.source_hierarchy_id === (_r == null ? void 0 : _r.id) ? `The group "${_a.name}"` : "The tree"} takes ${vn.owner_group_id ? `"${vn.name}"` : ((rr = c.find((w) => w.id === vn.owner_sample_id)) == null ? void 0 : rr.name) ?? "this file"}'s gate coordinates, and every file following it follows again; any tailoring they had is dropped. Populations and gate names are unchanged. Undo brings everything back.`,
-        confirmLabel: vn.owner_group_id ? "Use for the tree" : _a && vn.source_hierarchy_id === (_r == null ? void 0 : _r.id) ? `Use for ${_a.name}` : "Use for the tree",
+        title: vn.owner_group_id ? "Use this group's gates for the tree?" : _a && vn.source_hierarchy_id === (Cr == null ? void 0 : Cr.id) ? `Use this file's gates for ${_a.name}?` : "Use this file's gates for the tree?",
+        message: `${vn.owner_group_id ? "The tree" : _a && vn.source_hierarchy_id === (Cr == null ? void 0 : Cr.id) ? `The group "${_a.name}"` : "The tree"} takes ${vn.owner_group_id ? `"${vn.name}"` : ((rr = c.find((w) => w.id === vn.owner_sample_id)) == null ? void 0 : rr.name) ?? "this file"}'s gate coordinates, and every file following it follows again; any tailoring they had is dropped. Populations and gate names are unchanged. Undo brings everything back.`,
+        confirmLabel: vn.owner_group_id ? "Use for the tree" : _a && vn.source_hierarchy_id === (Cr == null ? void 0 : Cr.id) ? `Use for ${_a.name}` : "Use for the tree",
         onCancel: () => it(!1),
         onConfirm: Qs
       }
     ),
     Tc && /* @__PURE__ */ d.jsx(
-      $G,
+      e9,
       {
         summary: Tc.summary,
         onSave: Iy,
         onCancel: () => If(null)
       }
     ),
-    Ar && cN(Ar, $, c.length) && /* @__PURE__ */ d.jsx(
-      v7,
+    Mr && cN(Mr, $, c.length) && /* @__PURE__ */ d.jsx(
+      w7,
       {
-        nGates: Ar.result.n_gates_imported,
-        nPopulations: Ar.result.n_pops_imported,
-        sourceKind: Ar.sourceKind ?? "gatingml",
-        sourceLabel: Ar.sourceKind === "flowjo" ? "a FlowJo workspace" : Ar.sourceKind === "chorus" ? "a FACSChorus experiment" : Ar.sourceKind === "diva" ? "a FACSDiva experiment" : Ar.result.source === "gatelabr" ? "a GateLab / GateLabR export" : Ar.result.source === "cytobank" ? "a Cytobank Gating-ML file" : "a Gating-ML file",
+        nGates: Mr.result.n_gates_imported,
+        nPopulations: Mr.result.n_pops_imported,
+        sourceKind: Mr.sourceKind ?? "gatingml",
+        sourceLabel: Mr.sourceKind === "flowjo" ? "a FlowJo workspace" : Mr.sourceKind === "chorus" ? "a FACSChorus experiment" : Mr.sourceKind === "diva" ? "a FACSDiva experiment" : Mr.result.source === "gatelabr" ? "a GateLab / GateLabR export" : Mr.result.source === "cytobank" ? "a Cytobank Gating-ML file" : "a Gating-ML file",
         currentRootName: $.root_population_id ? ((co = $.populations[$.root_population_id]) == null ? void 0 : co.name) ?? "the current root" : "the current root",
         hasExistingStrategy: $.root_population_id !== null && cg({
           gates: $.gates,
           populations: $.populations,
           root_population_id: $.root_population_id
         }),
-        mergeBlockedReason: Ar.mergeBlockedReason,
+        mergeBlockedReason: Mr.mergeBlockedReason,
         structureMatches: $.root_population_id !== null && Ib(
           { gates: $.gates, gate_order: $.gate_order, populations: $.populations, root_population_id: $.root_population_id },
-          Ar.result
+          Mr.result
         ),
-        compensationNote: Ar.compensationNote,
-        missingMatrix: Ar.missingMatrix ?? null,
+        compensationNote: Mr.compensationNote,
+        missingMatrix: Mr.missingMatrix ?? null,
         onSupplyMatrix: (w) => {
           As(w);
         },
         onUseFcsMatrix: (w) => yi((M) => M && M.missingMatrix ? { ...M, missingMatrix: { ...M.missingMatrix, useFcs: w } } : M),
         matrixChoice: (() => {
           var J;
-          const w = Ar, M = !!((J = w.externalSpillover) != null && J.differsFromEmbedded) && w.externalSpillover.source !== "supplied", R = (w.siblingTrees ?? []).filter((re) => {
+          const w = Mr, M = !!((J = w.externalSpillover) != null && J.differsFromEmbedded) && w.externalSpillover.source !== "supplied", R = (w.siblingTrees ?? []).filter((re) => {
             var ee;
             return (ee = re.externalSpillover) == null ? void 0 : ee.differsFromEmbedded;
           });
@@ -66773,9 +66792,9 @@ function Qq() {
         })(),
         onMatrixChoice: (w) => {
           var R;
-          const M = (R = Ar.byMatrixChoice) == null ? void 0 : R[w];
+          const M = (R = Mr.byMatrixChoice) == null ? void 0 : R[w];
           if (M) {
-            const q = [...M.result.warnings, ...Ar.notes ?? []];
+            const q = [...M.result.warnings, ...Mr.notes ?? []];
             xe(q.length ? q.join(`
 `) : null);
           }
@@ -66784,10 +66803,10 @@ function Qq() {
             return q && { ...q, matrixChoice: w, ...((J = q.byMatrixChoice) == null ? void 0 : J[w]) ?? {} };
           });
         },
-        compensationNeedsConfirmation: Ar.compensation.requiresConfirmation,
+        compensationNeedsConfirmation: Mr.compensation.requiresConfirmation,
         perFileNames: (() => {
           var J;
-          const w = Ar;
+          const w = Mr;
           if (!w.primaryFileName || !((J = w.siblingTrees) != null && J.length)) return null;
           const M = [
             { name: w.primaryFileName, sample: w.primarySampleLabel, entryId: w.primaryEntryId ?? null },
@@ -66795,9 +66814,9 @@ function Qq() {
           ], R = Dp(w), q = Au();
           return M.map((re) => R(re.name) ? re.sample ? `${re.name} (${re.sample})` : (re.entryId ? q.get(re.entryId) : void 0) ?? re.name : re.name);
         })(),
-        primaryByChoice: Ar.primaryByChoice ?? null,
+        primaryByChoice: Mr.primaryByChoice ?? null,
         followNames: (() => {
-          const w = Ar;
+          const w = Mr;
           if (!w.primaryFileName) return null;
           const M = Dp(w), R = Au();
           return [...w.unreadFiles ?? [], ...w.followFiles ?? []].map((q) => {
@@ -66813,16 +66832,16 @@ function Qq() {
           tailored: ac.flatMap((w) => w.members).filter((w) => w.tailored === !0).length
         } : null,
         onCancel: () => {
-          const w = Ar.openedSampleIds ?? [];
+          const w = Mr.openedSampleIds ?? [];
           yi(null), w.length ? _l(w).then(() => Gt(
             `Workspace open cancelled; the ${w.length === 1 ? "file it loaded was" : `${w.length} files it loaded were`} removed again and the current strategy was not changed.`
           )) : Gt("Gating-ML import cancelled; the current strategy was not changed.");
         },
         onImport: Od,
         busy: o0,
-        flowJoGrid: Ar.flowJoGridChoice ? { value: Ar.flowJoGridChoice.value, busy: i0 } : null,
+        flowJoGrid: Mr.flowJoGridChoice ? { value: Mr.flowJoGridChoice.value, busy: i0 } : null,
         onFlowJoGrid: (w) => {
-          const M = Ar;
+          const M = Mr;
           M.flowJoGridChoice && (Ep(!0), M.flowJoGridChoice.redo(w).finally(() => {
             Ep(!1), yi((R) => R && R !== M ? { ...R, matrixChoice: M.matrixChoice } : R);
           }));
@@ -66830,7 +66849,7 @@ function Qq() {
       }
     ),
     (tn == null ? void 0 : tn.kind) === "exportSceColData" && r && /* @__PURE__ */ d.jsx(
-      Tq,
+      Fq,
       {
         state: $,
         existingColumns: un,
@@ -66845,7 +66864,7 @@ function Qq() {
       }
     ),
     qi && O && /* @__PURE__ */ d.jsx(
-      k7,
+      _7,
       {
         state: $,
         samples: c.map((w) => ({
@@ -66870,7 +66889,7 @@ function Qq() {
       }
     ),
     Gf && O && /* @__PURE__ */ d.jsx(
-      S7,
+      k7,
       {
         state: $,
         onCancel: () => Eu(!1),
@@ -66880,7 +66899,7 @@ function Qq() {
       }
     ),
     Wp && O && /* @__PURE__ */ d.jsx(
-      b7,
+      S7,
       {
         files: c.map((w) => {
           var M;
@@ -66919,21 +66938,21 @@ function Qq() {
         }
       }
     ),
-    Cr.step && !r && /* @__PURE__ */ d.jsx(
-      PW,
+    Ar.step && !r && /* @__PURE__ */ d.jsx(
+      IW,
       {
-        step: Cr.step,
-        index: Cr.index,
-        total: Cr.total,
-        reached: Cr.reached,
-        held: Cr.held,
-        arriving: Cr.arriving,
+        step: Ar.step,
+        index: Ar.index,
+        total: Ar.total,
+        reached: Ar.reached,
+        held: Ar.held,
+        arriving: Ar.arriving,
         ctx: Zt(),
-        tabLabels: Jq,
-        onNext: Cr.next,
-        onBack: Cr.back,
-        onEnd: Cr.end,
-        onArrive: Cr.arrive
+        tabLabels: Kq,
+        onNext: Ar.next,
+        onBack: Ar.back,
+        onEnd: Ar.end,
+        onArrive: Ar.arrive
       }
     )
   ] });
@@ -67024,15 +67043,15 @@ function Qq() {
     };
   }
 }
-const Zq = 23, Yq = "gl-number-step-up-hover", $q = "gl-number-step-down-hover";
+const Yq = 23, $q = "gl-number-step-up-hover", eU = "gl-number-step-down-hover";
 function bN(e, t, n) {
-  const r = e.getBoundingClientRect(), a = Math.min(Zq, r.width / 2);
+  const r = e.getBoundingClientRect(), a = Math.min(Yq, r.width / 2);
   return t < r.right - a || t > r.right || n < r.top || n > r.bottom ? null : n < r.top + r.height / 2 ? "up" : "down";
 }
 function SN(e, t) {
-  e.classList.toggle(Yq, t === "up"), e.classList.toggle($q, t === "down");
+  e.classList.toggle($q, t === "up"), e.classList.toggle(eU, t === "down");
 }
-function eU(e, t) {
+function tU(e, t) {
   if (e.disabled || e.readOnly) return;
   const n = e.value;
   try {
@@ -67042,7 +67061,7 @@ function eU(e, t) {
   }
   e.value !== n && (e.focus({ preventScroll: !0 }), e.dispatchEvent(new Event("input", { bubbles: !0 })));
 }
-function tU(e = document) {
+function nU(e = document) {
   let t = null;
   const n = () => {
     t && (SN(t, null), t = null);
@@ -67059,13 +67078,13 @@ function tU(e = document) {
     const l = i.target;
     if (!(l instanceof HTMLInputElement) || l.type !== "number") return;
     const s = bN(l, i.clientX, i.clientY);
-    !s || l.disabled || l.readOnly || (i.preventDefault(), eU(l, s));
+    !s || l.disabled || l.readOnly || (i.preventDefault(), tU(l, s));
   };
   return e.addEventListener("pointermove", r, !0), e.addEventListener("pointerout", a, !0), e.addEventListener("pointerdown", o, !0), () => {
     n(), e.removeEventListener("pointermove", r, !0), e.removeEventListener("pointerout", a, !0), e.removeEventListener("pointerdown", o, !0);
   };
 }
-function EU(e, t = {}) {
+function jU(e, t = {}) {
   var i, l;
   const n = t.host ?? MT();
   if (n.contractVersion !== oy)
@@ -67073,10 +67092,10 @@ function EU(e, t = {}) {
       `Unsupported GateLab host contract ${String(n.contractVersion)}; expected ${oy}.`
     );
   c8(n.kind === "r-sce" ? "samples" : "files", n.objectName), (l = (i = n.lifecycle) == null ? void 0 : i.mounted) == null || l.call(i);
-  const r = aF.createRoot(e), a = tU();
+  const r = aF.createRoot(e), a = nU();
   let o = !0;
   return r.render(
-    /* @__PURE__ */ d.jsx(TW, { host: n, children: /* @__PURE__ */ d.jsx(k8, { children: /* @__PURE__ */ d.jsx(Qq, {}) }) })
+    /* @__PURE__ */ d.jsx(FW, { host: n, children: /* @__PURE__ */ d.jsx(k8, { children: /* @__PURE__ */ d.jsx(Zq, {}) }) })
   ), {
     host: n,
     unmount() {
@@ -67085,12 +67104,12 @@ function EU(e, t = {}) {
     }
   };
 }
-function nU(e) {
+function rU(e) {
   if (!e || typeof e != "object") return null;
   const t = e;
   return typeof t.requestId != "string" || t.requestId.length === 0 || typeof t.ok != "boolean" ? null : t;
 }
-function rU(e) {
+function aU(e) {
   if (!e || typeof e != "object") return null;
   const t = e, n = [
     t.sampleIndex,
@@ -67107,7 +67126,7 @@ function kN() {
   var e, t;
   return ((t = (e = globalThis.crypto) == null ? void 0 : e.randomUUID) == null ? void 0 : t.call(e)) ?? `gatelabr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
-function aU(e) {
+function oU(e) {
   if (!e || typeof e != "object")
     throw new Error("GateLabR supplied an invalid SCE host manifest.");
   const t = e;
@@ -67125,7 +67144,7 @@ function mw(e, t) {
 function n1(e) {
   return typeof e == "string" ? [e] : Array.from(e);
 }
-function oU(e) {
+function iU(e) {
   return Array.isArray(e) ? Array.from(e) : [e];
 }
 async function r1(e, t, n) {
@@ -67141,11 +67160,11 @@ async function r1(e, t, n) {
     );
   return r.arrayBuffer();
 }
-function iU(e) {
+function sU(e) {
   const t = (o, i) => typeof o == "string" && i.test(o) ? o : void 0, n = t(e.hostVersion, /^[0-9][0-9A-Za-z.\-]{0,30}$/), r = t(e.hostCommit, /^[0-9a-f]{7,40}$/), a = t(e.coreCommit, /^[0-9a-f]{7,40}$/);
   return { ...n ? { hostVersion: n } : {}, ...r ? { hostCommit: r } : {}, ...a ? { coreCommit: a } : {} };
 }
-function jU(e = {}) {
+function PU(e = {}) {
   const t = window.Shiny;
   if (!t)
     throw new Error("GateLabR's Shiny client is unavailable.");
@@ -67156,7 +67175,7 @@ function jU(e = {}) {
   });
   t.addCustomMessageHandler(n, (T) => {
     try {
-      f(aU(T));
+      f(oU(T));
     } catch (L) {
       p(L);
     }
@@ -67165,21 +67184,21 @@ function jU(e = {}) {
     g.delete(T), window.clearTimeout(L.timeout), L.signal && L.abortHandler && L.signal.removeEventListener("abort", L.abortHandler);
   };
   t.addCustomMessageHandler(o, (T) => {
-    const L = nU(T);
+    const L = rU(T);
     if (!L) return;
     const z = g.get(L.requestId);
     if (z)
       if (y(L.requestId, z), L.ok)
         z.resolve(L.result);
       else {
-        const U = typeof L.error == "string" && L.error.length > 0 ? L.error : "GateLabR could not complete the requested SCE update.", D = Eq(L.errorCode, L.errorData);
+        const U = typeof L.error == "string" && L.error.length > 0 ? L.error : "GateLabR could not complete the requested SCE update.", D = jq(L.errorCode, L.errorData);
         z.reject(
           D ? new HT(U, D) : new Error(U)
         );
       }
   }), t.addCustomMessageHandler(i, (T) => {
     var z, U;
-    const L = rU(T);
+    const L = aU(T);
     L && ((U = (z = g.get(L.requestId)) == null ? void 0 : z.onProgress) == null || U.call(z, L));
   });
   const b = async (T, L, z = l, U, D) => {
@@ -67255,7 +67274,7 @@ function jU(e = {}) {
     async readWorkspace(T) {
       const L = (await m).workspace ?? null;
       if (!L) return null;
-      if (L.contractVersion !== Nq || L.datasetId !== T)
+      if (L.contractVersion !== Eq || L.datasetId !== T)
         throw new Error(
           "GateLabR supplied an incompatible SCE workspace envelope."
         );
@@ -67324,7 +67343,7 @@ function jU(e = {}) {
       appliedAt: T.appliedAt
     };
   }, j = async (T, L) => {
-    const z = await E(T.application), U = await Promise.all(oU(T.targets).map(async (D) => ({
+    const z = await E(T.application), U = await Promise.all(iU(T.targets).map(async (D) => ({
       sampleId: D.sampleId,
       eventCount: D.eventCount,
       assayPayload: await r1(c, D.assayUrl, L)
@@ -67410,7 +67429,7 @@ function jU(e = {}) {
     kind: "r-sce",
     label: `GateLabR / ${F}`,
     objectName: F,
-    ...e.build ? { build: iU(e.build) } : {},
+    ...e.build ? { build: sU(e.build) } : {},
     capabilities: {
       dataSources: {
         fcsFiles: !1,
@@ -67456,7 +67475,7 @@ function jU(e = {}) {
 }
 export {
   js as $,
-  xU as A,
+  bU as A,
   fD as B,
   f2 as C,
   dp as D,
@@ -67467,10 +67486,10 @@ export {
   RC as I,
   YO as J,
   oD as K,
-  Q7 as L,
+  Z7 as L,
   Yw as M,
   ka as N,
-  wU as O,
+  xU as O,
   eL as P,
   zg as Q,
   C1 as R,
@@ -67484,7 +67503,7 @@ export {
   hp as Z,
   dL as _,
   W as a,
-  cq as a$,
+  uq as a$,
   wC as a0,
   ZO as a1,
   bg as a2,
@@ -67497,31 +67516,31 @@ export {
   z8 as a9,
   cO as aA,
   uO as aB,
-  uU as aC,
+  dU as aC,
   gE as aD,
-  eH as aE,
-  pU as aF,
-  fU as aG,
-  hU as aH,
+  tH as aE,
+  mU as aF,
+  hU as aG,
+  pU as aH,
   QO as aI,
   KT as aJ,
-  SU as aK,
-  lU as aL,
+  kU as aK,
+  cU as aL,
   OS as aM,
   yf as aN,
   oy as aO,
   GT as aP,
-  Nq as aQ,
-  TW as aR,
-  uq as aS,
+  Eq as aQ,
+  FW as aR,
+  dq as aS,
   MT as aT,
-  jU as aU,
+  PU as aU,
   LS as aV,
-  RW as aW,
+  OW as aW,
   Fw as aX,
   Yb as aY,
-  EU as aZ,
-  E7 as a_,
+  jU as aZ,
+  j7 as a_,
   IL as aa,
   sk as ab,
   P8 as ac,
@@ -67533,42 +67552,42 @@ export {
   vC as ai,
   XO as aj,
   rL as ak,
-  gU as al,
-  yU as am,
-  mU as an,
+  yU as al,
+  vU as am,
+  gU as an,
   iL as ao,
-  vU as ap,
-  bU as aq,
+  wU as ap,
+  SU as aq,
   Pv as ar,
-  $7 as as,
-  nH as at,
-  tH as au,
-  fH as av,
-  hH as aw,
-  mH as ax,
-  xH as ay,
-  bH as az,
+  eH as as,
+  rH as at,
+  nH as au,
+  hH as av,
+  pH as aw,
+  gH as ax,
+  bH as ay,
+  SH as az,
   la as b,
-  NU as b0,
-  FW as b1,
+  EU as b0,
+  RW as b1,
   ES as c,
   jx as d,
   mT as e,
   WE as f,
-  MU as g,
+  NU as g,
   cd as h,
   RI as i,
   d as j,
   xd as k,
   kf as l,
-  _U as m,
-  kU as n,
+  CU as m,
+  _U as n,
   bz as o,
-  AU as p,
-  CU as q,
-  cU as r,
+  MU as p,
+  AU as q,
+  uU as r,
   cl as s,
-  dU as t,
+  fU as t,
   Yn as u,
   t0 as v,
   wc as w,
