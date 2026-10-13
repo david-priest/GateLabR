@@ -38,6 +38,17 @@ reference:
       - gatelabHierarchy
       - gatelabPopulations
       - gatelabLeafPopulation
+  - title: Drawing a gating strategy in R
+    desc: >
+      The gating path to chosen populations as the Strategy tab draws it, made in R
+      from the saved workspace and the stored memberships. The panel, the contours
+      and the event thinning it is built from can be used on their own.
+    contents:
+      - gatelabStrategyPlot
+      - gatelabPanelGrob
+      - gatelabContour
+      - gatelabDisplayEvents
+      - print.gatelab_strategy
   - title: Retired
     desc: >
       Kept as an exported stub so existing scripts fail with an explanation
