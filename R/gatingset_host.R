@@ -42,10 +42,12 @@
 #
 # fasinh is `length * (asinh(x * sinh(M ln10) / T) + A ln10) / ((M + A) ln10)`, an affine
 # function of GateLab's asinh at cofactor T / sinh(M ln10); FlowJo's log is GateLab's wsplog
-# times its scale; the logicle, Gating-ML's logtGml2 (GateLab's standard flog) and FlowJo's
-# biexponential are the same functions by parameters (the biexponential to a quarter of a
-# channel in 4096 inside FlowJo's table, both sides interpolating it; GateLab's test
-# flowworkspaceTransforms.test.ts measures that against values this package's tests write).
+# times its scale; the logicle and Gating-ML's logtGml2 (GateLab's standard flog) are the same
+# functions by parameters. So is the biexponential, provided the spec carries no
+# `tableChannels`: without it GateLab builds cytolib's own table at `channelRange` channels,
+# which is the function flowWorkspace runs (equal to five thousandths of a channel; GateLab's
+# flowworkspaceTransforms.test.ts measures it against values flowWorkspace wrote), where
+# FlowJo's 4096-channel table, which `tableChannels` selects, differs by up to six channels in 256.
 .gatelabr_gatingset_axis <- function(raw) {
   identity <- function(x) x
   linear <- list(spec = NULL, forward = identity, backward = identity)
@@ -96,8 +98,7 @@
     p <- numbers("channelRange", "maxValue", "pos", "neg", "widthBasis")
     if (is.null(p)) return(malformed)
     return(list(spec = list(kind = "biex", maxValue = p$maxValue, pos = p$pos, neg = p$neg,
-                            widthBasis = p$widthBasis, channelRange = p$channelRange,
-                            tableChannels = 4096L),
+                            widthBasis = p$widthBasis, channelRange = p$channelRange),
                 forward = identity, backward = identity))
   }
   if (identical(type, "scale")) {

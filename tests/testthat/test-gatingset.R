@@ -107,8 +107,9 @@ test_that("the descriptor is built from the object's parts, each channel carryin
   expect_identical(transforms[[3]], logicle_spec())
   expect_equal(transforms[[4]], asinh_spec())
   expect_identical(transforms[[5]], list(kind = "wsplog", offset = 1, decades = 4.5))
+  # No tableChannels: the app then builds cytolib's own table, which is flowWorkspace's function.
   expect_identical(transforms[[7]], list(kind = "biex", maxValue = 262144, pos = 4.5, neg = 0,
-                                         widthBasis = -10, channelRange = 4096, tableChannels = 4096L))
+                                         widthBasis = -10, channelRange = 4096))
   expect_null(transforms[[8]])
   # One assay, named for what the values are: no matrix was applied here.
   expect_length(descriptor$assays, 1L)
