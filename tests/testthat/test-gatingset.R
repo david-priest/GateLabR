@@ -800,3 +800,29 @@ test_that("a half-open rectangle is written closed just below its upper edge, so
   expect_lt(unname(gate@max)[[1]], edge)
   expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[1]], "/half")), masks[[1]])
 })
+
+test_that("a population excluding its one gate is written as that gate, negated", {
+  # FlowJo's NOT gate, which CytoML parses as a negated node: the parent's events outside the gate.
+  gs <- make_gatingset()
+  gates <- list(`g-box` = list(gate_id = "g-box", name = "box", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
+                               vertices = list(list(1.5, 1), list(3.5, 1), list(3.5, 3), list(1.5, 3)),
+                               space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec())))
+  populations <- list(
+    `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), parent_id = NULL),
+    `pop-not` = list(population_id = "pop-not", name = "not box", parent_id = "pop-root",
+                     gate_refs = list(list(gate_id = "g-box", include = FALSE)))
+  )
+  masks <- lapply(1:2, function(index) {
+    v <- transformed_values(gs, index)
+    !(v[, "FL1-H"] >= 1.5 & v[, "FL1-H"] <= 3.5 & v[, "FL2-H"] >= 1 & v[, "FL2-H"] <= 3)
+  })
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(workspace_json(gates, populations),
+                      memberships_payload(gs, list(list(id = "pop-not", name = "not box", parent = "pop-root", masks = masks)))),
+    dataset_id = "gatingset-gs"
+  )
+  expect_identical(handled$report$gates, "not box")
+  expect_s4_class(flowWorkspace::gh_pop_get_gate(gs[[1]], "/not box"), "rectangleGate")
+  expect_true(flowWorkspace::gh_pop_is_negated(gs[[1]], "/not box"))
+  expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[2]], "/not box")), masks[[2]])
+})

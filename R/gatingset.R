@@ -196,8 +196,9 @@
     gate <- .gatelabr_gatingset_gate(gates, tree_populations[[population$population_id]], node, axes)
     written <- "masks"
     if (!is.null(gate)) {
+      negated <- isTRUE(attr(gate, "gatelabr_negated"))
       added <- tryCatch({
-        flowWorkspace::gs_pop_add(gs, gate, parent = parent_path, name = node)
+        flowWorkspace::gs_pop_add(gs, gate, parent = parent_path, name = node, negated = negated)
         flowWorkspace::recompute(gs, path)
         TRUE
       }, error = function(...) FALSE)
@@ -289,17 +290,26 @@
   }, logical(1)))
 }
 
-# The flowWorkspace gate a population can be written as, or NULL when it has none: one
-# included gate reference, no quadrant, a rectangle, polygon or ellipse. A rectangle is mapped
-# bound by bound from the app's space through linear into the object's, which is exact for an
-# axis-aligned edge under any transform; a polygon or ellipse is mapped only when the app's
-# space is the object's by parameters, so that its edges stay straight.
+# The flowWorkspace gate a population can be written as, or NULL when it has none: one gate
+# reference, no quadrant, a rectangle, polygon or ellipse. An excluded reference (the parent's
+# events outside the gate, FlowJo's NOT gate) is the same gate added negated, which the result
+# says through its `gatelabr_negated` attribute. A rectangle is mapped bound by bound from the
+# app's space through linear into the object's, which is exact for an axis-aligned edge under
+# any transform; a polygon or ellipse is mapped only when the app's space is the object's by
+# parameters, so that its edges stay straight.
 .gatelabr_gatingset_gate <- function(gates, population, node, axes) {
   if (!is.list(population)) return(NULL)
   refs <- population$gate_refs
   if (!is.list(refs) || length(refs) != 1L) return(NULL)
   ref <- refs[[1]]
-  if (!is.list(ref) || !isTRUE(ref$include) || !is.null(ref$quadrant)) return(NULL)
+  if (!is.list(ref) || !is.null(ref$quadrant)) return(NULL)
+  built <- .gatelabr_gatingset_gate_shape(gates, ref, node, axes)
+  if (is.null(built)) return(NULL)
+  if (!isTRUE(ref$include)) attr(built, "gatelabr_negated") <- TRUE
+  built
+}
+
+.gatelabr_gatingset_gate_shape <- function(gates, ref, node, axes) {
   gate <- gates[[as.character(ref$gate_id)]]
   if (!is.list(gate) || !gate$gate_type %in% c("rectangle", "polygon", "ellipse")) return(NULL)
   x <- as.character(gate$x_channel)
