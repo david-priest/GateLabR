@@ -22,6 +22,27 @@ result can be read back without re-gating. These four read that record.
   [`gatelabLeafPopulation()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
   : Population hierarchies stored in a gated SingleCellExperiment
 
+## Drawing a gating strategy in R
+
+The gating path to chosen populations as the Strategy tab draws it, made
+in R from the saved workspace and the stored memberships. The panel, the
+contours and the event thinning it is built from can be used on their
+own.
+
+- [`gatelabStrategyPlot()`](https://david-priest.github.io/GateLabR/reference/gatelabStrategyPlot.md)
+  : A gating strategy, drawn as GateLab's Strategy tab draws it
+- [`gatelabPanelGrob()`](https://david-priest.github.io/GateLabR/reference/gatelabPanelGrob.md)
+  : One gating panel, drawn as GateLab draws it
+- [`gatelabContour()`](https://david-priest.github.io/GateLabR/reference/gatelabContour.md)
+  : Density contours as GateLab draws them
+- [`gatelabDisplayEvents()`](https://david-priest.github.io/GateLabR/reference/gatelabDisplayEvents.md)
+  : The events GateLab draws for a pooled population
+- [`print(`*`<gatelab_strategy>`*`)`](https://david-priest.github.io/GateLabR/reference/print.gatelab_strategy.md)
+  [`plot(`*`<gatelab_strategy>`*`)`](https://david-priest.github.io/GateLabR/reference/print.gatelab_strategy.md)
+  [`print(`*`<gatelab_panel>`*`)`](https://david-priest.github.io/GateLabR/reference/print.gatelab_strategy.md)
+  [`plot(`*`<gatelab_panel>`*`)`](https://david-priest.github.io/GateLabR/reference/print.gatelab_strategy.md)
+  : Draw a gating strategy or a panel on the current device
+
 ## Retired
 
 Kept as an exported stub so existing scripts fail with an explanation

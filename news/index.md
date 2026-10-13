@@ -1,5 +1,39 @@
 # Changelog
 
+## GateLabR (development version)
+
+- [`gatelabStrategyPlot()`](https://david-priest.github.io/GateLabR/reference/gatelabStrategyPlot.md)
+  draws the gating strategy of a saved object in R as the Strategy tab
+  draws it in its “Multiple pops” mode with the samples pooled: one
+  contour panel per parent population and pair of channels, with every
+  gate its children draw there, each gate’s name and share, a quadrant
+  gate as a crosshair with its four shares, and an arrow from each gate
+  to the panel of the population it makes. The gates are read from the
+  saved workspace and the counts from the memberships “Save to SCE”
+  stores, through
+  [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md),
+  so a population made by one gate has the app’s own count and is not
+  gated again in R; a gate of a population made by several, and a
+  quadrant no population was made for, are counted from the gate’s
+  geometry. The result is a grid drawing of a fixed size, in the app’s
+  CSS pixels at 96 to the inch, which
+  [`print()`](https://rdrr.io/r/base/print.html) and
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) draw on the
+  current device; its size in inches and a table of the counts are
+  attributes.
+  [`gatelabPanelGrob()`](https://david-priest.github.io/GateLabR/reference/gatelabPanelGrob.md)
+  draws one such panel from events and gates given to it,
+  [`gatelabContour()`](https://david-priest.github.io/GateLabR/reference/gatelabContour.md)
+  computes the contour lines and outlier dots of the app’s contour mode
+  (a port of `d3.contourDensity()`), and
+  [`gatelabDisplayEvents()`](https://david-priest.github.io/GateLabR/reference/gatelabDisplayEvents.md)
+  picks the events a plot pooled over samples draws. Only the hierarchy
+  that was active at the save can be drawn, and events and gates are
+  drawn as stored, so a workspace drawn on a linear assay, which the app
+  shows through a transform, is not reproduced. A quadrant’s shares are
+  written in the corners of the plot; `quadrant_labels = "centre"`
+  writes them where the app does.
+
 ## GateLabR 1.6.0
 
 - `launchGatingApp(sce, agent = TRUE)` opens the tab connected to an
