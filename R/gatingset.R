@@ -332,8 +332,12 @@
       low <- to_object(min(vertices[, index]))
       high <- to_object(max(vertices[, index]))
       if (is.nan(low) || is.nan(high)) return(NULL)
-      bounds[[channel]] <- c(low, high)
+      # A range gate repeats its channel on both axes (hostedHierarchy.ts, and the Gating-ML
+      # importer): the object gets one dimension, over the two ranges' intersection.
+      previous <- bounds[[channel]]
+      bounds[[channel]] <- if (is.null(previous)) c(low, high) else c(max(previous[[1]], low), min(previous[[2]], high))
     }
+    if (any(vapply(bounds, function(range) range[[1]] > range[[2]], logical(1)))) return(NULL)
     return(flowCore::rectangleGate(filterId = node, .gate = bounds))
   }
 

@@ -715,3 +715,36 @@ test_that("the launch note and the UI name the object", {
   expect_match(ui, "\"objectKind\":\"GatingSet\"", fixed = TRUE)
   expect_match(ui, "\"hostVersion\":\"1.6.0\"", fixed = TRUE)
 })
+
+test_that("a range gate, which the app holds on one channel twice, is written as a one-dimensional rectangleGate", {
+  # Found by the headless check on CytoML's GatingSet (2026-10-13): its 'not debris' and 'HLA
+  # range' nodes came back as memberships because the open second axis overwrote the first.
+  gs <- make_gatingset()
+  huge <- 1.7976931348623157e308
+  gates <- list(`g-range` = list(
+    gate_id = "g-range", name = "bright", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL1-H",
+    vertices = list(list(2, -huge), list(3.5, -huge), list(3.5, huge), list(2, huge)),
+    space = "display", transforms = list(`FL1-H` = logicle_spec())
+  ))
+  populations <- list(
+    `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), parent_id = NULL),
+    `pop-range` = list(population_id = "pop-range", name = "bright", parent_id = "pop-root",
+                       gate_refs = list(list(gate_id = "g-range", include = TRUE)))
+  )
+  masks <- lapply(1:2, function(index) {
+    values <- transformed_values(gs, index)[, "FL1-H"]
+    values >= 2 & values <= 3.5
+  })
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(workspace_json(gates, populations),
+                      memberships_payload(gs, list(list(id = "pop-range", name = "bright", parent = "pop-root", masks = masks)))),
+    dataset_id = "gatingset-gs"
+  )
+  expect_identical(handled$report$gates, "bright")
+  gate <- flowWorkspace::gh_pop_get_gate(gs[[1]], "/bright")
+  expect_s4_class(gate, "rectangleGate")
+  expect_identical(as.character(flowCore::parameters(gate)), "FL1-H")
+  expect_equal(unname(gate@min), 2)
+  expect_equal(unname(gate@max), 3.5)
+  expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[2]], "/bright")), masks[[2]])
+})
