@@ -145,3 +145,17 @@ test_that("the R export declares a $PnR that covers its data", {
   read_default <- suppressWarnings(flowCore::read.FCS(path))
   expect_equal(max(flowCore::exprs(read_default)[, "FSC_A"]), 3.5e6)
 })
+
+test_that("metadata(sce)$spillover is the documented slot, read before the older names", {
+  spill <- matrix(c(1, 0.1, 0.05, 1), nrow = 2, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  older <- matrix(c(1, 0.3, 0.2, 1), nrow = 2, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = matrix(1, nrow = 2, ncol = 3, dimnames = list(c("FL1-H", "FL2-H"), NULL))))
+  expect_null(GateLabR:::.gatelabr_sce_spillover_matrix(sce))
+  S4Vectors::metadata(sce)$spillover_matrix <- older
+  expect_identical(GateLabR:::.gatelabr_sce_spillover_matrix(sce), older)
+  S4Vectors::metadata(sce)$spillover <- spill
+  expect_identical(GateLabR:::.gatelabr_sce_spillover_matrix(sce), spill)
+  # A value under the documented name that is not a named numeric matrix is passed over, not an error.
+  S4Vectors::metadata(sce)$spillover <- "not a matrix"
+  expect_identical(GateLabR:::.gatelabr_sce_spillover_matrix(sce), older)
+})
