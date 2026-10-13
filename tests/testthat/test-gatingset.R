@@ -585,22 +585,142 @@ test_that("the panel dialog writes the object's marker names", {
   ), "markernames")
 })
 
-test_that("compensation from the app is refused with the reason", {
+# The app's compensation profile record (compensationProfileRecord.ts), as test-host-compensation.R
+# builds it, on channels of the GvHD files.
+gatingset_compensation_profile <- function(kind = c("flow-spillover", "cytof-spillover"),
+                                           channels = c("FL1-H", "FL2-H"),
+                                           spill = matrix(c(1, 0.1, 0.05, 1), nrow = 2, byrow = TRUE),
+                                           purpose = c("apply", "adopt")) {
+  kind <- match.arg(kind)
+  purpose <- match.arg(purpose)
+  scientific <- list(
+    schema = "gatelab.compensation-profile.v1",
+    kind = kind,
+    method = if (kind == "cytof-spillover") "nnls" else "matrix-inverse",
+    solverVersion = if (purpose == "adopt") "r-external-precomputed-v1" else if (kind == "cytof-spillover") "r-nnls-v1" else "r-matrix-inverse-v1",
+    solverSettings = if (kind == "cytof-spillover") {
+      list(list(key = "adaptationVersion", value = "identity-backed-v1"), list(key = "kktTolerance", value = 1e-9),
+           list(key = "maxIterations", value = 1000), list(key = "tolerance", value = 1e-10))
+    } else {
+      list(list(key = "conditionWarningThreshold", value = 1e8), list(key = "singularTolerance", value = 1e-12))
+    },
+    matrix = list(
+      schema = "gatelab.compensation-matrix.v1",
+      orientation = "source-rows-receiver-columns",
+      sourceChannels = channels,
+      receiverChannels = channels,
+      matrix = lapply(seq_len(nrow(spill)), function(row) unname(as.numeric(spill[row, ])))
+    ),
+    includedChannels = if (kind == "cytof-spillover") channels else list()
+  )
+  matrix_record <- GateLabR:::.gatelabr_comp_matrix_record(scientific)
+  matrix_hash <- GateLabR:::.gatelabr_comp_matrix_hash(matrix_record)
+  profile_hash <- GateLabR:::.gatelabr_comp_profile_hash(scientific, matrix_hash)
+  profile <- list(
+    schema = "gatelab.compensation-profile-record.v1", recordType = "baseline",
+    profileId = paste0("gs-test-", purpose), name = "GatingSet compensation test",
+    createdAt = "2026-10-13T00:00:00.000Z", note = NULL, scientific = scientific,
+    matrixHash = matrix_hash, profileHash = profile_hash,
+    origin = list(type = "uploaded", fileName = "test.csv", format = "csv", sourceColumnHeader = ""),
+    provenance = NULL, baselineProfileId = paste0("gs-test-", purpose), baselineMatrixHash = matrix_hash,
+    baselineProfileHash = profile_hash, parentProfileId = NULL, revisionReason = NULL
+  )
+  as.character(jsonlite::toJSON(profile, auto_unbox = TRUE, digits = NA, null = "null", na = "null",
+                                dataframe = "rows", matrix = "rowmajor"))
+}
+
+compensation_request <- function(operation, profile_json, samples, output = NULL) {
+  payload <- list(
+    datasetId = "gatingset-gs", contractVersion = 1L, profileJson = profile_json,
+    targets = lapply(samples, function(sample) list(sampleId = sample, sourceAssayId = "counts",
+                                                   expectedAssayRevision = 0, activeLayer = "compensated"))
+  )
+  if (!is.null(output)) { payload$outputAssayId <- output; payload$expectedOutputAssayRevision <- 1 }
+  list(operation = operation, payload = payload)
+}
+
+test_that("a matrix from the app is applied to a writable, uncompensated, untransformed GatingSet in place", {
+  gs <- flowWorkspace::GatingSet(gvhd())
+  samples <- flowWorkspace::sampleNames(gs)
+  spill <- matrix(c(1, 0.1, 0.05, 1), nrow = 2, byrow = TRUE, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  registered <- list()
+  session <- list(
+    registerDataObj = function(name, data, filterFunc) { registered[[name]] <<- list(data = data, filter = filterFunc); paste0("session/", name) },
+    sendCustomMessage = function(type, message) invisible(NULL)
+  )
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    gs, compensation_request("apply-compensation", gatingset_compensation_profile(), samples[[1]]),
+    dataset_id = "gatingset-gs", session = session
+  )
+  application <- handled$result$application
+  expect_identical(application$execution, "computed")
+  expect_identical(application$sourceAssayId, "counts")
+  expect_identical(application$outputAssay$id, "compensated")
+  # The object is compensated as a whole, whatever the request named.
+  expect_identical(as.character(application$targetSampleIds), samples)
+  expect_identical(as.character(application$activeSampleIds), samples[[1]])
+  expect_length(handled$result$targets, 2L)
+  expect_identical(handled$result$targets[[2]]$sampleId, samples[[2]])
+  # flowWorkspace holds the matrix, and the served values are flowCore's compensation of the files.
+  expect_equal(unname(flowWorkspace::gh_get_compensations(gs[[1]])@spillover), unname(spill))
+  expected <- flowCore::exprs(flowCore::compensate(gvhd()[[2]], spill))
+  path <- withr::local_tempfile(fileext = ".f32")
+  channels <- unname(colnames(expected))
+  GateLabR:::.gatelabr_write_gatingset_assay_payload(gs, samples[[2]], channels, path)
+  served <- matrix(readBin(path, "numeric", n = length(channels) * nrow(expected), size = 4L, endian = "little"),
+                   ncol = length(channels), dimnames = list(NULL, channels))
+  expect_equal(served[, "FL1-H"], unname(expected[, "FL1-H"]), tolerance = 1e-6)
+  expect_identical(served[, "FSC-H"], unname(expected[, "FSC-H"]))
+  # The descriptor now says compensated, with the matrix; the manifest reports the application.
+  descriptor <- GateLabR:::.gatelabr_gatingset_dataset_descriptor(gs, dataset_id = "gatingset-gs")
+  expect_identical(descriptor$assays[[1]]$id, "compensated")
+  expect_identical(descriptor$assays[[1]]$revision, 1L)
+  expect_identical(as.character(descriptor$compensationMatrix$sourceChannels), c("FL1-H", "FL2-H"))
+  applications <- GateLabR:::.gatelabr_gatingset_compensation_applications(gs, "gatingset-gs")
+  expect_length(applications, 1L)
+  expect_identical(applications[[1]]$execution, "adopted-existing-assay")
+  expect_identical(jsonlite::fromJSON(applications[[1]]$profileJson)$profileId, "gs-test-apply")
+  # The record survives save_gs(); a second matrix is refused.
+  dir <- withr::local_tempdir()
+  flowWorkspace::save_gs(gs, dir)
+  reloaded <- flowWorkspace::load_gs(dir)
+  expect_identical(GateLabR:::.gatelabr_gatingset_compensation_record(reloaded)$execution, "computed")
+  expect_length(GateLabR:::.gatelabr_gatingset_compensation_applications(reloaded, "gatingset-gs"), 1L)
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    gs, compensation_request("apply-compensation", gatingset_compensation_profile(), samples), dataset_id = "gatingset-gs"
+  ), "compensated already")
+  # Adoption records a profile for the compensation the object carries.
+  adopted <- GateLabR:::.gatelabr_handle_host_request(
+    gs, compensation_request("adopt-compensated-assay", gatingset_compensation_profile(purpose = "adopt"), samples, output = "compensated"),
+    dataset_id = "gatingset-gs"
+  )
+  expect_identical(adopted$result$application$execution, "adopted-existing-assay")
+  expect_identical(jsonlite::fromJSON(GateLabR:::.gatelabr_gatingset_compensation_record(gs)$profile_json)$profileId, "gs-test-adopt")
+})
+
+test_that("compensation from the app is refused with the reason where flowWorkspace cannot do it in place", {
+  samples <- c("s5a01", "s5a02")
   transformed <- make_gatingset()
-  request <- list(operation = "apply-compensation", payload = list(
-    datasetId = "gatingset-gs", contractVersion = 1L, profileJson = "{}", targets = list()
-  ))
-  expect_error(GateLabR:::.gatelabr_handle_host_request(transformed, request, dataset_id = "gatingset-gs"),
-               "compensation precedes transformation")
-  compensated <- flowWorkspace::GatingSet(gvhd())
-  spill <- matrix(c(1, 0.1, 0.05, 1), 2L, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
-  flowWorkspace::compensate(compensated, spill)
-  expect_error(GateLabR:::.gatelabr_handle_host_request(compensated, request, dataset_id = "gatingset-gs"),
-               "cannot uncompensate")
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    transformed, compensation_request("apply-compensation", gatingset_compensation_profile(), samples), dataset_id = "gatingset-gs"
+  ), "compensation precedes transformation")
   plain <- flowWorkspace::GatingSet(gvhd())
-  request$operation <- "adopt-compensated-assay"
-  expect_error(GateLabR:::.gatelabr_handle_host_request(plain, request, dataset_id = "gatingset-gs"),
-               "compensate\\(\\)")
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    plain, compensation_request("apply-compensation", gatingset_compensation_profile("cytof-spillover"), samples), dataset_id = "gatingset-gs"
+  ), "NNLS")
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    plain, compensation_request("apply-compensation", gatingset_compensation_profile(channels = c("FL1-H", "FL9-H")), samples), dataset_id = "gatingset-gs"
+  ), "FL9-H")
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    plain, compensation_request("adopt-compensated-assay", gatingset_compensation_profile(purpose = "adopt"), samples, output = "compensated"), dataset_id = "gatingset-gs"
+  ), "no compensation")
+  # A GatingSet opened with load_gs() is read-only on its data.
+  dir <- withr::local_tempdir()
+  flowWorkspace::save_gs(plain, dir)
+  loaded <- flowWorkspace::load_gs(dir)
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    loaded, compensation_request("apply-compensation", gatingset_compensation_profile(), samples), dataset_id = "gatingset-gs"
+  ), "read-only")
 })
 
 # ── the manifest and the launcher ─────────────────────────────────────────────

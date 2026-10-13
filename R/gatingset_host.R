@@ -292,7 +292,8 @@
       label = assay_id,
       role = assay_id,
       coordinateSpace = "linear",
-      revision = 0L,
+      # The compensated assay the app installs from an apply carries revision 1 (above).
+      revision = if (identical(assay_id, "compensated")) 1L else 0L,
       encoding = "channel-major-float32-le"
     )),
     defaultAssayId = assay_id,
@@ -642,9 +643,8 @@
 # ── the manifest ──────────────────────────────────────────────────────────────
 
 # What .gatelabr_register_host_manifest() does for a GatingSet: the descriptor from the
-# object's parts, one lazy assay resource and one event-index resource per sample, and the
-# envelope above. No compensation application: the object's matrix, where applied, is in its
-# values and reported on the descriptor.
+# object's parts, one lazy assay resource and one event-index resource per sample, the
+# envelope above, and the application behind the compensated values when the app applied it.
 .gatelabr_register_gatingset_manifest <- function(
     session,
     gs,
@@ -677,7 +677,7 @@
     datasets = list(descriptor),
     resources = resources,
     workspace = .gatelabr_gatingset_workspace_envelope(gs, dataset_id),
-    compensationApplications = list()
+    compensationApplications = .gatelabr_gatingset_compensation_applications(gs, dataset_id)
   )
   session$sendCustomMessage(message_type, manifest)
   invisible(manifest)
@@ -909,19 +909,206 @@
   )
 }
 
-# Why a matrix cannot be applied to a GatingSet from the app: the first reason that holds.
+# ── compensation, in place ────────────────────────────────────────────────────
+
+.gatelabr_gatingset_compensation_keyword <- "GATELAB_COMPENSATION"
+
+# Why a matrix cannot be applied to this GatingSet from the app, or NULL when it can. A
+# GatingSet is compensated by flowWorkspace in place, before any transform, and cannot be
+# uncompensated, so only an uncompensated, untransformed object takes one.
 .gatelabr_gatingset_compensation_refusal <- function(gs) {
-  reason <- if (.gatelabr_gatingset_compensated(gs)) {
-    "the GatingSet is compensated already, and flowWorkspace cannot uncompensate it"
-  } else if (length(flowWorkspace::gh_get_transformations(gs[[1]])) > 0L) {
-    "the GatingSet is transformed, and compensation precedes transformation"
-  } else {
-    "the app keeps the uncompensated values beside the compensated ones, which compensate() in place cannot offer"
+  if (.gatelabr_gatingset_compensated(gs)) {
+    return(paste0(
+      "The GatingSet is compensated already, and flowWorkspace cannot uncompensate it; the ",
+      "matrix it carries is the one the app shows."
+    ))
   }
-  paste0(
-    "A GatingSet is not compensated from the app: ", reason,
-    ". Compensate before launching, with flowWorkspace::compensate(gs, spillover), and the ",
-    "app shows the matrix the object carries."
+  if (length(flowWorkspace::gh_get_transformations(gs[[1]])) > 0L) {
+    return(paste0(
+      "The GatingSet is transformed, and compensation precedes transformation: compensate it ",
+      "in R before transforming (flowWorkspace::compensate(gs, spillover), then transform())."
+    ))
+  }
+  NULL
+}
+
+# The compensation applied or adopted from the app, kept as a keyword on every sample as the
+# workspace is, so that save_gs() keeps it and a reopened object reports it to the app.
+.gatelabr_gatingset_compensation_record <- function(gs) {
+  frame <- flowWorkspace::gs_cyto_data(gs)[[1]]
+  text <- flowWorkspace::keyword(frame)[[.gatelabr_gatingset_compensation_keyword]]
+  if (!is.character(text) || length(text) != 1L || is.na(text) || !nzchar(text)) return(NULL)
+  record <- tryCatch(jsonlite::fromJSON(text, simplifyVector = TRUE), error = function(...) NULL)
+  if (!is.list(record) || !is.character(record$profile_json)) return(NULL)
+  record
+}
+
+.gatelabr_gatingset_store_compensation_record <- function(gs, record) {
+  text <- as.character(jsonlite::toJSON(record, auto_unbox = TRUE, null = "null", na = "null", digits = NA))
+  frames <- flowWorkspace::gs_cyto_data(gs)
+  for (index in seq_along(frames)) {
+    frame <- frames[[index]]
+    if (.gatelabr_gatingset_compensation_keyword %in% names(flowWorkspace::keyword(frame))) {
+      flowWorkspace::cf_keyword_set(frame, .gatelabr_gatingset_compensation_keyword, text)
+    } else {
+      flowWorkspace::cf_keyword_insert(frame, .gatelabr_gatingset_compensation_keyword, text)
+    }
+  }
+  invisible(gs)
+}
+
+# The application as the app's contract describes one (compensationContract.ts). The output
+# assay is the object's one assay once it is compensated.
+.gatelabr_gatingset_application_descriptor <- function(record, dataset_id, execution = record$execution) {
+  list(
+    contractVersion = .gatelabr_host_compensation_contract_version,
+    datasetId = dataset_id,
+    profileJson = record$profile_json,
+    sourceAssayId = as.character(record$source_assay_id),
+    execution = if (identical(execution, "computed")) "computed" else "adopted-existing-assay",
+    outputAssay = list(
+      id = "compensated", label = "compensated", role = "compensated",
+      coordinateSpace = "linear", revision = 1L, encoding = "channel-major-float32-le"
+    ),
+    targetSampleIds = I(as.character(record$target_sample_ids)),
+    activeSampleIds = I(as.character(record$active_sample_ids)),
+    appliedAt = as.character(record$applied_at)
+  )
+}
+
+# What the manifest reports: the application behind the object's compensated values, when the
+# app applied or adopted it, so a reopened workspace restores its compensated layer from the
+# object's own values. Nothing when the object was compensated in R only.
+.gatelabr_gatingset_compensation_applications <- function(gs, dataset_id) {
+  record <- .gatelabr_gatingset_compensation_record(gs)
+  if (is.null(record) || !.gatelabr_gatingset_compensated(gs)) return(list())
+  list(.gatelabr_gatingset_application_descriptor(record, dataset_id, execution = "adopted-existing-assay"))
+}
+
+# One lazy resource per sample serving the object's compensated values under the output assay.
+.gatelabr_register_gatingset_compensation_targets <- function(session, gs, dataset_id) {
+  if (is.null(session)) return(list())
+  samples <- flowWorkspace::sampleNames(gs)
+  counts <- .gatelabr_gatingset_event_counts(gs)
+  channels <- .gatelabr_gatingset_channels(gs)$pnn
+  lapply(seq_along(samples), function(index) {
+    name <- paste0("gatelabr-gs-comp-", index, "-", substr(gsub("[^A-Za-z0-9]", "", dataset_id), 1L, 24L))
+    list(
+      sampleId = samples[[index]],
+      eventCount = unname(counts[[index]]),
+      assayUrl = .gatelabr_register_gatingset_assay_resource(session, name, gs, samples[[index]], channels)
+    )
+  })
+}
+
+# The samples a request names, checked against the object's. A GatingSet is compensated as
+# one object, so every sample is a target whatever the request named; the active ones are the
+# samples the app asked to show compensated.
+.gatelabr_gatingset_compensation_targets <- function(gs, targets) {
+  samples <- flowWorkspace::sampleNames(gs)
+  if (!is.list(targets) || length(targets) == 0L) {
+    stop("Compensation needs at least one sample.", call. = FALSE)
+  }
+  named <- vapply(targets, function(target) as.character(target$sampleId), character(1))
+  unknown <- setdiff(named, samples)
+  if (length(unknown)) {
+    stop("A compensation target is not a sample of the GatingSet: ", paste(unknown, collapse = ", "), ".",
+         call. = FALSE)
+  }
+  active <- unique(named[vapply(targets, function(target) identical(target$activeLayer, "compensated"), logical(1))])
+  list(samples = samples, active = active)
+}
+
+# Apply a spillover matrix to the object in place, with flowWorkspace::compensate(), which is
+# what a GatingSet user does in R. After it the object's one assay is `compensated`; the
+# uncompensated values are gone from the object, as they are after compensate() at the prompt.
+.gatelabr_gatingset_compensate <- function(gs, dataset_id, profile_json, targets, session = NULL) {
+  validated <- .gatelabr_validate_host_compensation_profile(profile_json, purpose = "apply")
+  scientific <- validated$profile$scientific
+  if (!identical(scientific$kind, "flow-spillover")) {
+    stop(
+      "A GatingSet is compensated by flowWorkspace, which inverts a spillover matrix; the NNLS ",
+      "solve the app uses for mass cytometry has no in-place form. Compensate the object in R ",
+      "before launching.",
+      call. = FALSE
+    )
+  }
+  refusal <- .gatelabr_gatingset_compensation_refusal(gs)
+  if (!is.null(refusal)) stop(refusal, call. = FALSE)
+  spill <- validated$matrix$matrix
+  channels <- .gatelabr_gatingset_channels(gs)$pnn
+  missing <- setdiff(rownames(spill), channels)
+  if (length(missing)) {
+    stop("The matrix names channels the GatingSet does not have: ", paste(missing, collapse = ", "), ".",
+         call. = FALSE)
+  }
+  # Square, in source order: flowCore's spillover has one name set on both axes.
+  spill <- spill[, rownames(spill), drop = FALSE]
+  chosen <- .gatelabr_gatingset_compensation_targets(gs, targets)
+  tryCatch(
+    flowWorkspace::compensate(gs, spill),
+    error = function(cause) {
+      message <- conditionMessage(cause)
+      if (grepl("read-only", message, ignore.case = TRUE)) {
+        stop(
+          "The GatingSet's data are read-only, as load_gs() opens them, so the matrix cannot be ",
+          "applied in place. Compensate in R before launching (flowWorkspace::compensate(gs, ",
+          "spillover) on a GatingSet built from the files, or one opened with load_gs(path, ",
+          "backend_readonly = FALSE)).",
+          call. = FALSE
+        )
+      }
+      stop(message, call. = FALSE)
+    }
+  )
+  record <- list(
+    format = "gatelab-gatingset-compensation",
+    version = 1L,
+    profile_json = validated$profile_json,
+    source_assay_id = "counts",
+    execution = "computed",
+    applied_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%OS3%z", tz = "UTC"),
+    target_sample_ids = chosen$samples,
+    active_sample_ids = chosen$active
+  )
+  .gatelabr_gatingset_store_compensation_record(gs, record)
+  list(
+    sce = gs,
+    result = list(
+      application = .gatelabr_gatingset_application_descriptor(record, dataset_id, execution = "computed"),
+      targets = .gatelabr_register_gatingset_compensation_targets(session, gs, dataset_id)
+    )
+  )
+}
+
+# Record the profile behind a GatingSet's existing compensation, as the SCE host adopts an
+# existing assay: provenance only, no value changes.
+.gatelabr_gatingset_adopt_compensation <- function(gs, dataset_id, profile_json, output_assay_id, targets, session = NULL) {
+  validated <- .gatelabr_validate_host_compensation_profile(profile_json, purpose = "adopt")
+  if (!.gatelabr_gatingset_compensated(gs)) {
+    stop("The GatingSet carries no compensation to adopt a profile for.", call. = FALSE)
+  }
+  if (!identical(as.character(output_assay_id), "compensated")) {
+    stop("A GatingSet's compensated values are its assay `compensated`.", call. = FALSE)
+  }
+  chosen <- .gatelabr_gatingset_compensation_targets(gs, targets)
+  record <- list(
+    format = "gatelab-gatingset-compensation",
+    version = 1L,
+    profile_json = validated$profile_json,
+    source_assay_id = "compensated",
+    execution = "adopted-existing-assay",
+    applied_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%OS3%z", tz = "UTC"),
+    target_sample_ids = chosen$samples,
+    active_sample_ids = chosen$active
+  )
+  .gatelabr_gatingset_store_compensation_record(gs, record)
+  list(
+    sce = gs,
+    result = list(
+      application = .gatelabr_gatingset_application_descriptor(record, dataset_id, execution = "adopted-existing-assay"),
+      targets = .gatelabr_register_gatingset_compensation_targets(session, gs, dataset_id)
+    )
   )
 }
 
@@ -963,9 +1150,19 @@
     contract(.gatelabr_rowdata_contract_version, "rowData")
     return(.gatelabr_gatingset_write_labels(gs, payload$expectedRevision, payload$changes))
   }
-  if (operation %in% c("apply-compensation", "adopt-compensated-assay")) {
+  if (identical(operation, "apply-compensation")) {
     contract(.gatelabr_host_compensation_contract_version, "compensation")
-    stop(.gatelabr_gatingset_compensation_refusal(gs), call. = FALSE)
+    return(.gatelabr_gatingset_compensate(
+      gs, dataset_id = dataset_id, profile_json = payload$profileJson, targets = payload$targets,
+      session = session
+    ))
+  }
+  if (identical(operation, "adopt-compensated-assay")) {
+    contract(.gatelabr_host_compensation_contract_version, "compensation")
+    return(.gatelabr_gatingset_adopt_compensation(
+      gs, dataset_id = dataset_id, profile_json = payload$profileJson,
+      output_assay_id = payload$outputAssayId, targets = payload$targets, session = session
+    ))
   }
   stop("Unsupported GateLab host operation '", operation, "'.", call. = FALSE)
 }
