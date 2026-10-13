@@ -71,6 +71,14 @@
 #' Assign the app's object to the global name after a write, and remember which object that is.
 #' @noRd
 .gatelabr_write_back <- function(live, sce_name, sce) {
+  if (.gatelabr_is_gatingset(sce)) {
+    # A GatingSet was written in place by the request itself (gatingset_host.R); the global
+    # name already holds it, so only the record of what was last written moves.
+    live$written <- sce
+    live$address <- .gatelabr_object_address(sce)
+    live$refused_address <- NULL
+    return(invisible(sce))
+  }
   assign(sce_name, sce, envir = .GlobalEnv)
   live$written <- sce
   live$address <- .gatelabr_object_address(sce)
@@ -116,6 +124,28 @@ gatelabSync <- function(sce_name = NULL) {
     stop("The running app was launched on `", live$sce_name, "`, not `", sce_name, "`.", call. = FALSE)
   }
   object <- get0(sce_name, envir = .GlobalEnv, inherits = FALSE)
+  if (!is.null(live$gatingset)) {
+    if (!.gatelabr_is_gatingset(object)) {
+      stop("`", sce_name, "` in the global environment is not a GatingSet.", call. = FALSE)
+    }
+    # The app keeps the events it loaded; the GatingSet handed over must hold the same samples
+    # with the same event counts. Its pData, marker names and record reach the app as it asks.
+    current <- live$get_sce()
+    if (!identical(.gatelabr_gatingset_event_counts(object), .gatelabr_gatingset_event_counts(current))) {
+      stop(
+        "`", sce_name, "` holds other samples or events than the app was launched with: the ",
+        "browser keeps the events it loaded. Stop the app (gatelabStop()) and relaunch on the object.",
+        call. = FALSE
+      )
+    }
+    live$gatingset <- object
+    live$set_sce(object)
+    live$written <- object
+    live$address <- .gatelabr_object_address(object)
+    live$refused_address <- NULL
+    message("GateLabR: the app now works on `", sce_name, "` as it is in your console.")
+    return(invisible(object))
+  }
   if (!methods::is(object, "SingleCellExperiment")) {
     stop("`", sce_name, "` in the global environment is not a SingleCellExperiment.", call. = FALSE)
   }

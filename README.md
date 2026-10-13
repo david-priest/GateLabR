@@ -2,14 +2,14 @@
   <img src="man/figures/gatelabr-logo.png" alt="GateLabR" width="280">
 </h1>
 
-<p align="center"><b>Gate a <code>SingleCellExperiment</code> by hand, from your R session.</b></p>
+<p align="center"><b>Gate a <code>SingleCellExperiment</code> or a <code>GatingSet</code> by hand, from your R session.</b></p>
 
 <p align="center">Open the GateLab app on the object, draw gates on its samples, and read the populations back in R. The gating is stored in the object.</p>
 
 <p align="center">
   <a href="https://doi.org/10.5281/zenodo.20404387"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-1b2027" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/works_on-SingleCellExperiment-1b2027" alt="Works on SingleCellExperiment">
+  <img src="https://img.shields.io/badge/works_on-SingleCellExperiment_·_GatingSet-1b2027" alt="Works on SingleCellExperiment and GatingSet">
   <img src="https://img.shields.io/badge/exchanges-Gating--ML_2.0-1b2027" alt="Exchanges Gating-ML 2.0">
 </p>
 
@@ -21,13 +21,13 @@
   <a href="https://david-priest.github.io/GateLabR"><b>Documentation</b></a> · <a href="#installation">Installation</a> · <a href="https://github.com/david-priest/GateLab">GateLab in your browser</a>
 </p>
 
-GateLabR opens the [GateLab](https://github.com/david-priest/GateLab) gating application on a [`SingleCellExperiment`](https://bioconductor.org/packages/SingleCellExperiment/) from an R session, for flow cytometry and mass cytometry (CyTOF) data. It does three things.
+GateLabR opens the [GateLab](https://github.com/david-priest/GateLab) gating application on a [`SingleCellExperiment`](https://bioconductor.org/packages/SingleCellExperiment/) or a [flowWorkspace](https://bioconductor.org/packages/flowWorkspace/) `GatingSet` from an R session, for flow cytometry and mass cytometry (CyTOF) data. It does three things.
 
-The object is gated where it is. `launchGatingApp(sce)` opens a browser tab on its samples, one at a time or pooled, drawing the assay chosen in the header. Rectangle, polygon, ellipse and quadrant gates build one population tree for the object. The interface is GateLab's, with its Strategy, Illustration, Layout, Plotting and Statistics tabs, and with shiny 1.14 or later the R prompt stays free while the tab is open.
+The object is gated where it is. `launchGatingApp(sce)` or `launchGatingApp(gs)` opens a browser tab on its samples, one at a time or pooled, drawing the assay chosen in the header. Rectangle, polygon, ellipse and quadrant gates build one population tree for the object. The interface is GateLab's, with its Strategy, Illustration, Layout, Plotting and Statistics tabs, and with shiny 1.14 or later the R prompt stays free while the tab is open.
 
-The gating is stored in the object. Gates, populations, scales, compensation records and figure settings are written to `metadata(sce)` as the work is done and restored when the object is opened again, so saving the object saves the gating.
+The gating is stored in the object. Gates, populations, scales, compensation records and figure settings are written to `metadata(sce)`, or to a keyword on every sample of a `GatingSet`, as the work is done and restored when the object is opened again, so saving the object saves the gating. A `GatingSet` also brings its own hierarchy: the gates it holds open in the app, each in the transformed space the object evaluates it in, with the same counts.
 
-Populations come back to R as data. "Save to SCE" stores which events each population holds, read with `gatelabPopulations()`, `gatelabHierarchy()` and `gatelabLeafPopulation()`. "Export populations to colData" writes a column per population for `diffcyt`, `CATALYST` or any other tool that reads the object.
+Populations come back to R as data. "Save to SCE" stores which events each population holds, read with `gatelabPopulations()`, `gatelabHierarchy()` and `gatelabLeafPopulation()`. "Export populations to colData" writes a column per population for `diffcyt`, `CATALYST` or any other tool that reads the object. On a `GatingSet`, "Save to GatingSet" writes the populations to its hierarchy as flowWorkspace gates, so `gs_get_pop_paths()`, `gh_pop_get_count()`, `gs_pop_get_data()` and `ggcyto` read them as they read any node, and `save_gs()` keeps them. `gatelabGatingSet(sce)` builds a `GatingSet` from a gated SCE, its populations written as the same nodes, for flowWorkspace, openCyto, `ggcyto` and CytoML.
 
 It exists because a Bioconductor cytometry analysis holds its events in a `SingleCellExperiment`, while manual gating is usually done in a separate program on FCS files, and a gate drawn there has to be exported and matched back to the object's events. GateLabR gates the object itself, so a gated population is a column of the data the next step already uses.
 
@@ -37,7 +37,9 @@ library(GateLabR)
 launchGatingApp(sce)
 ```
 
-GateLabR starts from a `SingleCellExperiment` and does not read FCS files. To gate FCS files without R, use [GateLab](https://github.com/david-priest/GateLab) in the browser, which is the same application.
+GateLabR starts from a `SingleCellExperiment` or a `GatingSet` and does not read FCS files itself; `flowWorkspace::GatingSet(read.flowSet(...))` or CATALYST's `prepData()` assembles them (the vignette shows both). To gate FCS files without R, use [GateLab](https://github.com/david-priest/GateLab) in the browser, which is the same application.
+
+For flowWorkspace and openCyto users, nothing changes in the object's conventions: a `GatingSet` parsed from FlowJo, Cytobank or Diva with CytoML, or gated by openCyto, opens with its hierarchy, transforms and compensation as they are; a gate drawn in the app returns as a `rectangleGate`, `polygonGate` or `ellipsoidGate` under its parent's node, named as the population; a population the object's gate types cannot hold (a quadrant, a gate excluded from a population, a polygon drawn in another transform space) returns as its exact per-sample membership, a `booleanFilter`-class node that `gh_pop_get_indices()` reads like any other. The object is modified in place, as flowWorkspace always modifies it: a matrix applied in the app goes through `compensate()` on a writable, uncompensated, untransformed object, and a `GatingSet` loaded with `load_gs()` is read-only on its data, so for one of those compensate and transform before launching.
 
 ## Features
 
@@ -97,13 +99,13 @@ instead of replacing it — while keeping full R access to the same object.
 | | GateLabR | FlowJo | Cytobank | CytoExploreR / flowGate |
 |---|---|---|---|---|
 | Interface | GUI (the GateLab app in a browser tab, served from R) **+** full R access | GUI (desktop, proprietary) | GUI (cloud, proprietary) | R, with interactive gating helpers |
-| Data object | `SingleCellExperiment` (Bioconductor-native) | `.wsp` workspace | cloud workspace | `GatingSet` (flowWorkspace) |
+| Data object | `SingleCellExperiment` (Bioconductor-native) or `GatingSet` (flowWorkspace) | `.wsp` workspace | cloud workspace | `GatingSet` (flowWorkspace) |
 | Cost / licence | Free, MIT, open source | Commercial | Commercial | Free, open source |
 | Flow / CyTOF | Both (auto-detected) | Flow-focused | Both | Flow-focused |
-| Gates persist in the object | Yes — in `metadata()`; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
+| Gates persist in the object | Yes — in `metadata()`, or in the `GatingSet`'s hierarchy and keywords; reload restores everything | Workspace files | Cloud workspace | `GatingSet` on disk |
 | Gate exchange | Gating-ML 2.0 import and export (AND populations); FlowJo `.wsp` import | `.wsp` / `.wspt` workspace formats | Gating-ML 2.0 import and export | `flowWorkspace` / `CytoML` ecosystem |
 | Access for AI agents | An MCP server: an agent reads the gating and proposes gates in the open session | No MCP server documented | No MCP server documented | Scripted in R |
-| Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
+| Downstream hand-off | Populations → `colData` for `diffcyt` / `CATALYST` / any SCE tool, or → `GatingSet` nodes for flowWorkspace / openCyto / `ggcyto` | Export gated FCS | Export gated FCS | `GatingSet` → downstream |
 
 On gate exchange: GateLabR reads and writes Cytobank-compatible Gating-ML, so supported gate geometry and AND population trees can move between GateLabR and Cytobank, and it reads the gating strategy of a FlowJo workspace (`.wsp`). A population that excludes a gate is written with the schema's `gating:use-as-complement` in the Cytobank format and through a NOT gate in the standard format, and both are read back, as is the `gating:complement` attribute GateLab wrote before; such a population has not been shown to cross to Cytobank. OR populations are not imported.
 

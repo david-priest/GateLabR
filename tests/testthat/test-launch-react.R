@@ -281,7 +281,7 @@ test_that("the page tells the app which build it is, in the form a version or a 
   expect_match(GateLabR:::.gatelabr_build_label(build), "^GateLabR [0-9.]+.* GateLab core 89abcde$")
 
   rendered <- htmltools::renderTags(GateLabR:::.gatelabr_react_ui("gatelabr-test-core", build))
-  expect_match(rendered$html, "createShinySceHost({\"build\":{", fixed = TRUE)
+  expect_match(rendered$html, "createShinySceHost({\"objectKind\":\"SingleCellExperiment\",\"build\":{", fixed = TRUE)
   expect_match(rendered$html, "\"coreCommit\":\"89abcdef0123456789abcdef0123456789abcdef\"", fixed = TRUE)
 
   # A record that is not a commit is left out, and a core with no record still launches.
@@ -289,8 +289,9 @@ test_that("the page tells the app which build it is, in the form a version or a 
   expect_null(GateLabR:::.gatelabr_build_identity(dir)$coreCommit)
   expect_null(GateLabR:::.gatelabr_build_identity(tempfile("absent-"))$coreCommit)
   expect_match(GateLabR:::.gatelabr_build_label(list()), "version unknown.*commit unknown")
+  # The object's kind is always stated; a core with no record states no build.
   bare <- htmltools::renderTags(GateLabR:::.gatelabr_react_ui("gatelabr-test-core"))
-  expect_match(bare$html, "createShinySceHost()", fixed = TRUE)
+  expect_match(bare$html, "createShinySceHost({\"objectKind\":\"SingleCellExperiment\"})", fixed = TRUE)
 })
 
 test_that("the app keeps one port from session to session unless told otherwise", {

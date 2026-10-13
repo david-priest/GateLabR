@@ -16,7 +16,8 @@ gatelabPopulations(
   sce,
   populations = NULL,
   hierarchy = NULL,
-  allow_stale = FALSE
+  allow_stale = FALSE,
+  by = c("name", "path")
 )
 
 gatelabLeafPopulation(
@@ -37,6 +38,10 @@ the memberships were saved.}
 
 \item{populations}{Population names (or ids) to return; \code{NULL} means every population of
 the hierarchy, root included.}
+
+\item{by}{How the columns of \code{gatelabPopulations()} are named: by population name,
+disambiguated by id where names repeat, or by the population's path from the root (the
+node path on a GatingSet), which is unique by construction.}
 
 \item{ungated}{Label for events that fall in no population below the root.}
 }
