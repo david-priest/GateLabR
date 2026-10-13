@@ -5,13 +5,19 @@
 #' \code{\link{launchGatingApp}}, which is the single supported entry point.
 #'
 #' @param sce A \code{SingleCellExperiment}, or a flowWorkspace \code{GatingSet},
-#'   which is served through an SCE built from it: its samples, the compensated
-#'   linear values its transforms are the inverse of, and the \code{pData()}
-#'   columns as sample metadata; the workspace is kept as a keyword on every
-#'   sample's cytoframe, and "Save to SCE" writes every population of the tree
-#'   back as a node of the hierarchy, as its gate where flowWorkspace selects
-#'   exactly the events GateLab did and as its per-sample membership otherwise.
-#'   If \code{NULL}, the first SCE in the global environment is used.
+#'   which is served from the object itself: its samples with the \code{pData()}
+#'   columns as metadata, each sample's values read from its cytoframe as the
+#'   app asks for them and put back to linear through the channel's inverse
+#'   transform, and the hierarchy it holds opened as the app's gates, each in
+#'   the transformed space the object evaluates it in. The app's axes take the
+#'   object's transforms (a logicle as the object's own, an arcsinh at its
+#'   cofactor). The workspace is kept as the keyword \code{GATELAB_WORKSPACE} on
+#'   every sample's cytoframe, which \code{save_gs()} keeps, and "Save to
+#'   GatingSet" writes every population of the tree back to the hierarchy in
+#'   place: as a flowWorkspace gate where the space allows (a rectangle under
+#'   any transforms; a polygon or ellipse when the app's space is the object's)
+#'   and as the exact per-sample membership otherwise. If \code{NULL}, the first
+#'   SCE in the global environment is used.
 #' @param sample_column Optional \code{colData} column defining samples. When
 #'   omitted, common sample columns such as \code{sample_id} are detected.
 #' @param port Port for Shiny. By default the app is served on one port from
@@ -108,12 +114,12 @@ launchReactGateLab <- function(
     sce_name <- candidates[[1]]
     sce <- get(sce_name, envir = .GlobalEnv)
   } else if (.gatelabr_is_gatingset(sce)) {
-    # A GatingSet is served through an SCE built from it (gatingset.R); the global name keeps
-    # the GatingSet, which every write reaches in place.
+    # A GatingSet is served from its own parts and written in place (gatingset_host.R); the
+    # global name keeps the object, which every write reaches.
+    .gatelabr_require_gatingset_support()
     gatingset <- sce
     if (!nzchar(sce_name) || identical(sce_name, "NULL")) sce_name <- "gatelabr_gs"
     assign(sce_name, gatingset, envir = .GlobalEnv)
-    sce <- .gatelabr_gatingset_sce(gatingset)
   } else {
     if (!methods::is(sce, "SingleCellExperiment")) {
       stop("sce must be a SingleCellExperiment or a flowWorkspace GatingSet.", call. = FALSE)
@@ -130,47 +136,51 @@ launchReactGateLab <- function(
   } else {
     message(
       "GateLabR will save the workspace to the GatingSet `", sce_name, "` (a keyword on every ",
-      "sample) and, on \"Save to SCE\", write every population of the tree back as a node of its ",
-      "hierarchy, in place."
+      "sample) and, on \"Save to GatingSet\", write every population of the tree back to its ",
+      "hierarchy, in place: as a flowWorkspace gate where the space allows, as the exact ",
+      "membership otherwise. save_gs() keeps both."
     )
+    message(.gatelabr_gatingset_launch_note(gatingset))
   }
-  # Likewise for the assays: the user must know what the app draws, and from which assay,
-  # before they gate on it.
-  assay_note <- tryCatch(
-    .gatelabr_assay_note(sce),
-    error = function(cause) {
-      # Never fail a launch over an advisory note, but never swallow it either: a silent NULL
-      # is indistinguishable from "nothing to say".
-      warning(
-        "GateLabR could not describe this SCE's assays: ",
-        conditionMessage(cause),
-        call. = FALSE
-      )
-      NULL
-    }
-  )
-  if (!is.null(assay_note)) message(assay_note)
-  # Gates that name rows renamed since the workspace was saved are restated under the new names
-  # where the channel list the save recorded shows the renames, and gates on channels the object
-  # lacks are named (workspace_channels.R). Neither is a reason to stop the launch. The object in
-  # the global environment changes only when the app next saves.
   absent_gates <- NULL
-  reconciled <- tryCatch(
-    .gatelabr_reconcile_workspace_channels(sce),
-    error = function(cause) {
-      warning(
-        "GateLabR could not check the saved workspace's channels against this SCE: ",
-        conditionMessage(cause),
-        call. = FALSE
-      )
-      NULL
+  if (is.null(gatingset)) {
+    # Likewise for the assays: the user must know what the app draws, and from which assay,
+    # before they gate on it.
+    assay_note <- tryCatch(
+      .gatelabr_assay_note(sce),
+      error = function(cause) {
+        # Never fail a launch over an advisory note, but never swallow it either: a silent NULL
+        # is indistinguishable from "nothing to say".
+        warning(
+          "GateLabR could not describe this SCE's assays: ",
+          conditionMessage(cause),
+          call. = FALSE
+        )
+        NULL
+      }
+    )
+    if (!is.null(assay_note)) message(assay_note)
+    # Gates that name rows renamed since the workspace was saved are restated under the new
+    # names where the channel list the save recorded shows the renames, and gates on channels
+    # the object lacks are named (workspace_channels.R). Neither is a reason to stop the launch.
+    # The object in the global environment changes only when the app next saves.
+    reconciled <- tryCatch(
+      .gatelabr_reconcile_workspace_channels(sce),
+      error = function(cause) {
+        warning(
+          "GateLabR could not check the saved workspace's channels against this SCE: ",
+          conditionMessage(cause),
+          call. = FALSE
+        )
+        NULL
+      }
+    )
+    if (!is.null(reconciled)) {
+      sce <- reconciled$sce
+      absent_gates <- reconciled$absent
+      report <- .gatelabr_workspace_channel_report(reconciled, sce_name)
+      if (!is.null(report)) message(report)
     }
-  )
-  if (!is.null(reconciled)) {
-    sce <- reconciled$sce
-    absent_gates <- reconciled$absent
-    report <- .gatelabr_workspace_channel_report(reconciled, sce_name)
-    if (!is.null(report)) message(report)
   }
 
   assets <- .gatelabr_react_asset_dir()
@@ -185,10 +195,13 @@ launchReactGateLab <- function(
   shiny::addResourcePath(prefix, assets)
 
   dataset_id <- paste0(
-    "sce-",
+    if (is.null(gatingset)) "sce-" else "gatingset-",
     substr(gsub("[^A-Za-z0-9_-]", "-", sce_name), 1L, 48L)
   )
-  ui <- .gatelabr_react_ui(prefix, build)
+  ui <- .gatelabr_react_ui(
+    prefix, build,
+    object_kind = if (is.null(gatingset)) "SingleCellExperiment" else "GatingSet"
+  )
   # This state belongs to the running app, not to an individual browser
   # connection. A page reload creates a new Shiny session; keeping the state
   # outside the session closure ensures that saved workspace/colData changes
@@ -414,6 +427,9 @@ launchReactGateLab <- function(
           )
           sce_state(handled$sce)
           if (writes) .gatelabr_write_back(live, sce_name, handled$sce)
+          if (is.list(handled$report)) {
+            message(.gatelabr_gatingset_write_report(handled$report, sce_name))
+          }
           if (identical(request$operation, "write-workspace")) {
             signature <- .gatelabr_absent_channel_signature(handled$absent_gates)
             if (!identical(signature, reported$signature)) {
@@ -549,13 +565,12 @@ launchReactGateLab <- function(
   FALSE
 }
 
-.gatelabr_react_ui <- function(resource_prefix, build = list()) {
-  # The host adapter is told which build it is in; the header and the About card show it.
-  host_options <- if (length(build)) {
-    as.character(jsonlite::toJSON(list(build = build), auto_unbox = TRUE))
-  } else {
-    ""
-  }
+.gatelabr_react_ui <- function(resource_prefix, build = list(), object_kind = "SingleCellExperiment") {
+  # The host adapter is told which build it is in, and which object it serves: the header and
+  # the About card show the build, and the app's text names the object where it says SCE.
+  options <- list(objectKind = object_kind)
+  if (length(build)) options$build <- build
+  host_options <- as.character(jsonlite::toJSON(options, auto_unbox = TRUE))
   module <- sprintf(
     paste0(
       "import { mountGateLab, createShinySceHost } from '/%s/gatelab-embed.js';\n",

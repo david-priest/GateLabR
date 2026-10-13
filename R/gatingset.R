@@ -1,18 +1,14 @@
-# gatingset.R -- a flowWorkspace GatingSet as the object GateLabR serves and writes back to.
+# gatingset.R -- what GateLabR writes to a flowWorkspace GatingSet, and reads from it.
 #
-# A GatingSet holds, per sample, a cytoframe whose values are compensated and transformed in
-# place, each channel's transformation with its inverse, and a hierarchy of nodes. Everything
-# else in this package is written against a SingleCellExperiment, so the GatingSet is served
-# through an SCE built from it at launch: the channels as rows, the events of every sample in
-# order as columns, the compensated linear values (the inverse of the stored transforms) as one
-# assay named `compensated`, so the app draws through its own display transforms and applies no
-# matrix a second time. The workspace record lives in a cytoframe keyword, which save_gs() keeps
-# where an R attribute is lost, and the hierarchy is the record of the populations: an explicit
-# save writes every population of the active tree back as a node. Design note: the vault's
+# The object is served from its own parts (gatingset_host.R). This file holds the record the
+# app keeps on it, the write of populations to its hierarchy, and the readers. The workspace
+# record lives in a cytoframe keyword on every sample, which save_gs() keeps where an R
+# attribute is lost; the hierarchy is the record of the populations: an explicit save writes
+# every population of the active tree back as a node, as a flowWorkspace gate where the space
+# allows and as the exact membership otherwise. Design note: the vault's
 # `Coding/GateLab/GateLabR — GatingSet support (design, 2026-10-13).md`.
 
 .gatelabr_gatingset_keyword <- "GATELAB_WORKSPACE"
-.gatelabr_gatingset_assay <- "compensated"
 
 .gatelabr_is_gatingset <- function(x) {
   methods::is(x, "GatingSet")
@@ -30,88 +26,10 @@
   invisible(TRUE)
 }
 
-# Every sample's events as flowWorkspace holds them before its transforms: the compensated
-# linear values. A GatingSet with no transformation stores linear values already.
-.gatelabr_gatingset_linear <- function(gh) {
-  transformed <- length(flowWorkspace::gh_get_transformations(gh)) > 0L
-  frame <- if (transformed) {
-    flowWorkspace::gh_pop_get_data(gh, "root", inverse.transform = TRUE)
-  } else {
-    flowWorkspace::gh_pop_get_data(gh, "root")
-  }
-  flowCore::exprs(frame)
-}
-
-#' The SingleCellExperiment the app is served for a GatingSet.
-#'
-#' Rows are the cytoframe parameters ($PnN as the row name, $PnS as the marker), columns the
-#' events of every sample in `sampleNames()` order, `sample_id` and the `pData()` columns the
-#' colData, and the one assay the compensated linear values. The metadata declares the assay's
-#' role and space and carries the workspace record read from the keyword, so the host layer
-#' treats the object as it treats any SCE.
-#' @noRd
-.gatelabr_gatingset_sce <- function(gs) {
-  .gatelabr_require_gatingset_support()
-  samples <- flowWorkspace::sampleNames(gs)
-  if (length(samples) == 0L) stop("The GatingSet holds no samples.", call. = FALSE)
-  frames <- lapply(seq_along(samples), function(index) .gatelabr_gatingset_linear(gs[[index]]))
-  counts <- vapply(frames, nrow, integer(1))
-  first <- flowWorkspace::gh_pop_get_data(gs[[1]], "root")
-  parameters <- flowCore::pData(flowCore::parameters(first))
-  # The columns come as AsIs; plain character, or identical() and the row names refuse them.
-  pnn <- as.character(unclass(parameters$name))
-  pns <- as.character(unclass(parameters$desc))
-  pns[is.na(pns)] <- ""
-  # The values are taken in the parameters' order by name, so a sample whose matrix lists them
-  # in another order is served the same; one that lacks or adds a parameter is refused.
-  for (index in seq_along(frames)) {
-    found <- colnames(frames[[index]])
-    if (is.null(found) || !setequal(found, pnn) || length(found) != length(pnn)) {
-      stop(
-        "Sample `", samples[[index]], "` of the GatingSet has other parameters than `",
-        samples[[1]], "`; GateLabR serves one panel.",
-        call. = FALSE
-      )
-    }
-    frames[[index]] <- frames[[index]][, pnn, drop = FALSE]
-  }
-  values <- t(do.call(rbind, frames))
-  storage.mode(values) <- "double"
-  row_ids <- make.unique(pnn, sep = "__")
-  dimnames(values) <- list(
-    row_ids,
-    paste0(rep(samples, counts), "_", unlist(lapply(counts, seq_len)))
-  )
-  pd <- flowWorkspace::pData(gs)
-  col_data <- S4Vectors::DataFrame(sample_id = rep(samples, counts))
-  for (field in setdiff(colnames(pd), c("name", "sample_id"))) {
-    col_data[[field]] <- rep(pd[[field]], counts)
-  }
-  rownames(col_data) <- colnames(values)
-  row_data <- S4Vectors::DataFrame(gatelabr_pnn = pnn, gatelabr_pns = pns)
-  rownames(row_data) <- row_ids
-  assays <- list(values)
-  names(assays) <- .gatelabr_gatingset_assay
-  sce <- SingleCellExperiment::SingleCellExperiment(
-    assays = assays,
-    colData = col_data,
-    rowData = row_data
-  )
-  md <- list(
-    gatelabr_assay_roles = stats::setNames(list("compensated"), .gatelabr_gatingset_assay),
-    gatelabr_assay_coordinate_spaces = stats::setNames(list("linear"), .gatelabr_gatingset_assay),
-    gatelabr_gatingset = list(samples = samples, event_counts = counts)
-  )
-  record <- .gatelabr_gatingset_record(gs)
-  if (!is.null(record)) md$gatelab_workspace <- record
-  S4Vectors::metadata(sce) <- md
-  sce
-}
-
 # ── the record on the object ─────────────────────────────────────────────────
 
-# The workspace record as the SCE host stores it in metadata(), read from the keyword of the
-# first sample's cytoframe. NULL when the object holds none.
+# The workspace record, read from the keyword of the first sample's cytoframe. NULL when the
+# object holds none.
 .gatelabr_gatingset_record <- function(gs) {
   frame <- flowWorkspace::gs_cyto_data(gs)[[1]]
   text <- flowWorkspace::keyword(frame)[[.gatelabr_gatingset_keyword]]
@@ -126,15 +44,12 @@
   )
   if (!is.list(record) || !is.character(record$workspace_json)) return(NULL)
   record$revision <- as.integer(record$revision)
-  record$version <- as.integer(record$version)
   record
 }
 
-# Write the record to every sample's cytoframe, the same value on each, so that a sample
-# subset of the object still carries it. Memberships are left out: the hierarchy is the record
-# of the populations, and the masks would be a second copy of it.
+# Store the record as the keyword on every sample's cytoframe. In the session the keyword is in
+# memory; save_gs() writes it with the object.
 .gatelabr_gatingset_store_record <- function(gs, record) {
-  record <- record[setdiff(names(record), "memberships")]
   text <- as.character(jsonlite::toJSON(record, auto_unbox = TRUE, null = "null", na = "null",
                                         digits = NA))
   frames <- flowWorkspace::gs_cyto_data(gs)
@@ -149,30 +64,7 @@
   invisible(gs)
 }
 
-# ── write-back ────────────────────────────────────────────────────────────────
-
-#' Apply what the app wrote to its SCE copy to the GatingSet it stands for.
-#'
-#' Every write stores the workspace record. A save that brought memberships (an explicit one,
-#' whose memberships carry the record's own revision) also rebuilds the hierarchy from the
-#' active tree. Returns the report of that rebuild, or NULL when none ran.
-#' @noRd
-.gatelabr_gatingset_apply <- function(gs, sce) {
-  md <- S4Vectors::metadata(sce)$gatelab_workspace
-  if (!is.list(md) || !is.character(md$workspace_json)) return(invisible(NULL))
-  .gatelabr_gatingset_store_record(gs, md)
-  memberships <- md$memberships
-  if (!is.list(memberships) ||
-      !identical(as.integer(memberships$revision), as.integer(md$revision))) {
-    return(invisible(NULL))
-  }
-  report <- .gatelabr_gatingset_write_populations(gs, sce, md)
-  # The record says the hierarchy was written from this revision, which is what the stop-time
-  # warning and the readers' status ask.
-  md$hierarchy_written <- TRUE
-  .gatelabr_gatingset_store_record(gs, md)
-  invisible(report)
-}
+# ── populations to the hierarchy ──────────────────────────────────────────────
 
 # The gates and populations of one hierarchy of a GateLab workspace. The active tree is
 # `gating`; the others are kept beside it under `gating$stored_hierarchies`, each with its id.
@@ -200,77 +92,116 @@
   candidate
 }
 
+# The populations of the active hierarchy of a memberships payload, parents before children,
+# each with its masks per sample. The payload is the app's (workspaceContract.ts): hierarchies,
+# and populations with one packed mask per sample.
+.gatelabr_gatingset_memberships <- function(gs, memberships) {
+  if (!is.list(memberships) || !is.list(memberships$hierarchies) || !is.list(memberships$populations)) {
+    stop("Population memberships payload is malformed.", call. = FALSE)
+  }
+  hierarchies <- memberships$hierarchies
+  if (length(hierarchies) == 0L) stop("Population memberships name no hierarchy.", call. = FALSE)
+  ids <- vapply(hierarchies, function(hierarchy) .gatelabr_membership_scalar(hierarchy$id, "hierarchy id"), character(1))
+  active <- ids[vapply(hierarchies, function(hierarchy) isTRUE(hierarchy$active), logical(1))]
+  active <- if (length(active)) active[[1]] else ids[[1]]
+  partition <- .gatelabr_gatingset_partition(gs, include_metadata = FALSE)
+  samples <- partition$levels
+  rows <- list()
+  for (population in memberships$populations) {
+    if (!is.list(population)) stop("Population memberships: a population is malformed.", call. = FALSE)
+    if (!identical(.gatelabr_membership_scalar(population$hierarchyId, "hierarchy id"), active)) next
+    name <- .gatelabr_membership_scalar(population$populationName, "population name")
+    parent <- population$parentId
+    parent <- if (is.null(parent) || length(parent) != 1L || is.na(parent) || !nzchar(as.character(parent))) {
+      NA_character_
+    } else {
+      as.character(parent)
+    }
+    membership <- .gatelabr_assemble_membership(population$sampleMasks, partition, samples, name)
+    rows[[length(rows) + 1L]] <- list(
+      population_id = .gatelabr_membership_scalar(population$populationId, "population id"),
+      name = name,
+      parent_id = parent,
+      masks = stats::setNames(lapply(partition$event_indices, function(index) membership[index] %in% TRUE), samples)
+    )
+  }
+  if (length(rows) == 0L) stop("Population memberships name no population.", call. = FALSE)
+  # Parents before children, whatever order the payload came in.
+  ordered <- list()
+  placed <- character(0)
+  remaining <- rows
+  repeat {
+    before <- length(remaining)
+    keep <- list()
+    for (row in remaining) {
+      if (is.na(row$parent_id) || row$parent_id %in% placed) {
+        ordered[[length(ordered) + 1L]] <- row
+        placed <- c(placed, row$population_id)
+      } else {
+        keep[[length(keep) + 1L]] <- row
+      }
+    }
+    remaining <- keep
+    if (length(remaining) == 0L || length(remaining) == before) break
+  }
+  for (row in remaining) {
+    warning("Population '", row$name, "' has a parent outside its hierarchy and was not written.",
+            call. = FALSE)
+  }
+  list(active = active, hierarchies = length(hierarchies), populations = ordered)
+}
+
 #' Rebuild the hierarchy from the active tree of the memberships an explicit save brought.
 #'
-#' Each population becomes a node under its parent's node. One with a single included gate
-#' that is a rectangle, polygon or ellipse in display space under the GatingSet's own
-#' transforms is written as that gate, and kept only when flowWorkspace selects exactly the
-#' events GateLab did; every other population, and a gate whose events differ, is written as
-#' its per-sample membership, which flowWorkspace holds as a node of its own kind. Nodes the
-#' tree no longer has are removed first: the tree in GateLab is the tree.
+#' Each population becomes a node under its parent's node. One with a single included
+#' rectangle, polygon or ellipse becomes that gate where the object's space allows it
+#' (.gatelabr_gatingset_gate), and is kept only when flowWorkspace selects exactly the events
+#' GateLab did; every other population, and a gate whose events differ, is written as its
+#' per-sample membership, which flowWorkspace holds as a node of its own kind. Nodes the tree
+#' no longer has are removed first: the tree in GateLab is the tree.
 #' @noRd
-.gatelabr_gatingset_write_populations <- function(gs, sce, md) {
-  memberships <- md$memberships
-  hierarchies <- memberships$hierarchies
-  active <- hierarchies$hierarchy_id[hierarchies$active %in% TRUE]
-  if (length(active) == 0L) active <- hierarchies$hierarchy_id[[1]]
-  active <- active[[1]]
-  populations <- memberships$populations[memberships$populations$hierarchy_id == active, ]
-  populations <- populations[order(populations$depth), ]
-  parsed <- tryCatch(jsonlite::fromJSON(md$workspace_json, simplifyVector = FALSE),
-                     error = function(cause) NULL)
-  tree <- if (is.list(parsed)) .gatelabr_workspace_tree(parsed, active) else NULL
+.gatelabr_gatingset_write_populations <- function(gs, parsed, memberships) {
+  prepared <- .gatelabr_gatingset_memberships(gs, memberships)
+  tree <- .gatelabr_workspace_tree(parsed, prepared$active)
   gates <- if (is.list(tree)) tree$gates else list()
   tree_populations <- if (is.list(tree)) tree$populations else list()
-  if (is.list(gates) && is.null(names(gates))) {
+  if (is.list(gates) && length(gates) && is.null(names(gates))) {
     names(gates) <- vapply(gates, function(gate) as.character(gate$gate_id), character(1))
   }
-  if (is.list(tree_populations) && is.null(names(tree_populations))) {
+  if (is.list(tree_populations) && length(tree_populations) && is.null(names(tree_populations))) {
     names(tree_populations) <- vapply(tree_populations,
                                       function(population) as.character(population$population_id),
                                       character(1))
   }
-
   samples <- flowWorkspace::sampleNames(gs)
-  partition <- .gatelabr_sample_partition(sce, "sample_id", include_metadata = FALSE)
-  if (!identical(partition$levels, samples)) {
-    stop("The app's samples are not the GatingSet's samples; relaunch on the object.", call. = FALSE)
-  }
-  event_count <- ncol(sce)
-  masks_of <- function(population_id) {
-    packed <- memberships$masks[[paste0(active, "/", population_id)]]
-    bits <- .gatelabr_unpack_bits(packed, event_count)
-    stats::setNames(lapply(partition$event_indices, function(rows) bits[rows]), samples)
-  }
+  axes <- .gatelabr_gatingset_axes(gs, .gatelabr_gatingset_channels(gs)$pnn)
 
   for (child in flowWorkspace::gs_pop_get_children(gs, "root")) {
     flowWorkspace::gs_pop_remove(gs, child)
   }
   paths <- list()
-  report <- list(gates = character(0), masks = character(0), replaced = character(0))
-  for (row in seq_len(nrow(populations))) {
-    population_id <- populations$population_id[[row]]
-    parent_id <- populations$parent_id[[row]]
-    if (is.na(parent_id)) {
-      paths[[population_id]] <- "root"
+  report <- list(gates = character(0), masks = character(0), replaced = character(0),
+                 hierarchies = prepared$hierarchies, populations = 0L)
+  for (population in prepared$populations) {
+    if (is.na(population$parent_id)) {
+      paths[[population$population_id]] <- "root"
       next
     }
-    parent_path <- paths[[parent_id]]
-    if (is.null(parent_path)) {
-      warning("Population '", populations$population[[row]], "' has no parent node and was not written.",
-              call. = FALSE)
-      next
-    }
+    parent_path <- paths[[population$parent_id]]
+    if (is.null(parent_path)) next
     siblings <- basename(flowWorkspace::gs_pop_get_children(gs, parent_path))
-    node <- .gatelabr_gatingset_node_name(populations$population[[row]], siblings)
+    node <- .gatelabr_gatingset_node_name(population$name, siblings)
     path <- if (identical(parent_path, "root")) paste0("/", node) else paste0(parent_path, "/", node)
-    masks <- masks_of(population_id)
-    gate <- .gatelabr_gatingset_gate(gs, gates, tree_populations[[population_id]], node)
+    masks <- population$masks
+    gate <- .gatelabr_gatingset_gate(gates, tree_populations[[population$population_id]], node, axes)
     written <- "masks"
     if (!is.null(gate)) {
-      flowWorkspace::gs_pop_add(gs, gate, parent = parent_path, name = node)
-      flowWorkspace::recompute(gs, path)
-      exact <- all(vapply(seq_along(samples), function(index) {
+      added <- tryCatch({
+        flowWorkspace::gs_pop_add(gs, gate, parent = parent_path, name = node)
+        flowWorkspace::recompute(gs, path)
+        TRUE
+      }, error = function(...) FALSE)
+      exact <- added && all(vapply(seq_along(samples), function(index) {
         identical(
           as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], path)),
           as.logical(masks[[index]])
@@ -279,7 +210,7 @@
       if (exact) {
         written <- "gate"
       } else {
-        flowWorkspace::gs_pop_remove(gs, path)
+        if (added) flowWorkspace::gs_pop_remove(gs, path)
         report$replaced <- c(report$replaced, node)
       }
     }
@@ -288,32 +219,129 @@
     }
     report[[if (written == "gate") "gates" else "masks"]] <-
       c(report[[if (written == "gate") "gates" else "masks"]], node)
-    paths[[population_id]] <- path
+    report$populations <- report$populations + 1L
+    paths[[population$population_id]] <- path
   }
+  flowWorkspace::recompute(gs)
   report
 }
 
-# The flowWorkspace gate a population can be written as, or NULL when it has none: one included
-# gate reference, no quadrant, a rectangle, polygon or ellipse in display space whose transforms
-# on both axes are the GatingSet's own.
-.gatelabr_gatingset_gate <- function(gs, gates, population, node) {
+# The app's UNBOUNDED (Number.MAX_VALUE) read by R: no bound on that side.
+.gatelabr_gatingset_unbounded <- function(value) {
+  !is.finite(value) || abs(value) >= 1e300
+}
+
+# The function from a GateLab transform spec's space back to linear values, or NULL for a
+# kind R cannot invert. A gate stated in no space is in the sample's gating space, which for
+# the linear values the app is served is the linear value.
+.gatelabr_spec_inverse <- function(spec) {
+  if (is.null(spec)) return(function(y) y)
+  if (!is.list(spec) || !is.character(spec$kind)) return(NULL)
+  number <- function(name) {
+    value <- suppressWarnings(as.numeric(spec[[name]]))
+    if (length(value) != 1L || !is.finite(value)) NULL else value
+  }
+  switch(
+    spec$kind,
+    identity = function(y) y,
+    asinh = {
+      cofactor <- number("cofactor")
+      if (is.null(cofactor) || cofactor <= 0) NULL else function(y) cofactor * sinh(y)
+    },
+    logicle = {
+      p <- list(T = number("T"), W = number("W"), M = number("M"), A = number("A"))
+      if (any(vapply(p, is.null, logical(1)))) NULL else
+        flowCore::inverseLogicleTransform(flowCore::logicleTransform(w = p$W, t = p$T, m = p$M, a = p$A))@.Data
+    },
+    biex = {
+      p <- list(maxValue = number("maxValue"), pos = number("pos"), neg = number("neg"),
+                widthBasis = number("widthBasis"), channelRange = number("channelRange"))
+      if (any(vapply(p, is.null, logical(1)))) NULL else
+        flowWorkspace::flowjo_biexp(channelRange = p$channelRange, maxValue = p$maxValue,
+                                    pos = p$pos, neg = p$neg, widthBasis = p$widthBasis, inverse = TRUE)
+    },
+    wsplog = {
+      p <- list(offset = number("offset"), decades = number("decades"))
+      if (any(vapply(p, is.null, logical(1))) || p$offset <= 0 || p$decades <= 0) NULL else
+        function(y) 10^(y * p$decades + log10(p$offset))
+    },
+    flog = {
+      p <- list(T = number("T"), M = number("M"))
+      if (any(vapply(p, is.null, logical(1))) || p$T <= 0 || p$M <= 0) NULL else
+        function(y) p$T * 10^((y - 1) * p$M)
+    },
+    NULL
+  )
+}
+
+# Whether a GateLab spec is the object's axis by parameters, so that straight edges in one
+# space are straight in the other and the axis's affine `backward` map carries the geometry.
+.gatelabr_gatingset_same_space <- function(spec, axis) {
+  own <- axis$spec
+  if (is.null(own)) return(is.null(spec) || identical(spec$kind, "identity"))
+  if (!is.list(spec) || !identical(spec$kind, own$kind)) return(FALSE)
+  fields <- setdiff(names(own), c("kind", "standard", "tableChannels"))
+  all(vapply(fields, function(field) {
+    a <- suppressWarnings(as.numeric(spec[[field]]))
+    b <- suppressWarnings(as.numeric(own[[field]]))
+    length(a) == 1L && length(b) == 1L && is.finite(a) && is.finite(b) &&
+      abs(a - b) <= 1e-9 * max(1, abs(b))
+  }, logical(1)))
+}
+
+# The flowWorkspace gate a population can be written as, or NULL when it has none: one
+# included gate reference, no quadrant, a rectangle, polygon or ellipse. A rectangle is mapped
+# bound by bound from the app's space through linear into the object's, which is exact for an
+# axis-aligned edge under any transform; a polygon or ellipse is mapped only when the app's
+# space is the object's by parameters, so that its edges stay straight.
+.gatelabr_gatingset_gate <- function(gates, population, node, axes) {
   if (!is.list(population)) return(NULL)
   refs <- population$gate_refs
   if (!is.list(refs) || length(refs) != 1L) return(NULL)
   ref <- refs[[1]]
   if (!is.list(ref) || !isTRUE(ref$include) || !is.null(ref$quadrant)) return(NULL)
   gate <- gates[[as.character(ref$gate_id)]]
-  if (!is.list(gate) || !identical(gate$space, "display")) return(NULL)
-  if (!gate$gate_type %in% c("rectangle", "polygon", "ellipse")) return(NULL)
+  if (!is.list(gate) || !gate$gate_type %in% c("rectangle", "polygon", "ellipse")) return(NULL)
   x <- as.character(gate$x_channel)
   y <- as.character(gate$y_channel)
-  transforms <- gate$transforms
-  if (!is.list(transforms)) return(NULL)
-  for (channel in c(x, y)) {
-    if (!isTRUE(.gatelabr_gatingset_transform_matches(gs, channel, transforms[[channel]]))) {
-      return(NULL)
-    }
+  if (!x %in% names(axes) || !y %in% names(axes)) return(NULL)
+  specs <- if (identical(gate$space, "display") && is.list(gate$transforms)) {
+    list(gate$transforms[[x]], gate$transforms[[y]])
+  } else {
+    list(NULL, NULL)
   }
+  axis_pair <- list(axes[[x]], axes[[y]])
+  if (any(vapply(axis_pair, function(axis) !is.null(axis$unsupported), logical(1)))) return(NULL)
+
+  if (identical(gate$gate_type, "rectangle")) {
+    vertices <- matrix(as.numeric(unlist(gate$vertices)), ncol = 2L, byrow = TRUE)
+    if (nrow(vertices) < 2L || any(is.na(vertices))) return(NULL)
+    bounds <- list()
+    for (index in 1:2) {
+      undo <- .gatelabr_spec_inverse(specs[[index]])
+      if (is.null(undo)) return(NULL)
+      channel <- c(x, y)[[index]]
+      own <- axis_pair[[index]]
+      # From the app's space to linear, then through the object's own transform into the space
+      # its gates are evaluated in.
+      to_object <- function(value) {
+        if (.gatelabr_gatingset_unbounded(value)) return(sign(value) * Inf)
+        linear <- undo(value)
+        if (is.function(own$transform)) own$transform(linear) else linear
+      }
+      low <- to_object(min(vertices[, index]))
+      high <- to_object(max(vertices[, index]))
+      if (is.nan(low) || is.nan(high)) return(NULL)
+      bounds[[channel]] <- c(low, high)
+    }
+    return(flowCore::rectangleGate(filterId = node, .gate = bounds))
+  }
+
+  same <- all(vapply(1:2, function(index) {
+    .gatelabr_gatingset_same_space(specs[[index]], axis_pair[[index]])
+  }, logical(1)))
+  if (!same) return(NULL)
+  backward <- lapply(axis_pair, `[[`, "backward")
   if (identical(gate$gate_type, "ellipse")) {
     mean <- as.numeric(unlist(gate$mean))
     covariance <- matrix(as.numeric(unlist(gate$covariance)), 2L, 2L, byrow = TRUE)
@@ -322,83 +350,20 @@
         distance_square <= 0) {
       return(NULL)
     }
+    slopes <- vapply(backward, function(map) map(1) - map(0), numeric(1))
+    covariance <- diag(slopes) %*% covariance %*% diag(slopes)
     dimnames(covariance) <- list(c(x, y), c(x, y))
     return(flowCore::ellipsoidGate(
       filterId = node, .gate = covariance,
-      mean = stats::setNames(mean, c(x, y)), distance = sqrt(distance_square)
+      mean = stats::setNames(c(backward[[1]](mean[[1]]), backward[[2]](mean[[2]])), c(x, y)),
+      distance = sqrt(distance_square)
     ))
   }
   vertices <- matrix(as.numeric(unlist(gate$vertices)), ncol = 2L, byrow = TRUE)
-  if (any(!is.finite(vertices))) return(NULL)
-  if (identical(gate$gate_type, "rectangle")) {
-    if (nrow(vertices) < 2L) return(NULL)
-    bounds <- stats::setNames(list(range(vertices[, 1]), range(vertices[, 2])), c(x, y))
-    return(flowCore::rectangleGate(filterId = node, .gate = bounds))
-  }
-  if (nrow(vertices) < 3L) return(NULL)
+  if (nrow(vertices) < 3L || any(!is.finite(vertices))) return(NULL)
+  vertices <- cbind(backward[[1]](vertices[, 1L]), backward[[2]](vertices[, 2L]))
   colnames(vertices) <- c(x, y)
   flowCore::polygonGate(filterId = node, .gate = vertices)
-}
-
-# The R function of a GateLab transform spec, or NULL for a kind R cannot rebuild.
-.gatelabr_transform_function <- function(spec) {
-  if (!is.list(spec) || !is.character(spec$kind)) return(NULL)
-  number <- function(name) {
-    value <- suppressWarnings(as.numeric(spec[[name]]))
-    if (length(value) != 1L || !is.finite(value)) NULL else value
-  }
-  switch(
-    spec$kind,
-    identity = function(x) x,
-    asinh = {
-      cofactor <- number("cofactor")
-      if (is.null(cofactor) || cofactor <= 0) NULL else function(x) asinh(x / cofactor)
-    },
-    logicle = {
-      parameters <- list(T = number("T"), W = number("W"), M = number("M"), A = number("A"))
-      if (any(vapply(parameters, is.null, logical(1)))) NULL else
-        flowCore::logicleTransform(w = parameters$W, t = parameters$T, m = parameters$M,
-                                   a = parameters$A)
-    },
-    biex = {
-      parameters <- list(maxValue = number("maxValue"), pos = number("pos"), neg = number("neg"),
-                         widthBasis = number("widthBasis"), channelRange = number("channelRange"))
-      if (any(vapply(parameters, is.null, logical(1)))) NULL else
-        flowWorkspace::flowjo_biexp(
-          channelRange = parameters$channelRange, maxValue = parameters$maxValue,
-          pos = parameters$pos, neg = parameters$neg, widthBasis = parameters$widthBasis
-        )
-    },
-    NULL
-  )
-}
-
-#' Whether a GateLab transform spec is, numerically, the GatingSet's transform of a channel.
-#'
-#' The parameters of a transform stored in the GatingSet are not readable from R, so the two
-#' are compared as functions over the channel's own values: 200 quantiles of the linear values
-#' plus their extremes, to within 1e-6 of the transformed range. A channel the GatingSet does
-#' not transform matches the identity only.
-#' @noRd
-.gatelabr_gatingset_transform_matches <- function(gs, channel, spec) {
-  gh <- gs[[1]]
-  stored <- flowWorkspace::gh_get_transformations(gh)[[channel]]
-  candidate <- .gatelabr_transform_function(spec)
-  if (is.null(candidate)) return(FALSE)
-  if (is.null(stored)) return(identical(spec$kind, "identity"))
-  if (identical(spec$kind, "identity")) return(FALSE)
-  linear <- .gatelabr_gatingset_linear(gh)
-  if (!channel %in% colnames(linear)) return(FALSE)
-  values <- linear[, channel]
-  values <- values[is.finite(values)]
-  if (length(values) == 0L) return(FALSE)
-  probe <- unique(c(range(values), stats::quantile(values, probs = seq(0, 1, length.out = 200),
-                                                  names = FALSE)))
-  expected <- stored(probe)
-  observed <- tryCatch(candidate(probe), error = function(cause) NULL)
-  if (is.null(observed) || length(observed) != length(expected)) return(FALSE)
-  scale <- max(diff(range(expected)), 1e-12)
-  all(is.finite(observed)) && max(abs(observed - expected)) <= 1e-6 * scale
 }
 
 # ── readers ───────────────────────────────────────────────────────────────────
@@ -444,9 +409,7 @@
 
 .gatelabr_gatingset_event_names <- function(gs) {
   samples <- flowWorkspace::sampleNames(gs)
-  counts <- vapply(seq_along(samples), function(index) {
-    nrow(flowWorkspace::gh_pop_get_data(gs[[index]], "root"))
-  }, integer(1))
+  counts <- .gatelabr_gatingset_event_counts(gs)
   paste0(rep(samples, counts), "_", unlist(lapply(counts, seq_len)))
 }
 

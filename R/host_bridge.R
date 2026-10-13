@@ -1953,6 +1953,10 @@
       !identical(payload$datasetId, dataset_id)) {
     stop("The host request targets a different SCE dataset.", call. = FALSE)
   }
+  # A GatingSet is written in place, on its own parts (gatingset_host.R).
+  if (.gatelabr_is_gatingset(sce)) {
+    return(.gatelabr_handle_gatingset_request(sce, request, dataset_id = dataset_id, session = session))
+  }
 
   if (identical(request$operation, "write-workspace")) {
     return(.gatelabr_store_host_workspace(
@@ -2097,6 +2101,12 @@
       !is.function(session$registerDataObj) ||
       !is.function(session$sendCustomMessage)) {
     stop("session must provide registerDataObj() and sendCustomMessage().", call. = FALSE)
+  }
+  # A GatingSet is served from its own parts (gatingset_host.R).
+  if (.gatelabr_is_gatingset(sce)) {
+    return(.gatelabr_register_gatingset_manifest(
+      session, sce, dataset_id = dataset_id, label = label, message_type = message_type
+    ))
   }
   partition <- .gatelabr_sample_partition(sce, sample_column)
   descriptor <- .gatelabr_sce_dataset_descriptor(

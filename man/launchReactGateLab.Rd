@@ -16,13 +16,19 @@ launchReactGateLab(
 }
 \arguments{
 \item{sce}{A \code{SingleCellExperiment}, or a flowWorkspace \code{GatingSet},
-which is served through an SCE built from it: its samples, the compensated
-linear values its transforms are the inverse of, and the \code{pData()}
-columns as sample metadata; the workspace is kept as a keyword on every
-sample's cytoframe, and "Save to SCE" writes every population of the tree
-back as a node of the hierarchy, as its gate where flowWorkspace selects
-exactly the events GateLab did and as its per-sample membership otherwise.
-If \code{NULL}, the first SCE in the global environment is used.}
+which is served from the object itself: its samples with the \code{pData()}
+columns as metadata, each sample's values read from its cytoframe as the
+app asks for them and put back to linear through the channel's inverse
+transform, and the hierarchy it holds opened as the app's gates, each in
+the transformed space the object evaluates it in. The app's axes take the
+object's transforms (a logicle as the object's own, an arcsinh at its
+cofactor). The workspace is kept as the keyword \code{GATELAB_WORKSPACE} on
+every sample's cytoframe, which \code{save_gs()} keeps, and "Save to
+GatingSet" writes every population of the tree back to the hierarchy in
+place: as a flowWorkspace gate where the space allows (a rectangle under
+any transforms; a polygon or ellipse when the app's space is the object's)
+and as the exact per-sample membership otherwise. If \code{NULL}, the first
+SCE in the global environment is used.}
 
 \item{sample_column}{Optional \code{colData} column defining samples. When
 omitted, common sample columns such as \code{sample_id} are detected.}

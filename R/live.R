@@ -71,25 +71,13 @@
 #' Assign the app's object to the global name after a write, and remember which object that is.
 #' @noRd
 .gatelabr_write_back <- function(live, sce_name, sce) {
-  gatingset <- live$gatingset
-  if (!is.null(gatingset)) {
-    # The app works on an SCE built from the GatingSet; what it wrote goes back into the
-    # GatingSet in place (gatingset.R), and the global name keeps the GatingSet.
-    report <- .gatelabr_gatingset_apply(gatingset, sce)
-    if (!is.null(report)) {
-      message(
-        "GateLabR wrote ", length(report$gates) + length(report$masks),
-        " population(s) to the GatingSet's hierarchy: ", length(report$gates), " as gates, ",
-        length(report$masks), " as memberships",
-        if (length(report$replaced)) paste0(" (", paste(report$replaced, collapse = ", "),
-                                            " as memberships, since the gate selected other events)") else "",
-        "."
-      )
-    }
-    live$written <- gatingset
-    live$address <- .gatelabr_object_address(gatingset)
+  if (.gatelabr_is_gatingset(sce)) {
+    # A GatingSet was written in place by the request itself (gatingset_host.R); the global
+    # name already holds it, so only the record of what was last written moves.
+    live$written <- sce
+    live$address <- .gatelabr_object_address(sce)
     live$refused_address <- NULL
-    return(invisible(gatingset))
+    return(invisible(sce))
   }
   assign(sce_name, sce, envir = .GlobalEnv)
   live$written <- sce
@@ -141,10 +129,9 @@ gatelabSync <- function(sce_name = NULL) {
       stop("`", sce_name, "` in the global environment is not a GatingSet.", call. = FALSE)
     }
     # The app keeps the events it loaded; the GatingSet handed over must hold the same samples
-    # with the same event counts. Its SCE is built again, so new pData and its record reach the app.
+    # with the same event counts. Its pData, marker names and record reach the app as it asks.
     current <- live$get_sce()
-    rebuilt <- .gatelabr_gatingset_sce(object)
-    if (ncol(rebuilt) != ncol(current) || !identical(colnames(rebuilt), colnames(current))) {
+    if (!identical(.gatelabr_gatingset_event_counts(object), .gatelabr_gatingset_event_counts(current))) {
       stop(
         "`", sce_name, "` holds other samples or events than the app was launched with: the ",
         "browser keeps the events it loaded. Stop the app (gatelabStop()) and relaunch on the object.",
@@ -152,7 +139,7 @@ gatelabSync <- function(sce_name = NULL) {
       )
     }
     live$gatingset <- object
-    live$set_sce(rebuilt)
+    live$set_sce(object)
     live$written <- object
     live$address <- .gatelabr_object_address(object)
     live$refused_address <- NULL

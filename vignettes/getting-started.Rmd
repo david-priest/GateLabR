@@ -43,22 +43,47 @@ clone). It opens in your browser.
 
 ## 2. Get your data in
 
-Two entry points:
-
-- **Import `.fcs` files** in the app — it builds the `SingleCellExperiment`,
-  auto-detects flow vs CyTOF, and sets up the per-channel transforms.
-- **Pass an existing SCE** — e.g. from CATALYST `prepData()` (CyTOF) or one you
-  built with `flowCore` / your own pipeline:
+GateLabR opens on an R object, not on FCS files: a `SingleCellExperiment` or a flowWorkspace `GatingSet`. Pass the object, or call `launchGatingApp()` with no argument to pick from the SCEs in your session.
 
 ```r
-launchGatingApp(my_sce)          # use a specific object
-launchGatingApp()                # or pick from SCEs in your session / Import FCS
+launchGatingApp(my_sce)          # a SingleCellExperiment
+launchGatingApp(my_gs)           # a flowWorkspace GatingSet
+launchGatingApp()                # pick from the SCEs in your session
 ```
 
-Flow data uses per-channel **logicle** for fluorescence and **arcsinh** for
-FSC/SSC scatter (editable W and cofactor); CyTOF uses arcsinh (cofactor 5).
+A CyTOF `SingleCellExperiment` comes from CATALYST's `prepData()`. FCS files from a flow cytometer are assembled into either object with flowCore and flowWorkspace:
 
-> 📸 *Screenshot: the FCS import dialog / SCE picker.* — add `man/figures/import.png`
+```r
+library(flowCore)
+library(flowWorkspace)
+fs <- read.flowSet(path = "fcs/", pattern = "\\.fcs$", truncate_max_range = FALSE)
+
+# A GatingSet keeps the files' events on disk, compensated and transformed in place.
+# Compensate before transforming: a GatingSet cannot be uncompensated.
+gs <- GatingSet(fs)
+compensate(gs, spillover(fs[[1]])$SPILL)                # the matrix the files record
+fluor <- grep("-A$", colnames(gs), value = TRUE)
+fluor <- setdiff(fluor, grep("^(FSC|SSC)", fluor, value = TRUE))
+transform(gs, estimateLogicle(gs[[1]], fluor))          # logicle per channel, W from the data
+launchGatingApp(gs)
+
+# A SingleCellExperiment holds the events as columns and the channels as rows. Keep the
+# uncompensated values as `counts`; GateLabR compensates in the app and stores the result as
+# a second assay.
+library(SingleCellExperiment)
+events <- do.call(rbind, lapply(seq_along(fs), function(i) exprs(fs[[i]])))
+sample_id <- rep(sampleNames(fs), fsApply(fs, nrow))
+sce <- SingleCellExperiment(
+  assays = list(counts = t(events)),
+  colData = DataFrame(sample_id = sample_id),
+  rowData = DataFrame(channel_name = colnames(events),
+                      marker_name = unname(markernames(fs[[1]])[colnames(events)]))
+)
+metadata(sce)$spillover <- spillover(fs[[1]])$SPILL     # offered in the Compensation tab
+launchGatingApp(sce)
+```
+
+On a `GatingSet`, the hierarchy it holds opens as the app's gates, drawn in the transformed space the object evaluates them in, and "Save to GatingSet" writes the populations back to the hierarchy in place (see `?launchReactGateLab`). On an SCE, flow data is drawn on a per-channel **logicle** for fluorescence and linear scatter (editable W and cofactor); CyTOF uses arcsinh (cofactor 5).
 
 ## 3. The layout
 

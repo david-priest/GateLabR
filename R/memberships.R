@@ -730,7 +730,14 @@ gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", al
 .gatelabr_warn_memberships_at_stop <- function(sce_name) {
   sce <- tryCatch(get(sce_name, envir = .GlobalEnv), error = function(...) NULL)
   status <- tryCatch(.gatelabr_memberships_status(sce), error = function(...) "absent")
-  if (status == "none") {
+  if (status == "none" && .gatelabr_is_gatingset(sce)) {
+    warning(
+      "GateLabR stopped without writing the populations to the hierarchy of `", sce_name, "`: ",
+      "it holds the nodes it held at launch. Autosaves keep the workspace as a keyword only; ",
+      "relaunch and press \"Save to GatingSet\" to write the populations as nodes.",
+      call. = FALSE
+    )
+  } else if (status == "none") {
     warning(
       "GateLabR stopped with no population memberships stored in `", sce_name, "`: ",
       "gatelabPopulations() and gatelabHierarchy() will refuse it. Autosaves keep gate ",
