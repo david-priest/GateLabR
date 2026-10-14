@@ -13,7 +13,8 @@
 # why the hierarchy is not sent as Gating-ML (CytoML cannot carry FlowJo's log or biexponential),
 # is in the vault's `Coding/GateLab/GateLabR — GatingSet support (design, 2026-10-13).md`.
 
-.gatelabr_gatingset_hierarchy_contract_version <- 1L
+# 2 since tailored per-sample gates: a core reading 1 would give every sample the tree's gate.
+.gatelabr_gatingset_hierarchy_contract_version <- 2L
 
 # ── transforms ────────────────────────────────────────────────────────────────
 
@@ -117,10 +118,13 @@
 # Every channel's axis (above), by channel name, with `transform`, the object's own function
 # from linear values to its transformed values (NULL where it has none), which the write-back
 # of a rectangle maps bounds through. Channels the object does not transform are linear. Read
-# from the first sample: flowWorkspace transforms a GatingSet as one.
-.gatelabr_gatingset_axes <- function(gs, channels) {
-  raw <- .gatelabr_gatingset_raw_transforms(gs)
-  transforms <- tryCatch(flowWorkspace::gh_get_transformations(gs[[1]]), error = function(...) list())
+# from one sample, the first unless `sample` names another: a GatingSet parsed from a FlowJo
+# workspace keeps each sample's own transforms, so the hierarchy and the write-back read each
+# sample's gates through that sample's axes, and the channel descriptors take the first's.
+.gatelabr_gatingset_axes <- function(gs, channels, sample = NULL) {
+  if (is.null(sample)) sample <- flowWorkspace::sampleNames(gs)[[1]]
+  raw <- .gatelabr_gatingset_raw_transforms(gs, sample)
+  transforms <- tryCatch(flowWorkspace::gh_get_transformations(gs[[sample]]), error = function(...) list())
   axes <- lapply(channels, function(channel) {
     axis <- .gatelabr_gatingset_axis(raw[[channel]])
     transform <- transforms[[channel]]
@@ -378,13 +382,24 @@
 }
 
 # The text of a booleanFilter, as flowWorkspace stores it: a single symbol such as
-# `rect&!ell` over node names.
+# `rect&!ell` over node names. Space beside an operator is layout and goes; space inside a term
+# is part of a node's name ("T cells") and stays, where it used to be removed with the rest and
+# the term then named no node.
 .gatelabr_gatingset_boolean_text <- function(gate) {
   expr <- tryCatch(gate@expr, error = function(...) NULL)
   if (is.null(expr) || length(expr) == 0L) return("")
   text <- tryCatch(paste(deparse(expr[[1]]), collapse = ""), error = function(...) "")
   text <- gsub("`", "", text, fixed = TRUE)
-  gsub("[[:space:]]+", "", text)
+  text <- gsub("[[:space:]]*([&|!()])[[:space:]]*", "\\1", text)
+  trimws(text)
+}
+
+# A node flowWorkspace holds as fixed event indices (gs_pop_add() given logical vectors: what
+# Save to GatingSet writes for a population no gate can carry, and what the colData export
+# writes). Its gate reads as a booleanFilter whose expression is `rep(TRUE, ...)`.
+.gatelabr_gatingset_is_indices_gate <- function(gate) {
+  methods::is(gate, "booleanFilter") &&
+    startsWith(.gatelabr_gatingset_boolean_text(gate), "rep(TRUE")
 }
 
 # The node a boolean term names, as a full path. cytolib stores a term as a path relative to
@@ -412,6 +427,13 @@
 .gatelabr_gatingset_boolean_node <- function(gate, paths, parent = "root") {
   text <- .gatelabr_gatingset_boolean_text(gate)
   if (!nzchar(text)) return(list(unsupported = "a boolean with no expression"))
+  if (.gatelabr_gatingset_is_indices_gate(gate)) {
+    return(list(unsupported = paste0("a node holding fixed event indices (a membership written ",
+                                     "from GateLab or R), which GateLab cannot redraw as a gate")))
+  }
+  if (grepl("[()]", text)) {
+    return(list(unsupported = paste0("a boolean with grouping (", text, "), which GateLab does not hold")))
+  }
   has_and <- grepl("&", text, fixed = TRUE)
   has_or <- grepl("|", text, fixed = TRUE)
   if (has_and && has_or) {
@@ -440,10 +462,13 @@
   if (length(parameters) < 1L || length(parameters) > 2L) {
     return(list(unsupported = paste0("a gate on ", length(parameters), " channels")))
   }
-  axis_of <- lapply(parameters, function(channel) {
-    axis <- axes[[channel]]
-    if (is.null(axis)) list(spec = NULL, forward = function(x) x, backward = function(y) y) else axis
-  })
+  # A channel the dataset lacks is one the app has no events on; it leaves the node out by that
+  # reason, and so does the host, so that what the app holds is what the host says it sent.
+  absent <- setdiff(parameters, names(axes))
+  if (length(absent)) {
+    return(list(unsupported = paste0("on channel '", absent[[1]], "', which the dataset does not have")))
+  }
+  axis_of <- lapply(parameters, function(channel) axes[[channel]])
   for (index in seq_along(parameters)) {
     if (!is.null(axis_of[[index]]$unsupported)) {
       return(list(unsupported = paste0(parameters[[index]], " is on ", axis_of[[index]]$unsupported)))
@@ -501,11 +526,12 @@
 # sharing the two cuts. Among the children of one parent, the sets of four such siblings on
 # the same channels and cuts are quadrant sets; each is one quadrant gate for the app, its
 # members numbered as the app numbers quadrants (1 = x-/y+, 2 = x+/y+, 3 = x+/y-, 4 = x-/y-).
+# A negated rectangle is no quadrant.
 .gatelabr_gatingset_quadrant_sets <- function(nodes) {
   sets <- list()
   candidates <- Filter(function(node) {
     gate <- node$gate
-    methods::is(gate, "rectangleGate") && length(gate@min) == 2L &&
+    !isTRUE(node$negated) && methods::is(gate, "rectangleGate") && length(gate@min) == 2L &&
       all(xor(is.finite(gate@min), is.finite(gate@max)))
   }, nodes)
   for (node in candidates) {
@@ -531,87 +557,229 @@
   unname(complete)
 }
 
+# What a quadrant set is apart from where its cuts lie: its parent, channels and members.
+.gatelabr_gatingset_quadrant_signature <- function(set) {
+  members <- vapply(set$members, function(member) paste(member$path, member$quadrant), character(1))
+  paste(c(set$parent, set$channels, sort(members)), collapse = "\t")
+}
+
+# Which of a node's per-sample descriptions the tree takes: the one most samples hold, the
+# earliest sample's on a tie; and the samples whose own differs from it, which become their
+# tailoring in the app.
+.gatelabr_gatingset_reference <- function(bodies) {
+  count <- length(bodies)
+  group <- seq_len(count)
+  for (index in seq_len(count)) {
+    for (earlier in seq_len(index - 1L)) {
+      if (group[[earlier]] == earlier && identical(bodies[[index]], bodies[[earlier]])) {
+        group[[index]] <- earlier
+        break
+      }
+    }
+  }
+  reference <- which.max(tabulate(group, count))
+  list(index = reference, differing = which(group != reference))
+}
+
+# One reason for a node from its per-sample reasons (NA where the sample's is fine): the reason
+# as it stands when every sample gives it, else the first, naming its sample.
+.gatelabr_gatingset_sample_reason <- function(reasons, samples) {
+  failing <- which(!is.na(reasons))
+  if (length(failing) == 0L) return(NULL)
+  if (length(failing) == length(reasons) && length(unique(reasons)) == 1L) return(reasons[[1]])
+  paste0(reasons[[failing[[1]]]], " (on sample '", samples[[failing[[1]]]], "')")
+}
+
 # The hierarchy as the app's contract has it (hostedHierarchy.ts): nodes in the object's order
 # with a gate in the space of its axes or a boolean over node paths, and what could not be
 # described, each with its reason. NULL when the object has no node.
+#
+# Every node is read on every sample, since a FlowJo workspace tailors gates per sample and a
+# GatingSet keeps each sample's own. The tree takes the gate most samples hold; a sample whose
+# gate differs carries it as `tailored`, and the app gives that sample a tailored copy of the
+# tree with it. A node no form can carry on some sample is left out with the sample named.
+#
+# The host leaves out by itself everything the app would drop (an OR, a boolean naming a node
+# left out or a node without a gate of its own, a NOT of an AND of several nodes, a node under
+# one left out), so that the nodes described are exactly the nodes the app holds: the paths
+# are the result's "received" attribute, which the write-back uses to tell a node the user
+# deleted in the app from one the app never had, which it keeps.
 .gatelabr_gatingset_hierarchy_payload <- function(gs, axes = NULL) {
   paths <- setdiff(flowWorkspace::gs_get_pop_paths(gs, path = "full"), "root")
   if (length(paths) == 0L) return(NULL)
-  if (is.null(axes)) axes <- .gatelabr_gatingset_axes(gs, .gatelabr_gatingset_channels(gs)$pnn)
-  gh <- gs[[1]]
+  samples <- flowWorkspace::sampleNames(gs)
+  channels <- .gatelabr_gatingset_channels(gs)$pnn
+  axes_of <- lapply(samples, function(sample) {
+    if (is.null(axes)) .gatelabr_gatingset_axes(gs, channels, sample) else axes
+  })
+  hierarchies <- lapply(samples, function(sample) gs[[sample]])
+  read <- function(value) tryCatch(value, error = function(...) NULL)
   nodes <- lapply(paths, function(path) {
     parent <- flowWorkspace::gs_pop_get_parent(gs, path)
     list(
       path = path,
       name = basename(path),
       parent = if (identical(parent, "root") || !nzchar(parent)) "root" else parent,
-      gate = tryCatch(flowWorkspace::gh_pop_get_gate(gh, path), error = function(...) NULL),
-      negated = isTRUE(tryCatch(flowWorkspace::gh_pop_is_negated(gh, path), error = function(...) FALSE)),
-      boolean = isTRUE(tryCatch(flowWorkspace::gh_pop_is_bool_gate(gh, path), error = function(...) FALSE))
+      gates = lapply(hierarchies, function(gh) read(flowWorkspace::gh_pop_get_gate(gh, path))),
+      negated = vapply(hierarchies, function(gh) isTRUE(read(flowWorkspace::gh_pop_is_negated(gh, path))), logical(1)),
+      boolean = vapply(hierarchies, function(gh) isTRUE(read(flowWorkspace::gh_pop_is_bool_gate(gh, path))), logical(1))
     )
   })
-  quadrant_sets <- .gatelabr_gatingset_quadrant_sets(nodes)
+  # A quadrant set is one where its four rectangles form one on every sample.
+  sets_on <- lapply(seq_along(samples), function(index) {
+    .gatelabr_gatingset_quadrant_sets(lapply(nodes, function(node) {
+      list(path = node$path, name = node$name, parent = node$parent,
+           gate = node$gates[[index]], negated = node$negated[[index]])
+    }))
+  })
+  signatures_on <- lapply(sets_on, function(sets) vapply(sets, .gatelabr_gatingset_quadrant_signature, character(1)))
+  quadrant_sets <- Filter(function(set) {
+    signature <- .gatelabr_gatingset_quadrant_signature(set)
+    all(vapply(signatures_on, function(signatures) signature %in% signatures, logical(1)))
+  }, sets_on[[1]])
   member_paths <- unlist(lapply(quadrant_sets, function(set) vapply(set$members, `[[`, character(1), "path")))
+
   described <- list()
   left_out <- list()
+  left <- character(0)
+  with_gate <- character(0)
+  received <- character(0)
   emitted_sets <- character(0)
   describe <- function(path, name, parent, body) {
     described[[length(described) + 1L]] <<- c(list(path = path, name = name, parent = parent), body)
   }
   leave <- function(path, reason) {
+    left <<- c(left, path)
     left_out[[length(left_out) + 1L]] <<- list(path = path, reason = reason)
   }
+  tailoring <- function(bodies, reference) {
+    lapply(reference$differing, function(index) list(sample = samples[[index]], gate = bodies[[index]]))
+  }
   for (node in nodes) {
+    if (!identical(node$parent, "root") && node$parent %in% left) {
+      leave(node$path, paste0("under '", node$parent, "', which was left out"))
+      next
+    }
     if (node$path %in% member_paths) {
-      set_index <- which(vapply(quadrant_sets, function(set) {
-        node$path %in% vapply(set$members, `[[`, character(1), "path")
-      }, logical(1)))[[1]]
-      set <- quadrant_sets[[set_index]]
+      set <- Find(function(set) node$path %in% vapply(set$members, `[[`, character(1), "path"), quadrant_sets)
       set_name <- paste0(paste(set$channels, collapse = " x "), " quadrants")
       set_path <- if (identical(set$parent, "root")) paste0("/", set_name) else paste0(set$parent, "/", set_name)
       if (set_path %in% emitted_sets) next
       emitted_sets <- c(emitted_sets, set_path)
-      body <- .gatelabr_gatingset_gate_node(node$gate, axes)
-      if (!is.null(body$unsupported)) {
-        for (member in set$members) leave(member$path, body$unsupported)
-        next
-      }
-      maps <- lapply(set$channels, function(channel) {
-        axis <- axes[[channel]]
-        if (is.null(axis) || is.null(axis$forward)) function(x) x else axis$forward
+      signature <- .gatelabr_gatingset_quadrant_signature(set)
+      bodies <- lapply(seq_along(samples), function(index) {
+        own <- sets_on[[index]][[match(signature, signatures_on[[index]])]]
+        body <- .gatelabr_gatingset_gate_node(node$gates[[index]], axes_of[[index]])
+        if (!is.null(body$unsupported)) return(body)
+        maps <- lapply(own$channels, function(channel) {
+          axis <- axes_of[[index]][[channel]]
+          if (is.null(axis) || is.null(axis$forward)) function(x) x else axis$forward
+        })
+        list(kind = "quadrant", axes = body$axes,
+             center = I(c(maps[[1]](own$center[[1]]), maps[[2]](own$center[[2]]))),
+             members = set$members)
       })
-      describe(set_path, basename(set_path), set$parent, list(gate = list(
-        kind = "quadrant", axes = body$axes,
-        center = I(c(maps[[1]](set$center[[1]]), maps[[2]](set$center[[2]]))),
-        members = set$members
-      )))
-      next
-    }
-    if (node$boolean) {
-      body <- .gatelabr_gatingset_boolean_node(node$gate, paths, node$parent)
-      if (!is.null(body$unsupported)) {
-        leave(node$path, body$unsupported)
+      reason <- .gatelabr_gatingset_sample_reason(
+        vapply(bodies, function(body) if (is.null(body$unsupported)) NA_character_ else body$unsupported, character(1)),
+        samples
+      )
+      if (!is.null(reason)) {
+        for (member in set$members) leave(member$path, reason)
         next
       }
-      describe(node$path, node$name, node$parent, list(negated = node$negated, boolean = body))
+      reference <- .gatelabr_gatingset_reference(bodies)
+      body <- list(gate = bodies[[reference$index]])
+      if (length(reference$differing)) body$tailored <- tailoring(bodies, reference)
+      describe(set_path, basename(set_path), set$parent, body)
+      members <- vapply(set$members, `[[`, character(1), "path")
+      with_gate <- c(with_gate, members)
+      received <- c(received, members)
       next
     }
-    if (is.null(node$gate)) {
-      leave(node$path, "a node whose gate could not be read")
+    if (any(node$boolean)) {
+      if (!all(node$boolean)) {
+        leave(node$path, "a boolean on some samples and a gate on others")
+        next
+      }
+      bodies <- lapply(seq_along(samples), function(index) {
+        .gatelabr_gatingset_boolean_node(node$gates[[index]], paths, node$parent)
+      })
+      reason <- .gatelabr_gatingset_sample_reason(
+        vapply(bodies, function(body) if (is.null(body$unsupported)) NA_character_ else body$unsupported, character(1)),
+        samples
+      )
+      if (!is.null(reason)) {
+        leave(node$path, reason)
+        next
+      }
+      if (length(unique(node$negated)) > 1L ||
+          !all(vapply(bodies, identical, logical(1), bodies[[1]]))) {
+        leave(node$path, "a boolean that differs between samples")
+        next
+      }
+      body <- bodies[[1]]
+      negated <- node$negated[[1]]
+      if (identical(body$operator, "or")) {
+        leave(node$path, "an OR of other nodes, which GateLab does not hold")
+        next
+      }
+      # NOT (A AND B) is NOT A OR NOT B, an OR; a population of excluded gates is AND NOT each.
+      if (negated && length(body$refs) > 1L) {
+        leave(node$path, "a NOT of an AND of several nodes, which a GateLab population cannot hold")
+        next
+      }
+      unresolved <- NULL
+      for (ref in body$refs) {
+        if (ref$path %in% left) {
+          unresolved <- paste0("names '", ref$path, "', which was left out")
+        } else if (!ref$path %in% with_gate) {
+          unresolved <- paste0("names '", ref$path, "', which has no gate of its own")
+        }
+        if (!is.null(unresolved)) break
+      }
+      if (!is.null(unresolved)) {
+        leave(node$path, unresolved)
+        next
+      }
+      describe(node$path, node$name, node$parent, list(negated = negated, boolean = body))
+      received <- c(received, node$path)
       next
     }
-    body <- .gatelabr_gatingset_gate_node(node$gate, axes)
-    if (!is.null(body$unsupported)) {
-      leave(node$path, body$unsupported)
+    unread <- vapply(node$gates, is.null, logical(1))
+    if (any(unread)) {
+      leave(node$path, .gatelabr_gatingset_sample_reason(
+        ifelse(unread, "a node whose gate could not be read", NA_character_), samples))
       next
     }
-    describe(node$path, node$name, node$parent, list(negated = node$negated, gate = body))
+    if (length(unique(node$negated)) > 1L) {
+      leave(node$path, "negated on some samples and not on others")
+      next
+    }
+    bodies <- lapply(seq_along(samples), function(index) {
+      .gatelabr_gatingset_gate_node(node$gates[[index]], axes_of[[index]])
+    })
+    reason <- .gatelabr_gatingset_sample_reason(
+      vapply(bodies, function(body) if (is.null(body$unsupported)) NA_character_ else body$unsupported, character(1)),
+      samples
+    )
+    if (!is.null(reason)) {
+      leave(node$path, reason)
+      next
+    }
+    reference <- .gatelabr_gatingset_reference(bodies)
+    body <- list(negated = node$negated[[1]], gate = bodies[[reference$index]])
+    if (length(reference$differing)) body$tailored <- tailoring(bodies, reference)
+    describe(node$path, node$name, node$parent, body)
+    with_gate <- c(with_gate, node$path)
+    received <- c(received, node$path)
   }
-  list(
+  payload <- list(
     contractVersion = .gatelabr_gatingset_hierarchy_contract_version,
     nodes = described,
     leftOut = left_out
   )
+  attr(payload, "received") <- received
+  payload
 }
 
 # The workspace envelope for a GatingSet: GateLab's own record when the object holds one,
@@ -629,6 +797,11 @@
   }
   payload <- .gatelabr_gatingset_hierarchy_payload(gs)
   if (is.null(payload)) return(NULL)
+  # The nodes the app is given, which the first write keeps in the record (store_workspace):
+  # a node among them the app's tree later lacks was deleted there; any other is kept.
+  state <- .gatelabr_gatingset_state(gs)
+  state$received <- attr(payload, "received")
+  attr(payload, "received") <- NULL
   list(
     contractVersion = .gatelabr_workspace_contract_version,
     datasetId = dataset_id,
@@ -755,17 +928,32 @@
     event_count = sum(.gatelabr_gatingset_event_counts(gs)),
     workspace_json = workspace_json,
     hierarchy_written = isTRUE(current$hierarchy_written),
-    hierarchy_revision = if (is.null(current$hierarchy_revision)) NA_integer_ else as.integer(current$hierarchy_revision)
+    hierarchy_revision = if (is.null(current$hierarchy_revision)) NA_integer_ else as.integer(current$hierarchy_revision),
+    # Since the per-sample fix: the record's tree came from a hierarchy read on every sample.
+    hierarchy_contract = .gatelabr_gatingset_hierarchy_contract_version
   )
+  # Which nodes are the app's (gatingset.R, .gatelabr_gatingset_owned): those an earlier save
+  # wrote, by population, and until a save has written them, those the app was given at opening.
+  received <- if (is.null(current)) .gatelabr_gatingset_state(gs)$received else current$received_nodes
+  if (!is.null(current$nodes)) record$nodes <- current$nodes
+  if (!is.null(received) && is.null(current$nodes)) record$received_nodes <- I(as.character(unlist(received)))
+  if (!is.null(current) && is.null(current$hierarchy_contract)) record$hierarchy_contract <- NULL
   .gatelabr_gatingset_store_record(gs, record)
   result <- list(revision = revision, clientRevision = client_revision, savedAt = saved_at)
   report <- NULL
   if (!is.null(memberships)) {
-    report <- .gatelabr_gatingset_write_populations(gs, parsed, memberships)
+    report <- .gatelabr_gatingset_write_populations(
+      gs, parsed, memberships, record = current,
+      received = if (is.null(current)) .gatelabr_gatingset_state(gs)$received else NULL
+    )
     record$hierarchy_written <- TRUE
     record$hierarchy_revision <- revision
+    record$nodes <- report$nodes
+    record$received_nodes <- NULL
     .gatelabr_gatingset_store_record(gs, record)
     result$memberships <- list(hierarchies = report$hierarchies, populations = report$populations)
+    notes <- .gatelabr_gatingset_write_notes(report)
+    if (length(notes)) result$notes <- I(notes)
   }
   if (nrow(absent)) {
     result$gatesOnAbsentChannels <- lapply(seq_len(nrow(absent)), function(index) {
@@ -1194,24 +1382,116 @@
     format(sum(counts), big.mark = ","), " events, ", length(channels$pnn), " channels; ",
     "transforms: ", transform_text, "; ",
     if (.gatelabr_gatingset_compensated(gs)) "compensated (the matrix is shown in the app)" else "no compensation applied",
-    "; ", length(nodes), " node", if (length(nodes) == 1L) "" else "s",
-    if (length(nodes)) " in the hierarchy, opened as the app's gates" else " in the hierarchy"
+    "; ", length(nodes), " node", if (length(nodes) == 1L) "" else "s", " in the hierarchy",
+    if (length(nodes)) .gatelabr_gatingset_hierarchy_note(gs) else ""
   )
+}
+
+# What the launch says of the hierarchy: how the app opens it, which nodes carry a gate of their
+# own on some samples (they open as those samples' tailoring), and which the app does not hold,
+# which every save keeps as they are.
+.gatelabr_gatingset_hierarchy_note <- function(gs) {
+  payload <- tryCatch(.gatelabr_gatingset_hierarchy_payload(gs), error = function(...) NULL)
+  if (is.null(payload)) return("")
+  describe <- function(entries) {
+    paste(vapply(entries, function(entry) paste0(entry$path, " (", entry$reason, ")"), character(1)), collapse = "; ")
+  }
+  tailored <- Filter(function(node) length(node$tailored) > 0L, payload$nodes)
+  per_sample <- table(unlist(lapply(tailored, function(node) vapply(node$tailored, `[[`, character(1), "sample"))))
+  tailoring <- if (length(tailored)) {
+    paste0(
+      " (", length(tailored), " with a gate of their own on some samples, opened as those samples' tailoring: ",
+      paste(paste(names(per_sample), as.integer(per_sample)), collapse = ", "), ")"
+    )
+  } else {
+    ""
+  }
+  record <- .gatelabr_gatingset_record(gs)
+  if (is.null(record)) {
+    return(paste0(
+      ", opened as the app's gates", tailoring,
+      if (length(payload$leftOut)) paste0("; not opened, and kept on the object at every save: ",
+                                          describe(payload$leftOut)) else ""
+    ))
+  }
+  parsed <- tryCatch(jsonlite::fromJSON(record$workspace_json, simplifyVector = FALSE), error = function(...) NULL)
+  owned <- tryCatch(.gatelabr_gatingset_owned(gs, parsed, record), error = function(...) NULL)
+  existing <- setdiff(flowWorkspace::gs_get_pop_paths(gs, path = "full"), "root")
+  unowned <- if (is.null(owned)) character(0) else setdiff(existing, owned)
+  roots <- unowned[!vapply(unowned, function(path) {
+    parent <- flowWorkspace::gs_pop_get_parent(gs, path)
+    parent %in% unowned
+  }, logical(1))]
+  reasons <- stats::setNames(vapply(payload$leftOut, `[[`, character(1), "reason"),
+                             vapply(payload$leftOut, `[[`, character(1), "path"))
+  kept <- lapply(roots, function(path) {
+    list(path = path, reason = if (path %in% names(reasons)) reasons[[path]] else "not in the app's workspace")
+  })
+  paste0(
+    "; the app opens the GateLab workspace kept on the object (revision ", record$revision, ")",
+    if (length(kept)) paste0("; not in it, and kept on the object at every save: ", describe(kept)) else "",
+    # A record GateLabR 1.6.1 wrote from the hierarchy gave every sample the first sample's gate.
+    if (is.null(record$hierarchy_contract) && length(tailored)) {
+      paste0(
+        ". That workspace was saved by GateLabR 1.6.1, which opened every sample on the first ",
+        "sample's gates; ", length(tailored), " node", if (length(tailored) == 1L) "" else "s",
+        " carry other gates on some samples (", paste(vapply(tailored, `[[`, character(1), "path"), collapse = ", "),
+        "), so the app's counts there are not the object's. flowWorkspace::gs_keyword_delete(gs, ",
+        "\"GATELAB_WORKSPACE\") before launching reopens it from the object's own gates, without ",
+        "the GateLab workspace"
+      )
+    } else {
+      ""
+    }
+  )
+}
+
+# The nodes a save kept although the app does not hold them, and those it could not keep,
+# each with its reason: what the console and the app's status line say after the save.
+.gatelabr_gatingset_write_notes <- function(report) {
+  describe <- function(entries) {
+    paste(vapply(entries, function(entry) paste0(entry$path, " (", entry$reason, ")"), character(1)), collapse = "; ")
+  }
+  notes <- character(0)
+  if (length(report$kept_nodes)) {
+    count <- length(report$kept_nodes)
+    notes <- c(notes, paste0(
+      "Kept ", count, " node", if (count == 1L) "" else "s", " the app does not hold, with ",
+      if (count == 1L) "its" else "their", " subtree", if (count == 1L) "" else "s", " as ",
+      if (count == 1L) "it was" else "they were", ": ", describe(report$kept_nodes), "."
+    ))
+  }
+  if (length(report$lost)) {
+    count <- length(report$lost)
+    notes <- c(notes, paste0(
+      "Removed ", count, " node", if (count == 1L) "" else "s", " the app does not hold: ",
+      describe(report$lost), "."
+    ))
+  }
+  notes
 }
 
 # What the console is told after Save to GatingSet wrote the hierarchy.
 .gatelabr_gatingset_write_report <- function(report, name) {
-  written <- length(report$gates) + length(report$masks)
+  written <- length(report$gates) + length(report$masks) + length(report$kept)
+  count <- function(values, one, many) paste0(length(values), " ", if (length(values) == 1L) one else many)
   paste0(
     "GateLabR wrote ", written, " population", if (written == 1L) "" else "s",
-    " to the hierarchy of `", name, "`: ", length(report$gates), " as flowWorkspace gates, ",
-    length(report$masks), " as exact memberships",
+    " to the hierarchy of `", name, "`: ",
+    if (length(report$kept)) paste0(length(report$kept), " unchanged and left as ",
+                                    if (length(report$kept) == 1L) "it was" else "they were", ", ") else "",
+    length(report$gates), " as flowWorkspace gates, ", length(report$masks), " as exact memberships",
     if (length(report$replaced)) {
       paste0(" (", paste(report$replaced, collapse = ", "),
              " as memberships, since the gate written selected other events)")
     } else {
       ""
     },
-    ". save_gs() keeps them."
+    if (length(report$tailored)) paste0("; ", length(report$tailored), " hold", if (length(report$tailored) == 1L) "s" else "",
+                                        " a gate of ", if (length(report$tailored) == 1L) "its" else "their",
+                                        " own on some samples") else "",
+    if (length(report$removed)) paste0("; removed ", count(report$removed, "node", "nodes"),
+                                       " the app's tree no longer has (", paste(report$removed, collapse = ", "), ")") else "",
+    ". ", paste(c(.gatelabr_gatingset_write_notes(report), "save_gs() keeps them."), collapse = " ")
   )
 }
