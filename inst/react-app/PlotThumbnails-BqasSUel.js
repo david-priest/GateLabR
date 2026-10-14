@@ -1,5 +1,6 @@
-import { a as A, j as S } from "./embed-Divj10u8.js";
-import { u as _, d as z, N as D } from "./CellInspector-Da4_gj91.js";
+import { a as A, j as S } from "./embed-v78cfaSj.js";
+import { u as _, d as z } from "./CellInspector-CGzckEjI.js";
+import { N as D } from "./cvwDecode-CKHzN2J_.js";
 import { d as G, p as L } from "./plotGeometry-CJtfGMFK.js";
 function V(f) {
   let n = Math.floor(f) >>> 0 || 1;
@@ -75,7 +76,7 @@ function J({ service: f, entry: n, eventIndex: i, spec: l, size: m, left: x, top
     }
   );
 }
-function v({
+function nn({
   plotAreaRef: f,
   plotted: n,
   xRange: i,
@@ -161,7 +162,7 @@ function v({
   return /* @__PURE__ */ S.jsx("div", { className: "gl-plot-thumbs", "aria-hidden": "false", children: C });
 }
 export {
-  v as PlotThumbnails,
+  nn as PlotThumbnails,
   q as THUMB_GAP,
   Y as thumbBox
 };
