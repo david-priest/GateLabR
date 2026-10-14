@@ -215,11 +215,13 @@ add_every_node_kind <- function(gs) {
 test_that("the hierarchy reaches the app with every node kind in the space the object evaluates it in", {
   gs <- add_every_node_kind(make_mixed_gatingset())
   payload <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)
-  expect_identical(payload$contractVersion, 1L)
+  expect_identical(payload$contractVersion, 2L)
   nodes <- payload$nodes
   names(nodes) <- vapply(nodes, `[[`, character(1), "path")
-  expect_identical(names(nodes), c("/rect", "/rect/poly", "/ell", "/bool", "/FL1-H x FL2-H quadrants", "/oneD", "/neg", "/either"))
-  expect_identical(unname(vapply(nodes, `[[`, character(1), "parent")), c("root", "/rect", "root", "root", "root", "root", "root", "root"))
+  expect_identical(names(nodes), c("/rect", "/rect/poly", "/ell", "/bool", "/FL1-H x FL2-H quadrants", "/oneD", "/neg"))
+  expect_identical(unname(vapply(nodes, `[[`, character(1), "parent")), c("root", "/rect", "root", "root", "root", "root", "root"))
+  # Both samples hold the same gates, so no node carries a tailoring.
+  expect_true(all(vapply(nodes, function(node) is.null(node$tailored), logical(1))))
 
   # A rectangle on a logicle and a fasinh axis: the logicle bound as stored, the fasinh bound
   # in GateLab's asinh space by the affine map.
@@ -267,16 +269,18 @@ test_that("the hierarchy reaches the app with every node kind in the space the o
   expect_true(is.na(one$max))
   # A negated node says so.
   expect_true(nodes[["/neg"]]$negated)
-  # An OR is sent as one; the app leaves it out by name, as its Gating-ML importer does.
-  expect_identical(nodes[["/either"]]$boolean$operator, "or")
-  expect_length(payload$leftOut, 0L)
+  # An OR is left out by name, as the app's Gating-ML importer does; the host leaves it out
+  # itself, so that what it sent is what the app holds, and a save keeps the node.
+  expect_identical(payload$leftOut, list(list(path = "/either", reason = "an OR of other nodes, which GateLab does not hold")))
+  expect_identical(sort(attr(payload, "received")), sort(c(setdiff(names(nodes), "/FL1-H x FL2-H quadrants"),
+    vapply(nodes[["/FL1-H x FL2-H quadrants"]]$gate$members, `[[`, character(1), "path"))))
 
   # The envelope carries it as JSON the app's contract reads, with open bounds as null.
   envelope <- GateLabR:::.gatelabr_gatingset_workspace_envelope(gs, "gatingset-gs")
   expect_identical(envelope$sourceFormat, "gatingset-hierarchy")
   expect_identical(envelope$revision, 0L)
   parsed <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)
-  expect_length(parsed$nodes, 8L)
+  expect_length(parsed$nodes, 7L)
   expect_null(parsed$nodes[[6]]$gate$max[[1]])
   expect_identical(parsed$nodes[[1]]$gate$axes[[1]]$transform$kind, "logicle")
   expect_true(is.list(parsed$nodes[[2]]$gate$vertices[[1]]))
@@ -285,7 +289,7 @@ test_that("the hierarchy reaches the app with every node kind in the space the o
   expect_null(GateLabR:::.gatelabr_gatingset_workspace_envelope(make_gatingset(), "gatingset-gs"))
 })
 
-test_that("a node on a channel the host cannot map is left out with the reason; booleans naming it are the app's to drop", {
+test_that("a node on a channel the host cannot map is left out with the reason, and so are the booleans naming it", {
   gs <- make_gatingset()
   flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate("FL1-H" = c(1, 3), filterId = "a"), parent = "root")
   flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate("FL2-H" = c(1, 3), filterId = "b"), parent = "root")
@@ -295,12 +299,13 @@ test_that("a node on a channel the host cannot map is left out with the reason; 
   axes <- GateLabR:::.gatelabr_gatingset_axes(gs, c("FL1-H", "FL2-H"))
   axes[["FL2-H"]] <- GateLabR:::.gatelabr_gatingset_axis(list(type = "caltbl"))
   payload <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs, axes)
-  expect_identical(vapply(payload$nodes, `[[`, character(1), "path"), c("/a", "/either", "/both"))
-  expect_length(payload$leftOut, 1L)
-  expect_identical(payload$leftOut[[1]]$path, "/b")
+  expect_identical(vapply(payload$nodes, `[[`, character(1), "path"), "/a")
+  expect_identical(vapply(payload$leftOut, `[[`, character(1), "path"), c("/b", "/either", "/both"))
   expect_match(payload$leftOut[[1]]$reason, "calibration table")
-  # The booleans still name /b by path; the app, which knows /b was left out, drops them and says so.
-  expect_identical(payload$nodes[[3]]$boolean$refs[[2]]$path, "/b")
+  expect_identical(payload$leftOut[[2]]$reason, "an OR of other nodes, which GateLab does not hold")
+  # The app would drop a boolean naming a node left out; the host does, by the same words.
+  expect_identical(payload$leftOut[[3]]$reason, "names '/b', which was left out")
+  expect_identical(attr(payload, "received"), "/a")
 })
 
 # ── the record ────────────────────────────────────────────────────────────────
@@ -465,7 +470,10 @@ test_that("an explicit save writes every population to the hierarchy: gates wher
     gs, write_request(ws$json, memberships_payload(gs, ws$populations[1:2]), expected_revision = 2L),
     dataset_id = "gatingset-gs"
   )
-  expect_identical(trimmed$report$gates, c("box cells", "scatter box"))
+  # The two kept are unchanged, and left exactly as the first save wrote them.
+  expect_identical(trimmed$report$kept, c("box cells", "scatter box"))
+  expect_identical(trimmed$report$gates, character(0))
+  expect_setequal(trimmed$report$removed, c("/scatter poly", "/other space", "/box not poly", "/open box"))
   expect_setequal(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/box cells", "/box cells/scatter box"))
 })
 
@@ -1095,4 +1103,391 @@ test_that("a gated SCE becomes a GatingSet whose nodes hold the stored membershi
   # Without a stored save there is nothing to export.
   bare <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = counts))
   expect_error(GateLabR::gatelabGatingSet(bare), "Save to SCE")
+})
+
+# ── gates tailored per sample ─────────────────────────────────────────────────
+
+# Two samples, D1 and D2, whose "cells" rectangle differs, as a FlowJo workspace tailors a gate
+# per sample, with a polygon under it that both share; on linear scatter, so that every
+# expected membership is plain arithmetic on the files' values.
+tailored_bounds <- list(D1 = list(fsc = c(100, 600), ssc = c(0, 500)), D2 = list(fsc = c(200, 700), ssc = c(0, 400)))
+core_polygon <- matrix(c(150.5, 550.5, 550.5, 150.5, 50.5, 50.5, 350.5, 350.5), ncol = 2,
+                       dimnames = list(NULL, c("FSC-H", "SSC-H")))
+
+tailored_frames <- function() {
+  fs <- gvhd()
+  flowCore::sampleNames(fs) <- c("D1", "D2")
+  fs
+}
+
+tailored_gatingset <- function() {
+  gs <- flowWorkspace::GatingSet(tailored_frames())
+  rectangles <- lapply(tailored_bounds, function(b) flowCore::rectangleGate(filterId = "cells", "FSC-H" = b$fsc, "SSC-H" = b$ssc))
+  flowWorkspace::gs_pop_add(gs, rectangles, parent = "root", name = "cells")
+  flowWorkspace::gs_pop_add(gs, flowCore::polygonGate(filterId = "core", .gate = core_polygon), parent = "/cells", name = "core")
+  flowWorkspace::recompute(gs)
+  gs
+}
+
+# Membership of a closed rectangle and of the polygon, from the values, per sample.
+in_box <- function(values, b) {
+  values[, "FSC-H"] >= b$fsc[[1]] & values[, "FSC-H"] <= b$fsc[[2]] & values[, "SSC-H"] >= b$ssc[[1]] & values[, "SSC-H"] <= b$ssc[[2]]
+}
+in_core <- function(values) {
+  sp::point.in.polygon(values[, "FSC-H"], values[, "SSC-H"], core_polygon[, 1], core_polygon[, 2]) > 0
+}
+
+# The workspace the app holds after opening the GatingSet (hostedHierarchy.ts): the tree with the
+# reference gates, and D2's tailored copy of it with its own "cells" rectangle, with provenance.
+tailored_workspace <- function(bounds = tailored_bounds, extra = list(), sample_ids = c("gs:D1", "gs:D2")) {
+  identity <- list(`FSC-H` = list(kind = "identity"), `SSC-H` = list(kind = "identity"))
+  rectangle <- function(id, b) {
+    list(gate_id = id, name = "cells", gate_type = "rectangle", x_channel = "FSC-H", y_channel = "SSC-H",
+         vertices = list(list(b$fsc[[1]], b$ssc[[1]]), list(b$fsc[[2]], b$ssc[[1]]), list(b$fsc[[2]], b$ssc[[2]]), list(b$fsc[[1]], b$ssc[[2]])),
+         space = "display", transforms = identity, bounds = "closed")
+  }
+  polygon <- function(id) {
+    list(gate_id = id, name = "core", gate_type = "polygon", x_channel = "FSC-H", y_channel = "SSC-H",
+         vertices = lapply(seq_len(nrow(core_polygon)), function(row) as.list(unname(core_polygon[row, ]))),
+         space = "display", transforms = identity)
+  }
+  population <- function(id, name, parent, refs, children) {
+    list(population_id = id, name = name, gate_refs = refs, gate_logic = "and", parent_id = parent,
+         children = children, event_count = NULL, percent_of_parent = NULL)
+  }
+  tree <- function(prefix, b) {
+    gates <- list(rectangle(paste0(prefix, "/cells"), b), polygon(paste0(prefix, "/cells/core")))
+    names(gates) <- vapply(gates, `[[`, character(1), "gate_id")
+    root <- paste0(prefix, "root")
+    pops <- list(
+      population(root, "All Events", NULL, list(), list(paste0(prefix, "/cells"))),
+      population(paste0(prefix, "/cells"), "cells", root, list(list(gate_id = paste0(prefix, "/cells"), include = TRUE)), list(paste0(prefix, "/cells/core"))),
+      population(paste0(prefix, "/cells/core"), "core", paste0(prefix, "/cells"), list(list(gate_id = paste0(prefix, "/cells/core"), include = TRUE)), list())
+    )
+    names(pops) <- vapply(pops, `[[`, character(1), "population_id")
+    for (entry in extra) {
+      gates[[paste0(prefix, entry$gate$gate_id)]] <- utils::modifyList(entry$gate, list(gate_id = paste0(prefix, entry$gate$gate_id)))
+      refs <- lapply(entry$refs, function(ref) utils::modifyList(ref, list(gate_id = paste0(prefix, ref$gate_id))))
+      pops[[paste0(prefix, entry$id)]] <- population(paste0(prefix, entry$id), entry$name, root, refs, list())
+      pops[[root]]$children <- c(pops[[root]]$children, list(paste0(prefix, entry$id)))
+    }
+    list(gates = gates, populations = pops, root = root)
+  }
+  main <- tree("", bounds$D1)
+  copy <- tree("D2:", bounds$D2)
+  copy_id <- "gatingset-tailoring:D2"
+  source_ids <- function(ids) stats::setNames(as.list(sub("^D2:", "", ids)), ids)
+  ref <- list(id = copy_id, name = "D2 \u00b7 Main", owner_sample_id = sample_ids[[2]], structure_locked = TRUE,
+              source_hierarchy_id = "main", source_gate_ids = source_ids(names(copy$gates)),
+              source_population_ids = source_ids(names(copy$populations)))
+  ref$source_population_ids[["D2:root"]] <- "root"
+  as.character(jsonlite::toJSON(list(
+    format = "gatelab-workspace", version = 2L,
+    samples = list(list(sampleId = sample_ids[[1]], fileName = "D1", dataPath = "data/sce-1.fcs", logicleW = list(), compensationOn = FALSE),
+                   list(sampleId = sample_ids[[2]], fileName = "D2", dataPath = "data/sce-2.fcs", logicleW = list(), compensationOn = FALSE,
+                        hierarchyId = copy_id)),
+    activeSample = 0L,
+    gating = list(
+      gates = main$gates, gate_order = as.list(names(main$gates)), populations = main$populations,
+      root_population_id = "root", active_population_id = "root", selected_gate_id = NULL,
+      hierarchies = list(list(id = "main", name = "Main"), ref), active_hierarchy_id = "main",
+      stored_hierarchies = list(c(ref, list(gates = copy$gates, gate_order = as.list(names(copy$gates)),
+                                            populations = copy$populations, root_population_id = "D2:root",
+                                            active_population_id = "D2:root"))),
+      perFileHierarchies = TRUE
+    ),
+    scales = list(globalScales = setNames(list(), character(0))),
+    display = list(xChannel = "FSC-H", yChannel = "SSC-H", mode = "pseudocolor", maxEvents = 50000L, contourThreshold = 5L)
+  ), auto_unbox = TRUE, null = "null", digits = NA))
+}
+
+# The memberships the app sends at Save to GatingSet: the active tree's populations, each
+# sample's masks read under that sample's own tree.
+tailored_memberships <- function(masks, extra = list()) {
+  values <- lapply(1:2, function(index) flowCore::exprs(tailored_frames()[[index]]))
+  population <- function(id, name, parent, per_sample) {
+    list(hierarchyId = "main", populationId = id, populationName = name, parentId = parent, gateLogic = "and", gates = list(),
+         sampleMasks = lapply(1:2, function(index) {
+           list(sampleId = c("D1", "D2")[[index]], eventCount = nrow(values[[index]]), membershipBitsBase64 = packed_sample(per_sample[[index]]))
+         }))
+  }
+  everything <- lapply(values, function(v) rep(TRUE, nrow(v)))
+  list(
+    hierarchies = list(list(id = "main", name = "Main", active = TRUE, rootPopulationId = "root"),
+                       list(id = "gatingset-tailoring:D2", name = "D2 \u00b7 Main", active = FALSE, rootPopulationId = "D2:root")),
+    populations = c(
+      list(population("root", "All Events", NULL, everything),
+           population("/cells", "cells", "root", masks$cells),
+           population("/cells/core", "core", "/cells", masks$core)),
+      lapply(extra, function(entry) population(entry$id, entry$name, "root", entry$masks))
+    )
+  )
+}
+
+tailored_masks <- function(bounds = tailored_bounds) {
+  values <- lapply(1:2, function(index) flowCore::exprs(tailored_frames()[[index]]))
+  cells <- lapply(1:2, function(index) in_box(values[[index]], bounds[[index]]))
+  list(cells = cells, core = lapply(1:2, function(index) cells[[index]] & in_core(values[[index]])))
+}
+
+test_that("a node whose gate differs between samples reaches the app with each sample's own gate", {
+  gs <- tailored_gatingset()
+  payload <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)
+  nodes <- payload$nodes
+  names(nodes) <- vapply(nodes, `[[`, character(1), "path")
+  expect_identical(names(nodes), c("/cells", "/cells/core"))
+  expect_length(payload$leftOut, 0L)
+  # The tree takes D1's gate (each is held by one sample, and the earliest wins the tie)...
+  cells <- nodes[["/cells"]]
+  expect_identical(as.numeric(cells$gate$min), c(100, 0))
+  expect_identical(as.numeric(cells$gate$max), c(600, 500))
+  # ... and D2 carries its own as its tailoring, in the same form.
+  expect_length(cells$tailored, 1L)
+  expect_identical(cells$tailored[[1]]$sample, "D2")
+  expect_identical(cells$tailored[[1]]$gate$kind, "rectangle")
+  expect_identical(as.numeric(cells$tailored[[1]]$gate$min), c(200, 0))
+  expect_identical(as.numeric(cells$tailored[[1]]$gate$max), c(700, 400))
+  # The polygon both share carries none.
+  expect_null(nodes[["/cells/core"]]$tailored)
+  json <- jsonlite::fromJSON(GateLabR:::.gatelabr_gatingset_workspace_envelope(gs, "gs")$workspaceJson, simplifyVector = FALSE)
+  expect_identical(json$contractVersion, 2L)
+  expect_identical(json$nodes[[1]]$tailored[[1]]$sample, "D2")
+  expect_equal(unlist(json$nodes[[1]]$tailored[[1]]$gate$max), c(700, 400))
+  # The launch note says which nodes open tailored, and on which samples.
+  expect_match(GateLabR:::.gatelabr_gatingset_launch_note(gs), "1 with a gate of their own on some samples, opened as those samples' tailoring: D2 1", fixed = TRUE)
+})
+
+test_that("Save to GatingSet keeps each sample's own gate, and a gate edited on one sample changes on that sample only", {
+  gs <- tailored_gatingset()
+  before <- lapply(c("D1", "D2"), function(sample) flowWorkspace::gh_pop_get_gate(gs[[sample]], "/cells"))
+  counts_before <- flowWorkspace::gs_pop_get_count_fast(gs)
+  masks <- tailored_masks()
+  # The app's counts, from its per-sample masks, are flowWorkspace's on every sample.
+  for (index in 1:2) {
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells")), masks$cells[[index]])
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells/core")), masks$core[[index]])
+  }
+  GateLabR:::.gatelabr_gatingset_workspace_envelope(gs, "gs")
+  saved <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(tailored_workspace(), tailored_memberships(masks), dataset_id = "gs"), dataset_id = "gs"
+  )
+  # Nothing changed, so both nodes are left exactly as they were, each sample's gate its own.
+  expect_identical(saved$report$kept, c("cells", "core"))
+  expect_identical(saved$report$gates, character(0))
+  expect_identical(saved$report$masks, character(0))
+  expect_identical(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/cells", "/cells/core"))
+  for (index in 1:2) {
+    expect_identical(flowWorkspace::gh_pop_get_gate(gs[[index]], "/cells"), before[[index]])
+  }
+  expect_identical(flowWorkspace::gs_pop_get_count_fast(gs), counts_before)
+  expect_identical(names(GateLabR:::.gatelabr_gatingset_record(gs)$nodes), c("/cells", "/cells/core"))
+
+  # D2's gate moved in the app (its tailored copy): set on D2 only.
+  edited <- tailored_bounds
+  edited$D2$fsc <- c(250, 700)
+  masks2 <- tailored_masks(edited)
+  resaved <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(tailored_workspace(edited), tailored_memberships(masks2), expected_revision = 1L, dataset_id = "gs"),
+    dataset_id = "gs"
+  )
+  expect_identical(resaved$report$gates, "cells")
+  expect_identical(resaved$report$tailored, "cells")
+  expect_identical(resaved$report$kept, "core")
+  expect_identical(flowWorkspace::gh_pop_get_gate(gs[["D1"]], "/cells"), before[[1]])
+  d2 <- flowWorkspace::gh_pop_get_gate(gs[["D2"]], "/cells")
+  expect_s4_class(d2, "rectangleGate")
+  expect_identical(unname(d2@min), c(250, 0))
+  expect_identical(unname(d2@max), c(700, 400))
+  after <- flowWorkspace::gs_pop_get_count_fast(gs)
+  expect_identical(after[after$name == "D1", ]$Count, counts_before[counts_before$name == "D1", ]$Count)
+  for (index in 1:2) {
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells")), masks2$cells[[index]])
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells/core")), masks2$core[[index]])
+  }
+  expect_true(sum(masks2$cells[[2]]) < sum(masks$cells[[2]]))
+})
+
+test_that("a GatingSet with no nodes gets each sample's own gate from the app's tailoring", {
+  gs <- flowWorkspace::GatingSet(tailored_frames())
+  masks <- tailored_masks()
+  parsed <- jsonlite::fromJSON(tailored_workspace(), simplifyVector = FALSE)
+  prepared <- GateLabR:::.gatelabr_gatingset_memberships(gs, tailored_memberships(masks))
+  report <- GateLabR:::.gatelabr_gatingset_write_prepared(gs, parsed, prepared)
+  expect_identical(report$gates, c("cells", "core"))
+  expect_identical(report$tailored, "cells")
+  for (index in 1:2) {
+    gate <- flowWorkspace::gh_pop_get_gate(gs[[index]], "/cells")
+    expect_identical(unname(gate@min), c(tailored_bounds[[index]]$fsc[[1]], tailored_bounds[[index]]$ssc[[1]]))
+    expect_identical(unname(gate@max), c(tailored_bounds[[index]]$fsc[[2]], tailored_bounds[[index]]$ssc[[2]]))
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells")), masks$cells[[index]])
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells/core")), masks$core[[index]])
+  }
+})
+
+test_that("nodes the app never held survive a save with their subtrees and counts, and the save says so", {
+  gs <- tailored_gatingset()
+  flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "big", "FSC-H" = c(300, 1000)), parent = "root", name = "big")
+  flowWorkspace::gs_pop_add(gs, flowWorkspace::booleanFilter(cells | big), parent = "root", name = "either")
+  flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "low", "SSC-H" = c(0, 200)), parent = "/either", name = "low")
+  flowWorkspace::gs_pop_add(gs, flowWorkspace::booleanFilter(cells & big), parent = "root", name = "notboth", negated = TRUE)
+  flowWorkspace::recompute(gs)
+  counts_before <- flowWorkspace::gs_pop_get_count_fast(gs)
+  payload <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)
+  left <- stats::setNames(vapply(payload$leftOut, `[[`, character(1), "reason"), vapply(payload$leftOut, `[[`, character(1), "path"))
+  expect_identical(left[["/either"]], "an OR of other nodes, which GateLab does not hold")
+  expect_identical(left[["/either/low"]], "under '/either', which was left out")
+  # NOT (cells AND big) is an OR of two NOTs, which no GateLab population holds.
+  expect_identical(left[["/notboth"]], "a NOT of an AND of several nodes, which a GateLab population cannot hold")
+  expect_match(GateLabR:::.gatelabr_gatingset_launch_note(gs), "not opened, and kept on the object at every save: /either (an OR", fixed = TRUE)
+
+  GateLabR:::.gatelabr_gatingset_workspace_envelope(gs, "gs")
+  values <- lapply(1:2, function(index) flowCore::exprs(tailored_frames()[[index]]))
+  big <- list(gate = list(gate_id = "/big", name = "big", gate_type = "rectangle", x_channel = "FSC-H", y_channel = "FSC-H",
+                          vertices = list(list(300, -1.7976931348623157e308), list(1000, -1.7976931348623157e308),
+                                          list(1000, 1.7976931348623157e308), list(300, 1.7976931348623157e308)),
+                          space = "display", transforms = list(`FSC-H` = list(kind = "identity")), bounds = "closed"),
+              id = "/big", name = "big", refs = list(list(gate_id = "/big", include = TRUE)))
+  big_masks <- lapply(values, function(v) v[, "FSC-H"] >= 300 & v[, "FSC-H"] <= 1000)
+  saved <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(tailored_workspace(extra = list(big)),
+                      tailored_memberships(tailored_masks(), extra = list(list(id = "/big", name = "big", masks = big_masks))),
+                      dataset_id = "gs"),
+    dataset_id = "gs"
+  )
+  expect_setequal(flowWorkspace::gs_get_pop_paths(gs, path = "full"),
+                  c("root", "/cells", "/cells/core", "/big", "/either", "/either/low", "/notboth"))
+  expect_identical(flowWorkspace::gs_pop_get_count_fast(gs)[order(name, Population)], counts_before[order(name, Population)])
+  kept <- vapply(saved$report$kept_nodes, `[[`, character(1), "path")
+  expect_setequal(kept, c("/either", "/notboth"))
+  expect_match(saved$result$notes[[1]], "Kept 2 nodes the app does not hold", fixed = TRUE)
+  expect_match(GateLabR:::.gatelabr_gatingset_write_report(saved$report, "gs"), "/either (an OR of other nodes", fixed = TRUE)
+
+  # A population the user deleted in the app goes. The OR and the NOT name it, so they cannot be
+  # evaluated without it: they go too, and the save names them with the reason.
+  removed <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(tailored_workspace(), tailored_memberships(tailored_masks()), expected_revision = 1L, dataset_id = "gs"),
+    dataset_id = "gs"
+  )
+  expect_identical(removed$report$removed, "/big")
+  expect_identical(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/cells", "/cells/core"))
+  expect_identical(vapply(removed$report$lost, `[[`, character(1), "path"), c("/either", "/notboth"))
+  expect_match(removed$result$notes[[1]], "Removed 2 nodes the app does not hold: /either (an OR of other nodes, which GateLab does not hold; it names a node the app's tree no longer has)", fixed = TRUE)
+})
+
+test_that("a boolean naming a node renamed in the app names it by its new path", {
+  fs <- tailored_frames()
+  gs <- flowWorkspace::GatingSet(fs)
+  flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "debris", "FSC-H" = c(0, 150.5)), parent = "root", name = "debris")
+  flowWorkspace::gs_pop_add(gs, flowWorkspace::booleanFilter(!debris), parent = "root", name = "not debris")
+  flowWorkspace::recompute(gs)
+  counts_before <- flowWorkspace::gs_pop_get_count_fast(gs)$Count
+  values <- lapply(1:2, function(index) flowCore::exprs(fs[[index]]))
+  debris <- lapply(values, function(v) v[, "FSC-H"] >= 0 & v[, "FSC-H"] <= 150.5)
+  gate <- list(gate_id = "/debris", name = "debris", gate_type = "rectangle", x_channel = "FSC-H", y_channel = "FSC-H",
+               vertices = list(list(0, -1.7976931348623157e308), list(150.5, -1.7976931348623157e308),
+                               list(150.5, 1.7976931348623157e308), list(0, 1.7976931348623157e308)),
+               space = "display", transforms = list(`FSC-H` = list(kind = "identity")), bounds = "closed")
+  populations <- list(
+    root = list(population_id = "root", name = "All Events", gate_refs = list(), parent_id = NULL),
+    `/debris` = list(population_id = "/debris", name = "junk", parent_id = "root", gate_refs = list(list(gate_id = "/debris", include = TRUE))),
+    `/not debris` = list(population_id = "/not debris", name = "not debris", parent_id = "root", gate_refs = list(list(gate_id = "/debris", include = FALSE)))
+  )
+  json <- as.character(jsonlite::toJSON(list(format = "gatelab-workspace", version = 2L,
+    gating = list(gates = list(`/debris` = gate), populations = populations, root_population_id = "root")),
+    auto_unbox = TRUE, null = "null", digits = NA))
+  memberships <- memberships_payload(gs, list(
+    list(id = "/debris", name = "junk", parent = "pop-root", masks = debris),
+    list(id = "/not debris", name = "not debris", parent = "pop-root", masks = lapply(debris, `!`))
+  ))
+  GateLabR:::.gatelabr_gatingset_workspace_envelope(gs, "gs")
+  saved <- GateLabR:::.gatelabr_handle_host_request(gs, write_request(json, memberships, dataset_id = "gs"), dataset_id = "gs")
+  expect_identical(saved$report$renamed, "junk")
+  expect_identical(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/junk", "/not debris"))
+  # The NOT gate is still flowWorkspace's boolean, now naming junk (cytolib keeps a term without
+  # its leading slash), and holds the same events.
+  kept <- flowWorkspace::gh_pop_get_gate(gs[[1]], "/not debris")
+  expect_s4_class(kept, "booleanFilter")
+  expect_identical(GateLabR:::.gatelabr_gatingset_boolean_text(kept), "!junk")
+  expect_identical(flowWorkspace::gs_pop_get_count_fast(gs)$Count, counts_before)
+})
+
+test_that("an SCE with a file tailored in the app becomes a GatingSet with that file's own gate on its sample", {
+  fs <- tailored_frames()
+  raw <- lapply(1:2, function(index) flowCore::exprs(fs[[index]]))
+  counts <- t(rbind(raw[[1]], raw[[2]]))
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts),
+    colData = S4Vectors::DataFrame(sample_id = rep(c("D1", "D2"), c(nrow(raw[[1]]), nrow(raw[[2]]))))
+  )
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  json <- tailored_workspace(sample_ids = c("sce-gs:sample-0", "sce-gs:sample-1"))
+  masks <- tailored_masks()
+  sample_masks <- function(per_sample) lapply(1:2, function(index) {
+    list(sampleId = paste0("sample-", index - 1L), eventCount = nrow(raw[[index]]), membershipBitsBase64 = packed_sample(per_sample[[index]]))
+  })
+  everything <- lapply(raw, function(v) rep(TRUE, nrow(v)))
+  memberships <- list(
+    hierarchies = list(list(id = "main", name = "Main", active = TRUE, rootPopulationId = "root")),
+    populations = list(
+      list(hierarchyId = "main", populationId = "root", populationName = "All Events", parentId = NULL, gateLogic = "and", gates = list(), sampleMasks = sample_masks(everything)),
+      list(hierarchyId = "main", populationId = "/cells", populationName = "cells", parentId = "root", gateLogic = "and", gates = list(), sampleMasks = sample_masks(masks$cells)),
+      list(hierarchyId = "main", populationId = "/cells/core", populationName = "core", parentId = "/cells", gateLogic = "and", gates = list(), sampleMasks = sample_masks(masks$core))
+    )
+  )
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    sce, dataset_id = "sce-gs", expected_revision = 0L, client_revision = 1L, reason = "explicit",
+    workspace_json = json, sample_column = "sample_id", memberships = memberships
+  )
+  gs <- NULL
+  expect_message(gs <- GateLabR::gatelabGatingSet(stored$sce), "2 as flowWorkspace gates, 0 as exact memberships; 1 holds a gate of its own on some samples")
+  for (index in 1:2) {
+    gate <- flowWorkspace::gh_pop_get_gate(gs[[index]], "/cells")
+    expect_s4_class(gate, "rectangleGate")
+    expect_identical(unname(gate@max), c(tailored_bounds[[index]]$fsc[[2]], tailored_bounds[[index]]$ssc[[2]]))
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells")), masks$cells[[index]])
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/cells/core")), masks$core[[index]])
+  }
+})
+
+test_that("a rectangle on the object's own biexponential comes back with the bounds it had, and the same events", {
+  biexp <- flowWorkspace::flowjo_biexp_trans(maxValue = 262144, widthBasis = -10, pos = 4.5, neg = 0)
+  build <- function() {
+    gs <- flowWorkspace::GatingSet(tailored_frames())
+    flowWorkspace::transform(gs, flowWorkspace::transformerList("FL1-H", biexp))
+    gs
+  }
+  gs <- build()
+  flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "pos", "FL1-H" = c(1234.5678, 3456.789), "FSC-H" = c(100.25, 900.75)),
+                            parent = "root", name = "pos")
+  flowWorkspace::recompute(gs)
+  original <- flowWorkspace::gh_pop_get_gate(gs[[1]], "/pos")
+  # The app's gate is the host's description, in the object's space by parameters.
+  node <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)$nodes[[1]]
+  spec <- node$gate$axes[[1]]$transform
+  expect_identical(spec$kind, "biex")
+  gate <- list(gate_id = "/pos", name = "pos", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FSC-H",
+               vertices = list(list(node$gate$min[[1]], node$gate$min[[2]]), list(node$gate$max[[1]], node$gate$min[[2]]),
+                               list(node$gate$max[[1]], node$gate$max[[2]]), list(node$gate$min[[1]], node$gate$max[[2]])),
+               space = "display", transforms = list(`FL1-H` = spec, `FSC-H` = list(kind = "identity")), bounds = "closed")
+  populations <- list(
+    root = list(population_id = "root", name = "All Events", gate_refs = list(), parent_id = NULL),
+    `/pos` = list(population_id = "/pos", name = "pos", parent_id = "root", gate_refs = list(list(gate_id = "/pos", include = TRUE)))
+  )
+  json <- as.character(jsonlite::toJSON(list(format = "gatelab-workspace", version = 2L,
+    gating = list(gates = list(`/pos` = gate), populations = populations, root_population_id = "root")),
+    auto_unbox = TRUE, null = "null", digits = NA))
+  masks <- lapply(1:2, function(index) as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], "/pos")))
+  expect_true(all(vapply(masks, sum, numeric(1)) > 0))
+  fresh <- build()
+  prepared <- GateLabR:::.gatelabr_gatingset_memberships(fresh, memberships_payload(fresh, list(
+    list(id = "/pos", name = "pos", parent = "pop-root", masks = masks))))
+  report <- GateLabR:::.gatelabr_gatingset_write_prepared(fresh, jsonlite::fromJSON(json, simplifyVector = FALSE), prepared)
+  expect_identical(report$gates, "pos")
+  written <- flowWorkspace::gh_pop_get_gate(fresh[[1]], "/pos")
+  # The same bounds to the last digit: not put through the biexponential and its inverse.
+  expect_identical(unname(written@min), unname(original@min))
+  expect_identical(unname(written@max), unname(original@max))
+  for (index in 1:2) {
+    expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(fresh[[index]], "/pos")), masks[[index]])
+  }
 })

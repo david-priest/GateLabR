@@ -105,7 +105,9 @@ gatelabGatingSet <- function(sce, assay = NULL, hierarchy = NULL, sample_column 
     )
   })
   prepared <- list(active = hierarchy_id, hierarchies = nrow(record$hierarchies), populations = populations)
-  report <- .gatelabr_gatingset_write_prepared(gs, tree, prepared)
+  # Each sample's gates from the tree it is gated under, so a file tailored in the app keeps
+  # its own gate on its own sample.
+  report <- .gatelabr_gatingset_write_prepared(gs, parsed, prepared)
 
   # The record, so GateLabR opens the result on the same workspace.
   carried <- workspace[setdiff(names(workspace), "memberships")]
