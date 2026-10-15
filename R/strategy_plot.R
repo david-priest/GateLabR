@@ -259,16 +259,19 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
         outline_id <- if (index == 1L) entry$gate$gate_id else paste0(entry$gate$gate_id, "::", index)
         suffix <- if (length(variants) > 1L) paste0(" (", paste(variant$samples, collapse = ", "), ")") else ""
         if (identical(gate$type, "quadrant")) {
-          made <- quadrant_siblings(node, entry$gate)
+          references <- lapply(1:4, function(q) {
+            own <- Filter(function(ref) ref$quadrant %in% q, variant$quadrants)
+            single <- Filter(function(ref) ref$single, own)
+            if (length(single)) single[[1]] else if (length(own)) own[[1]] else NULL
+          })
           counts <- vapply(1:4, function(q) {
-            own <- Filter(function(p) any(p$gate_refs$gate_id == entry$gate$gate_id & p$gate_refs$quadrant %in% q) &&
-                            nrow(p$gate_refs) == 1L, made)
-            if (length(own)) sum(named_member(own[[1]]$id)) else sum(own_parent & gate_hit(q))
+            ref <- references[[q]]
+            if (!is.null(ref) && ref$single) return(sum(named_member(ref$population)))
+            hit <- gate_hit(q)
+            sum(own_parent & (if (is.null(ref) || ref$include) hit else !hit))
           }, numeric(1))
-          names_q <- vapply(1:4, function(q) {
-            own <- Filter(function(p) any(p$gate_refs$gate_id == entry$gate$gate_id & p$gate_refs$quadrant %in% q), made)
-            if (length(own)) own[[1]]$name else paste0("quadrant ", q)
-          }, character(1))
+          names_q <- vapply(1:4, function(q) if (is.null(references[[q]])) paste0("quadrant ", q) else references[[q]]$name, character(1))
+          prefixes <- vapply(references, function(ref) if (!is.null(ref) && !ref$include) "not " else "", character(1))
           pcts <- if (own_n > 0) round1(counts / own_n * 100) else rep(0, 4)
           rows[[length(rows) + 1L]] <<- data.frame(population = names_q, events = counts, percent_of_parent = pcts,
                                                    parent_events = own_n, samples = paste(variant$samples, collapse = ", "),
@@ -277,10 +280,10 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
           return(list(type = "quadrant", gate_id = outline_id, source_gate_id = entry$gate$gate_id,
                       name = paste0(gate$name, suffix), color = gate$color,
                       center = gate$center, quadrant_pcts = pcts, quadrant_label_offsets = gate$quadrant_label_offsets,
-                      quadrant_suffix = suffix, quadrant_label_row = index - 1L))
+                      quadrant_prefixes = prefixes, quadrant_suffix = suffix, quadrant_label_row = index - 1L))
         }
-        inside <- if (nrow(pop$gate_refs) == 1L) named_member(pop$id) else {
-          hit <- gate_hit(); own_parent & (if (entry$include) hit else !hit)
+        inside <- if (variant$single) named_member(pop$id) else {
+          hit <- gate_hit(); own_parent & (if (variant$include) hit else !hit)
         }
         n_child <- sum(inside)
         pct <- if (own_n > 0) round1(n_child / own_n * 100) else NA_real_

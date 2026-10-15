@@ -126,7 +126,7 @@ test_that("FlowJo channel grids preserve rounding, floors, endpoints and inverse
 # Twelve synthetic events, two samples with different gate bounds and quadrant centres. The
 # parent masks intentionally exclude one event per sample that its rectangle geometrically
 # contains, so replacing a named population with a new geometric count fails this fixture.
-strategy_coordinates_fixture <- function(label_offsets = list()) {
+strategy_coordinates_fixture <- function(label_offsets = list(), edit_workspace = identity, bits_override = list()) {
   counts <- rbind(CD4 = rep(c(0, 5, 15, 30, 60, 100), 2), CD8 = rep(c(0, 5, 15, 5, 15, 30), 2))
   sce <- SingleCellExperiment::SingleCellExperiment(
     assays = list(counts = counts, exprs = asinh(counts / 5)),
@@ -176,8 +176,10 @@ strategy_coordinates_fixture <- function(label_offsets = list()) {
              gating = c(main, list(active_hierarchy_id = "main", hierarchies = list(list(id = "main", name = "Main"), ref),
                                    stored_hierarchies = list(c(ref, copy)), perFileHierarchies = TRUE)),
              scales = list(globalScales = list(CD4 = list(0, 5), CD8 = list(0, 5))), display = none)
+  ws <- edit_workspace(ws)
   bits <- list(root = rep(TRUE, 12), p = seq_len(12) %in% c(2, 3, 9, 10),
                p_q2 = seq_len(12) %in% 3, p_and = seq_len(12) %in% c(3, 9))
+  for (id in names(bits_override)) bits[[id]] <- bits_override[[id]]
   masks <- function(values) lapply(1:2, function(i) list(
     sampleId = paste0("sample-", i - 1), eventCount = 6L,
     membershipBitsBase64 = base64enc::base64encode(GateLabR:::.gatelabr_pack_bits(values[((i - 1) * 6 + 1):(i * 6)]))))
@@ -253,6 +255,101 @@ test_that("raw-assay strategies draw both samples' saved outlines and keep named
   subset_outline <- Filter(function(child) inherits(child, "polygon"), subset_panel$children)
   expect_length(subset_outline, 1L)
   expect_equal(data_x(subset_outline[[1]]), asinh(c(15, 100, 100, 15) / 5))
+})
+
+test_that("AND components retain each sample's inclusion rule before pooling", {
+  fixture <- strategy_coordinates_fixture(edit_workspace = function(ws) {
+    ws$gating$hierarchies[[2]]$structure_locked <- FALSE
+    ws$gating$stored_hierarchies[[1]]$structure_locked <- FALSE
+    refs <- ws$gating$stored_hierarchies[[1]]$populations[["D2:p_and"]]$gate_refs
+    for (i in seq_along(refs)) if (refs[[i]]$gate_id == "D2:r1") refs[[i]]$include <- FALSE
+    ws$gating$stored_hierarchies[[1]]$populations[["D2:p_and"]]$gate_refs <- refs
+    ws
+  }, bits_override = list(p_and = seq_len(12) %in% 3))
+  plot <- gatelabStrategyPlot(fixture$sce, "treated", max_events = 0)
+  rows <- attr(plot, "panels")
+  parts <- rows[rows$population == "treated", ]
+  # Stored parents contain D1 events 2,3 and D2 events 9,10. r1 includes only 3
+  # in D1; both D2 events are inside r1, so excluding r1 leaves neither of them.
+  expect_equal(parts$events[parts$samples == "D1"], 1)
+  expect_equal(parts$events[parts$samples == "D2"], 0)
+  expect_equal(parts$parent_events[parts$samples %in% c("D1", "D2")], c(2, 2))
+  # r2 has the same geometry and inclusion rule on both samples: events 3 and 9.
+  expect_equal(parts$events[parts$samples == "D1, D2"], 2)
+  expect_equal(parts$parent_events[parts$samples == "D1, D2"], 4)
+  expect_equal(sum(gatelabPopulations(fixture$sce, populations = "treated")), 1)
+  expect_equal(attr(gatelabStrategyPlot(fixture$sce[, 12:1], "treated", max_events = 0), "panels"), rows)
+  subset <- attr(gatelabStrategyPlot(fixture$sce[, 7:12], "treated", max_events = 0), "panels")
+  expect_equal(sort(subset$events[subset$population == "treated"]), c(0, 1))
+})
+
+test_that("identical quadrant outlines retain each sample's named quadrant and exclusion", {
+  fixture <- strategy_coordinates_fixture(edit_workspace = function(ws) {
+    ws$gating$hierarchies[[2]]$structure_locked <- FALSE
+    ws$gating$stored_hierarchies[[1]]$structure_locked <- FALSE
+    ws$gating$stored_hierarchies[[1]]$gates[["D2:q"]]$center <- list(10, 10)
+    ws$gating$stored_hierarchies[[1]]$populations[["D2:p_q2"]]$gate_refs <- list(
+      list(gate_id = "D2:q", include = FALSE, quadrant = 3L))
+    ws
+  }, bits_override = list(p_q2 = seq_len(12) %in% c(3, 9)))
+  plot <- gatelabStrategyPlot(fixture$sce, "CD8_positive", max_events = 0)
+  rows <- attr(plot, "panels")
+  q <- rows[rows$panel == "CD4_positive", ]
+  d1 <- q[q$samples == "D1", ]; d2 <- q[q$samples == "D2", ]
+  expect_equal(d1$population, c("quadrant 1", "CD8_positive", "quadrant 3", "quadrant 4"))
+  expect_equal(d1$events, c(0, 1, 0, 1))
+  # D2 event 9 is in q2, event 10 is in q3. The saved named population is NOT q3.
+  expect_equal(d2$population, c("quadrant 1", "quadrant 2", "CD8_positive", "quadrant 4"))
+  expect_equal(d2$events, c(0, 1, 1, 0))
+  expect_equal(d2$parent_events, rep(2, 4))
+  panel <- strategy_find_panel(plot, "CD4_positive (4)")
+  labels <- unlist(lapply(panel$children, function(child) if (inherits(child, "text")) child$label))
+  expect_true("not 50.0% (D2)" %in% labels)
+  expect_false("not 50.0% (D1)" %in% labels)
+  expect_equal(attr(gatelabStrategyPlot(fixture$sce[, 12:1], "CD8_positive", max_events = 0), "panels"), rows)
+})
+
+test_that("excluded quadrant components use their own sample parent rather than the conjunction mask", {
+  fixture <- strategy_coordinates_fixture(edit_workspace = function(ws) {
+    ws$gating$populations$p_and$gate_refs <- list(
+      list(gate_id = "r1", include = TRUE), list(gate_id = "q", include = FALSE, quadrant = 1L))
+    ws$gating$hierarchies[[2]]$structure_locked <- FALSE
+    ws$gating$stored_hierarchies[[1]]$structure_locked <- FALSE
+    ws$gating$stored_hierarchies[[1]]$populations[["D2:p_and"]]$gate_refs <- list(
+      list(gate_id = "D2:q", include = FALSE, quadrant = 4L), list(gate_id = "D2:r1", include = TRUE))
+    ws
+  }, bits_override = list(p_and = seq_len(12) %in% c(3, 9, 10)))
+  plot <- gatelabStrategyPlot(fixture$sce, "treated", max_events = 0)
+  rows <- attr(plot, "panels")
+  parts <- rows[rows$population == "treated", ]
+  # D1 q1 and D2 q4 are empty within their saved parents; their complements
+  # each contain two events. r1's AND component contains events 3,9,10 overall.
+  expect_equal(parts$events[parts$samples == "D1"], 2)
+  expect_equal(parts$events[parts$samples == "D2"], 2)
+  expect_equal(parts$events[parts$samples == "D1, D2"], 3)
+  expect_equal(parts$parent_events[parts$samples %in% c("D1", "D2")], c(2, 2))
+  panel <- strategy_find_panel(plot, "CD4_positive (4)")
+  labels <- unlist(lapply(panel$children, function(child) if (inherits(child, "text")) child$label))
+  expect_true(all(c("not 100.0% (D1)", "not 100.0% (D2)") %in% labels))
+})
+
+test_that("missing or reparented sample counterparts cannot borrow another sample's panel", {
+  fixture <- strategy_coordinates_fixture()
+  membership <- do.call(cbind, fixture$bits)
+  with_workspace <- function(ws) {
+    sce <- fixture$sce
+    S4Vectors::metadata(sce)$gatelab_workspace$workspace_json <- as.character(
+      jsonlite::toJSON(ws, auto_unbox = TRUE, null = "null", digits = I(17)))
+    sce
+  }
+  ws <- fixture$workspace
+  ws$gating$stored_hierarchies[[1]]$populations[["D2:p_q2"]] <- NULL
+  expect_error(gatelabStrategyPlot(with_workspace(ws), "CD8_positive", membership = membership, max_events = 0),
+               "No saved gate counterpart for population 'p_q2' on sample 'D2'")
+  ws <- fixture$workspace
+  ws$gating$stored_hierarchies[[1]]$populations[["D2:p_and"]]$parent_id <- "D2:root"
+  expect_error(gatelabStrategyPlot(with_workspace(ws), "treated", membership = membership, max_events = 0),
+               "has another parent; it cannot share this strategy panel")
 })
 
 test_that("sample label stacking preserves explicitly saved display offsets", {

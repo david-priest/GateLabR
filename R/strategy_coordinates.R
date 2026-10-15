@@ -295,23 +295,55 @@
     }
     keys
   }
+  population_source <- function(index, id) {
+    source <- .gatelabr_workspace_sample_source(trees, sample_trees, index, id)
+    if (is.null(source) || is.null(trees$trees[[source$tree]]$populations[[source$population]]))
+      stop("No saved gate counterpart for population '", id, "' on sample '", samples[[index]],
+           "'. Select samples whose trees contain this population.", call. = FALSE)
+    population <- trees$trees[[source$tree]]$populations[[source$population]]
+    parent <- trees$trees[[trees$active]]$populations[[id]]$parent_id
+    if (!is.null(parent)) {
+      own_parent <- .gatelabr_workspace_sample_source(trees, sample_trees, index, parent)
+      if (is.null(own_parent) || !identical(population$parent_id, own_parent$population))
+        stop("Sample-specific population '", id, "' on sample '", samples[[index]],
+             "' has another parent; it cannot share this strategy panel.", call. = FALSE)
+    }
+    list(tree = source$tree, population = population)
+  }
+  reference <- function(ref) list(include = !identical(ref$include, FALSE),
+                                  quadrant = if (is.null(ref$quadrant)) NA_integer_ else as.integer(ref$quadrant))
   function(entry) {
     groups <- list()
     signatures <- character(0)
     original <- lineage(trees$active, entry$gate$gate_id)
     for (index in seq_along(samples)) {
-      source <- .gatelabr_workspace_sample_source(trees, sample_trees, index, entry$population)
-      if (is.null(source))
-        stop("No saved gate counterpart for population '", entry$population, "' on sample '", samples[[index]],
-             "'. Select samples whose trees contain this population.", call. = FALSE)
+      source <- population_source(index, entry$population)
       tree <- trees$trees[[source$tree]]
-      population <- tree$populations[[source$population]]
+      population <- source$population
       candidate_ids <- vapply(population$gate_refs, function(ref) as.character(ref$gate_id), character(1))
       matches <- candidate_ids[vapply(candidate_ids, function(id) any(lineage(source$tree, id) %in% original), logical(1))]
       matches <- unique(matches)
       if (length(matches) != 1L || is.null(tree$gates[[matches[[1]]]]))
         stop("Cannot match gate '", entry$gate$name, "' to sample '", samples[[index]], "' by its saved provenance.", call. = FALSE)
       gate <- .gatelabr_strategy_gate(tree$gates[[matches[[1]]]])
+      own_refs <- Filter(function(ref) identical(ref$gate_id, matches[[1]]), population$gate_refs)
+      own_reference <- lapply(own_refs, reference)
+      single <- length(population$gate_refs) == 1L
+      quadrants <- list()
+      if (identical(gate$type, "quadrant")) {
+        active <- trees$trees[[trees$active]]$populations
+        siblings <- Filter(function(pop) identical(pop$parent_id, active[[entry$population]]$parent_id) &&
+                             any(vapply(pop$gate_refs, function(ref) identical(ref$gate_id, entry$gate$gate_id), logical(1))), active)
+        for (sibling in siblings) {
+          own <- population_source(index, sibling$population_id)$population
+          refs <- Filter(function(ref) identical(ref$gate_id, matches[[1]]), own$gate_refs)
+          if (!length(refs))
+            stop("Cannot match quadrant references for population '", sibling$population_id,
+                 "' on sample '", samples[[index]], "'.", call. = FALSE)
+          for (ref in refs) quadrants[[length(quadrants) + 1L]] <- c(reference(ref), list(
+            population = sibling$population_id, name = sibling$name, single = length(own$gate_refs) == 1L))
+        }
+      }
       if (!identical(c(gate$x_channel, gate$y_channel), c(entry$gate$x_channel, entry$gate$y_channel)))
         stop("Sample-specific gate '", gate$name, "' uses another channel pair.", call. = FALSE)
       instrument <- if (!is.na(matched[[index]])) entries[[matched[[index]]]]$instrumentMode else NULL
@@ -322,12 +354,15 @@
       resolved <- lapply(axes, function(ch) .gatelabr_strategy_gate_spec(gate, ch, coordinates, instrument))
       names(resolved) <- axes
       gate$space <- "display"; gate$transforms <- resolved
-      signature <- as.character(jsonlite::toJSON(gate[setdiff(names(gate), c("gate_id", "name"))],
+      signature <- as.character(jsonlite::toJSON(list(
+        gate = gate[setdiff(names(gate), c("gate_id", "name"))], references = own_reference,
+        single = single, quadrants = quadrants),
                                                 auto_unbox = TRUE, null = "null", digits = I(17)))
       at <- match(signature, signatures)
       if (is.na(at)) {
         at <- length(groups) + 1L
-        groups[[at]] <- list(gate = gate, samples = character(0), events = rep(FALSE, length(sample_of)))
+        groups[[at]] <- list(gate = gate, include = own_reference[[1]]$include, single = single,
+                             quadrants = quadrants, samples = character(0), events = rep(FALSE, length(sample_of)))
         signatures <- c(signatures, signature)
       }
       groups[[at]]$samples <- c(groups[[at]]$samples, samples[[index]])

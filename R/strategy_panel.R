@@ -166,7 +166,8 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
         if (is.null(moved) && !is.null(gate$quadrant_label_row))
           at[2] <- at[2] + gate$quadrant_label_row * (1.117 * fs$gate + 4) * c(1, 1, -1, -1)[q]
         suffix <- if (is.null(gate$quadrant_suffix)) "" else gate$quadrant_suffix
-        label <- text(paste0(sprintf("%.1f%%", pct), suffix), at[1], at[2], fs$gate, hjust = hjust, col = stroke, face = "bold")
+        prefix <- if (is.null(gate$quadrant_prefixes)) "" else gate$quadrant_prefixes[q]
+        label <- text(paste0(prefix, sprintf("%.1f%%", pct), suffix), at[1], at[2], fs$gate, hjust = hjust, col = stroke, face = "bold")
         backing <- if (pub_style) max(0, min(1, label_background)) else 0.78
         if (backing > 0)
           labels[[length(labels) + 1L]] <- grid::roundrectGrob(
