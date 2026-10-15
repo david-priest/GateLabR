@@ -30,7 +30,9 @@
 #'   \code{color}, and \code{vertices} (two-column matrix, display units), \code{percent},
 #'   \code{label_offset} and \code{label_placed} for an outlined gate, or \code{center},
 #'   \code{quadrant_pcts} (four values, in the order top left, top right, bottom right, bottom
-#'   left) and \code{quadrant_label_offsets} for a quadrant gate. A \code{gate_id} is
+#'   left) and \code{quadrant_label_offsets} for a quadrant gate. Optional
+#'   \code{quadrant_suffix} and zero-based \code{quadrant_label_row} distinguish sample-specific
+#'   quadrant annotations. A \code{gate_id} is
 #'   optional: it names the gate's entry in the \code{anchors} attribute.
 #' @param plot_size Side of the panel in pixels, margins included.
 #' @param contour_levels,contour_threshold,bandwidth Passed to \code{\link{gatelabContour}}.
@@ -159,7 +161,10 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
         } else {
           at <- mids[[q]]; hjust <- 0.5
         }
-        label <- text(sprintf("%.1f%%", pct), at[1], at[2], fs$gate, hjust = hjust, col = stroke, face = "bold")
+        if (is.null(moved) && !is.null(gate$quadrant_label_row))
+          at[2] <- at[2] + gate$quadrant_label_row * (1.117 * fs$gate + 4) * c(1, 1, -1, -1)[q]
+        suffix <- if (is.null(gate$quadrant_suffix)) "" else gate$quadrant_suffix
+        label <- text(paste0(sprintf("%.1f%%", pct), suffix), at[1], at[2], fs$gate, hjust = hjust, col = stroke, face = "bold")
         backing <- if (pub_style) max(0, min(1, label_background)) else 0.78
         if (backing > 0)
           labels[[length(labels) + 1L]] <- grid::roundrectGrob(
