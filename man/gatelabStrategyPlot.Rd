@@ -70,7 +70,8 @@ A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} a
   \code{height}, the figure's size in inches; \code{panels}, a data frame with one row per
   gate or quadrant drawn (\code{panel}, \code{x_channel}, \code{y_channel},
   \code{parent_events}, \code{events_drawn}, \code{population}, \code{events},
-  \code{percent_of_parent}).
+  \code{percent_of_parent}, \code{samples}). Identical outlines are pooled; a differing
+  sample-specific outline has its own row and sample-specific parent denominator.
 }
 \description{
 Lays out the gating path to the populations asked for as GateLab's Strategy tab does in its
@@ -80,20 +81,23 @@ gating depth, and an arrow from each gate to the panel of the population it make
 is a \code{\link{gatelabPanelGrob}}.
 }
 \details{
-Counts and percentages are of the pooled samples. A population made by one gate
+Counts and percentages are of the samples sharing each outline. A population made by one gate
   takes its count from the stored memberships (\code{\link{gatelabPopulations}}), so it is
   the app's own; a gate of a population made by several is counted from the gate's geometry,
-  as are quadrants no population was made for. That is exact where gates are stored in
-  display units, as on a \code{SingleCellExperiment} hosted on its transformed assay. An
+  as are quadrants no population was made for. These counts use the stored parent membership
+  and each gate's recorded coordinate space. An
   event a population was not evaluated for, which \code{gatelabPopulations()} returns as
   \code{NA} with a warning, is counted as outside it.
 
-  Events are drawn as the assay holds them and gates as the workspace holds them, with no
-  transform applied. A workspace drawn on a linear assay, which the app shows through a
-  transform, is not reproduced. The gates drawn are those of the hierarchy that was active
-  when the workspace was saved: a file gated under a copy of the tree with coordinates of
-  its own keeps its counts, which come from the memberships, but its own outlines are not
-  drawn.
+  Events are drawn through the display transforms recorded at the save. A display-space
+  assay is read in its recorded arcsinh units; a linear assay requires saved channel
+  transforms. Gate outlines are mapped from each gate's own coordinate space to that
+  display. Files gated under tailored copies of the active tree contribute their own
+  outlines, labelled by sample when the outlines differ. Named population counts remain
+  the stored memberships; individual gate and unnamed quadrant counts use each sample's
+  own gate in its recorded space. A sample without a saved counterpart is refused, since its
+  outline cannot be reconstructed; select the samples whose trees contain the population.
+  Drawing does not change the object.
 
   Axis ranges follow the app: a channel's global scale when the workspace sets one, else 5
   percent of the drawn events' span below them and 20 percent above, widened to keep every

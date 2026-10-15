@@ -101,7 +101,7 @@ test_that("FlowJo channel grids preserve rounding, floors, endpoints and inverse
 # Twelve synthetic events, two samples with different gate bounds and quadrant centres. The
 # parent masks intentionally exclude one event per sample that its rectangle geometrically
 # contains, so replacing a named population with a new geometric count fails this fixture.
-strategy_coordinates_fixture <- function() {
+strategy_coordinates_fixture <- function(label_offsets = list()) {
   counts <- rbind(CD4 = rep(c(0, 5, 15, 30, 60, 100), 2), CD8 = rep(c(0, 5, 15, 5, 15, 30), 2))
   sce <- SingleCellExperiment::SingleCellExperiment(
     assays = list(counts = counts, exprs = asinh(counts / 5)),
@@ -114,6 +114,7 @@ strategy_coordinates_fixture <- function() {
   tree <- function(prefix = "", second = FALSE) {
     id <- function(x) paste0(prefix, x)
     gate <- rectangle(id("g"), if (second) 15 else 5, if (second) 100 else 60)
+    gate$label_offset <- label_offsets[[if (second) "D2" else "D1"]]
     quadrant <- list(gate_id = id("q"), name = "quadrant", gate_type = "quadrant", x_channel = "CD4", y_channel = "CD8",
                      center = list(if (second) 20 else 10, 10), space = "raw", color = "#377eb8")
     gates <- list(gate, quadrant, rectangle(id("r1"), 10, 50, 0, 50), rectangle(id("r2"), 0, 200, 10, 30))
@@ -198,6 +199,10 @@ test_that("raw-assay strategies draw both samples' saved outlines and keep named
   expect_equal(data_y(outlines[[1]]), asinh(c(0, 0, 20, 20) / 5))
   labels <- unlist(lapply(panel$children, function(child) if (inherits(child, "text")) child$label))
   expect_true(all(c("CD4_positive (D1)", "CD4_positive (D2)") %in% labels))
+  names <- Filter(function(child) inherits(child, "text") && child$label %in%
+                    c("CD4_positive (D1)", "CD4_positive (D2)"), panel$children)
+  # Two lines of 12 px text plus their backing must fit between the sample labels.
+  expect_gt(as.numeric(names[[1]]$y) - as.numeric(names[[2]]$y), 30)
 
   # Each component of the AND is counted separately within the stored parent, even though
   # D2's references are saved in reverse order. Its conjunction's stored count is only two.
@@ -223,6 +228,20 @@ test_that("raw-assay strategies draw both samples' saved outlines and keep named
   subset_outline <- Filter(function(child) inherits(child, "polygon"), subset_panel$children)
   expect_length(subset_outline, 1L)
   expect_equal(data_x(subset_outline[[1]]), asinh(c(15, 100, 100, 15) / 5))
+})
+
+test_that("sample label stacking preserves explicitly saved display offsets", {
+  fixture <- strategy_coordinates_fixture(list(D1 = c(0.2, 0.4), D2 = c(-0.1, 0.4)))
+  plot <- gatelabStrategyPlot(fixture$sce, "CD4_positive", max_events = 0)
+  panel <- strategy_find_panel(plot, "All Events (12)")
+  labels <- Filter(function(child) inherits(child, "text") && child$label %in%
+                     c("CD4_positive (D1)", "CD4_positive (D2)"), panel$children)
+  expect_length(labels, 2L)
+  geo <- attr(panel, "geometry")
+  # Both outlines have the same transformed y centre. Equal saved y offsets stay equal,
+  # even though automatic labels for those same outlines would occupy separate rows.
+  expected <- geo$margin[["top"]] + (5 - (mean(asinh(c(0, 20) / 5)) + 0.4)) / 5 * geo$H - 0.55 * 12
+  expect_equal(unname(vapply(labels, function(label) as.numeric(label$y), numeric(1))), rep(expected, 2))
 })
 
 test_that("display assays are not transformed twice and raw channels require explicit saved transforms", {

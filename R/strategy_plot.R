@@ -246,7 +246,7 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
     overlays <- unlist(lapply(node$entries, function(entry) {
       pop <- pops[[entry$population]]
       variants <- gate_variants(entry)
-      lapply(seq_along(variants), function(index) {
+      outlined <- lapply(seq_along(variants), function(index) {
         variant <- variants[[index]]
         stored_gate <- variant$gate
         gate <- .gatelabr_strategy_gate_display(stored_gate, coordinates)
@@ -299,6 +299,22 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
              label_offset = if (is.null(gate$label_offset)) auto else gate$label_offset,
              label_placed = !is.null(gate$label_offset))
       })
+      automatic <- which(vapply(outlined, function(gate) !identical(gate$type, "quadrant") &&
+                                  !isTRUE(gate$label_placed), logical(1)))
+      if (length(automatic) > 1L) {
+        # The automatic labels of one gate's sample variants share a baseline above all
+        # their outlines; the panel separates their rows in pixels, using its font size.
+        tops <- vapply(outlined[automatic], function(gate) max(gate$vertices[, 2]), numeric(1))
+        heights <- vapply(outlined[automatic], function(gate) diff(range(gate$vertices[, 2])), numeric(1))
+        baseline <- max(tops) + max(0.15, heights * 0.08)
+        for (row in seq_along(automatic)) {
+          index <- automatic[[row]]
+          outlined[[index]]$label_offset[2] <- baseline - mean(outlined[[index]]$vertices[, 2])
+          outlined[[index]]$label_row <- row - 1L
+          outlined[[index]]$label_rows <- length(automatic)
+        }
+      }
+      outlined
     }), recursive = FALSE)
     title <- sprintf("%s (%s)", if (identical(node$parent_id, root)) pops[[root]]$name else pops[[node$parent_id]]$name,
                      format(n_parent, big.mark = ",", scientific = FALSE, trim = TRUE))
