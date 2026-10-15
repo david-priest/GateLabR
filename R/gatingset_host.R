@@ -3,7 +3,7 @@
 # A GatingSet keeps, per sample, a cytoframe on disk (one HDF5 file, opened lazily and read by
 # column), each channel's transform with its parameters in C++, a compensation where one was
 # applied, and a hierarchy of nodes, each a gate evaluated in the transformed space of its
-# channels or a boolean of other nodes. Nothing here copies the object: the dataset the app sees
+# channels or a boolean of other nodes. Event data are not copied: the dataset the app sees
 # is described from the object's own parts, each sample's values are read from its cytoframe one
 # channel at a time when the app asks for them and put through the channel's inverse transform
 # in R (gh_pop_get_data(inverse.transform = TRUE) would write a full temporary copy of the
@@ -33,7 +33,61 @@
   if (!is.function(reader)) return(list())
   raw <- tryCatch(reader(gs@pointer, sample, inverse = FALSE), error = function(...) NULL)
   if (!is.list(raw) || is.null(names(raw))) return(list())
-  raw[nzchar(names(raw))]
+  raw <- raw[nzchar(names(raw))]
+  scales <- .gatelabr_gatingset_logicle_scales(gs, sample, raw)
+  for (channel in names(scales)) raw[[channel]]$native_scale <- scales[[channel]]
+  raw
+}
+
+# flowWorkspace 4.16 drops cytolib's isGml2 flag from its transform parameter accessor.
+# Both logicle modes consequently return the same R forward/inverse closures, although
+# native event and gate coordinates span M for legacy logicle and 1 for Gating-ML 2.
+# Probe the stored C++ transforms on fresh one-event data. The cloned hierarchy initially
+# shares the original data, so replacement MUST precede any native transform call. No
+# original events, ranges, keywords or gates are written or inferred from their values.
+# The temporary hierarchy does copy its membership indices; probe all logicle channels
+# together once per sample, not separately for every channel or population.
+.gatelabr_gatingset_logicle_scales <- function(gs, sample, raw) {
+  channels <- names(raw)[vapply(raw, function(p) identical(p$type, "logicle"), logical(1))]
+  if (!length(channels)) return(numeric(0))
+  native_transform <- get0("gs_transform_data", envir = asNamespace("flowWorkspace"))
+  if (!is.function(native_transform)) {
+    stop("Cannot determine the GatingSet's native logicle convention: flowWorkspace's native transform accessor is unavailable.", call. = FALSE)
+  }
+  tryCatch({
+    top <- vapply(raw[channels], function(p) as.numeric(p$T), numeric(1))
+    decades <- vapply(raw[channels], function(p) as.numeric(p$M), numeric(1))
+    if (any(!is.finite(top) | top <= 0 | !is.finite(decades) | decades <= 0)) {
+      stop("invalid logicle parameters")
+    }
+    sentinel <- flowCore::flowSet(list(flowCore::flowFrame(
+      matrix(top, nrow = 1L, dimnames = list(NULL, channels)))))
+    flowCore::sampleNames(sentinel) <- sample
+    probe <- flowWorkspace::gs_copy_tree_only(gs[sample])
+    flowWorkspace::gs_cyto_data(probe) <- sentinel
+    frame <- flowWorkspace::gs_cyto_data(probe)[[sample]]
+    if (nrow(frame) != 1L || !identical(as.character(colnames(frame)), channels) ||
+        identical(frame@pointer, flowWorkspace::gs_cyto_data(gs)[[sample]]@pointer)) {
+      stop("the sentinel data were not isolated from the source")
+    }
+    native_transform(probe@pointer)
+    measured <- as.numeric(flowCore::exprs(flowWorkspace::gs_cyto_data(probe)[[sample]])[1L, ])
+    scales <- vapply(seq_along(channels), function(i) {
+      if (!is.finite(measured[[i]])) stop("nonfinite native logicle scale")
+      if (decades[[i]] == 1) {
+        if (abs(measured[[i]] - 1) > 1e-6) stop("unexpected native logicle scale")
+        return(1)
+      }
+      # cytolib stores event values as float32. Require one of the two documented
+      # native conventions; do not accept arbitrary scaling or ambiguous evidence.
+      matches <- abs(measured[[i]] - c(1, decades[[i]])) <= 1e-6 * pmax(1, decades[[i]])
+      if (sum(matches) != 1L) stop("ambiguous native logicle scale")
+      c(1, decades[[i]])[matches]
+    }, numeric(1))
+    stats::setNames(scales, channels)
+  }, error = function(cause) {
+    stop("Cannot determine the GatingSet's native logicle convention: ", conditionMessage(cause), call. = FALSE)
+  })
 }
 
 # How one channel's transformed values relate to a GateLab transform spec: the spec the app
@@ -43,7 +97,7 @@
 #
 # fasinh is `length * (asinh(x * sinh(M ln10) / T) + A ln10) / ((M + A) ln10)`, an affine
 # function of GateLab's asinh at cofactor T / sinh(M ln10); FlowJo's log is GateLab's wsplog
-# times its scale; flowWorkspace's logicle is GateLab's normalized logicle times M.
+# times its scale; native logicle is normalized or multiplied by M, depending on its mode.
 # Gating-ML's logtGml2 (GateLab's standard flog) is the same function by parameters.
 # So is the biexponential, provided the spec carries no
 # `tableChannels` and says `spline`: GateLab then builds cytolib's own table at `channelRange`
@@ -72,8 +126,15 @@
   if (identical(type, "logicle")) {
     p <- numbers("T", "W", "M", "A")
     if (is.null(p) || p$M <= 0) return(malformed)
+    scale <- number("native_scale")
+    if (is.null(scale)) scale <- p$M
+    legacy <- flowCore::logicleTransform(t = p$T, w = p$W, m = p$M, a = p$A)
+    undo <- flowCore::inverseLogicleTransform(legacy)@.Data
+    native <- legacy@.Data
     return(list(spec = list(kind = "logicle", T = p$T, W = p$W, M = p$M, A = p$A),
-                forward = function(v) v / p$M, backward = function(y) y * p$M))
+                forward = function(v) v / scale, backward = function(y) y * scale,
+                transform = function(x) native(x) * scale / p$M,
+                inverse = function(v) undo(v * p$M / scale)))
   }
   if (identical(type, "fasinh")) {
     p <- numbers("T", "M", "A", "length")
@@ -129,7 +190,7 @@
   axes <- lapply(channels, function(channel) {
     axis <- .gatelabr_gatingset_axis(raw[[channel]])
     transform <- transforms[[channel]]
-    axis$transform <- if (is.function(transform)) transform else NULL
+    if (!is.function(axis$transform)) axis$transform <- if (is.function(transform)) transform else NULL
     axis
   })
   names(axes) <- channels
@@ -320,12 +381,14 @@
 .gatelabr_write_gatingset_assay_payload <- function(gs, sample, channels, path) {
   frame <- flowWorkspace::gs_cyto_data(gs)[[sample]]
   inverse <- flowWorkspace::gh_get_transformations(gs[[sample]], inverse = TRUE)
+  axes <- .gatelabr_gatingset_axes(gs, channels, sample)
   event_count <- nrow(frame)
   connection <- file(path, open = "wb")
   on.exit(close(connection), add = TRUE)
   for (channel in channels) {
     values <- as.numeric(flowCore::exprs(frame[, channel, drop = FALSE])[, 1L])
-    undo <- inverse[[channel]]
+    undo <- axes[[channel]]$inverse
+    if (!is.function(undo)) undo <- inverse[[channel]]
     if (is.function(undo)) values <- undo(values)
     writeBin(values, connection, size = 4L, endian = "little")
   }

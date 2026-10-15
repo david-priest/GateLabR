@@ -244,7 +244,9 @@ test_that("a normalized logicle gate stays editable with exact membership under 
     fasinh = list(min = 256 * asinh(c(-100, -10) / 5) / (4.5 * log(10)),
                   max = 256 * asinh(c(500, 50) / 5) / (4.5 * log(10))),
     logicle = list(min = 4.5 * c(0.009041134692025388, 0.099917946544774),
-                   max = 4.5 * c(0.3810191860365646, 0.16573893940523296)))
+                   max = 4.5 * c(0.3810191860365646, 0.16573893940523296)),
+    gml2 = list(min = c(0.009041134692025388, 0.099917946544774),
+                max = c(0.3810191860365646, 0.16573893940523296)))
   for (kind in names(expected)) {
     frames <- flowCore::flowSet(list(flowCore::flowFrame(values),
                                      flowCore::flowFrame(values[nrow(values):1, , drop = FALSE])))
@@ -253,7 +255,8 @@ test_that("a normalized logicle gate stays editable with exact membership under 
     trans <- switch(kind,
       identity = NULL,
       fasinh = flowWorkspace::flowjo_fasinh_trans(m = 4.5, t = 5 * sinh(4.5 * log(10)), a = 0, length = 256),
-      logicle = flowWorkspace::logicle_trans(w = 0.5, t = 262144, m = 4.5, a = 0))
+      logicle = flowWorkspace::logicle_trans(w = 0.5, t = 262144, m = 4.5, a = 0),
+      gml2 = flowWorkspace::logicleGml2_trans(W = 0.5, T = 262144, M = 4.5, A = 0))
     if (!is.null(trans)) flowWorkspace::transform(gs, flowWorkspace::transformerList(c("CD4", "CD8"), trans))
     before <- lapply(1:2, function(i) flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[i]], "root")))
     handled <- GateLabR:::.gatelabr_handle_host_request(
@@ -274,7 +277,7 @@ test_that("a normalized logicle gate stays editable with exact membership under 
                        if (i == 1L) mask else rev(mask), info = kind)
       expect_identical(flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[i]], "root")), before[[i]])
     }
-    if (identical(kind, "logicle")) {
+    if (kind %in% c("logicle", "gml2")) {
       hosted_gate <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)$nodes[[1]]$gate
       expect_equal(as.numeric(hosted_gate$min), expected$logicle$min / 4.5, tolerance = 1e-9)
       expect_equal(as.numeric(hosted_gate$max), expected$logicle$max / 4.5, tolerance = 1e-9)
