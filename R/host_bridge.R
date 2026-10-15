@@ -372,23 +372,64 @@
   NULL
 }
 
-# CATALYST and related R pipelines leave the spillover matrix in metadata().
-# Finding it both proves compensation happened and supplies the matrix itself,
-# so a pre-compensated SCE need not be re-derived or hand-declared.
 # The matrix an SCE carries for the app: metadata(sce)$spillover, as flowCore::spillover()
 # returns one (sources as row names, receivers as column names), is the documented name; the
-# three others are read for objects that used them.
-.gatelabr_sce_spillover_matrix <- function(sce) {
+# three others are read for objects that used them. Its presence does not say it was applied.
+.gatelabr_sce_spillover_matrix <- function(sce, with_source = FALSE) {
   md <- S4Vectors::metadata(sce)
   for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
     value <- md[[key]]
     if (is.matrix(value) && is.numeric(value) && nrow(value) > 0L &&
         ncol(value) > 0L && !is.null(rownames(value)) &&
         !is.null(colnames(value))) {
-      return(value)
+      return(if (with_source) list(matrix = value, source = key) else value)
     }
   }
   NULL
+}
+
+# The stored matrix offered in the Compensation tab, without changing an assay or declaring
+# it compensated. Resolve exact row ids and recorded channel names to the physical channel
+# names used by the compensation solver. Keep the two axes in their own recorded order.
+.gatelabr_sce_compensation_matrix <- function(sce, channels, instrument) {
+  stored <- .gatelabr_sce_spillover_matrix(sce, with_source = TRUE)
+  if (is.null(stored)) return(NULL)
+  source <- paste0("metadata(sce)$", stored$source)
+  refuse <- function(reason) {
+    warning(source, " is not offered for compensation: ", reason, call. = FALSE)
+    NULL
+  }
+  if (!instrument %in% c("flow", "cytof")) {
+    return(refuse("set metadata(sce)$instrument_type to 'flow' or 'cytof' first."))
+  }
+  spillover <- stored$matrix
+  if (any(!is.finite(spillover))) return(refuse("every coefficient must be finite."))
+  physical <- vapply(channels, function(channel) {
+    if (!is.null(channel$pnn) && nzchar(trimws(channel$pnn))) trimws(channel$pnn) else channel$id
+  }, character(1))
+  if (anyDuplicated(physical)) return(refuse("the object has duplicate physical channel names."))
+  resolve <- function(axis) {
+    if (anyNA(axis) || any(!nzchar(axis)) || anyDuplicated(axis)) return(NULL)
+    positions <- vapply(axis, function(name) {
+      hits <- which(vapply(channels, function(channel) {
+        name %in% c(channel$id, channel$pnn, channel$pns)
+      }, logical(1)))
+      if (length(hits) == 1L) hits else NA_integer_
+    }, integer(1), USE.NAMES = FALSE)
+    if (anyNA(positions) || anyDuplicated(positions)) NULL else physical[positions]
+  }
+  sources <- resolve(rownames(spillover))
+  receivers <- resolve(colnames(spillover))
+  if (is.null(sources) || is.null(receivers)) {
+    return(refuse("each matrix channel must identify exactly one SCE row by id, pnn or pns."))
+  }
+  list(
+    kind = paste0(instrument, "-spillover"),
+    name = source,
+    sourceChannels = I(sources),
+    receiverChannels = I(receivers),
+    matrix = lapply(seq_len(nrow(spillover)), function(row) I(unname(spillover[row, ])))
+  )
 }
 
 .gatelabr_counts_assay_name <- function(sce) {
@@ -770,7 +811,7 @@
     assay
   })
 
-  list(
+  descriptor <- list(
     contractVersion = .gatelabr_dataset_contract_version,
     id = dataset_id,
     label = as.character(label),
@@ -784,6 +825,9 @@
     colDataCategorical = .gatelabr_categorical_coldata_columns(sce),
     rowDataRevision = .gatelabr_rowdata_revision(sce)
   )
+  matrix <- .gatelabr_sce_compensation_matrix(sce, descriptor$channels, descriptor$instrument)
+  if (!is.null(matrix)) descriptor$compensationMatrix <- matrix
+  descriptor
 }
 
 .gatelabr_write_assay_payload <- function(
