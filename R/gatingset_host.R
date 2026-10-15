@@ -43,8 +43,9 @@
 #
 # fasinh is `length * (asinh(x * sinh(M ln10) / T) + A ln10) / ((M + A) ln10)`, an affine
 # function of GateLab's asinh at cofactor T / sinh(M ln10); FlowJo's log is GateLab's wsplog
-# times its scale; the logicle and Gating-ML's logtGml2 (GateLab's standard flog) are the same
-# functions by parameters. So is the biexponential, provided the spec carries no
+# times its scale; flowWorkspace's logicle is GateLab's normalized logicle times M.
+# Gating-ML's logtGml2 (GateLab's standard flog) is the same function by parameters.
+# So is the biexponential, provided the spec carries no
 # `tableChannels` and says `spline`: GateLab then builds cytolib's own table at `channelRange`
 # channels and evaluates it as R's natural cubic spline, which is the function flowWorkspace
 # runs to the last digit (GateLab's biexSpline.test.ts checks it against R's coefficients);
@@ -70,9 +71,9 @@
   malformed <- list(unsupported = paste0("a ", type, " transform with missing parameters"))
   if (identical(type, "logicle")) {
     p <- numbers("T", "W", "M", "A")
-    if (is.null(p)) return(malformed)
+    if (is.null(p) || p$M <= 0) return(malformed)
     return(list(spec = list(kind = "logicle", T = p$T, W = p$W, M = p$M, A = p$A),
-                forward = identity, backward = identity))
+                forward = function(v) v / p$M, backward = function(y) y * p$M))
   }
   if (identical(type, "fasinh")) {
     p <- numbers("T", "M", "A", "length")
