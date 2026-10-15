@@ -1,3 +1,28 @@
+# Uniform analytical samples are independent of the adaptive subdivision's chosen points.
+# Measure distance to the drawn segments, normalized separately by each axis's full span.
+strategy_outline_error <- function(vertices, drawn, map) {
+  mapped <- map(vertices[, 1], vertices[, 2])
+  spans <- apply(mapped, 2, function(v) diff(range(v)))
+  worst <- 0
+  for (edge in seq_len(nrow(vertices))) {
+    a <- vertices[edge, ]; b <- vertices[if (edge == nrow(vertices)) 1L else edge + 1L, ]
+    t <- (0:8191) / 8191 # not the subdivision's dyadic sample positions
+    points <- map(a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t)
+    nearest <- rep(Inf, nrow(points))
+    for (j in seq_len(nrow(drawn))) {
+      start <- drawn[j, ]; end <- drawn[if (j == nrow(drawn)) 1L else j + 1L, ]
+      delta <- (end - start) / spans
+      p <- sweep(sweep(points, 2, start), 2, spans, `/`)
+      length_square <- sum(delta^2)
+      along <- if (length_square > 0) pmin(1, pmax(0, as.vector(p %*% delta) / length_square)) else rep(0, nrow(p))
+      distance <- sqrt((p[, 1] - along * delta[1])^2 + (p[, 2] - along * delta[2])^2)
+      nearest <- pmin(nearest, distance)
+    }
+    worst <- max(worst, nearest)
+  }
+  worst
+}
+
 test_that("saved transforms reconstruct negative, zero and large values in the embedded core's units", {
   trans <- GateLabR:::.gatelabr_strategy_transform
   x <- c(-1000, -10, 0, 10, 1000, 1e6)
@@ -286,7 +311,7 @@ test_that("gate-specific transforms move outlines and individual counts in the s
     transforms = list(CD4 = list(kind = "asinh", cofactor = 5), CD8 = list(kind = "identity"))))
   gate$label_offset <- c(0.2, -0.3) # offsets are display deltas even for a gate in another space
   drawn <- GateLabR:::.gatelabr_strategy_gate_display(gate, coordinates)
-  expect_equal(nrow(drawn$vertices), 28) # exported polygonOutline() at embedded core f040e5d
+  expect_lte(strategy_outline_error(gate$vertices, drawn$vertices, function(x, y) cbind(5 * sinh(x), y)), 0.002)
   midpoint <- drawn$vertices[drawn$vertices[, 2] == 1, ]
   expect_equal(midpoint, c(5 * sinh(1), 1))
   expect_false(isTRUE(all.equal(midpoint[1], 5 * sinh(2) / 2))) # bowed, not a straight raw chord
@@ -311,4 +336,26 @@ test_that("individual geometric counts keep polygon edges and unbounded rectangl
                     vertices = rbind(c(-.Machine$double.xmax, 0), c(.Machine$double.xmax, 2)))
   expect_equal(in_gate(rectangle, c(-Inf, 0, Inf), c(1, 1, 1)), c(TRUE, TRUE, TRUE))
   expect_equal(in_gate(rectangle, c(0, 0), c(0, 2)), c(TRUE, FALSE))
+})
+
+test_that("nonlinear outlines meet their tolerance across inflections on either axis", {
+  triangle <- rbind(c(-2, 0), c(2, 2), c(-2, 2))
+  cases <- list(
+    list(vertices = triangle, map = function(x, y) cbind(5 * sinh(x), y)),
+    list(vertices = triangle[, 2:1], map = function(x, y) cbind(x, 150 * sinh(y))),
+    list(vertices = rbind(c(-1000, 0), c(1000, 100000), c(-1000, 100000)), map = function(x, y) cbind(asinh(x / 5), y)),
+    list(vertices = rbind(c(0, -1000), c(100000, 1000), c(100000, -1000)), map = function(x, y) cbind(x, asinh(y / 5))),
+    list(vertices = rbind(c(-2, -1), c(2, 3), c(-2, 3)), map = function(x, y) cbind(150 * sinh(x), 5 * sinh(y))),
+    list(vertices = rbind(c(1, -2), c(10000, 2), c(1, 2)), map = function(x, y) cbind(log10(x), 10^y)),
+    list(vertices = rbind(c(-1e6, 0), c(1e6, 2), c(-1e6, 2)), map = function(x, y) cbind(asinh(x / 5), y))
+  )
+  for (case in cases) {
+    vertices <- case$vertices; map <- case$map
+    mapped <- map(vertices[, 1], vertices[, 2])
+    drawn <- GateLabR:::.gatelabr_strategy_polygon_outline(vertices, mapped, function(v) as.numeric(map(v[1], v[2])))
+    expect_lte(strategy_outline_error(vertices, drawn, map), 0.002)
+  }
+  # At y=0.5 the true first edge has x=-5*sinh(1), not the endpoint chord's x=-5*sinh(2)/2.
+  expect_equal(as.numeric(cases[[1]]$map(0, 1)), c(0, 1))
+  expect_gt(abs(5 * sinh(1) - 5 * sinh(2) / 2) / (10 * sinh(2)), 0.08)
 })

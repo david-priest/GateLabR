@@ -199,7 +199,11 @@
   edge <- function(a, b, t0 = 0, t1 = 1, depth = 0L) {
     at <- function(t) to_display(a + (b - a) * t)
     p0 <- at(t0); p1 <- at(t1); tm <- (t0 + t1) / 2
-    off <- sqrt(sum(((at(tm) - (p0 + p1) / 2) / spans)^2))
+    # An inflection can put the midpoint on the chord while both halves bow away.
+    off <- max(vapply(c(0.25, 0.5, 0.75), function(fraction) {
+      point <- at(t0 + (t1 - t0) * fraction)
+      sqrt(sum(((point - (p0 + (p1 - p0) * fraction)) / spans)^2))
+    }, numeric(1)))
     if (depth >= 9L || !is.finite(off) || off <= 0.002) {
       out[[length(out) + 1L]] <<- p1
     } else {
