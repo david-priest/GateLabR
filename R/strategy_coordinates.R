@@ -148,11 +148,58 @@
   }, inverse = function(y) ifelse(y >= N, x[[last + 1]], raw((pmax(y, 0) + 0.5) * per_cell)))
 }
 
-.gatelabr_strategy_coordinates <- function(sce, gating, assay) {
+# A sample's active layer is saved in the workspace. The application's active_sample_ids
+# records the earlier apply/adopt operation and can be stale after a header toggle.
+.gatelabr_strategy_compensated_layers <- function(sce, workspace, assay, sample_of, pooled) {
+  entries <- workspace$samples
+  active <- function(entry) isTRUE(entry$compensationOn) || identical(entry$assay$activeLayer, "compensated")
+  if (!length(entries) || !any(vapply(entries, active, logical(1)))) return(list())
+  if (length(sample_of) != ncol(sce))
+    stop("Saved compensated layers require one sample identity per event.", call. = FALSE)
+  samples <- sort(unique(as.character(sample_of[pooled])))
+  state <- .gatelabr_compensation_state(sce)
+  dataset <- S4Vectors::metadata(sce)$gatelab_workspace$dataset_id
+  layers <- list()
+  for (sample in samples) {
+    fail <- function() stop("Cannot reconstruct saved compensated layer for sample '", sample,
+                            "'. Save its current assay and compensation binding in GateLabR again.", call. = FALSE)
+    hits <- which(vapply(entries, function(entry) {
+      id <- .gatelabr_scalar_or(entry$sampleId, "")
+      identical(.gatelabr_scalar_or(entry$fileName, ""), sample) || identical(id, sample) || endsWith(id, paste0(":", sample))
+    }, logical(1)))
+    if (length(hits) != 1L) fail()
+    entry <- entries[[hits]]
+    if (!active(entry)) next
+    binding <- entry$assay$compensatedLayer
+    if (!identical(entry$assay$schema, "gatelab.sample-assay-binding.v1") ||
+        is.null(entry$sampleId) || is.null(binding$profileId) || is.null(binding$profileHash) || is.null(binding$matrixHash)) fail()
+    application <- Filter(function(candidate) {
+      targets <- as.character(unlist(candidate$target_sample_ids))
+      matched <- entry$sampleId %in% targets || (!is.null(dataset) && entry$sampleId %in% paste0(dataset, ":", targets))
+      identical(candidate$profile_id, binding$profileId) && identical(candidate$source_assay_id, assay) &&
+        matched && !is.null(candidate$output_assay_id) && candidate$output_assay_id %in% SummarizedExperiment::assayNames(sce)
+    }, state$applications)
+    if (length(application) != 1L) fail()
+    application <- application[[1]]
+    profile <- tryCatch(jsonlite::fromJSON(application$profile_json, simplifyVector = FALSE), error = function(...) NULL)
+    if (!identical(profile$profileHash, binding$profileHash) || !identical(profile$matrixHash, binding$matrixHash) ||
+        !identical(.gatelabr_assay_coordinate_space(sce, application$output_assay_id), "linear")) fail()
+    layers[[length(layers) + 1L]] <- list(assay = application$output_assay_id,
+      events = which(as.character(sample_of) %in% sample & pooled))
+  }
+  layers
+}
+
+.gatelabr_strategy_coordinates <- function(sce, gating, assay,
+    sample_of = SummarizedExperiment::colData(sce)$sample_id, pooled = rep(TRUE, ncol(sce)), use_saved_layers = TRUE) {
   values <- SummarizedExperiment::assay(sce, assay)
   channels <- .gatelabr_channel_descriptors(sce)
   ids <- vapply(channels, `[[`, character(1), "id")
   display_assay <- identical(.gatelabr_assay_coordinate_space(sce, assay), "display")
+  # Display assays are drawn directly; the browser can retain a parked linear-assay binding
+  # while exprs is selected. An explicit assay argument likewise selects that assay itself.
+  layers <- if (use_saved_layers && !display_assay)
+    .gatelabr_strategy_compensated_layers(sce, gating$workspace, assay, sample_of, pooled) else list()
   cofactor <- .gatelabr_display_cofactor(sce)$cofactor
   specs <- gating$workspace$hostedChannelTransforms
   row_specs <- .gatelabr_rowdata_transforms(sce)
@@ -174,6 +221,8 @@
     index <- match(channel, ids)
     if (is.na(index)) stop("Channel '", channel, "' is not a row of assay '", assay, "'.", call. = FALSE)
     v <- as.numeric(values[index, ])
+    for (layer in layers)
+      v[layer$events] <- as.numeric(SummarizedExperiment::assay(sce, layer$assay)[index, layer$events])
     if (display_assay) cofactor * sinh(v) else v
   }
   list(raw = raw, display = function(channel) transform(channel)$forward(raw(channel)),

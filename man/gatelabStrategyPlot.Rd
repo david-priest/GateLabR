@@ -63,15 +63,17 @@ of events by population with the population names (or ids) as column names. \cod
 reads the stored memberships with \code{gatelabPopulations()}.}
 
 \item{assay}{The assay the gates were drawn on; \code{NULL} takes the one the workspace
-names, or \code{exprs} when it names none.}
+names, or \code{exprs} when it names none. For a saved linear assay, each sample uses its
+saved original or compensated layer. An explicit assay name uses that assay for every
+sample. A missing or ambiguous saved compensated layer is refused, never recomputed.}
 }
 \value{
 A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} and
   \code{height}, the figure's size in inches; \code{panels}, a data frame with one row per
   gate or quadrant drawn (\code{panel}, \code{x_channel}, \code{y_channel},
   \code{parent_events}, \code{events_drawn}, \code{population}, \code{events},
-  \code{percent_of_parent}, \code{samples}). Identical outlines are pooled; a differing
-  sample-specific outline has its own row and sample-specific parent denominator.
+  \code{percent_of_parent}, \code{samples}). Identical outlines and inclusion rules are
+  pooled; a differing sample-specific outline or rule has its own row and parent denominator.
 }
 \description{
 Lays out the gating path to the populations asked for as GateLab's Strategy tab does in its

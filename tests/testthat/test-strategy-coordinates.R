@@ -126,7 +126,7 @@ test_that("FlowJo channel grids preserve rounding, floors, endpoints and inverse
 # Twelve synthetic events, two samples with different gate bounds and quadrant centres. The
 # parent masks intentionally exclude one event per sample that its rectangle geometrically
 # contains, so replacing a named population with a new geometric count fails this fixture.
-strategy_coordinates_fixture <- function(label_offsets = list(), edit_workspace = identity, bits_override = list()) {
+strategy_coordinates_fixture <- function(label_offsets = list(), edit_workspace = identity, bits_override = list(), edit_sce = identity) {
   counts <- rbind(CD4 = rep(c(0, 5, 15, 30, 60, 100), 2), CD8 = rep(c(0, 5, 15, 5, 15, 30), 2))
   sce <- SingleCellExperiment::SingleCellExperiment(
     assays = list(counts = counts, exprs = asinh(counts / 5)),
@@ -190,7 +190,7 @@ strategy_coordinates_fixture <- function(label_offsets = list(), edit_workspace 
       hierarchyId = "main", populationId = id, populationName = main$populations[[id]]$name,
       parentId = main$populations[[id]]$parent_id, gateLogic = "and", gates = list(), sampleMasks = masks(bits[[id]]))))
   saved <- GateLabR:::.gatelabr_store_host_workspace(
-    sce, dataset_id = "strategy-fixture", expected_revision = 0L, client_revision = 1L, reason = "explicit",
+    edit_sce(sce), dataset_id = "strategy-fixture", expected_revision = 0L, client_revision = 1L, reason = "explicit",
     workspace_json = as.character(jsonlite::toJSON(ws, auto_unbox = TRUE, null = "null", digits = I(17))),
     memberships = payload)$sce
   list(sce = saved, workspace = ws, bits = bits)
@@ -350,6 +350,121 @@ test_that("missing or reparented sample counterparts cannot borrow another sampl
   ws$gating$stored_hierarchies[[1]]$populations[["D2:p_and"]]$parent_id <- "D2:root"
   expect_error(gatelabStrategyPlot(with_workspace(ws), "treated", membership = membership, max_events = 0),
                "has another parent; it cannot share this strategy panel")
+})
+
+strategy_compensated_fixture <- function() {
+  # Original CD4 = true CD4 + true CD8; original CD8 = true CD8. This stored
+  # linear assay therefore subtracts CD8 from CD4, with no solver in the oracle.
+  scientific <- list(schema = "gatelab.compensation-profile.v1", kind = "flow-spillover", method = "matrix-inverse",
+    solverVersion = "r-external-precomputed-v1", solverSettings = list(
+      list(key = "conditionWarningThreshold", value = 1e8), list(key = "singularTolerance", value = 1e-12)),
+    matrix = list(schema = "gatelab.compensation-matrix.v1", orientation = "source-rows-receiver-columns",
+      sourceChannels = list("CD4", "CD8"), receiverChannels = list("CD4", "CD8"), matrix = list(c(1, 0), c(1, 1))),
+    includedChannels = list())
+  matrix_hash <- GateLabR:::.gatelabr_comp_matrix_hash(GateLabR:::.gatelabr_comp_matrix_record(scientific))
+  profile_hash <- GateLabR:::.gatelabr_comp_profile_hash(scientific, matrix_hash)
+  profile <- list(schema = "gatelab.compensation-profile-record.v1", recordType = "baseline", profileId = "synthetic-flow",
+    name = "Synthetic spillover", createdAt = "2026-01-01T00:00:00Z", note = NULL, scientific = scientific,
+    matrixHash = matrix_hash, profileHash = profile_hash,
+    origin = list(type = "uploaded", fileName = "synthetic.csv", format = "csv", sourceColumnHeader = ""), provenance = NULL,
+    baselineProfileId = "synthetic-flow", baselineMatrixHash = matrix_hash, baselineProfileHash = profile_hash,
+    parentProfileId = NULL, revisionReason = NULL)
+  binding <- list(profileId = profile$profileId, profileHash = profile_hash, matrixHash = matrix_hash,
+    kind = "flow-spillover", method = "matrix-inverse", includedPnns = list("CD4", "CD8"),
+    channelBindings = lapply(1:2, function(i) list(pnn = c("CD4", "CD8")[i], fcsColumnIndex = i - 1L,
+      matrixSourceIndex = i - 1L, matrixReceiverIndex = i - 1L, included = TRUE)), transformBinding = list(kind = "flow-linear"))
+  strategy_coordinates_fixture(edit_workspace = function(ws) {
+    ws$version <- 3L
+    ws$compensation <- list(schema = "gatelab.workspace-compensation.v1",
+      lineages = list(list(baselineProfileId = profile$profileId, records = list(profile))))
+    for (i in 1:2) {
+      ws$samples[[i]]$compensationOn <- NULL
+      ws$samples[[i]]$assay <- list(schema = "gatelab.sample-assay-binding.v1",
+        activeLayer = if (i == 1L) "original" else "compensated", compensatedLayer = binding)
+    }
+    ws$gating$stored_hierarchies[[1]]$gates[["D2:q"]]$center <- list(12, 10)
+    ws
+  }, bits_override = list(p_and = seq_len(12) %in% 3), edit_sce = function(sce) {
+    compensated <- SummarizedExperiment::assay(sce, "counts")
+    compensated["CD4", ] <- compensated["CD4", ] - compensated["CD8", ]
+    SummarizedExperiment::assay(sce, "compensated") <- compensated
+    S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(compensated = "linear")
+    S4Vectors::metadata(sce)$gatelabr_assay_revisions <- list(compensated = 1L)
+    S4Vectors::metadata(sce)$gatelabr_compensation <- list(format = "gatelabr-compensation", version = 1L,
+      applications = list(list(profile_id = profile$profileId, profile_json = as.character(jsonlite::toJSON(profile,
+        auto_unbox = TRUE, null = "null", digits = I(17))), source_assay_id = "counts", output_assay_id = "compensated",
+        output_assay_revision = 1L, execution = "adopted-existing-assay", managed_output = FALSE,
+        target_sample_ids = c("sample-0", "sample-1"), active_sample_ids = c("sample-0", "sample-1"))))
+    sce
+  })
+}
+
+test_that("strategy coordinates follow saved active layers by sample through reorder and subset", {
+  fixture <- strategy_compensated_fixture(); sce <- fixture$sce; original <- sce
+  gating <- GateLabR:::.gatelabr_strategy_gating(sce)
+  coordinates <- GateLabR:::.gatelabr_strategy_coordinates(sce, gating, "counts")
+  expected <- c(0, 5, 15, 30, 60, 100, 0, 0, 0, 25, 45, 70)
+  expect_equal(coordinates$raw("CD4"), expected)
+  expect_equal(coordinates$display("CD4"), asinh(expected / 5))
+  reversed <- GateLabR:::.gatelabr_strategy_coordinates(sce[, 12:1], gating, "counts")
+  expect_equal(reversed$raw("CD4"), rev(expected))
+  subset <- GateLabR:::.gatelabr_strategy_coordinates(sce[, 7:12], gating, "counts")
+  expect_equal(subset$raw("CD4"), expected[7:12])
+  plot <- gatelabStrategyPlot(sce, c("CD8_positive", "treated"), max_events = 0)
+  rows <- attr(plot, "panels")
+  # r1 selects D1 event 3 and compensated D2 event 10; r2 selects 3 and 9.
+  expect_equal(rows$events[rows$population == "treated"], c(2, 2))
+  expect_equal(sum(gatelabPopulations(sce, populations = "treated")), 1)
+  q <- rows[rows$panel == "CD4_positive" & rows$population != "treated" & rows$samples == "D2", ]
+  expect_equal(q$events, c(1, 0, 1, 0))
+  expect_equal(rows$events[rows$population == "CD4_positive"], c(2, 2)) # saved masks are unchanged
+  expect_equal(attr(gatelabStrategyPlot(sce[, 12:1], c("CD8_positive", "treated"), max_events = 0), "panels"), rows)
+  explicit <- attr(gatelabStrategyPlot(sce, "treated", assay = "counts", max_events = 0), "panels")
+  expect_equal(explicit$events[explicit$population == "treated"], c(3, 2)) # explicit assay overrides saved layers
+  expect_identical(sce, original)
+})
+
+test_that("active compensation cannot silently fall back to original values", {
+  fixture <- strategy_compensated_fixture()
+  plot <- function(sce) gatelabStrategyPlot(sce, "treated", max_events = 0)
+  missing <- fixture$sce
+  SummarizedExperiment::assay(missing, "compensated") <- NULL
+  expect_error(plot(missing), "Cannot reconstruct saved compensated layer for sample 'D2'")
+  mismatch <- fixture$sce
+  S4Vectors::metadata(mismatch)$gatelabr_compensation$applications[[1]]$profile_json <-
+    as.character(jsonlite::toJSON(list(profileHash = "different-profile"), auto_unbox = TRUE))
+  expect_error(plot(mismatch), "Cannot reconstruct saved compensated layer for sample 'D2'")
+  ambiguous <- fixture$sce
+  state <- S4Vectors::metadata(ambiguous)$gatelabr_compensation
+  state$applications <- rep(state$applications, 2)
+  S4Vectors::metadata(ambiguous)$gatelabr_compensation <- state
+  expect_error(plot(ambiguous), "Cannot reconstruct saved compensated layer for sample 'D2'")
+  # The invalid D2 binding does not prevent a plot restricted to D1's original layer.
+  expect_silent(gatelabStrategyPlot(missing, "treated", samples = "D1", max_events = 0))
+})
+
+test_that("display assays do not reactivate a parked linear compensation binding", {
+  fixture <- strategy_compensated_fixture(); sce <- fixture$sce
+  ws <- fixture$workspace; ws$hostedAssayId <- "exprs"
+  S4Vectors::metadata(sce)$gatelab_workspace$workspace_json <- as.character(jsonlite::toJSON(ws,
+    auto_unbox = TRUE, null = "null", digits = I(17)))
+  SummarizedExperiment::assay(sce, "compensated") <- NULL
+  plot <- gatelabStrategyPlot(sce, "treated", max_events = 0)
+  rows <- attr(plot, "panels")
+  expect_equal(rows$events[rows$population == "treated"], c(3, 2))
+  gating <- GateLabR:::.gatelabr_strategy_gating(sce)
+  coordinates <- GateLabR:::.gatelabr_strategy_coordinates(sce, gating, "exprs")
+  expect_equal(coordinates$display("CD4"), asinh(rep(c(0, 5, 15, 30, 60, 100), 2) / 5))
+})
+
+test_that("a legacy compensation flag cannot identify a stored compensated assay", {
+  fixture <- strategy_coordinates_fixture(); sce <- fixture$sce
+  ws <- fixture$workspace; ws$samples[[2]]$compensationOn <- TRUE
+  S4Vectors::metadata(sce)$gatelab_workspace$workspace_json <- as.character(jsonlite::toJSON(ws,
+    auto_unbox = TRUE, null = "null", digits = I(17)))
+  expect_error(gatelabStrategyPlot(sce, "treated", max_events = 0),
+               "Cannot reconstruct saved compensated layer for sample 'D2'")
+  expect_silent(gatelabStrategyPlot(sce, "treated", assay = "counts", max_events = 0))
 })
 
 test_that("sample label stacking preserves explicitly saved display offsets", {

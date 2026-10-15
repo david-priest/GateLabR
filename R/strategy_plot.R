@@ -70,13 +70,15 @@
 #'   of events by population with the population names (or ids) as column names. \code{NULL}
 #'   reads the stored memberships with \code{gatelabPopulations()}.
 #' @param assay The assay the gates were drawn on; \code{NULL} takes the one the workspace
-#'   names, or \code{exprs} when it names none.
+#'   names, or \code{exprs} when it names none. For a saved linear assay, each sample uses its
+#'   saved original or compensated layer. An explicit assay name uses that assay for every
+#'   sample. A missing or ambiguous saved compensated layer is refused, never recomputed.
 #' @return A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} and
 #'   \code{height}, the figure's size in inches; \code{panels}, a data frame with one row per
 #'   gate or quadrant drawn (\code{panel}, \code{x_channel}, \code{y_channel},
 #'   \code{parent_events}, \code{events_drawn}, \code{population}, \code{events},
-#'   \code{percent_of_parent}, \code{samples}). Identical outlines are pooled; a differing
-#'   sample-specific outline has its own row and sample-specific parent denominator.
+#'   \code{percent_of_parent}, \code{samples}). Identical outlines and inclusion rules are
+#'   pooled; a differing sample-specific outline or rule has its own row and parent denominator.
 #' @seealso \code{\link{gatelabHierarchy}} for the populations of the stored hierarchy.
 #' @examples
 #' # A gated object comes from the app. This one is put together by hand, with the memberships
@@ -194,14 +196,15 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
   if (!length(nodes)) stop("None of these populations has a gate to draw.", call. = FALSE)
 
   # The events: values on the gated assay, the sample of each, and who is in which population.
+  use_saved_layers <- is.null(assay)
   if (is.null(assay)) assay <- if (is.null(gating$assay)) "exprs" else gating$assay
-  coordinates <- .gatelabr_strategy_coordinates(sce, gating, assay)
-  channel <- coordinates$display
   sample_of <- if (length(sample_column) == 1L) SummarizedExperiment::colData(sce)[[sample_column]] else sample_column
   if (is.null(sample_of) || length(sample_of) != ncol(sce))
     stop("sample_column must name a colData column of `sce`, or give one sample per event.", call. = FALSE)
   pooled <- if (is.null(samples)) rep(TRUE, ncol(sce)) else as.character(sample_of) %in% samples
   if (!any(pooled)) stop("None of `samples` is in the object.", call. = FALSE)
+  coordinates <- .gatelabr_strategy_coordinates(sce, gating, assay, sample_of, pooled, use_saved_layers)
+  channel <- coordinates$display
   gate_variants <- .gatelabr_strategy_sample_gates(sce, gating, coordinates, sample_of, pooled)
   needed <- setdiff(unique(c(vapply(nodes, function(n) n$parent_id, character(1)),
                             unlist(lapply(nodes, function(n) vapply(n$entries, function(e) e$population, character(1)))))), root)
