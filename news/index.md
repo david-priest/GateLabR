@@ -1,6 +1,6 @@
 # Changelog
 
-## GateLabR (development version)
+## GateLabR 1.6.2
 
 - A GatingSet whose gates differ between samples now opens with each
   sample’s own gates. GateLabR 1.6.1 described the hierarchy from the
@@ -55,9 +55,18 @@
   says it sent is what the app holds. A boolean whose terms name a node
   with a space in its name (“T cells”) is read as written; the spaces
   were removed and the term named no node.
-- The embedded GateLab core is GateLab-dev f040e5d: the 0.9.2 release
-  with the per-sample hierarchy above (contract 2), the NOT of an AND
-  left out, and the save’s notes in the status line.
+- The embedded GateLab core is GateLab 0.9.3 (GateLab-dev ec0c0c6), up
+  from f040e5d: it carries the per-sample hierarchy above (contract 2),
+  the NOT of an AND left out and the save’s notes in the status line,
+  and the tab now connects only to an agent relay on this computer. The
+  0.9.0 to 0.9.2 cores, embedded since GateLabR 1.6.0, connected as the
+  page opened to a relay on any host named by `?agent=` in the page’s
+  address, and that relay could read the data the tab held and change
+  its gates; the core now accepts a `ws://` or `wss://` relay on
+  127.0.0.1, localhost or \[::1\] only and leaves any other address
+  unconnected. `launchGatingApp(agent = TRUE)` connects as before, since
+  the relay records a 127.0.0.1 address; an `agent` address on another
+  host is no longer connected to.
 - A GateLab workspace a 1.6.1 session saved on a GatingSet with tailored
   gates holds the first sample’s gates for every sample. The launch note
   names the tailored nodes and how to reopen the object from its own
