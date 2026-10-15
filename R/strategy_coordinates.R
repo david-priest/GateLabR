@@ -17,6 +17,7 @@
       cofactor <- number("cofactor", TRUE)
       list(forward = function(x) asinh(x / cofactor), inverse = function(y) cofactor * sinh(y))
     },
+    hyperlog = .gatelabr_hyperlog_transform(spec),
     logicle = {
       M <- number("M", TRUE)
       trans <- flowCore::logicleTransform(t = number("T", TRUE), w = number("W"),

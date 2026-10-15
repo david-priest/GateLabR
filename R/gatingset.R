@@ -805,6 +805,7 @@
   switch(
     spec$kind,
     identity = function(y) y,
+    hyperlog = tryCatch(.gatelabr_hyperlog_transform(spec)$inverse, error = function(e) NULL),
     asinh = {
       cofactor <- number("cofactor")
       if (is.null(cofactor) || cofactor <= 0) NULL else function(y) cofactor * sinh(y)
