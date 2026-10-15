@@ -1,6 +1,6 @@
 var I = Object.defineProperty;
 var j = (n, t, e) => t in n ? I(n, t, { enumerable: !0, configurable: !0, writable: !0, value: e }) : n[t] = e;
-var c = (n, t, e) => j(n, typeof t != "symbol" ? t + "" : t, e);
+var a = (n, t, e) => j(n, typeof t != "symbol" ? t + "" : t, e);
 const m = "gatelab.cvw-worker.v1";
 function $(n, t) {
   const e = n.display.map((i) => `${i.slot}:${i.enabled ? 1 : 0}:${i.colour}:${i.threshold}:${i.saturation}:${i.gamma}:${i.smoothing}:${n.scale[i.slot] ?? 1}`).join("|");
@@ -15,14 +15,14 @@ const b = 128 * 1024 * 1024, M = 1e4;
 function E(n) {
   return new Worker(new URL(
     /* @vite-ignore */
-    "" + new URL("assets/cvw.worker-CxLOhM6t.js", import.meta.url).href,
+    "" + new URL("assets/cvw.worker-PURwuGNr.js", import.meta.url).href,
     import.meta.url
   ), { type: "module", name: `gatelab-images-${n}` });
 }
 function q(n) {
   return n.cols * n.rows * 4 * ((n.composite ? 1 : 0) + Object.keys(n.channels).length);
 }
-function y(n) {
+function v(n) {
   var t, e, i, r, s;
   if (n.kind === "image") {
     (i = (e = (t = n.image.composite) == null ? void 0 : t.bitmap) == null ? void 0 : e.close) == null || i.call(e);
@@ -40,27 +40,27 @@ function O(n) {
     recordingId: n.recordingId
   };
 }
-class x {
+class R {
   constructor(t = {}) {
-    c(this, "factory");
-    c(this, "bitmapBudget");
-    c(this, "timeoutMs");
-    c(this, "lanes", {
+    a(this, "factory");
+    a(this, "bitmapBudget");
+    a(this, "timeoutMs");
+    a(this, "lanes", {
       interactive: { worker: null, opened: /* @__PURE__ */ new Map(), suspended: !1, held: [] },
       batch: { worker: null, opened: /* @__PURE__ */ new Map(), suspended: !1, held: [] }
     });
-    c(this, "sources", /* @__PURE__ */ new Map());
-    c(this, "sourceInfo", /* @__PURE__ */ new Map());
-    c(this, "sourceListeners", /* @__PURE__ */ new Set());
-    c(this, "pending", /* @__PURE__ */ new Map());
-    c(this, "inflight", /* @__PURE__ */ new Map());
-    c(this, "classifications", /* @__PURE__ */ new Map());
-    c(this, "classifying", /* @__PURE__ */ new Map());
-    c(this, "cache", /* @__PURE__ */ new Map());
-    c(this, "cacheHeld", 0);
-    c(this, "hoverSeq", 0);
-    c(this, "nextId", 0);
-    c(this, "disposed", !1);
+    a(this, "sources", /* @__PURE__ */ new Map());
+    a(this, "sourceInfo", /* @__PURE__ */ new Map());
+    a(this, "sourceListeners", /* @__PURE__ */ new Set());
+    a(this, "pending", /* @__PURE__ */ new Map());
+    a(this, "inflight", /* @__PURE__ */ new Map());
+    a(this, "classifications", /* @__PURE__ */ new Map());
+    a(this, "classifying", /* @__PURE__ */ new Map());
+    a(this, "cache", /* @__PURE__ */ new Map());
+    a(this, "cacheHeld", 0);
+    a(this, "hoverSeq", 0);
+    a(this, "nextId", 0);
+    a(this, "disposed", !1);
     this.factory = t.workerFactory ?? E, this.bitmapBudget = t.bitmapBudgetBytes ?? b, this.timeoutMs = t.timeoutMs ?? M;
   }
   /** Register a sample's source; the workers open it when a lane first needs it. */
@@ -105,22 +105,22 @@ class x {
     } };
     let r = this.classifying.get(t);
     if (!r) {
-      const a = `cls-${++this.nextId}`;
+      const c = `cls-${++this.nextId}`;
       let u, g;
       const f = new Promise((l, d) => {
         u = l, g = d;
       });
       f.catch(() => {
-      }), r = { requestId: a, promise: f, resolve: u, reject: g, listeners: /* @__PURE__ */ new Set() }, this.classifying.set(t, r);
+      }), r = { requestId: c, promise: f, resolve: u, reject: g, listeners: /* @__PURE__ */ new Set() }, this.classifying.set(t, r);
       const h = r;
       this.ensureOpen("batch", t).then(() => {
-        var k, v;
+        var k, y;
         if (this.classifying.get(t) !== h) return;
-        const l = ((k = this.sources.get(t)) == null ? void 0 : k.mask) ?? null, d = (v = this.sourceInfo.get(t)) == null ? void 0 : v.scale, w = { ...l ? { slot: l.slot, fraction: l.fraction } : {}, ...d ? { scale: d } : {} };
+        const l = ((k = this.sources.get(t)) == null ? void 0 : k.mask) ?? null, d = (y = this.sourceInfo.get(t)) == null ? void 0 : y.scale, w = { ...l ? { slot: l.slot, fraction: l.fraction } : {}, ...d ? { scale: d } : {} };
         this.lane("batch").worker.postMessage({
           protocol: m,
           type: "classify",
-          requestId: a,
+          requestId: c,
           fileKey: t,
           ...Object.keys(w).length ? { options: w } : {}
         });
@@ -134,8 +134,8 @@ class x {
     return {
       promise: s.promise,
       cancel: () => {
-        var a;
-        o || (o = !0, e && s.listeners.delete(e), !(s.listeners.size > 0 || this.classifying.get(t) !== s) && (this.classifying.delete(t), (a = this.lanes.batch.worker) == null || a.postMessage({ protocol: m, type: "cancel", requestIds: [s.requestId] }), s.reject(new p())));
+        var c;
+        o || (o = !0, e && s.listeners.delete(e), !(s.listeners.size > 0 || this.classifying.get(t) !== s) && (this.classifying.delete(t), (c = this.lanes.batch.worker) == null || c.postMessage({ protocol: m, type: "cancel", requestIds: [s.requestId] }), s.reject(new p())));
       }
     };
   }
@@ -149,8 +149,8 @@ class x {
     const s = this.cacheKey(t, e, i), o = this.cached(t, e, i);
     if (o) return { promise: Promise.resolve(o), cancel: () => {
     } };
-    const a = this.inflight.get(s);
-    if (a && a.lane === r) return this.join(a);
+    const c = this.inflight.get(s);
+    if (c && c.lane === r) return this.join(c);
     const u = `img-${++this.nextId}`, g = r === "interactive" ? ++this.hoverSeq : void 0, f = { requestId: u, lane: r, cacheKey: s, waiters: [], timer: null, sent: !1 };
     this.pending.set(u, f), this.inflight.set(s, f);
     const h = () => {
@@ -211,7 +211,7 @@ class x {
     };
   }
   cacheKey(t, e, i) {
-    const r = i.outline ? `|o${i.outline.slot ?? ""}:${i.outline.fraction ?? ""}` : "", s = `c${i.composite ? 1 : 0}|s${[...i.channels].sort((o, a) => o - a).join(",")}${r}`;
+    const r = (i.outline ? `|o${i.outline.slot ?? ""}:${i.outline.fraction ?? ""}` : "") + (i.grey && i.grey.length ? `|g${[...i.grey].sort((o, c) => o - c).join(",")}` : ""), s = `c${i.composite ? 1 : 0}|s${[...i.channels].sort((o, c) => o - c).join(",")}${r}`;
     return `${t}:${e}:${$(i, i.hop)}|${s}`;
   }
   lane(t) {
@@ -240,7 +240,7 @@ class x {
       if (!s.file) return Promise.reject(new Error(`the cell images file ${s.fileName} has not been found`));
       o = { kind: "file", file: s.file };
     }
-    const a = new Promise((u, g) => {
+    const c = new Promise((u, g) => {
       const f = (h) => {
         if (h.type === "source-ready" && h.fileKey === e) {
           this.sourceListeners.delete(f);
@@ -257,7 +257,7 @@ class x {
         ...this.sourceInfo.has(e) ? { scaleSample: 0 } : {}
       });
     });
-    return i.opened.set(e, a), a;
+    return i.opened.set(e, c), c;
   }
   receive(t) {
     const e = t;
@@ -270,7 +270,7 @@ class x {
       const s = this.classifying.get(e.fileKey);
       if (!s || s.requestId !== e.requestId) return;
       if (e.type === "classify-progress") {
-        for (const a of [...s.listeners]) a(e.done, e.total);
+        for (const c of [...s.listeners]) c(e.done, e.total);
         return;
       }
       const o = { objectCount: e.objectCount, objectArea: e.objectArea, features: e.features };
@@ -285,7 +285,7 @@ class x {
     }
     const r = this.pending.get(e.requestId);
     if (!r) {
-      e.type === "image" && y({ kind: "image", image: e });
+      e.type === "image" && v({ kind: "image", image: e });
       return;
     }
     if (this.settle(r), e.type === "image") {
@@ -320,10 +320,10 @@ class x {
   }
   evict(t) {
     const e = this.cache.get(t);
-    e && (this.cache.delete(t), this.cacheHeld -= e.bytes, y(e.result));
+    e && (this.cache.delete(t), this.cacheHeld -= e.bytes, v(e.result));
   }
 }
 export {
-  x as ImageService,
+  R as ImageService,
   p as RenderCancelled
 };
