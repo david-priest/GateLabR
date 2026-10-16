@@ -598,3 +598,58 @@ test_that("outlines over mass cytometry's raw ranges are traced as deep as the e
     expect_lte(worst, 2 * 0.002)
   }
 })
+
+test_that("a gate saved without a space is read in the space the app reads it in", {
+  # engine/sample.ts, gateSpace: a gate with no space is in its sample's default, raw under flow
+  # and display under mass cytometry, by the sample's instrument mode; "auto", which the app
+  # saves, is the instrument it detects, for a hosted SCE the one GateLabR describes. The drawn
+  # assay does not enter into it.
+  legacy <- function(ws, mode) {
+    strip <- function(gates) lapply(gates, function(gate) { gate$space <- NULL; gate })
+    ws$gating$gates <- strip(ws$gating$gates)
+    ws$gating$stored_hierarchies[[1]]$gates <- strip(ws$gating$stored_hierarchies[[1]]$gates)
+    for (i in seq_along(ws$samples)) ws$samples[[i]]$instrumentMode <- mode
+    ws
+  }
+  kinds <- function(mode, instrument, assay = "counts") {
+    fixture <- strategy_coordinates_fixture(edit_workspace = function(ws) legacy(ws, mode), edit_sce = function(sce) {
+      S4Vectors::metadata(sce)$instrument_type <- instrument
+      sce
+    })
+    gating <- GateLabR:::.gatelabr_strategy_gating(fixture$sce)
+    coordinates <- GateLabR:::.gatelabr_strategy_coordinates(fixture$sce, gating, assay)
+    get <- GateLabR:::.gatelabr_strategy_sample_gates(fixture$sce, gating, coordinates,
+                                                      rep(c("D1", "D2"), each = 6), rep(TRUE, 12))
+    vapply(get(list(gate = gating$gates$g, population = "p", include = TRUE)),
+           function(group) group$gate$transforms$CD4$kind, character(1))
+  }
+  expect_equal(kinds("auto", "cytof"), c("asinh", "asinh"))
+  expect_equal(kinds(NULL, "cytof"), c("asinh", "asinh"))
+  expect_equal(kinds("auto", "flow"), c("identity", "identity"))
+  expect_equal(kinds("cytof", "flow"), c("asinh", "asinh"))
+  expect_equal(kinds("flow", "cytof"), c("identity", "identity"))
+  expect_equal(kinds("auto", "flow", "exprs"), c("identity", "identity"))
+})
+
+test_that("an undescribed instrument is detected from the channel names as the app detects it", {
+  detect <- GateLabR:::.gatelabr_app_detected_instrument
+  expect_identical(detect(character(0)), "flow")
+  expect_identical(detect(c("FSC-A", "SSC-A", "CD4")), "flow")
+  expect_identical(detect(c("Nd142Di", "Nd145Di", "Sm147Di", "Time")), "cytof")
+  expect_identical(detect(c("CD4", "CD8", "CD45RA", "CCR7")), "flow")
+  # One metal among channels that are neither scatter nor flow-suffixed: the app's last rule.
+  expect_identical(detect(c("Nd142Di", "CD4", "CD8", "CD45RA", "CCR7")), "cytof")
+  expect_identical(detect(c("FL1-A", "FL2-A", "FL3-A", "Nd142Di")), "flow")
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = matrix(0, 3, 2, dimnames = list(c("a", "b", "c"), NULL))),
+    rowData = S4Vectors::DataFrame(pnn = c("Nd142Di", "Nd145Di", "Sm147Di"), pns = c("CD4", "CD8", "CD3")))
+  # Where GateLabR describes the instrument, the app takes that description.
+  expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "cytof")
+  expect_identical(GateLabR:::.gatelabr_strategy_instrument(sce, "auto"), "cytof")
+  # Where it does not, the app detects on each channel's marker where it has one, not on $PnN.
+  S4Vectors::metadata(sce)$instrument_type <- "unknown"
+  SummarizedExperiment::rowData(sce)$pnn <- c("CD4", "CD8", "CD3")
+  SummarizedExperiment::rowData(sce)$pns <- c("Nd142Di", "Nd145Di", "Sm147Di")
+  expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "unknown")
+  expect_identical(GateLabR:::.gatelabr_strategy_instrument(sce, "auto"), "cytof")
+})

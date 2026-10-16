@@ -136,10 +136,10 @@ workspace <- list(
     gates = list(
       g1 = list(gate_id = "g1", name = "CD4 gate", gate_type = "rectangle",
                 x_channel = "CD4", y_channel = "CD8", color = "#e41a1c", label_offset = NULL,
-                vertices = list(list(2.5, -0.5), list(6, 2.5))),
+                space = "display", vertices = list(list(2.5, -0.5), list(6, 2.5))),
       g2 = list(gate_id = "g2", name = "naive gate", gate_type = "rectangle",
                 x_channel = "CD45RA", y_channel = "CCR7", color = "#377eb8", label_offset = NULL,
-                vertices = list(list(2, 2), list(5, 5)))
+                space = "display", vertices = list(list(2, 2), list(5, 5)))
     ),
     populations = list(
       root = list(population_id = "root", name = "All Events", parent_id = NULL,

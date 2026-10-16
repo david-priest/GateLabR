@@ -109,17 +109,19 @@ test_that("the cap is shared by sample size and each sample thinned evenly", {
   expect_equal(gatelabDisplayEvents(member, sample_id, max_events = 0), which(member))
 })
 
-# A two-step workspace: a polygon on the root, then a quadrant inside it.
+# A two-step workspace: a polygon on the root, then a quadrant inside it, both drawn on exprs as
+# stored and saved with their space as the app saves them. (A gate without one is read in its
+# sample's default space, raw under flow, which an object stating no instrument is detected as.)
 strategy_workspace <- function(label_offset = NULL) list(
   hostedAssayId = "exprs",
   gating = list(
     root_population_id = "root",
     gates = list(
       g_poly = list(gate_id = "g_poly", name = "CD4_positive gate", gate_type = "polygon", x_channel = "CD4",
-                    y_channel = "CD8", color = "#e41a1c", label_offset = label_offset,
+                    y_channel = "CD8", color = "#e41a1c", label_offset = label_offset, space = "display",
                     vertices = list(list(2.5, -0.5), list(6, -0.5), list(6, 2.5), list(2.5, 2.5))),
       g_quad = list(gate_id = "g_quad", name = "CD45RA x CCR7 quadrant", gate_type = "quadrant", x_channel = "CD45RA",
-                    y_channel = "CCR7", color = "#377eb8", label_offset = NULL, center = list(2, 2))),
+                    y_channel = "CCR7", color = "#377eb8", label_offset = NULL, space = "display", center = list(2, 2))),
     populations = list(
       root = list(population_id = "root", name = "All Events", parent_id = NULL, children = list("p_cd4"), gate_refs = list()),
       p_cd4 = list(population_id = "p_cd4", name = "CD4_positive", parent_id = "root", children = list("p_naive", "p_em"),

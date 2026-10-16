@@ -232,7 +232,10 @@
 
 .gatelabr_strategy_gate_spec <- function(gate, channel, coordinates, instrument = NULL) {
   space <- gate$space
-  if (is.null(space)) space <- if (coordinates$display_assay || identical(instrument, "cytof")) "display" else "raw"
+  # A gate saved without a space is in its sample's default space, as the app reads it
+  # (engine/sample.ts, gateSpace): display under mass cytometry, raw otherwise, whichever assay
+  # is drawn. `instrument` is the sample's, resolved by .gatelabr_strategy_instrument().
+  if (is.null(space)) space <- if (identical(instrument, "cytof")) "display" else "raw"
   if (identical(space, "raw")) return(list(kind = "identity"))
   own <- gate$transforms[[channel]]
   if (is.null(own)) coordinates$spec(channel) else own
@@ -307,6 +310,57 @@
   out <- .gatelabr_strategy_in_gate(gate, value(gate$x_channel), value(gate$y_channel), quadrant)
   out[is.na(out)] <- FALSE
   out
+}
+
+# The instrument the app reads a sample under (engine/sample.ts, instrument): the mode the
+# workspace saved for it where that is "flow" or "cytof"; under "auto", which the app saves by
+# default, or with no mode saved, the instrument the app detects. For a hosted sample that is the
+# one GateLabR describes the dataset with, and where that is unknown, the app's own detection from
+# each channel's marker or name (host/hostedSample.ts, hostedFcs and fcsChannels).
+.gatelabr_strategy_instrument <- function(sce, mode = NULL) {
+  if (length(mode) == 1L && !is.na(mode) && mode %in% c("flow", "cytof")) return(as.character(mode))
+  described <- .gatelabr_sce_instrument(sce)
+  if (described %in% c("flow", "cytof")) return(described)
+  names <- vapply(.gatelabr_channel_descriptors(sce), function(channel) {
+    pnn <- if (is.null(channel$pnn)) "" else trimws(channel$pnn)
+    name <- if (nzchar(pnn)) pnn else channel$id
+    pns <- if (is.null(channel$pns)) "" else trimws(channel$pns)
+    marker <- if (nzchar(pns)) pns else if (!identical(trimws(channel$label), name)) trimws(channel$label) else ""
+    if (nzchar(marker)) marker else name
+  }, character(1))
+  .gatelabr_app_detected_instrument(names)
+}
+
+# engine/transforms.ts, detectInstrumentType, with the channel tests it uses (isMetalChannel,
+# isScatterChannel, hasFlowSuffix, isQcChannel), rule for rule.
+.gatelabr_app_detected_instrument <- function(names) {
+  names <- as.character(names)
+  if (!length(names)) return("flow")
+  lower <- tolower(names)
+  qc <- lower %in% c("time", "event_length", "cell_length", "center", "offset", "width", "residual",
+                     "file_number", "beads") |
+    grepl("gaussian|amplitude|beaddist|^width$|^center$|^offset$|^residual$", names, ignore.case = TRUE)
+  suffix <- grepl("-(A|H|W|T)(\\b|\\)|\\s|$)", names, ignore.case = TRUE, perl = TRUE)
+  scatter <- !qc & (
+    grepl("^FSC|^SSC|^BSC|^FS[\\s\\-_]|^SS[\\s\\-_]|^BS[\\s\\-_]|^FS$|^SS$|^LightLoss|^Light\\s*Loss|^Extinction",
+          names, ignore.case = TRUE, perl = TRUE) |
+      grepl("^(forward|side|back|orthogonal)[\\s_-]*(angle[\\s_-]*)?scatter", names, ignore.case = TRUE, perl = TRUE))
+  non_metal <- lower %in% c("time", "event_length", "cell_length", "center", "offset", "width", "residual",
+                            "file_number", "beads", "dead", "live", "viability") |
+    grepl("^FSC|^SSC|^Viab|^Scatter", names, ignore.case = TRUE)
+  metal <- (grepl("Di$", names, ignore.case = TRUE) |
+              grepl("(?<![A-Za-z0-9])[A-Z][a-z]?[0-9]{2,3}(?![A-Za-z0-9])", names, perl = TRUE) |
+              grepl("(?<![A-Za-z0-9])[0-9]{2,3}[A-Z][a-z]?(?![A-Za-z0-9])", names, perl = TRUE)) &
+    !non_metal & !suffix
+  n_metal <- sum(metal); n_scatter <- sum(scatter); n_suffix <- sum(suffix)
+  n_signal <- max(0L, length(names) - sum(qc))
+  if (n_scatter >= 2L) return("flow")
+  if (n_metal >= 3L && n_suffix == 0L) return("cytof")
+  if (n_suffix >= 3L) return("flow")
+  if (n_signal > 0L && n_metal / n_signal >= 0.35 && n_metal > n_suffix) return("cytof")
+  if (n_suffix > n_metal) return("flow")
+  if (n_metal > 0L && n_scatter == 0L) return("cytof")
+  "flow"
 }
 
 # Return every distinct outline for an active-tree entry, with the events of the samples that
@@ -399,8 +453,8 @@
       }
       if (!identical(c(gate$x_channel, gate$y_channel), c(entry$gate$x_channel, entry$gate$y_channel)))
         stop("Sample-specific gate '", gate$name, "' uses another channel pair.", call. = FALSE)
-      instrument <- if (!is.na(matched[[index]])) entries[[matched[[index]]]]$instrumentMode else NULL
-      if (is.null(instrument)) instrument <- S4Vectors::metadata(sce)$instrument_type
+      mode <- if (!is.na(matched[[index]])) entries[[matched[[index]]]]$instrumentMode else NULL
+      instrument <- .gatelabr_strategy_instrument(sce, mode)
       # Resolve legacy defaults once, on the sample that owns the gate. Downstream geometry
       # always has a stated space and both axis transforms.
       axes <- c(gate$x_channel, gate$y_channel)
