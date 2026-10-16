@@ -50,7 +50,7 @@ env:
   APP_DESC: "Interactive manual gating of flow / mass cytometry on SingleCellExperiment objects"
   APP_HOMEPAGE: "https://david-priest.github.io/GateLabR"
   APP_LICENSE: "MIT"
-  APP_MODE: "auto"
+  APP_MODE: "flat"
   APP_SUBDIR: "shinyapps"
   PKG_SUBDIR: "."
   ENTRY_FN: ""
