@@ -239,7 +239,10 @@
 }
 
 # A polygon bows when its saved straight edges are viewed through different transforms. Use
-# the embedded core's polygonOutline tolerance (0.2% per axis, depth 9) for drawing only.
+# the embedded core's polygonOutline tolerance and depth cap (plots/gatePayload.ts: 0.2% per
+# axis, depth 15) for drawing only. An edge spanning raw values to R on arcsinh(x / c) takes
+# about log2(R / c) + 3 halvings to trace: depth 9 left raw triangles over mass cytometry's
+# ranges tens of times the tolerance off, and 15 reaches 100,000 at cofactor 5.
 .gatelabr_strategy_polygon_outline <- function(vertices, mapped, to_display) {
   if (nrow(vertices) < 3L || any(colSums(is.finite(mapped)) < 3L)) return(mapped)
   spans <- apply(mapped, 2, function(x) diff(range(x[is.finite(x)])))
@@ -254,7 +257,7 @@
       point <- at(t0 + (t1 - t0) * fraction)
       sqrt(sum(((point - (p0 + (p1 - p0) * fraction)) / spans)^2))
     }, numeric(1)))
-    if (depth >= 9L || !is.finite(off) || off <= 0.002) {
+    if (depth >= 15L || !is.finite(off) || off <= 0.002) {
       out[[length(out) + 1L]] <<- p1
     } else {
       edge(a, b, t0, tm, depth + 1L)

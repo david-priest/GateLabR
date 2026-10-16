@@ -571,3 +571,30 @@ test_that("nonlinear outlines meet their tolerance across inflections on either 
   expect_equal(as.numeric(cases[[1]]$map(0, 1)), c(0, 1))
   expect_gt(abs(5 * sinh(1) - 5 * sinh(2) / 2) / (10 * sinh(2)), 0.08)
 })
+
+test_that("outlines over mass cytometry's raw ranges are traced as deep as the embedded core", {
+  # The nearest-distance measure above is met by a chord that runs near some other part of the
+  # curve. The core's criterion compares each drawn segment with the curve between the same two
+  # points of the edge, so this measures that: the segment's ends are mapped back to the edge,
+  # and the curve between them is compared with the chord at the same fractions. Depth 9 left a
+  # raw triangle to 20,000 at cofactor 5 about 40 times the 0.2% tolerance off; depth 15 does not.
+  cofactor <- 5
+  map <- function(x, y) cbind(asinh(x / cofactor), asinh(y / cofactor))
+  for (top in c(2e4, 1e5)) {
+    vertices <- rbind(c(0, 0), c(top, 0), c(0, top))
+    mapped <- map(vertices[, 1], vertices[, 2])
+    drawn <- GateLabR:::.gatelabr_strategy_polygon_outline(vertices, mapped, function(v) as.numeric(map(v[1], v[2])))
+    spans <- apply(mapped, 2, function(v) diff(range(v)))
+    fractions <- (1:63) / 64
+    worst <- 0
+    for (j in seq_len(nrow(drawn) - 1L)) {
+      start <- drawn[j, ]; end <- drawn[j + 1L, ]
+      a <- cofactor * sinh(start); b <- cofactor * sinh(end)
+      curve <- map(a[1] + (b[1] - a[1]) * fractions, a[2] + (b[2] - a[2]) * fractions)
+      off <- sqrt(((curve[, 1] - (start[1] + (end[1] - start[1]) * fractions)) / spans[1])^2 +
+                    ((curve[, 2] - (start[2] + (end[2] - start[2]) * fractions)) / spans[2])^2)
+      worst <- max(worst, off)
+    }
+    expect_lte(worst, 2 * 0.002)
+  }
+})
