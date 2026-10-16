@@ -191,6 +191,21 @@
   layers
 }
 
+# The pooled samples whose saved active layer is the compensated one, on the saved assay: what a
+# strategy drawn from another assay leaves out. None where the saved assay is a display assay,
+# which the app draws as stored with any linear-assay binding parked.
+.gatelabr_strategy_layered_samples <- function(sce, workspace, assay, sample_of, pooled) {
+  space <- tryCatch(.gatelabr_assay_coordinate_space(sce, assay), error = function(...) "linear")
+  if (identical(space, "display")) return(character(0))
+  active <- Filter(function(entry) isTRUE(entry$compensationOn) || identical(entry$assay$activeLayer, "compensated"),
+                   if (is.list(workspace$samples)) workspace$samples else list())
+  samples <- sort(unique(as.character(sample_of[pooled])))
+  Filter(function(sample) any(vapply(active, function(entry) {
+    id <- .gatelabr_scalar_or(entry$sampleId, "")
+    identical(.gatelabr_scalar_or(entry$fileName, ""), sample) || identical(id, sample) || endsWith(id, paste0(":", sample))
+  }, logical(1))), samples)
+}
+
 .gatelabr_strategy_coordinates <- function(sce, gating, assay,
     sample_of = SummarizedExperiment::colData(sce)$sample_id, pooled = rep(TRUE, ncol(sce)), use_saved_layers = TRUE) {
   values <- SummarizedExperiment::assay(sce, assay)
@@ -198,7 +213,8 @@
   ids <- vapply(channels, `[[`, character(1), "id")
   display_assay <- identical(.gatelabr_assay_coordinate_space(sce, assay), "display")
   # Display assays are drawn directly; the browser can retain a parked linear-assay binding
-  # while exprs is selected. An explicit assay argument likewise selects that assay itself.
+  # while exprs is selected. An assay other than the saved one is drawn as it stands
+  # (gatelabStrategyPlot passes use_saved_layers = FALSE and says so).
   layers <- if (use_saved_layers && !display_assay)
     .gatelabr_strategy_compensated_layers(sce, gating$workspace, assay, sample_of, pooled) else list()
   cofactor <- .gatelabr_display_cofactor(sce)$cofactor

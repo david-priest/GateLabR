@@ -64,8 +64,10 @@ reads the stored memberships with \code{gatelabPopulations()}.}
 
 \item{assay}{The assay the gates were drawn on; \code{NULL} takes the one the workspace
 names, or \code{exprs} when it names none. For a saved linear assay, each sample uses its
-saved original or compensated layer. An explicit assay name uses that assay for every
-sample. A missing or ambiguous saved compensated layer is refused, never recomputed.}
+saved original or compensated layer, whether the assay is left \code{NULL} or named. Any
+other assay is used as it stands for every sample, with a warning naming the samples whose
+saved compensated layers it leaves out. A missing or ambiguous saved compensated layer is
+refused, never recomputed.}
 }
 \value{
 A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} and

@@ -71,8 +71,10 @@
 #'   reads the stored memberships with \code{gatelabPopulations()}.
 #' @param assay The assay the gates were drawn on; \code{NULL} takes the one the workspace
 #'   names, or \code{exprs} when it names none. For a saved linear assay, each sample uses its
-#'   saved original or compensated layer. An explicit assay name uses that assay for every
-#'   sample. A missing or ambiguous saved compensated layer is refused, never recomputed.
+#'   saved original or compensated layer, whether the assay is left \code{NULL} or named. Any
+#'   other assay is used as it stands for every sample, with a warning naming the samples whose
+#'   saved compensated layers it leaves out. A missing or ambiguous saved compensated layer is
+#'   refused, never recomputed.
 #' @return A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} and
 #'   \code{height}, the figure's size in inches; \code{panels}, a data frame with one row per
 #'   gate or quadrant drawn (\code{panel}, \code{x_channel}, \code{y_channel},
@@ -196,13 +198,25 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
   if (!length(nodes)) stop("None of these populations has a gate to draw.", call. = FALSE)
 
   # The events: values on the gated assay, the sample of each, and who is in which population.
-  use_saved_layers <- is.null(assay)
-  if (is.null(assay)) assay <- if (is.null(gating$assay)) "exprs" else gating$assay
+  # The saved assay is drawn with each sample's saved layer whether or not `assay` names it;
+  # another assay is drawn as it stands for every sample, and the console is told what that
+  # leaves out, since the named counts below still come from the stored memberships.
+  saved_assay <- if (is.null(gating$assay)) "exprs" else gating$assay
+  if (is.null(assay)) assay <- saved_assay
+  use_saved_layers <- identical(assay, saved_assay)
   sample_of <- if (length(sample_column) == 1L) SummarizedExperiment::colData(sce)[[sample_column]] else sample_column
   if (is.null(sample_of) || length(sample_of) != ncol(sce))
     stop("sample_column must name a colData column of `sce`, or give one sample per event.", call. = FALSE)
   pooled <- if (is.null(samples)) rep(TRUE, ncol(sce)) else as.character(sample_of) %in% samples
   if (!any(pooled)) stop("None of `samples` is in the object.", call. = FALSE)
+  if (!use_saved_layers) {
+    layered <- .gatelabr_strategy_layered_samples(sce, gating$workspace, saved_assay, sample_of, pooled)
+    if (length(layered))
+      warning("Assay '", assay, "' is drawn as it stands for every sample: the saved compensated layers of ",
+              paste(layered, collapse = ", "), " on '", saved_assay, "' are not used, so their events and gate ",
+              "counts are not the values the workspace gated, while named population counts are still the ",
+              "stored memberships. Leave `assay` unset to draw the saved layers.", call. = FALSE)
+  }
   coordinates <- .gatelabr_strategy_coordinates(sce, gating, assay, sample_of, pooled, use_saved_layers)
   channel <- coordinates$display
   gate_variants <- .gatelabr_strategy_sample_gates(sce, gating, coordinates, sample_of, pooled)

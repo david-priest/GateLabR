@@ -419,8 +419,14 @@ test_that("strategy coordinates follow saved active layers by sample through reo
   expect_equal(q$events, c(1, 0, 1, 0))
   expect_equal(rows$events[rows$population == "CD4_positive"], c(2, 2)) # saved masks are unchanged
   expect_equal(attr(gatelabStrategyPlot(sce[, 12:1], c("CD8_positive", "treated"), max_events = 0), "panels"), rows)
-  explicit <- attr(gatelabStrategyPlot(sce, "treated", assay = "counts", max_events = 0), "panels")
-  expect_equal(explicit$events[explicit$population == "treated"], c(3, 2)) # explicit assay overrides saved layers
+  # Naming the saved assay is leaving it unset: the saved layers are kept.
+  expect_silent(explicit <- attr(gatelabStrategyPlot(sce, c("CD8_positive", "treated"), assay = "counts", max_events = 0), "panels"))
+  expect_equal(explicit, rows)
+  # Another assay is drawn as it stands for every sample, and the console is told what that leaves out.
+  expect_warning(other <- attr(gatelabStrategyPlot(sce, "treated", assay = "exprs", max_events = 0), "panels"),
+                 "saved compensated layers of D2 on 'counts' are not used")
+  expect_equal(other$events[other$population == "treated"], c(3, 2))
+  expect_silent(gatelabStrategyPlot(sce, "treated", assay = "exprs", samples = "D1", max_events = 0))
   expect_identical(sce, original)
 })
 
@@ -464,7 +470,10 @@ test_that("a legacy compensation flag cannot identify a stored compensated assay
     auto_unbox = TRUE, null = "null", digits = I(17)))
   expect_error(gatelabStrategyPlot(sce, "treated", max_events = 0),
                "Cannot reconstruct saved compensated layer for sample 'D2'")
-  expect_silent(gatelabStrategyPlot(sce, "treated", assay = "counts", max_events = 0))
+  expect_error(gatelabStrategyPlot(sce, "treated", assay = "counts", max_events = 0),
+               "Cannot reconstruct saved compensated layer for sample 'D2'")
+  expect_warning(gatelabStrategyPlot(sce, "treated", assay = "exprs", max_events = 0),
+                 "saved compensated layers of D2 on 'counts' are not used")
 })
 
 test_that("sample label stacking preserves explicitly saved display offsets", {
