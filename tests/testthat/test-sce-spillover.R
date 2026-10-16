@@ -11,7 +11,7 @@ spillover_sce <- function(instrument = "flow") {
 }
 
 test_that("the SCE manifest offers stored spillover without applying it or relabelling assays", {
-  sce <- spillover_sce()
+  sce <- spillover_sce("cytof")
   before <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce)
   expect_null(before$compensationMatrix)
   # Row and column orders deliberately differ, and neither follows SCE row order.
@@ -31,7 +31,7 @@ test_that("the SCE manifest offers stored spillover without applying it or relab
   expect_identical(sent, manifest)
   descriptor <- manifest$datasets[[1]]
   offered <- descriptor$compensationMatrix
-  expect_identical(offered$kind, "flow-spillover")
+  expect_identical(offered$kind, "cytof-spillover")
   expect_identical(offered$name, "metadata(sce)$spillover")
   expect_identical(as.character(offered$sourceChannels), c("FL2-A", "FL1-A"))
   expect_identical(as.character(offered$receiverChannels), c("FL1-A", "FL2-A"))
@@ -58,6 +58,29 @@ test_that("the SCE manifest offers stored spillover without applying it or relab
   }
 })
 
+test_that("a flow SCE's stored matrix is not offered, since the app would install it as each sample's own", {
+  # host/hostedSample.ts makes a flow-spillover compensationMatrix every hosted sample's own
+  # spillover. Reopening a workspace whose sample was compensated then applies it in the browser
+  # at once (App.tsx, the workspace open's setCompensation(true)), and the header offers
+  # "Compensated" on any linear assay, one whose role is compensated too (canUseCompensatedAssay).
+  # A descriptor carrying no flow matrix leaves the hosted samples without one: such a sample
+  # stays pending, and the header has nothing to apply.
+  spill <- matrix(c(1, 0.05, 0.2, 1), nrow = 2, byrow = TRUE,
+                  dimnames = list(c("FL1-A", "FL2-A"), c("FL1-A", "FL2-A")))
+  for (with_compensated in c(FALSE, TRUE)) {
+    sce <- spillover_sce()
+    if (with_compensated) {
+      SummarizedExperiment::assay(sce, "compensated") <- SummarizedExperiment::assay(sce, "counts")
+    }
+    S4Vectors::metadata(sce)$spillover <- spill
+    expect_warning(descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce),
+                   "metadata\\(sce\\)\\$spillover is not offered for compensation: on flow data")
+    expect_null(descriptor$compensationMatrix)
+    roles <- vapply(descriptor$assays, `[[`, character(1), "role")
+    expect_identical("compensated" %in% roles, with_compensated)
+  }
+})
+
 test_that("CyTOF spillover preserves rectangular source and receiver axes", {
   sce <- spillover_sce("cytof")
   SummarizedExperiment::rowData(sce)$pnn <- c("Nd142Di", "Nd145Di")
@@ -80,7 +103,7 @@ test_that("legacy matrix keys keep their provenance and the documented key takes
   spill <- diag(2)
   dimnames(spill) <- list(c("CD4", "CD8"), c("CD4", "CD8"))
   for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
-    sce <- spillover_sce()
+    sce <- spillover_sce("cytof")
     S4Vectors::metadata(sce)[[key]] <- spill
     offered <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce)$compensationMatrix
     expect_identical(offered$name, paste0("metadata(sce)$", key))
@@ -92,7 +115,7 @@ test_that("legacy matrix keys keep their provenance and the documented key takes
 })
 
 test_that("unmatched or ambiguous matrix names are reported without guessing a mapping", {
-  sce <- spillover_sce()
+  sce <- spillover_sce("cytof")
   spill <- diag(2)
   dimnames(spill) <- list(c("CD4", "missing"), c("CD4", "CD8"))
   S4Vectors::metadata(sce)$spillover <- spill
@@ -114,7 +137,7 @@ test_that("unmatched or ambiguous matrix names are reported without guessing a m
 })
 
 test_that("a stored matrix does not supply an unknown instrument or nonfinite coefficients", {
-  sce <- spillover_sce()
+  sce <- spillover_sce("cytof")
   spill <- diag(2)
   dimnames(spill) <- list(c("CD4", "CD8"), c("CD4", "CD8"))
   spill[1, 2] <- NA_real_

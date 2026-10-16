@@ -391,6 +391,14 @@
 # The stored matrix offered in the Compensation tab, without changing an assay or declaring
 # it compensated. Resolve exact row ids and recorded channel names to the physical channel
 # names used by the compensation solver. Keep the two axes in their own recorded order.
+#
+# Mass cytometry only. The app makes a flow matrix in the descriptor every hosted sample's own
+# spillover (host/hostedSample.ts), and a sample's own matrix is one the app applies by itself:
+# a reopened workspace whose sample was compensated applies it in the browser at once, and the
+# header offers it on any linear assay, one already compensated too. A mass cytometry matrix
+# only fills the Compensation tab's import, which the user applies, in R, where Apply refuses an
+# assay already compensated (.gatelabr_prepare_host_compensation). Offering a flow matrix the
+# same way needs the app to take it as an import rather than as the samples' own.
 .gatelabr_sce_compensation_matrix <- function(sce, channels, instrument) {
   stored <- .gatelabr_sce_spillover_matrix(sce, with_source = TRUE)
   if (is.null(stored)) return(NULL)
@@ -401,6 +409,12 @@
   }
   if (!instrument %in% c("flow", "cytof")) {
     return(refuse("set metadata(sce)$instrument_type to 'flow' or 'cytof' first."))
+  }
+  if (identical(instrument, "flow")) {
+    return(refuse(paste0(
+      "on flow data the app would install it as each sample's own matrix, which it then applies ",
+      "by itself, to an assay already compensated too. It is offered on mass cytometry data only."
+    )))
   }
   spillover <- stored$matrix
   if (any(!is.finite(spillover))) return(refuse("every coefficient must be finite."))
