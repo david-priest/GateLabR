@@ -175,8 +175,10 @@ test_that("each transform kind maps to GateLab's by parameters, with the affine 
   expect_equal(axes[["FL2-H"]]$backward(asinh(x / fasinh_cofactor)), stored[["FL2-H"]](x))
   # log: the object's value is GateLab's wsplog times the scale (1 here).
   expect_equal(axes[["FL3-H"]]$forward(stored[["FL3-H"]](x)), log10(pmax(x, 1)) / 4.5)
-  # logicle and biexp are the same function: the maps are the identity.
-  expect_identical(axes[["FL1-H"]]$forward(2.5), 2.5)
+  # logicle uses normalized GateLab coordinates; the object's native values span M decades.
+  expect_identical(axes[["FL1-H"]]$forward(2.5), 2.5 / 4.5)
+  expect_identical(axes[["FL1-H"]]$backward(1), 4.5)
+  # biexp keeps its channel scale.
   expect_identical(axes[["FL4-H"]]$backward(1000), 1000)
   expect_true(is.function(axes[["FL1-H"]]$transform))
   expect_null(axes[["FSC-H"]]$transform)
@@ -186,11 +188,101 @@ test_that("each transform kind maps to GateLab's by parameters, with the affine 
   expect_match(GateLabR:::.gatelabr_gatingset_axis(list(type = "fasinh", T = 1))$unsupported, "missing parameters")
   expect_match(GateLabR:::.gatelabr_gatingset_axis(list(type = "logtGml2", t = 262144, m = 4.5))$spec$kind, "flog")
   # The inverse of a GateLab spec, for the write-back.
-  expect_equal(GateLabR:::.gatelabr_spec_inverse(logicle_spec())(stored[["FL1-H"]](x)), x)
+  expect_equal(GateLabR:::.gatelabr_spec_inverse(logicle_spec())(stored[["FL1-H"]](x) / 4.5), x)
   expect_equal(GateLabR:::.gatelabr_spec_inverse(asinh_spec())(asinh(x / fasinh_cofactor)), x)
   expect_equal(GateLabR:::.gatelabr_spec_inverse(list(kind = "wsplog", offset = 1, decades = 4.5))(log10(x) / 4.5), x)
   expect_equal(GateLabR:::.gatelabr_spec_inverse(list(kind = "flog", T = 262144, M = 4.5, standard = TRUE))(log10(x / 262144) / 4.5 + 1), x)
   expect_null(GateLabR:::.gatelabr_spec_inverse(list(kind = "flowjoChannels")))
+})
+
+test_that("host logicle coordinates agree with the normalized embedded core, including nonzero A", {
+  raw <- c(-1e6, -1000, -10, 0, 10, 1000, 1e6)
+  # Frozen Logicle.scale() results from embedded core f040e5d, src/engine/transforms.ts.
+  # The oracle does not call the R inverse or derive values from its forward function.
+  expected <- list(
+    c(-0.90702048634541, -0.23211535395017646, 0.099917946544774, 0.1111111111111111,
+      0.12230427567744821, 0.45433757617239867, 1.1292427085676322),
+    c(-0.6345889882960657, -0.05609887481443698, 0.2285010970383777, 0.23809523809523808,
+      0.24768937915209846, 0.5322893510049131, 1.1107794644865419),
+    c(-1.019198162012787, -0.30459272771195156, 0.04697194340034895, 0.058823529411764705,
+      0.07067511542318046, 0.42223978653548094, 1.1368452208363165))
+  for (i in seq_along(expected)) {
+    A <- c(0, 0.75, -0.25)[i]
+    spec <- list(kind = "logicle", T = 262144, W = 0.5, M = 4.5, A = A)
+    inverse <- GateLabR:::.gatelabr_spec_inverse(spec)
+    expect_equal(inverse(expected[[i]]), raw, tolerance = 1e-9)
+    expect_equal(inverse(c((0.5 + A) / (4.5 + A), 1)), c(0, 262144), tolerance = 1e-9)
+    axis <- GateLabR:::.gatelabr_gatingset_axis(c(list(type = "logicle"), spec[c("T", "W", "M", "A")]))
+    native <- flowCore::logicleTransform(w = 0.5, t = 262144, m = 4.5, a = A)@.Data(raw)
+    expect_equal(axis$forward(native), expected[[i]], tolerance = 1e-10)
+    expect_equal(axis$backward(expected[[i]]), native, tolerance = 1e-10)
+  }
+})
+
+test_that("a normalized logicle gate stays editable with exact membership under a different object transform", {
+  values <- cbind(CD4 = c(-1e6, -200, -20, 0, 20, 200, 1000, 1e6),
+                  CD8 = c(0, 20, 20, 0, 100, 20, 20, 20))
+  mask <- c(FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE)
+  # Frozen core coordinates of CD4 bounds [-100, 500] at A = 0.75 and CD8 bounds
+  # [-10, 50] at A = -0.25. All events are away from the boundaries.
+  low <- c(0.1506066868788789, 0.04697194340034895)
+  high <- c(0.4694450166027697, 0.11666475937024666)
+  gates <- list(`g-CD4` = list(
+    gate_id = "g-CD4", name = "CD4_positive", gate_type = "rectangle",
+    x_channel = "CD4", y_channel = "CD8", space = "display", bounds = "closed",
+    vertices = list(as.list(low), list(high[1], low[2]), as.list(high), list(low[1], high[2])),
+    transforms = list(CD4 = list(kind = "logicle", T = 262144, W = 0.5, M = 4.5, A = 0.75),
+                      CD8 = list(kind = "logicle", T = 262144, W = 0.5, M = 4.5, A = -0.25))))
+  populations <- list(
+    `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), parent_id = NULL),
+    `pop-CD4` = list(population_id = "pop-CD4", name = "CD4_positive", parent_id = "pop-root",
+                     gate_refs = list(list(gate_id = "g-CD4", include = TRUE))))
+  # Independent expected native bounds: raw values, the fasinh formula, and frozen core
+  # logicle coordinates at A = 0 multiplied by its native flowWorkspace scale M.
+  expected <- list(
+    identity = list(min = c(-100, -10), max = c(500, 50)),
+    fasinh = list(min = 256 * asinh(c(-100, -10) / 5) / (4.5 * log(10)),
+                  max = 256 * asinh(c(500, 50) / 5) / (4.5 * log(10))),
+    logicle = list(min = 4.5 * c(0.009041134692025388, 0.099917946544774),
+                   max = 4.5 * c(0.3810191860365646, 0.16573893940523296)),
+    gml2 = list(min = c(0.009041134692025388, 0.099917946544774),
+                max = c(0.3810191860365646, 0.16573893940523296)))
+  for (kind in names(expected)) {
+    frames <- flowCore::flowSet(list(flowCore::flowFrame(values),
+                                     flowCore::flowFrame(values[nrow(values):1, , drop = FALSE])))
+    flowCore::sampleNames(frames) <- c("D1", "D2")
+    gs <- flowWorkspace::GatingSet(frames)
+    trans <- switch(kind,
+      identity = NULL,
+      fasinh = flowWorkspace::flowjo_fasinh_trans(m = 4.5, t = 5 * sinh(4.5 * log(10)), a = 0, length = 256),
+      logicle = flowWorkspace::logicle_trans(w = 0.5, t = 262144, m = 4.5, a = 0),
+      gml2 = flowWorkspace::logicleGml2_trans(W = 0.5, T = 262144, M = 4.5, A = 0))
+    if (!is.null(trans)) flowWorkspace::transform(gs, flowWorkspace::transformerList(c("CD4", "CD8"), trans))
+    before <- lapply(1:2, function(i) flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[i]], "root")))
+    handled <- GateLabR:::.gatelabr_handle_host_request(
+      gs, write_request(workspace_json(gates, populations), memberships_payload(gs, list(
+        list(id = "pop-CD4", name = "CD4_positive", parent = "pop-root", masks = list(mask, rev(mask)))))),
+      dataset_id = "gatingset-gs")
+    # Membership fallback would hide incorrect geometry, so require an actual rectangle
+    # and recompute it again after the write before checking every event.
+    expect_identical(handled$report$gates, "CD4_positive", info = kind)
+    expect_identical(handled$report$masks, character(0), info = kind)
+    flowWorkspace::recompute(gs)
+    for (i in 1:2) {
+      gate <- flowWorkspace::gh_pop_get_gate(gs[[i]], "/CD4_positive")
+      expect_s4_class(gate, "rectangleGate")
+      expect_equal(unname(gate@min), expected[[kind]]$min, tolerance = 1e-9, info = kind)
+      expect_equal(unname(gate@max), expected[[kind]]$max, tolerance = 1e-9, info = kind)
+      expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[i]], "/CD4_positive")),
+                       if (i == 1L) mask else rev(mask), info = kind)
+      expect_identical(flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[i]], "root")), before[[i]])
+    }
+    if (kind %in% c("logicle", "gml2")) {
+      hosted_gate <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)$nodes[[1]]$gate
+      expect_equal(as.numeric(hosted_gate$min), expected$logicle$min / 4.5, tolerance = 1e-9)
+      expect_equal(as.numeric(hosted_gate$max), expected$logicle$max / 4.5, tolerance = 1e-9)
+    }
+  }
 })
 
 # ── the hierarchy, for the app ────────────────────────────────────────────────
@@ -223,14 +315,14 @@ test_that("the hierarchy reaches the app with every node kind in the space the o
   # Both samples hold the same gates, so no node carries a tailoring.
   expect_true(all(vapply(nodes, function(node) is.null(node$tailored), logical(1))))
 
-  # A rectangle on a logicle and a fasinh axis: the logicle bound as stored, the fasinh bound
-  # in GateLab's asinh space by the affine map.
+  # A rectangle on a logicle and a fasinh axis: both bounds use GateLab's coordinates
+  # through the respective affine maps.
   rect <- nodes[["/rect"]]$gate
   expect_identical(rect$kind, "rectangle")
   expect_identical(rect$axes[[1]]$transform, logicle_spec())
   expect_equal(rect$axes[[2]]$transform, asinh_spec())
-  expect_equal(as.numeric(rect$min), c(1, 0.5 * fasinh_scale))
-  expect_equal(as.numeric(rect$max), c(3, 2.5 * fasinh_scale))
+  expect_equal(as.numeric(rect$min), c(1 / 4.5, 0.5 * fasinh_scale))
+  expect_equal(as.numeric(rect$max), c(3 / 4.5, 2.5 * fasinh_scale))
   expect_false(isTRUE(nodes[["/rect"]]$negated))
   # A polygon on a log and a biex axis keeps its vertices (both maps are the identity at scale 1).
   poly <- nodes[["/rect/poly"]]$gate
@@ -241,8 +333,8 @@ test_that("the hierarchy reaches the app with every node kind in the space the o
   # An ellipse carries flowCore's distance; the app squares it.
   ell <- nodes[["/ell"]]$gate
   expect_identical(ell$kind, "ellipse")
-  expect_equal(as.numeric(ell$mean), c(2, 2))
-  expect_equal(ell$covariance, matrix(c(0.2, 0.05, 0.05, 0.2), 2))
+  expect_equal(as.numeric(ell$mean), c(2 / 4.5, 2))
+  expect_equal(ell$covariance, matrix(c(0.2 / 4.5^2, 0.05 / 4.5, 0.05 / 4.5, 0.2), 2))
   expect_identical(ell$distance, 1.5)
   # A boolean of & and ! becomes references by path.
   bool <- nodes[["/bool"]]$boolean
@@ -252,7 +344,7 @@ test_that("the hierarchy reaches the app with every node kind in the space the o
   # numbers quadrants (1 = x-/y+, 2 = x+/y+, 3 = x+/y-, 4 = x-/y-), the centre mapped.
   quad <- nodes[["/FL1-H x FL2-H quadrants"]]$gate
   expect_identical(quad$kind, "quadrant")
-  expect_equal(as.numeric(quad$center), c(2, 1.5 * fasinh_scale))
+  expect_equal(as.numeric(quad$center), c(2 / 4.5, 1.5 * fasinh_scale))
   members <- quad$members
   numbers <- vapply(members, `[[`, integer(1), "quadrant")
   names(numbers) <- vapply(members, `[[`, character(1), "name")
@@ -336,14 +428,14 @@ test_that("the workspace record lives in a keyword on every sample and survives 
 
 # ── populations to the hierarchy ──────────────────────────────────────────────
 
-# A workspace on the mixed GatingSet: a rectangle in the object's logicle space over the
+# A workspace on the mixed GatingSet: a rectangle in normalized logicle space over the
 # fasinh channel in GateLab's asinh space, a rectangle stated in no space on linear channels,
 # a polygon in that same linear space, a polygon in a space the object does not have (asinh
 # over the logicle channel), a population of two gates, and a rectangle with open bounds.
 mixed_workspace <- function(gs) {
   gates <- list(
     `g-box` = list(gate_id = "g-box", name = "box", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
-                   vertices = list(list(1.5, 0.1), list(3.5, 0.1), list(3.5, 0.3), list(1.5, 0.3)),
+                   vertices = list(list(1.5 / 4.5, 0.1), list(3.5 / 4.5, 0.1), list(3.5 / 4.5, 0.3), list(1.5 / 4.5, 0.3)),
                    space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = asinh_spec())),
     `g-raw` = list(gate_id = "g-raw", name = "scatter box", gate_type = "rectangle", x_channel = "FSC-H", y_channel = "SSC-H",
                    vertices = list(list(100, 50), list(800, 50), list(800, 600), list(100, 600))),
@@ -353,8 +445,8 @@ mixed_workspace <- function(gs) {
                      vertices = list(list(0.5, 0.1), list(3, 0.1), list(3, 0.3)),
                      space = "display", transforms = list(`FL1-H` = list(kind = "asinh", cofactor = 150), `FL2-H` = asinh_spec())),
     `g-open` = list(gate_id = "g-open", name = "open", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
-                    vertices = list(list(2, -1.7976931348623157e308), list(1.7976931348623157e308, -1.7976931348623157e308),
-                                    list(1.7976931348623157e308, 1.7976931348623157e308), list(2, 1.7976931348623157e308)),
+                    vertices = list(list(2 / 4.5, -1.7976931348623157e308), list(1.7976931348623157e308, -1.7976931348623157e308),
+                                    list(1.7976931348623157e308, 1.7976931348623157e308), list(2 / 4.5, 1.7976931348623157e308)),
                     space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = asinh_spec()))
   )
   populations <- list(
@@ -477,6 +569,25 @@ test_that("an explicit save writes every population to the hierarchy: gates wher
   expect_setequal(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/box cells", "/box cells/scatter box"))
 })
 
+test_that("a logicle channel whose native convention cannot be read is saved by membership", {
+  gs <- make_mixed_gatingset()
+  ws <- mixed_workspace(gs)
+  testthat::local_mocked_bindings(gs_transform_data = function(pointer) invisible(NULL), .package = "flowWorkspace")
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(ws$json, memberships_payload(gs, ws$populations)), dataset_id = "gatingset-gs"
+  )
+  # Every population on FL1-H, the logicle channel, is written as its exact membership.
+  expect_identical(handled$report$gates, c("scatter box", "scatter poly"))
+  expect_setequal(handled$report$masks, c("box cells", "other space", "box not poly", "open box"))
+  for (index in 1:2) {
+    for (pair in list(c("/box cells", "box"), c("/box cells/scatter box", "raw"), c("/scatter poly", "poly"),
+                      c("/other space", "other"), c("/box not poly", "two"), c("/open box", "open"))) {
+      expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], pair[[1]])),
+                       ws$masks[[pair[[2]]]][[index]], label = pair[[1]])
+    }
+  }
+})
+
 test_that("a gate flowWorkspace evaluates differently is written as its membership instead", {
   gs <- make_mixed_gatingset()
   ws <- mixed_workspace(gs)
@@ -497,7 +608,7 @@ test_that("an ellipse in the object's own space is written as an ellipsoidGate",
   gs <- make_gatingset()
   gates <- list(`g-ell` = list(
     gate_id = "g-ell", name = "blob", gate_type = "ellipse", x_channel = "FL1-H", y_channel = "FL2-H",
-    mean = list(2, 2), covariance = list(list(0.25, 0.05), list(0.05, 0.3)), distance_square = 2.25,
+    mean = list(2 / 4.5, 2 / 4.5), covariance = list(list(0.25 / 4.5^2, 0.05 / 4.5^2), list(0.05 / 4.5^2, 0.3 / 4.5^2)), distance_square = 2.25,
     space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec())
   ))
   populations <- list(
@@ -795,7 +906,7 @@ test_that("the launcher serves a GatingSet from the object, and every write reac
   expect_true(GateLabR:::.gatelabr_is_gatingset(get(name, envir = .GlobalEnv)))
   # A write reaches the object in place, and the write-back guard sees the same object.
   ws_gates <- list(`g` = list(gate_id = "g", name = "box", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
-                              vertices = list(list(1.5, 1), list(3.5, 1), list(3.5, 3), list(1.5, 3)),
+                              vertices = list(list(1.5 / 4.5, 1 / 4.5), list(3.5 / 4.5, 1 / 4.5), list(3.5 / 4.5, 3 / 4.5), list(1.5 / 4.5, 3 / 4.5)),
                               space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec())))
   ws_populations <- list(
     `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), parent_id = NULL),
@@ -853,7 +964,7 @@ test_that("a range gate, which the app holds on one channel twice, is written as
   huge <- 1.7976931348623157e308
   gates <- list(`g-range` = list(
     gate_id = "g-range", name = "bright", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL1-H",
-    vertices = list(list(2, -huge), list(3.5, -huge), list(3.5, huge), list(2, huge)),
+    vertices = list(list(2 / 4.5, -huge), list(3.5 / 4.5, -huge), list(3.5 / 4.5, huge), list(2 / 4.5, huge)),
     space = "display", transforms = list(`FL1-H` = logicle_spec())
   ))
   populations <- list(
@@ -933,7 +1044,7 @@ test_that("a population excluding its one gate is written as that gate, negated"
   # FlowJo's NOT gate, which CytoML parses as a negated node: the parent's events outside the gate.
   gs <- make_gatingset()
   gates <- list(`g-box` = list(gate_id = "g-box", name = "box", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
-                               vertices = list(list(1.5, 1), list(3.5, 1), list(3.5, 3), list(1.5, 3)),
+                               vertices = list(list(1.5 / 4.5, 1 / 4.5), list(3.5 / 4.5, 1 / 4.5), list(3.5 / 4.5, 3 / 4.5), list(1.5 / 4.5, 3 / 4.5)),
                                space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec())))
   populations <- list(
     `pop-root` = list(population_id = "pop-root", name = "root", gate_refs = list(), parent_id = NULL),
@@ -1032,7 +1143,7 @@ test_that("a gated SCE becomes a GatingSet whose nodes hold the stored membershi
   logicle <- function(x) flowCore::logicleTransform(w = 0.5, t = 262144, m = 4.5, a = 0)@.Data(x)
   gates <- list(
     `g-box` = list(gate_id = "g-box", name = "box", gate_type = "rectangle", x_channel = "FL1-H", y_channel = "FL2-H",
-                   vertices = list(list(1.5, 1), list(3.5, 1), list(3.5, 3), list(1.5, 3)),
+                   vertices = list(list(1.5 / 4.5, 1 / 4.5), list(3.5 / 4.5, 1 / 4.5), list(3.5 / 4.5, 3 / 4.5), list(1.5 / 4.5, 3 / 4.5)),
                    space = "display", transforms = list(`FL1-H` = logicle_spec(), `FL2-H` = logicle_spec())),
     `g-poly` = list(gate_id = "g-poly", name = "scatter", gate_type = "polygon", x_channel = "FSC-H", y_channel = "SSC-H",
                     vertices = list(list(100, 50), list(900, 100), list(500, 700)))
@@ -1331,7 +1442,13 @@ test_that("nodes the app never held survive a save with their subtrees and count
   flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "low", "SSC-H" = c(0, 200)), parent = "/either", name = "low")
   flowWorkspace::gs_pop_add(gs, flowWorkspace::booleanFilter(cells & big), parent = "root", name = "notboth", negated = TRUE)
   flowWorkspace::recompute(gs)
-  counts_before <- flowWorkspace::gs_pop_get_count_fast(gs)
+  sorted_counts <- function(object) {
+    counts <- as.data.frame(flowWorkspace::gs_pop_get_count_fast(object))
+    counts <- counts[order(counts$name, counts$Population), , drop = FALSE]
+    rownames(counts) <- NULL
+    counts
+  }
+  counts_before <- sorted_counts(gs)
   payload <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)
   left <- stats::setNames(vapply(payload$leftOut, `[[`, character(1), "reason"), vapply(payload$leftOut, `[[`, character(1), "path"))
   expect_identical(left[["/either"]], "an OR of other nodes, which GateLab does not hold")
@@ -1356,7 +1473,7 @@ test_that("nodes the app never held survive a save with their subtrees and count
   )
   expect_setequal(flowWorkspace::gs_get_pop_paths(gs, path = "full"),
                   c("root", "/cells", "/cells/core", "/big", "/either", "/either/low", "/notboth"))
-  expect_identical(flowWorkspace::gs_pop_get_count_fast(gs)[order(name, Population)], counts_before[order(name, Population)])
+  expect_identical(sorted_counts(gs), counts_before)
   kept <- vapply(saved$report$kept_nodes, `[[`, character(1), "path")
   expect_setequal(kept, c("/either", "/notboth"))
   expect_match(saved$result$notes[[1]], "Kept 2 nodes the app does not hold", fixed = TRUE)

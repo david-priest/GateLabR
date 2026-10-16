@@ -520,6 +520,13 @@
          call. = FALSE)
   }
   source_assay <- source_assays[[1]]
+  # The app sends the drawn assay as the source; one already compensated would be compensated
+  # twice.
+  if (identical(.gatelabr_assay_role(source_assay, sce), "compensated")) {
+    stop("Compensation Apply refused: the source assay '", source_assay, "' is already compensated ",
+         "(its role is \"compensated\"), and applying a matrix to it would compensate it twice. ",
+         "Draw the uncompensated assay and apply again.", call. = FALSE)
+  }
   expected_revision <- .gatelabr_assay_revision(sce, source_assay)
   for (target in targets) {
     supplied_revision <- suppressWarnings(

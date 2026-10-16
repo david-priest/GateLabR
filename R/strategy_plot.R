@@ -14,20 +14,23 @@
 #' gating depth, and an arrow from each gate to the panel of the population it makes. Each panel
 #' is a \code{\link{gatelabPanelGrob}}.
 #'
-#' @details Counts and percentages are of the pooled samples. A population made by one gate
+#' @details Counts and percentages are of the samples sharing each outline. A population made by one gate
 #'   takes its count from the stored memberships (\code{\link{gatelabPopulations}}), so it is
 #'   the app's own; a gate of a population made by several is counted from the gate's geometry,
-#'   as are quadrants no population was made for. That is exact where gates are stored in
-#'   display units, as on a \code{SingleCellExperiment} hosted on its transformed assay. An
+#'   as are quadrants no population was made for. These counts use the stored parent membership
+#'   and each gate's recorded coordinate space. An
 #'   event a population was not evaluated for, which \code{gatelabPopulations()} returns as
 #'   \code{NA} with a warning, is counted as outside it.
 #'
-#'   Events are drawn as the assay holds them and gates as the workspace holds them, with no
-#'   transform applied. A workspace drawn on a linear assay, which the app shows through a
-#'   transform, is not reproduced. The gates drawn are those of the hierarchy that was active
-#'   when the workspace was saved: a file gated under a copy of the tree with coordinates of
-#'   its own keeps its counts, which come from the memberships, but its own outlines are not
-#'   drawn.
+#'   Events are drawn through the display transforms recorded at the save. A display-space
+#'   assay is read in its recorded arcsinh units; a linear assay requires saved channel
+#'   transforms. Gate outlines are mapped from each gate's own coordinate space to that
+#'   display. Files gated under tailored copies of the active tree contribute their own
+#'   outlines, labelled by sample when the outlines differ. Named population counts remain
+#'   the stored memberships; individual gate and unnamed quadrant counts use each sample's
+#'   own gate in its recorded space. A sample without a saved counterpart is refused, since its
+#'   outline cannot be reconstructed; select the samples whose trees contain the population.
+#'   Drawing does not change the object.
 #'
 #'   Axis ranges follow the app: a channel's global scale when the workspace sets one, else 5
 #'   percent of the drawn events' span below them and 20 percent above, widened to keep every
@@ -67,12 +70,17 @@
 #'   of events by population with the population names (or ids) as column names. \code{NULL}
 #'   reads the stored memberships with \code{gatelabPopulations()}.
 #' @param assay The assay the gates were drawn on; \code{NULL} takes the one the workspace
-#'   names, or \code{exprs} when it names none.
+#'   names, or \code{exprs} when it names none. For a saved linear assay, each sample uses its
+#'   saved original or compensated layer, whether the assay is left \code{NULL} or named. Any
+#'   other assay is used as it stands for every sample, with a warning naming the samples whose
+#'   saved compensated layers it leaves out. A missing or ambiguous saved compensated layer is
+#'   refused, never recomputed.
 #' @return A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} and
 #'   \code{height}, the figure's size in inches; \code{panels}, a data frame with one row per
 #'   gate or quadrant drawn (\code{panel}, \code{x_channel}, \code{y_channel},
 #'   \code{parent_events}, \code{events_drawn}, \code{population}, \code{events},
-#'   \code{percent_of_parent}).
+#'   \code{percent_of_parent}, \code{samples}). Identical outlines and inclusion rules are
+#'   pooled; a differing sample-specific outline or rule has its own row and parent denominator.
 #' @seealso \code{\link{gatelabHierarchy}} for the populations of the stored hierarchy.
 #' @examples
 #' # A gated object comes from the app. This one is put together by hand, with the memberships
@@ -97,10 +105,10 @@
 #'     gates = list(
 #'       g1 = list(gate_id = "g1", name = "CD4 gate", gate_type = "rectangle",
 #'                 x_channel = "CD4", y_channel = "CD8", color = "#e41a1c", label_offset = NULL,
-#'                 vertices = list(list(2.5, -0.5), list(6, 2.5))),
+#'                 space = "display", vertices = list(list(2.5, -0.5), list(6, 2.5))),
 #'       g2 = list(gate_id = "g2", name = "naive gate", gate_type = "rectangle",
 #'                 x_channel = "CD45RA", y_channel = "CCR7", color = "#377eb8", label_offset = NULL,
-#'                 vertices = list(list(2, 2), list(5, 5)))
+#'                 space = "display", vertices = list(list(2, 2), list(5, 5)))
 #'     ),
 #'     populations = list(
 #'       root = list(population_id = "root", name = "All Events", parent_id = NULL,
@@ -190,17 +198,28 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
   if (!length(nodes)) stop("None of these populations has a gate to draw.", call. = FALSE)
 
   # The events: values on the gated assay, the sample of each, and who is in which population.
-  if (is.null(assay)) assay <- if (is.null(gating$assay)) "exprs" else gating$assay
-  values <- SummarizedExperiment::assay(sce, assay)
-  channel <- function(name) {
-    if (!name %in% rownames(values)) stop("Channel '", name, "' is not a row of assay '", assay, "'.", call. = FALSE)
-    as.numeric(values[name, ])
-  }
+  # The saved assay is drawn with each sample's saved layer whether or not `assay` names it;
+  # another assay is drawn as it stands for every sample, and the console is told what that
+  # leaves out, since the named counts below still come from the stored memberships.
+  saved_assay <- if (is.null(gating$assay)) "exprs" else gating$assay
+  if (is.null(assay)) assay <- saved_assay
+  use_saved_layers <- identical(assay, saved_assay)
   sample_of <- if (length(sample_column) == 1L) SummarizedExperiment::colData(sce)[[sample_column]] else sample_column
   if (is.null(sample_of) || length(sample_of) != ncol(sce))
     stop("sample_column must name a colData column of `sce`, or give one sample per event.", call. = FALSE)
   pooled <- if (is.null(samples)) rep(TRUE, ncol(sce)) else as.character(sample_of) %in% samples
   if (!any(pooled)) stop("None of `samples` is in the object.", call. = FALSE)
+  if (!use_saved_layers) {
+    layered <- .gatelabr_strategy_layered_samples(sce, gating$workspace, saved_assay, sample_of, pooled)
+    if (length(layered))
+      warning("Assay '", assay, "' is drawn as it stands for every sample: the saved compensated layers of ",
+              paste(layered, collapse = ", "), " on '", saved_assay, "' are not used, so their events and gate ",
+              "counts are not the values the workspace gated, while named population counts are still the ",
+              "stored memberships. Leave `assay` unset to draw the saved layers.", call. = FALSE)
+  }
+  coordinates <- .gatelabr_strategy_coordinates(sce, gating, assay, sample_of, pooled, use_saved_layers)
+  channel <- coordinates$display
+  gate_variants <- .gatelabr_strategy_sample_gates(sce, gating, coordinates, sample_of, pooled)
   needed <- setdiff(unique(c(vapply(nodes, function(n) n$parent_id, character(1)),
                             unlist(lapply(nodes, function(n) vapply(n$entries, function(e) e$population, character(1)))))), root)
   quadrant_siblings <- function(node, gate)
@@ -241,51 +260,92 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
     }
     xlim <- range_of(node$x_channel, gx[keep]); ylim <- range_of(node$y_channel, gy[keep])
     widen <- function(lim, at) range(c(lim, at[is.finite(at)]))
-    overlays <- lapply(node$entries, function(entry) {
-      gate <- entry$gate
+    overlays <- unlist(lapply(node$entries, function(entry) {
       pop <- pops[[entry$population]]
-      if (identical(gate$type, "quadrant")) {
-        made <- quadrant_siblings(node, gate)
-        counts <- vapply(1:4, function(q) {
-          own <- Filter(function(p) any(p$gate_refs$gate_id == gate$gate_id & p$gate_refs$quadrant %in% q) &&
-                          nrow(p$gate_refs) == 1L, made)
-          if (length(own)) sum(member(own[[1]]$id)) else sum(parent & .gatelabr_strategy_in_gate(gate, gx, gy, q))
-        }, numeric(1))
-        names_q <- vapply(1:4, function(q) {
-          own <- Filter(function(p) any(p$gate_refs$gate_id == gate$gate_id & p$gate_refs$quadrant %in% q), made)
-          if (length(own)) own[[1]]$name else paste0("quadrant ", q)
-        }, character(1))
-        pcts <- if (n_parent > 0) round1(counts / n_parent * 100) else rep(0, 4)
-        rows[[length(rows) + 1L]] <<- data.frame(population = names_q, events = counts, percent_of_parent = pcts,
+      variants <- gate_variants(entry)
+      outlined <- lapply(seq_along(variants), function(index) {
+        variant <- variants[[index]]
+        stored_gate <- variant$gate
+        gate <- .gatelabr_strategy_gate_display(stored_gate, coordinates)
+        own_samples <- variant$events
+        own_parent <- parent & own_samples
+        own_n <- sum(own_parent)
+        named_member <- function(id) member(id) & own_samples
+        gate_hit <- function(q = NA_integer_)
+          .gatelabr_strategy_gate_membership(stored_gate, coordinates, quadrant = q)
+        outline_id <- if (index == 1L) entry$gate$gate_id else paste0(entry$gate$gate_id, "::", index)
+        suffix <- if (length(variants) > 1L) paste0(" (", paste(variant$samples, collapse = ", "), ")") else ""
+        if (identical(gate$type, "quadrant")) {
+          references <- lapply(1:4, function(q) {
+            own <- Filter(function(ref) ref$quadrant %in% q, variant$quadrants)
+            single <- Filter(function(ref) ref$single, own)
+            if (length(single)) single[[1]] else if (length(own)) own[[1]] else NULL
+          })
+          counts <- vapply(1:4, function(q) {
+            ref <- references[[q]]
+            if (!is.null(ref) && ref$single) return(sum(named_member(ref$population)))
+            hit <- gate_hit(q)
+            sum(own_parent & (if (is.null(ref) || ref$include) hit else !hit))
+          }, numeric(1))
+          names_q <- vapply(1:4, function(q) if (is.null(references[[q]])) paste0("quadrant ", q) else references[[q]]$name, character(1))
+          prefixes <- vapply(references, function(ref) if (!is.null(ref) && !ref$include) "not " else "", character(1))
+          pcts <- if (own_n > 0) round1(counts / own_n * 100) else rep(0, 4)
+          rows[[length(rows) + 1L]] <<- data.frame(population = names_q, events = counts, percent_of_parent = pcts,
+                                                   parent_events = own_n, samples = paste(variant$samples, collapse = ", "),
+                                                   key = node$key, stringsAsFactors = FALSE)
+          xlim <<- widen(xlim, gate$center[1]); ylim <<- widen(ylim, gate$center[2])
+          return(list(type = "quadrant", gate_id = outline_id, source_gate_id = entry$gate$gate_id,
+                      name = paste0(gate$name, suffix), color = gate$color,
+                      center = gate$center, quadrant_pcts = pcts, quadrant_label_offsets = gate$quadrant_label_offsets,
+                      quadrant_prefixes = prefixes, quadrant_suffix = suffix, quadrant_label_row = index - 1L))
+        }
+        inside <- if (variant$single) named_member(pop$id) else {
+          hit <- gate_hit(); own_parent & (if (variant$include) hit else !hit)
+        }
+        n_child <- sum(inside)
+        pct <- if (own_n > 0) round1(n_child / own_n * 100) else NA_real_
+        rows[[length(rows) + 1L]] <<- data.frame(population = pop$name, events = n_child, percent_of_parent = pct,
+                                                 parent_events = own_n, samples = paste(variant$samples, collapse = ", "),
                                                  key = node$key, stringsAsFactors = FALSE)
-        xlim <<- widen(xlim, gate$center[1]); ylim <<- widen(ylim, gate$center[2])
-        return(list(type = "quadrant", gate_id = gate$gate_id, name = gate$name, color = gate$color,
-                    center = gate$center, quadrant_pcts = pcts, quadrant_label_offsets = gate$quadrant_label_offsets))
+        v <- gate$vertices
+        xlim <<- widen(xlim, v[, 1]); ylim <<- widen(ylim, v[, 2])
+        if (!is.null(gate$label_offset)) {
+          xlim <<- widen(xlim, mean(v[, 1]) + gate$label_offset[1]); ylim <<- widen(ylim, mean(v[, 2]) + gate$label_offset[2])
+        }
+        # Where the label goes by itself: above the gate, by 8 percent of its height.
+        auto <- c(0, max(v[, 2]) - mean(v[, 2]) + max(0.15, diff(range(v[, 2])) * 0.08))
+        list(type = gate$type, gate_id = outline_id, source_gate_id = entry$gate$gate_id,
+             name = paste0(pop$name, suffix), color = gate$color, vertices = v, percent = pct,
+             label_offset = if (is.null(gate$label_offset)) auto else gate$label_offset,
+             label_placed = !is.null(gate$label_offset))
+      })
+      automatic <- which(vapply(outlined, function(gate) !identical(gate$type, "quadrant") &&
+                                  !isTRUE(gate$label_placed), logical(1)))
+      if (length(automatic) > 1L) {
+        # The automatic labels of one gate's sample variants share a baseline above all
+        # their outlines; the panel separates their rows in pixels, using its font size.
+        tops <- vapply(outlined[automatic], function(gate) max(gate$vertices[, 2]), numeric(1))
+        heights <- vapply(outlined[automatic], function(gate) diff(range(gate$vertices[, 2])), numeric(1))
+        baseline <- max(tops) + max(0.15, heights * 0.08)
+        for (row in seq_along(automatic)) {
+          index <- automatic[[row]]
+          outlined[[index]]$label_offset[2] <- baseline - mean(outlined[[index]]$vertices[, 2])
+          outlined[[index]]$label_row <- row - 1L
+          outlined[[index]]$label_rows <- length(automatic)
+        }
       }
-      inside <- if (nrow(pop$gate_refs) == 1L) member(pop$id) else {
-        hit <- .gatelabr_strategy_in_gate(gate, gx, gy); parent & (if (entry$include) hit else !hit)
-      }
-      n_child <- sum(inside)
-      pct <- if (n_parent > 0) round1(n_child / n_parent * 100) else NA_real_
-      rows[[length(rows) + 1L]] <<- data.frame(population = pop$name, events = n_child, percent_of_parent = pct,
-                                               key = node$key, stringsAsFactors = FALSE)
-      v <- gate$vertices
-      xlim <<- widen(xlim, v[, 1]); ylim <<- widen(ylim, v[, 2])
-      if (!is.null(gate$label_offset)) {
-        xlim <<- widen(xlim, mean(v[, 1]) + gate$label_offset[1]); ylim <<- widen(ylim, mean(v[, 2]) + gate$label_offset[2])
-      }
-      # Where the label goes by itself: above the gate, by 8 percent of its height.
-      auto <- c(0, max(v[, 2]) - mean(v[, 2]) + max(0.15, diff(range(v[, 2])) * 0.08))
-      list(type = gate$type, gate_id = gate$gate_id, name = pop$name, color = gate$color, vertices = v, percent = pct,
-           label_offset = if (is.null(gate$label_offset)) auto else gate$label_offset,
-           label_placed = !is.null(gate$label_offset))
-    })
+      outlined
+    }), recursive = FALSE)
     title <- sprintf("%s (%s)", if (identical(node$parent_id, root)) pops[[root]]$name else pops[[node$parent_id]]$name,
                      format(n_parent, big.mark = ",", scientific = FALSE, trim = TRUE))
     panel <- gatelabPanelGrob(gx[keep], gy[keep], xlim, ylim, xlab = node$x_channel, ylab = node$y_channel, title = title,
                               gates = overlays, plot_size = plot_size, pub_style = pub_style, font_sizes = font_sizes,
                               scale = scale, ...)
-    c(node, list(panel = panel, n_parent = n_parent, n_drawn = length(keep), title = title))
+    c(node, list(panel = panel, n_parent = n_parent, n_drawn = length(keep), title = title,
+                outlines = lapply(node$entries, function(entry) {
+                  own <- Filter(function(overlay) identical(overlay$source_gate_id, entry$gate$gate_id), overlays)
+                  vapply(own, `[[`, character(1), "gate_id")
+                })))
   })
 
   # The tree: a panel's children are the panels of the populations its gates make.
@@ -321,12 +381,15 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
   links <- list()
   if (arrows) for (key in names(drawn)) for (child in own[[key]]) {
     target <- drawn[[child]]$parent_id
-    for (entry in drawn[[key]]$entries) {
+    for (index in seq_along(drawn[[key]]$entries)) {
+      entry <- drawn[[key]]$entries[[index]]
       ref <- pops[[target]]$gate_refs
       hit <- which(ref$gate_id == entry$gate$gate_id)
       if (!length(hit)) next
-      anchor <- if (identical(entry$gate$type, "quadrant")) paste0(entry$gate$gate_id, "#", ref$quadrant[hit[1]]) else entry$gate$gate_id
-      links[[length(links) + 1L]] <- list(from = key, to = child, anchor = anchor, color = entry$gate$color)
+      for (outline in drawn[[key]]$outlines[[index]]) {
+        anchor <- if (identical(entry$gate$type, "quadrant")) paste0(outline, "#", ref$quadrant[hit[1]]) else outline
+        links[[length(links) + 1L]] <- list(from = key, to = child, anchor = anchor, color = entry$gate$color)
+      }
       break
     }
   }
@@ -374,9 +437,10 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
     panel = vapply(drawn[at], function(node) pops[[node$parent_id]]$name, character(1)),
     x_channel = vapply(drawn[at], function(node) node$x_channel, character(1)),
     y_channel = vapply(drawn[at], function(node) node$y_channel, character(1)),
-    parent_events = vapply(drawn[at], function(node) node$n_parent, numeric(1)),
+    parent_events = summary$parent_events,
     events_drawn = vapply(drawn[at], function(node) node$n_drawn, numeric(1)),
     population = summary$population, events = summary$events, percent_of_parent = summary$percent_of_parent,
+    samples = summary$samples,
     stringsAsFactors = FALSE, row.names = NULL)
   attr(strategy, "width") <- width * scale / 96
   attr(strategy, "height") <- height * scale / 96
@@ -499,35 +563,14 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
 # population has `id`, `name`, `parent_id`, `children` and `gate_refs` (a data frame of `gate_id`,
 # `include`, `quadrant`).
 #
-# Coordinates are returned as stored. On an object hosted on its transformed assay, as GateLabR
-# hosts a SingleCellExperiment, the stored and the displayed coordinates are the same values.
+# Coordinates are returned in each gate's stored space; strategy_coordinates.R maps them to
+# the saved display, and reads each sample's gate from its tree using the workspace provenance.
 .gatelabr_strategy_gating <- function(x) {
   ws <- .gatelabr_strategy_workspace(x)
   tree <- ws$gating
   if (is.null(tree) || is.null(tree$gates) || is.null(tree$populations))
     stop("The workspace holds no gating tree.", call. = FALSE)
-  pair <- function(v) if (is.null(v) || length(v) != 2L) NULL else as.numeric(unlist(v))
-  gates <- lapply(tree$gates, function(g) {
-    type <- as.character(g$gate_type)
-    vertices <- if (!is.null(g$vertices) && length(g$vertices))
-      matrix(as.numeric(unlist(g$vertices)), ncol = 2, byrow = TRUE) else NULL
-    if (identical(type, "rectangle") && !is.null(vertices))
-      vertices <- cbind(range(vertices[, 1])[c(1, 2, 2, 1)], range(vertices[, 2])[c(1, 1, 2, 2)])
-    ellipse <- NULL
-    if (identical(type, "ellipse")) {
-      ellipse <- list(mean = as.numeric(unlist(g$mean)),
-                      covariance = matrix(as.numeric(unlist(g$covariance)), 2, 2, byrow = TRUE),
-                      distance_square = as.numeric(g$distance_square))
-      vertices <- .gatelabr_strategy_ellipse_outline(ellipse)
-    }
-    list(gate_id = as.character(g$gate_id), name = as.character(g$name), type = type,
-         x_channel = as.character(g$x_channel), y_channel = as.character(g$y_channel),
-         vertices = vertices, center = pair(g$center), ellipse = ellipse,
-         color = if (is.null(g$color)) "#e41a1c" else as.character(g$color),
-         label_offset = pair(g$label_offset),
-         quadrant_label_offsets = if (is.null(g$quadrant_label_offsets)) NULL else
-           lapply(g$quadrant_label_offsets, pair))
-  })
+  gates <- lapply(tree$gates, .gatelabr_strategy_gate)
   populations <- lapply(tree$populations, function(p) {
     refs <- p$gate_refs
     list(id = as.character(p$population_id), name = as.character(p$name),
@@ -545,9 +588,33 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
   list(gates = gates, populations = populations,
        root = as.character(tree$root_population_id),
        scales = lapply(ws$scales$globalScales, function(r) as.numeric(unlist(r))),
-       display = ws$display,
+       display = ws$display, workspace = ws,
        assay = if (is.null(ws$hostedAssayId)) NULL else as.character(ws$hostedAssayId),
        hierarchy_id = if (is.character(active) && length(active) == 1L && !is.na(active) && nzchar(active)) active else NULL)
+}
+
+.gatelabr_strategy_gate <- function(g) {
+  pair <- function(v) if (is.null(v) || length(v) != 2L) NULL else as.numeric(unlist(v))
+  type <- as.character(g$gate_type)
+  vertices <- if (!is.null(g$vertices) && length(g$vertices))
+    matrix(as.numeric(unlist(g$vertices)), ncol = 2, byrow = TRUE) else NULL
+  if (identical(type, "rectangle") && !is.null(vertices))
+    vertices <- cbind(range(vertices[, 1])[c(1, 2, 2, 1)], range(vertices[, 2])[c(1, 1, 2, 2)])
+  ellipse <- NULL
+  if (identical(type, "ellipse")) {
+    ellipse <- list(mean = as.numeric(unlist(g$mean)),
+                    covariance = matrix(as.numeric(unlist(g$covariance)), 2, 2, byrow = TRUE),
+                    distance_square = as.numeric(g$distance_square))
+    vertices <- .gatelabr_strategy_ellipse_outline(ellipse)
+  }
+  list(gate_id = as.character(g$gate_id), name = as.character(g$name), type = type,
+       x_channel = as.character(g$x_channel), y_channel = as.character(g$y_channel),
+       space = g$space, transforms = g$transforms, bounds = g$bounds,
+       vertices = vertices, center = pair(g$center), ellipse = ellipse,
+       color = if (is.null(g$color)) "#e41a1c" else as.character(g$color),
+       label_offset = pair(g$label_offset),
+       quadrant_label_offsets = if (is.null(g$quadrant_label_offsets)) NULL else
+         lapply(g$quadrant_label_offsets, pair))
 }
 
 # The workspace as a parsed list, from an object GateLabR saved, a JSON string or a list. cbind()
@@ -589,8 +656,20 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
     d <- rbind(gx - gate$ellipse$mean[1], gy - gate$ellipse$mean[2])
     return(colSums(d * (solve(gate$ellipse$covariance) %*% d)) <= gate$ellipse$distance_square)
   }
-  if (identical(gate$type, "rectangle"))
-    return(gx >= min(gate$vertices[, 1]) & gx <= max(gate$vertices[, 1]) &
-           gy >= min(gate$vertices[, 2]) & gy <= max(gate$vertices[, 2]))
-  .gatelabr_in_ring(gx, gy, gate$vertices[, 1], gate$vertices[, 2])
+  if (identical(gate$type, "rectangle")) {
+    bound <- function(values) {
+      limits <- range(values)
+      limits[limits <= -.Machine$double.xmax] <- -Inf
+      limits[limits >= .Machine$double.xmax] <- Inf
+      limits
+    }
+    x <- bound(gate$vertices[, 1]); y <- bound(gate$vertices[, 2])
+    upper <- if (identical(gate$bounds, "half-open")) function(value, high) value < high | (high == Inf & value == Inf) else `<=`
+    return(gx >= x[1] & upper(gx, x[2]) & gy >= y[1] & upper(gy, y[2]))
+  }
+  # Polygon gates hold their boundary; the contour helper's ray crossing alone does not.
+  keep <- is.finite(gx) & is.finite(gy)
+  inside <- rep(FALSE, length(gx))
+  inside[keep] <- sp::point.in.polygon(gx[keep], gy[keep], gate$vertices[, 1], gate$vertices[, 2]) >= 1L
+  inside
 }

@@ -805,14 +805,20 @@
   switch(
     spec$kind,
     identity = function(y) y,
+    hyperlog = tryCatch(.gatelabr_hyperlog_transform(spec)$inverse, error = function(e) NULL),
     asinh = {
       cofactor <- number("cofactor")
       if (is.null(cofactor) || cofactor <= 0) NULL else function(y) cofactor * sinh(y)
     },
     logicle = {
       p <- list(T = number("T"), W = number("W"), M = number("M"), A = number("A"))
-      if (any(vapply(p, is.null, logical(1)))) NULL else
-        flowCore::inverseLogicleTransform(flowCore::logicleTransform(w = p$W, t = p$T, m = p$M, a = p$A))@.Data
+      if (any(vapply(p, is.null, logical(1))) || p$M <= 0) NULL else {
+        inverse <- flowCore::inverseLogicleTransform(
+          flowCore::logicleTransform(w = p$W, t = p$T, m = p$M, a = p$A))@.Data
+        # GateLab stores normalized coordinates (T maps to 1); flowCore's inverse expects
+        # decades (T maps to M). The factor remains M when A is nonzero.
+        function(y) inverse(y * p$M)
+      }
     },
     biex = {
       p <- list(maxValue = number("maxValue"), pos = number("pos"), neg = number("neg"),

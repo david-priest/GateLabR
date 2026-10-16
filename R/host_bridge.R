@@ -291,11 +291,12 @@
 
 # What the app will draw: every assay by name, its space and how it is drawn, and which one the
 # app opens on. Said at launch so that nothing about the assays is assumed in silence.
-.gatelabr_assay_note <- function(sce) {
+.gatelabr_assay_note <- function(sce, notices = NULL) {
   descriptor <- .gatelabr_sce_dataset_descriptor(
     sce,
     sample_column = NULL,
-    sample_partition = .gatelabr_sample_partition(sce, NULL, include_metadata = FALSE)
+    sample_partition = .gatelabr_sample_partition(sce, NULL, include_metadata = FALSE),
+    notices = notices
   )
   lines <- vapply(descriptor$assays, function(assay) {
     paste0(
@@ -372,23 +373,102 @@
   NULL
 }
 
-# CATALYST and related R pipelines leave the spillover matrix in metadata().
-# Finding it both proves compensation happened and supplies the matrix itself,
-# so a pre-compensated SCE need not be re-derived or hand-declared.
+# A warning said once in `notices`, an environment a launch keeps for its life; every time where
+# there is none.
+.gatelabr_warn_once <- function(message, notices = NULL) {
+  if (is.environment(notices)) {
+    if (message %in% notices$said) return(invisible(NULL))
+    notices$said <- c(notices$said, message)
+  }
+  warning(message, call. = FALSE)
+}
+
 # The matrix an SCE carries for the app: metadata(sce)$spillover, as flowCore::spillover()
 # returns one (sources as row names, receivers as column names), is the documented name; the
-# three others are read for objects that used them.
-.gatelabr_sce_spillover_matrix <- function(sce) {
+# three others are read for objects that used them. Its presence does not say it was applied.
+.gatelabr_sce_spillover_matrix <- function(sce, with_source = FALSE) {
   md <- S4Vectors::metadata(sce)
   for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
     value <- md[[key]]
     if (is.matrix(value) && is.numeric(value) && nrow(value) > 0L &&
         ncol(value) > 0L && !is.null(rownames(value)) &&
         !is.null(colnames(value))) {
-      return(value)
+      return(if (with_source) list(matrix = value, source = key) else value)
     }
   }
   NULL
+}
+
+# The stored matrix offered in the Compensation tab, without changing an assay or declaring
+# it compensated. Resolve exact row ids and recorded channel names to the physical channel
+# names used by the compensation solver. Keep the two axes in their own recorded order.
+#
+# Mass cytometry only. The app makes a flow matrix in the descriptor every hosted sample's own
+# spillover (host/hostedSample.ts), and a sample's own matrix is one the app applies by itself:
+# a reopened workspace whose sample was compensated applies it in the browser at once, and the
+# header offers it on any linear assay, one already compensated too. A mass cytometry matrix
+# only fills the Compensation tab's import, which the user applies, in R, where Apply refuses an
+# assay already compensated (.gatelabr_prepare_host_compensation). Offering a flow matrix the
+# same way needs the app to take it as an import rather than as the samples' own.
+#
+# A refusal is warned about once in `notices`, which a launch keeps for its life: the launch note
+# and every page load's manifest build this descriptor.
+.gatelabr_sce_compensation_matrix <- function(sce, channels, instrument, notices = NULL) {
+  stored <- .gatelabr_sce_spillover_matrix(sce, with_source = TRUE)
+  if (is.null(stored)) return(NULL)
+  source <- paste0("metadata(sce)$", stored$source)
+  refuse <- function(reason) {
+    .gatelabr_warn_once(paste0(source, " is not offered for compensation: ", reason), notices)
+    NULL
+  }
+  if (!instrument %in% c("flow", "cytof")) {
+    return(refuse("set metadata(sce)$instrument_type to 'flow' or 'cytof' first."))
+  }
+  if (identical(instrument, "flow")) {
+    return(refuse(paste0(
+      "on flow data the app would install it as each sample's own matrix, which it then applies ",
+      "by itself, to an assay already compensated too. It is offered on mass cytometry data only."
+    )))
+  }
+  spillover <- stored$matrix
+  if (any(!is.finite(spillover))) return(refuse("every coefficient must be finite."))
+  physical <- vapply(channels, function(channel) {
+    if (!is.null(channel$pnn) && nzchar(trimws(channel$pnn))) trimws(channel$pnn) else channel$id
+  }, character(1))
+  if (anyDuplicated(physical)) return(refuse("the object has duplicate physical channel names."))
+  positions_of <- function(axis) vapply(axis, function(name) {
+    hits <- which(vapply(channels, function(channel) {
+      name %in% c(channel$id, channel$pnn, channel$pns)
+    }, logical(1)))
+    if (length(hits) == 1L) hits else NA_integer_
+  }, integer(1), USE.NAMES = FALSE)
+  resolve <- function(axis) {
+    if (anyNA(axis) || any(!nzchar(axis)) || anyDuplicated(axis)) return(NULL)
+    positions <- positions_of(axis)
+    if (anyNA(positions) || anyDuplicated(positions)) NULL else physical[positions]
+  }
+  sources <- resolve(rownames(spillover))
+  receivers <- resolve(colnames(spillover))
+  if (is.null(sources) || is.null(receivers)) {
+    named <- unique(c(rownames(spillover), colnames(spillover)))
+    named <- named[!is.na(named) & nzchar(named)]
+    unmatched <- named[is.na(positions_of(named))]
+    return(refuse(paste0(
+      "each matrix channel must identify exactly one SCE row by id, pnn or pns",
+      if (length(unmatched)) {
+        paste0(" (", paste(unmatched, collapse = ", "), if (length(unmatched) == 1L) " does" else " do", " not)")
+      } else "",
+      ". A matrix naming a channel the SCE lacks, as a CATALYST matrix's receiver columns often do, ",
+      "is refused whole, not cut down to the SCE's channels."
+    )))
+  }
+  list(
+    kind = paste0(instrument, "-spillover"),
+    name = source,
+    sourceChannels = I(sources),
+    receiverChannels = I(receivers),
+    matrix = lapply(seq_len(nrow(spillover)), function(row) I(unname(spillover[row, ])))
+  )
 }
 
 .gatelabr_counts_assay_name <- function(sce) {
@@ -714,7 +794,8 @@
     dataset_id = "gatelabr-sce",
     label = dataset_id,
     sample_column = NULL,
-    sample_partition = NULL) {
+    sample_partition = NULL,
+    notices = NULL) {
   if (!methods::is(sce, "SingleCellExperiment")) {
     stop("sce must be a SingleCellExperiment.", call. = FALSE)
   }
@@ -770,7 +851,7 @@
     assay
   })
 
-  list(
+  descriptor <- list(
     contractVersion = .gatelabr_dataset_contract_version,
     id = dataset_id,
     label = as.character(label),
@@ -784,6 +865,9 @@
     colDataCategorical = .gatelabr_categorical_coldata_columns(sce),
     rowDataRevision = .gatelabr_rowdata_revision(sce)
   )
+  matrix <- .gatelabr_sce_compensation_matrix(sce, descriptor$channels, descriptor$instrument, notices)
+  if (!is.null(matrix)) descriptor$compensationMatrix <- matrix
+  descriptor
 }
 
 .gatelabr_write_assay_payload <- function(
@@ -2139,7 +2223,8 @@
     dataset_id = "gatelabr-sce",
     label = dataset_id,
     sample_column = NULL,
-    message_type = "gatelabr-host-manifest") {
+    message_type = "gatelabr-host-manifest",
+    notices = NULL) {
   if (is.null(session) ||
       !is.function(session$registerDataObj) ||
       !is.function(session$sendCustomMessage)) {
@@ -2157,7 +2242,8 @@
     dataset_id = dataset_id,
     label = label,
     sample_column = sample_column,
-    sample_partition = partition
+    sample_partition = partition,
+    notices = notices
   )
   assay_names <- SummarizedExperiment::assayNames(sce)
 

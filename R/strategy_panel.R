@@ -30,7 +30,11 @@
 #'   \code{color}, and \code{vertices} (two-column matrix, display units), \code{percent},
 #'   \code{label_offset} and \code{label_placed} for an outlined gate, or \code{center},
 #'   \code{quadrant_pcts} (four values, in the order top left, top right, bottom right, bottom
-#'   left) and \code{quadrant_label_offsets} for a quadrant gate. A \code{gate_id} is
+#'   left) and \code{quadrant_label_offsets} for a quadrant gate. Optional
+#'   \code{quadrant_suffix} and zero-based \code{quadrant_label_row} distinguish sample-specific
+#'   quadrant annotations. For outlined gates, optional zero-based \code{label_row} and
+#'   \code{label_rows} stack automatic labels; explicitly placed labels keep their offsets.
+#'   A \code{gate_id} is
 #'   optional: it names the gate's entry in the \code{anchors} attribute.
 #' @param plot_size Side of the panel in pixels, margins included.
 #' @param contour_levels,contour_threshold,bandwidth Passed to \code{\link{gatelabContour}}.
@@ -159,7 +163,11 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
         } else {
           at <- mids[[q]]; hjust <- 0.5
         }
-        label <- text(sprintf("%.1f%%", pct), at[1], at[2], fs$gate, hjust = hjust, col = stroke, face = "bold")
+        if (is.null(moved) && !is.null(gate$quadrant_label_row))
+          at[2] <- at[2] + gate$quadrant_label_row * (1.117 * fs$gate + 4) * c(1, 1, -1, -1)[q]
+        suffix <- if (is.null(gate$quadrant_suffix)) "" else gate$quadrant_suffix
+        prefix <- if (is.null(gate$quadrant_prefixes)) "" else gate$quadrant_prefixes[q]
+        label <- text(paste0(prefix, sprintf("%.1f%%", pct), suffix), at[1], at[2], fs$gate, hjust = hjust, col = stroke, face = "bold")
         backing <- if (pub_style) max(0, min(1, label_background)) else 0.78
         if (backing > 0)
           labels[[length(labels) + 1L]] <- grid::roundrectGrob(
@@ -185,6 +193,10 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
     # Measured from the plot's corner, as the app holds a label inside the axes.
     lx <- max(half - room[["left"]], min(W + room[["right"]] - half, mean(X(v[, 1])) - left + offset[1] / diff(xlim) * W))
     ly <- max(inset[1] - room[["top"]], min(H + room[["bottom"]] - inset[2], mean(Y(v[, 2])) - top - offset[2] / diff(ylim) * H))
+    if (!placed && !is.null(gate$label_row) && !is.null(gate$label_rows)) {
+      row_height <- if (is.null(pct)) 1.117 * fs$gate + 6 else 2.417 * fs$gate + 5
+      ly <- max(ly, inset[1] + (gate$label_rows - 1L) * row_height) - gate$label_row * row_height
+    }
     name_base <- ly + (if (is.null(pct)) 0.35 else -0.55) * fs$gate
     pct_base <- name_base + 1.3 * (fs$gate - 1)
     fill <- if (pub_style) "#000000" else "#ffffff"
