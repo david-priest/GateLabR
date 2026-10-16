@@ -569,6 +569,25 @@ test_that("an explicit save writes every population to the hierarchy: gates wher
   expect_setequal(flowWorkspace::gs_get_pop_paths(gs, path = "full"), c("root", "/box cells", "/box cells/scatter box"))
 })
 
+test_that("a logicle channel whose native convention cannot be read is saved by membership", {
+  gs <- make_mixed_gatingset()
+  ws <- mixed_workspace(gs)
+  testthat::local_mocked_bindings(gs_transform_data = function(pointer) invisible(NULL), .package = "flowWorkspace")
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    gs, write_request(ws$json, memberships_payload(gs, ws$populations)), dataset_id = "gatingset-gs"
+  )
+  # Every population on FL1-H, the logicle channel, is written as its exact membership.
+  expect_identical(handled$report$gates, c("scatter box", "scatter poly"))
+  expect_setequal(handled$report$masks, c("box cells", "other space", "box not poly", "open box"))
+  for (index in 1:2) {
+    for (pair in list(c("/box cells", "box"), c("/box cells/scatter box", "raw"), c("/scatter poly", "poly"),
+                      c("/other space", "other"), c("/box not poly", "two"), c("/open box", "open"))) {
+      expect_identical(as.logical(flowWorkspace::gh_pop_get_indices(gs[[index]], pair[[1]])),
+                       ws$masks[[pair[[2]]]][[index]], label = pair[[1]])
+    }
+  }
+})
+
 test_that("a gate flowWorkspace evaluates differently is written as its membership instead", {
   gs <- make_mixed_gatingset()
   ws <- mixed_workspace(gs)

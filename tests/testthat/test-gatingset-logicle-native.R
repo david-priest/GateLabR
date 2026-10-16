@@ -93,16 +93,60 @@ test_that("M equal to one gives equivalent native logicle conventions", {
   }
 })
 
-test_that("native logicle discovery refuses an unavailable or ineffective native accessor", {
+test_that("an ineffective native accessor leaves only the logicle channels unmapped", {
   gs <- native_logicle_fixture()$gs
   equivalent <- native_logicle_fixture(M = 1)$gs
   testthat::local_mocked_bindings(gs_transform_data = function(pointer) invisible(NULL), .package = "flowWorkspace")
-  expect_error(GateLabR:::.gatelabr_gatingset_axes(gs, "CD4", "D2"), "native logicle convention")
-  expect_error(GateLabR:::.gatelabr_gatingset_axes(equivalent, "CD4", "D2"), "native logicle convention")
+  for (object in list(gs, equivalent)) {
+    axes <- GateLabR:::.gatelabr_gatingset_axes(object, c("CD4", "EventID"), "D2")
+    expect_match(axes$CD4$unsupported, "native coordinate convention could not be determined")
+    expect_null(axes$CD4$spec)
+    expect_null(axes$EventID$unsupported)
+  }
 })
 
-test_that("native logicle discovery reports a missing native accessor", {
+test_that("a missing native accessor leaves only the logicle channels unmapped, with the reason", {
   gs <- native_logicle_fixture()$gs
   testthat::local_mocked_bindings(gs_transform_data = NULL, .package = "flowWorkspace")
-  expect_error(GateLabR:::.gatelabr_gatingset_axes(gs, "CD4", "D2"), "native transform accessor is unavailable")
+  axes <- GateLabR:::.gatelabr_gatingset_axes(gs, c("CD4", "EventID"), "D2")
+  expect_match(axes$CD4$unsupported, "native transform accessor is unavailable")
+  expect_null(axes$EventID$unsupported)
+})
+
+test_that("a failed probe leaves the launch, the hierarchy, the data and the transforms working", {
+  gs <- native_logicle_fixture()$gs
+  flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "CD4_positive", CD4 = c(0.2, 0.8)))
+  flowWorkspace::gs_pop_add(gs, flowCore::rectangleGate(filterId = "early", EventID = c(1, 4)))
+  flowWorkspace::recompute(gs)
+  testthat::local_mocked_bindings(gs_transform_data = function(pointer) invisible(NULL), .package = "flowWorkspace")
+  descriptor <- GateLabR:::.gatelabr_gatingset_dataset_descriptor(gs)
+  expect_null(descriptor$channels[[1]]$transform)
+  note <- GateLabR:::.gatelabr_gatingset_launch_note(gs)
+  expect_match(note, "1 unmapped (CD4: a logicle transform whose native coordinate convention could not be determined", fixed = TRUE)
+  payload <- GateLabR:::.gatelabr_gatingset_hierarchy_payload(gs)
+  expect_identical(vapply(payload$nodes, `[[`, character(1), "path"), "/early")
+  expect_identical(vapply(payload$leftOut, `[[`, character(1), "path"), "/CD4_positive")
+  expect_match(payload$leftOut[[1]]$reason, "CD4 is on a logicle transform whose native coordinate convention")
+  path <- withr::local_tempfile(fileext = ".f32")
+  GateLabR:::.gatelabr_write_gatingset_assay_payload(gs, "D2", c("CD4", "EventID"), path)
+  expect_equal(file.size(path), 2 * 8 * 4)
+  expect_identical(gatelabTransforms(gs), structure(list(), names = character(0)))
+})
+
+test_that("the probe runs on data of its own, and leaves no file behind", {
+  fixture <- native_logicle_fixture(); gs <- fixture$gs
+  before <- list.files(tempdir(), recursive = TRUE, include.dirs = TRUE, all.files = TRUE)
+  for (id in c("D1", "D2")) GateLabR:::.gatelabr_gatingset_axes(gs, "CD4", id)
+  expect_identical(list.files(tempdir(), recursive = TRUE, include.dirs = TRUE, all.files = TRUE), before)
+
+  # Were the probe's data not replaced, the native call would transform the object's own events.
+  one <- flowCore::flowSet(list(flowCore::flowFrame(cbind(CD4 = 262144))))
+  flowCore::sampleNames(one) <- "D1"
+  shared <- flowWorkspace::GatingSet(one)
+  flowWorkspace::transform(shared, flowWorkspace::transformerList("CD4", flowWorkspace::logicleGml2_trans(T = 262144, W = 0.5, M = 4.5, A = 0)))
+  values <- flowCore::exprs(flowWorkspace::gs_cyto_data(shared)[["D1"]])
+  testthat::local_mocked_bindings(`gs_cyto_data<-` = function(x, value) x, .package = "flowWorkspace")
+  axis <- GateLabR:::.gatelabr_gatingset_axes(shared, "CD4", "D1")$CD4
+  expect_match(axis$unsupported, "not isolated")
+  expect_identical(flowCore::exprs(flowWorkspace::gs_cyto_data(shared)[["D1"]]), values)
 })

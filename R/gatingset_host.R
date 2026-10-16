@@ -35,59 +35,93 @@
   if (!is.list(raw) || is.null(names(raw))) return(list())
   raw <- raw[nzchar(names(raw))]
   scales <- .gatelabr_gatingset_logicle_scales(gs, sample, raw)
-  for (channel in names(scales)) raw[[channel]]$native_scale <- scales[[channel]]
+  for (channel in names(scales)) {
+    if (is.character(scales[[channel]])) {
+      raw[[channel]]$native_failure <- scales[[channel]]
+    } else {
+      raw[[channel]]$native_scale <- scales[[channel]]
+    }
+  }
   raw
 }
 
 # flowWorkspace 4.16 drops cytolib's isGml2 flag from its transform parameter accessor.
 # Both logicle modes consequently return the same R forward/inverse closures, although
 # native event and gate coordinates span M for legacy logicle and 1 for Gating-ML 2.
-# Probe the stored C++ transforms on fresh one-event data. The cloned hierarchy initially
-# shares the original data, so replacement MUST precede any native transform call. No
-# original events, ranges, keywords or gates are written or inferred from their values.
-# The temporary hierarchy does copy its membership indices; probe all logicle channels
-# together once per sample, not separately for every channel or population.
+# Probe the stored C++ transforms on fresh one-event data. No original events, ranges,
+# keywords or gates are written or inferred from their values. The temporary hierarchy does
+# copy its membership indices; probe all logicle channels together once per sample, not
+# separately for every channel or population.
+#
+# Returns, by logicle channel, its native scale (1 or M) or, where the probe cannot tell, the
+# reason. A reason marks only that channel unsupported (.gatelabr_gatingset_axis): its nodes stay
+# on the object, a gate the app draws on it is saved as its membership, and its values reach the
+# app through flowWorkspace's own inverse, which reads the legacy scale.
 .gatelabr_gatingset_logicle_scales <- function(gs, sample, raw) {
   channels <- names(raw)[vapply(raw, function(p) identical(p$type, "logicle"), logical(1))]
-  if (!length(channels)) return(numeric(0))
+  if (!length(channels)) return(list())
+  parameter <- function(name) vapply(raw[channels], function(p) {
+    value <- suppressWarnings(as.numeric(p[[name]]))
+    if (length(value) == 1L) value else NA_real_
+  }, numeric(1))
+  top <- parameter("T")
+  decades <- parameter("M")
+  valid <- is.finite(top) & top > 0 & is.finite(decades) & decades > 0
+  result <- stats::setNames(as.list(rep("invalid logicle parameters", length(channels))), channels)
+  if (!any(valid)) return(result)
+  probed <- channels[valid]
+  measured <- tryCatch(
+    .gatelabr_gatingset_probe_logicle(gs, sample, probed, unname(top[valid])),
+    error = function(cause) conditionMessage(cause)
+  )
+  if (is.character(measured)) {
+    result[probed] <- measured
+    return(result)
+  }
+  for (index in seq_along(probed)) {
+    m <- unname(decades[valid][[index]])
+    value <- measured[[index]]
+    # cytolib stores event values as float32. Require one of the two documented native
+    # conventions, which coincide when M is 1; do not accept arbitrary scaling or ambiguous
+    # evidence.
+    candidates <- unique(c(1, m))
+    matches <- is.finite(value) & abs(value - candidates) <= 1e-6 * max(1, m)
+    result[[probed[[index]]]] <- if (sum(matches) == 1L) candidates[matches] else {
+      paste0("the native transform took T to ", format(value, digits = 7), ", neither 1 nor M")
+    }
+  }
+  result
+}
+
+# The native transform's value at T for each channel, on a hierarchy cloned from the sample whose
+# data are replaced by one event written to a directory of the probe's own, removed when the
+# probe ends. The clone shares the object's data until they are replaced, and a native call on
+# shared data would transform the object's own events, so the probe goes ahead only once the
+# clone's cytoframe is that file. (Two reads of one cytoframe give different external pointers,
+# so comparing pointers cannot tell.)
+.gatelabr_gatingset_probe_logicle <- function(gs, sample, channels, top) {
   native_transform <- get0("gs_transform_data", envir = asNamespace("flowWorkspace"))
   if (!is.function(native_transform)) {
-    stop("Cannot determine the GatingSet's native logicle convention: flowWorkspace's native transform accessor is unavailable.", call. = FALSE)
+    stop("flowWorkspace's native transform accessor is unavailable", call. = FALSE)
   }
-  tryCatch({
-    top <- vapply(raw[channels], function(p) as.numeric(p$T), numeric(1))
-    decades <- vapply(raw[channels], function(p) as.numeric(p$M), numeric(1))
-    if (any(!is.finite(top) | top <= 0 | !is.finite(decades) | decades <= 0)) {
-      stop("invalid logicle parameters")
-    }
-    sentinel <- flowCore::flowSet(list(flowCore::flowFrame(
-      matrix(top, nrow = 1L, dimnames = list(NULL, channels)))))
-    flowCore::sampleNames(sentinel) <- sample
-    probe <- flowWorkspace::gs_copy_tree_only(gs[sample])
-    flowWorkspace::gs_cyto_data(probe) <- sentinel
-    frame <- flowWorkspace::gs_cyto_data(probe)[[sample]]
-    if (nrow(frame) != 1L || !identical(as.character(colnames(frame)), channels) ||
-        identical(frame@pointer, flowWorkspace::gs_cyto_data(gs)[[sample]]@pointer)) {
-      stop("the sentinel data were not isolated from the source")
-    }
-    native_transform(probe@pointer)
-    measured <- as.numeric(flowCore::exprs(flowWorkspace::gs_cyto_data(probe)[[sample]])[1L, ])
-    scales <- vapply(seq_along(channels), function(i) {
-      if (!is.finite(measured[[i]])) stop("nonfinite native logicle scale")
-      if (decades[[i]] == 1) {
-        if (abs(measured[[i]] - 1) > 1e-6) stop("unexpected native logicle scale")
-        return(1)
-      }
-      # cytolib stores event values as float32. Require one of the two documented
-      # native conventions; do not accept arbitrary scaling or ambiguous evidence.
-      matches <- abs(measured[[i]] - c(1, decades[[i]])) <= 1e-6 * pmax(1, decades[[i]])
-      if (sum(matches) != 1L) stop("ambiguous native logicle scale")
-      c(1, decades[[i]])[matches]
-    }, numeric(1))
-    stats::setNames(scales, channels)
-  }, error = function(cause) {
-    stop("Cannot determine the GatingSet's native logicle convention: ", conditionMessage(cause), call. = FALSE)
-  })
+  directory <- tempfile("gatelabr-logicle-probe-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  sentinel <- flowCore::flowSet(list(flowCore::flowFrame(
+    matrix(top, nrow = 1L, dimnames = list(NULL, channels)))))
+  flowCore::sampleNames(sentinel) <- sample
+  data <- flowWorkspace::flowSet_to_cytoset(sentinel, path = directory, backend = "h5")
+  probe <- flowWorkspace::gs_copy_tree_only(gs[sample])
+  flowWorkspace::gs_cyto_data(probe) <- data
+  frame <- flowWorkspace::gs_cyto_data(probe)[[sample]]
+  uri <- flowWorkspace::cf_get_uri(frame)
+  own <- length(uri) == 1L && !is.na(uri) && nzchar(uri) &&
+    startsWith(normalizePath(uri, mustWork = FALSE),
+               paste0(normalizePath(directory, mustWork = FALSE), .Platform$file.sep))
+  if (!own || nrow(frame) != 1L || !identical(as.character(colnames(frame)), channels)) {
+    stop("the probe's data were not isolated from the object's", call. = FALSE)
+  }
+  native_transform(probe@pointer)
+  as.numeric(flowCore::exprs(flowWorkspace::gs_cyto_data(probe)[[sample]])[1L, ])
 }
 
 # How one channel's transformed values relate to a GateLab transform spec: the spec the app
@@ -124,6 +158,11 @@
   type <- raw$type
   malformed <- list(unsupported = paste0("a ", type, " transform with missing parameters"))
   if (identical(type, "logicle")) {
+    if (is.character(raw$native_failure)) {
+      return(list(unsupported = paste0(
+        "a logicle transform whose native coordinate convention could not be determined (",
+        raw$native_failure, ")")))
+    }
     p <- numbers("T", "W", "M", "A")
     if (is.null(p) || p$M <= 0) return(malformed)
     scale <- number("native_scale")
@@ -1431,13 +1470,18 @@
     if (!is.null(axis$unsupported)) "unsupported" else if (is.null(axis$spec)) "linear" else axis$spec$kind
   }, character(1))
   transformed <- kinds[kinds != "linear"]
+  # Each unmapped channel by its reason, which the hierarchy note's left-out nodes repeat.
+  reasons <- vapply(axes[kinds == "unsupported"], `[[`, character(1), "unsupported")
+  unmapped <- paste0(" (", paste(vapply(unique(reasons), function(reason) {
+    paste0(paste(names(reasons)[reasons == reason], collapse = ", "), ": ", reason)
+  }, character(1)), collapse = "; "), ")")
   transform_text <- if (length(transformed) == 0L) {
     "no transform (the app's axes are its own)"
   } else {
     paste(vapply(unique(transformed), function(kind) {
       paste0(sum(transformed == kind), " ", switch(kind,
         logicle = "logicle", asinh = "arcsinh", wsplog = "FlowJo log", flog = "Gating-ML log",
-        biex = "biexponential", unsupported = "unmapped", kind))
+        biex = "biexponential", unsupported = paste0("unmapped", unmapped), kind))
     }, character(1)), collapse = ", ")
   }
   nodes <- setdiff(flowWorkspace::gs_get_pop_paths(gs, path = "full"), "root")
