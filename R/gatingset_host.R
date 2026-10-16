@@ -331,8 +331,9 @@
   "unknown"
 }
 
-# The matrix flowWorkspace applied, as the app's descriptor states one: rows the source
-# channels, columns the receivers. NULL when none was applied.
+# The matrix flowWorkspace applied, in the form the app's descriptor states one: rows the source
+# channels, columns the receivers. NULL when none was applied. The launch note names it; the
+# descriptor does not carry it (below).
 .gatelabr_gatingset_compensation_matrix <- function(gs) {
   compensation <- tryCatch(flowWorkspace::gh_get_compensations(gs[[1]]), error = function(...) NULL)
   if (is.null(compensation)) return(NULL)
@@ -351,6 +352,19 @@
 
 .gatelabr_gatingset_compensated <- function(gs) {
   !is.null(tryCatch(flowWorkspace::gh_get_compensations(gs[[1]]), error = function(...) NULL))
+}
+
+# What the launch says of the object's compensation.
+.gatelabr_gatingset_compensation_note <- function(gs) {
+  if (!.gatelabr_gatingset_compensated(gs)) return("no compensation applied")
+  matrix <- .gatelabr_gatingset_compensation_matrix(gs)
+  channels <- if (is.null(matrix)) character() else as.character(matrix$sourceChannels)
+  paste0(
+    "compensated by flowWorkspace",
+    if (length(channels)) paste0(" (", length(channels), " x ", length(channels), " spillover over ",
+                                 paste(channels, collapse = ", "), ")") else "",
+    "; the app is not given the matrix, which it would apply to these values a second time"
+  )
 }
 
 # The dataset descriptor the SCE host sends, built from the object's parts. One assay: the
@@ -407,8 +421,11 @@
     colDataCategorical = categorical,
     rowDataRevision = .gatelabr_gatingset_state(gs)$rowdata_revision
   )
-  matrix <- .gatelabr_gatingset_compensation_matrix(gs)
-  if (!is.null(matrix)) descriptor$compensationMatrix <- matrix
+  # The applied matrix is not sent as compensationMatrix. The app installs a hosted flow matrix as
+  # each sample's own spillover (host/hostedSample.ts) and then applies it by itself to the values
+  # served, which flowWorkspace has compensated already: the header's "Compensated · this session"
+  # showed every event compensated twice, and Save to GatingSet wrote those memberships to the
+  # hierarchy. The launch note states the matrix instead.
   descriptor
 }
 
@@ -1211,7 +1228,7 @@
   if (.gatelabr_gatingset_compensated(gs)) {
     return(paste0(
       "The GatingSet is compensated already, and flowWorkspace cannot uncompensate it; the ",
-      "matrix it carries is the one the app shows."
+      "values the app is served carry its matrix already."
     ))
   }
   if (length(flowWorkspace::gh_get_transformations(gs[[1]])) > 0L) {
@@ -1489,7 +1506,7 @@
     "  ", length(counts), " sample", if (length(counts) == 1L) "" else "s", ", ",
     format(sum(counts), big.mark = ","), " events, ", length(channels$pnn), " channels; ",
     "transforms: ", transform_text, "; ",
-    if (.gatelabr_gatingset_compensated(gs)) "compensated (the matrix is shown in the app)" else "no compensation applied",
+    .gatelabr_gatingset_compensation_note(gs),
     "; ", length(nodes), " node", if (length(nodes) == 1L) "" else "s", " in the hierarchy",
     if (length(nodes)) .gatelabr_gatingset_hierarchy_note(gs) else ""
   )

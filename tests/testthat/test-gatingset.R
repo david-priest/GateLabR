@@ -129,17 +129,29 @@ test_that("the descriptor is built from the object's parts, each channel carryin
   expect_identical(descriptor$rowDataRevision, 0)
 })
 
-test_that("a compensated GatingSet is served as compensated, with its matrix shown", {
+test_that("a compensated GatingSet is served as compensated, without the matrix the app would apply again", {
+  # host/hostedSample.ts makes a flow-spillover compensationMatrix every hosted sample's own
+  # spillover, and the header's "Compensated · this session" then applies it to the values served,
+  # which flowWorkspace has compensated already. On a GatingSet compensated in R the app showed
+  # every event compensated twice, and Save to GatingSet wrote those memberships to the hierarchy
+  # (headless check, 2026-10-16). The descriptor carries no matrix; the launch note names it.
   gs <- flowWorkspace::GatingSet(gvhd())
   spill <- matrix(c(1, 0.1, 0.05, 1), 2L, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
   flowWorkspace::compensate(gs, spill)
   descriptor <- GateLabR:::.gatelabr_gatingset_dataset_descriptor(gs)
   expect_identical(descriptor$assays[[1]]$id, "compensated")
   expect_identical(descriptor$assays[[1]]$role, "compensated")
-  expect_identical(descriptor$compensationMatrix$kind, "flow-spillover")
-  expect_identical(as.character(descriptor$compensationMatrix$receiverChannels), c("FL1-H", "FL2-H"))
-  # matrix() fills by column: row 1 is (1, 0.05), the FL1-H source into both receivers.
-  expect_equal(as.numeric(descriptor$compensationMatrix$matrix[[1]]), c(1, 0.05))
+  expect_null(descriptor$compensationMatrix)
+  expect_false("compensationMatrix" %in% names(jsonlite::fromJSON(
+    jsonlite::toJSON(descriptor, auto_unbox = TRUE, null = "null"), simplifyVector = FALSE
+  )))
+  note <- GateLabR:::.gatelabr_gatingset_launch_note(gs)
+  expect_match(note, "compensated by flowWorkspace (2 x 2 spillover over FL1-H, FL2-H)", fixed = TRUE)
+  expect_match(note, "the app is not given the matrix, which it would apply to these values a second time", fixed = TRUE)
+  # The matrix flowWorkspace applied is still read, for the note: matrix() fills by column, so
+  # row 1 is (1, 0.05), the FL1-H source into both receivers.
+  read <- GateLabR:::.gatelabr_gatingset_compensation_matrix(gs)
+  expect_equal(as.numeric(read$matrix[[1]]), c(1, 0.05))
 })
 
 test_that("a sample's values are served from its cytoframe through the inverse transforms, one channel at a time", {
@@ -790,11 +802,12 @@ test_that("a matrix from the app is applied to a writable, uncompensated, untran
                    ncol = length(channels), dimnames = list(NULL, channels))
   expect_equal(served[, "FL1-H"], unname(expected[, "FL1-H"]), tolerance = 1e-6)
   expect_identical(served[, "FSC-H"], unname(expected[, "FSC-H"]))
-  # The descriptor now says compensated, with the matrix; the manifest reports the application.
+  # The descriptor now says compensated, without the matrix the app would apply a second time;
+  # the manifest reports the application.
   descriptor <- GateLabR:::.gatelabr_gatingset_dataset_descriptor(gs, dataset_id = "gatingset-gs")
   expect_identical(descriptor$assays[[1]]$id, "compensated")
   expect_identical(descriptor$assays[[1]]$revision, 1L)
-  expect_identical(as.character(descriptor$compensationMatrix$sourceChannels), c("FL1-H", "FL2-H"))
+  expect_null(descriptor$compensationMatrix)
   applications <- GateLabR:::.gatelabr_gatingset_compensation_applications(gs, "gatingset-gs")
   expect_length(applications, 1L)
   expect_identical(applications[[1]]$execution, "adopted-existing-assay")
