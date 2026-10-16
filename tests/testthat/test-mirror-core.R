@@ -1,0 +1,354 @@
+# The metadata(sce)$gating_workspace mirror is what the embedded GateLab core reloads when the
+# canonical record is gone. These tests serve one SCE to the real embedded core, in node, the way
+# the app does when it opens an SCE, restore the canonical record and the mirror alone, and require
+# the core to end up with the same gates from either. The core selects events from a gate's
+# geometry, space and transforms only, so the same gates select the same events.
+
+mirror_core_sce <- function(instrument = NULL) {
+  n <- 40L
+  index <- seq_len(n)
+  # Half the events near zero, half bright, on every channel; no random numbers.
+  mixed <- function(phase) {
+    ifelse(index %% 2L == 0L, 150 * sin(index * phase), 6000 * exp(0.8 * cos(index * phase)))
+  }
+  counts <- rbind(CD3 = mixed(0.7), CD19 = mixed(1.3), CD4 = mixed(2.1))
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts),
+    colData = S4Vectors::DataFrame(sample_id = rep(c("D1", "D2"), each = n / 2L))
+  )
+  if (!is.null(instrument)) {
+    S4Vectors::metadata(sce)$instrument_type <- instrument
+    S4Vectors::metadata(sce)$instrument_type_source <- "user"
+  }
+  sce
+}
+
+mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_ids,
+                                       version = 2L, required_features = NULL,
+                                       external_spillover = NULL) {
+  partition <- GateLabR:::.gatelabr_sample_partition(sce, include_metadata = FALSE)
+  samples <- vapply(seq_along(partition$samples), function(index) {
+    sprintf(
+      paste0(
+        '{"sampleId":"%s:%s","fileName":"%s","dataPath":"data/sce-%d.fcs","logicleW":{},',
+        '"scatterCofactor":{},"cytofCofactor":5,"compensationOn":false,',
+        '"instrumentMode":"%s","labels":{},"metadata":{}%s}'
+      ),
+      dataset_id, partition$samples[[index]]$id, partition$levels[[index]], index,
+      instrument_mode,
+      # A matrix a workspace supplied, on the first sample only.
+      if (index == 1L && !is.null(external_spillover)) {
+        paste0(',"externalSpillover":', external_spillover)
+      } else {
+        ""
+      }
+    )
+  }, character(1))
+  logicle <- '{"kind":"logicle","T":262144,"W":0.5,"M":4.5,"A":0}'
+  transforms <- paste0('{"CD3":', logicle, ',"CD19":', logicle, '}')
+  gate <- function(id, type, geometry, space = NULL) {
+    paste0(
+      '"', id, '":{"gate_id":"', id, '","name":"', id, '","gate_type":"', type, '",',
+      '"x_channel":"CD3","y_channel":"CD19",', geometry, ',"color":"#e41a1c",',
+      '"label_offset":null',
+      if (is.null(space)) "" else if (space == "raw") ',"space":"raw"' else
+        paste0(',"space":"display","transforms":', transforms),
+      "}"
+    )
+  }
+  gates <- c(
+    rawRect = gate("rawRect", "rectangle", '"vertices":[[1000,-1000],[262144,1000]]', "raw"),
+    # No space field, as a gate from before the field existed: read in the workspace's space.
+    noSpaceRect = gate("noSpaceRect", "rectangle", '"vertices":[[1000,1000],[262144,262144]]'),
+    dispRect = gate("dispRect", "rectangle", '"vertices":[[0.62,0.0],[1.0,0.45]]', "display"),
+    dispPoly = gate(
+      "dispPoly", "polygon",
+      '"vertices":[[0.55,0.55],[0.95,0.55],[0.95,0.95],[0.55,0.95]]', "display"
+    ),
+    dispEllipse = gate(
+      "dispEllipse", "ellipse",
+      '"mean":[0.75,0.2],"covariance":[[0.01,0],[0,0.01]],"distance_square":1', "display"
+    ),
+    # Unbounded below on y and above on x, as GateLab writes an open edge: the largest double.
+    openRect = gate(
+      "openRect", "rectangle",
+      '"vertices":[[1000,-1.7976931348623157e+308],[1.7976931348623157e+308,1000]]', "raw"
+    ),
+    # Vertices needing 16 and 17 significant digits, as numbers read from a file can.
+    finePoly = gate(
+      "finePoly", "polygon",
+      '"vertices":[[1000.0000000000001,-1000],[30000.123456789013,-1000],[30000.123456789013,1000]]',
+      "raw"
+    ),
+    # A rectangle under Gating-ML's edge rule: an event on its max is outside.
+    halfOpenRect = sub(
+      '"space":"raw"',
+      '"space":"raw","bounds":"half-open"',
+      gate("halfOpenRect", "rectangle", '"vertices":[[1000,-1000],[262144,1000]]', "raw"),
+      fixed = TRUE
+    ),
+    # A polygon on FlowJo's gate grid, with the vertices FlowJo saved.
+    gridPoly = paste0(
+      '"gridPoly":{"gate_id":"gridPoly","name":"gridPoly","gate_type":"polygon",',
+      '"x_channel":"CD3","y_channel":"CD19","vertices":[[10,20],[200,40],[180,150],[40,90]],',
+      '"color":"#e41a1c","label_offset":null,"space":"display","transforms":{',
+      '"CD3":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"linear","minRange":0,"maxRange":262144}},',
+      '"CD19":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"biex","maxValue":262144,',
+      '"pos":4.41854,"neg":0,"widthBasis":-10,"channelRange":256}}},',
+      '"flowjo_vertices":[[30000.123456789013,-150],[200000,40],[180000,150000],[40000,90000]],',
+      '"flowjo_polygon":{"quadId":-1,"gateResolution":256}}'
+    ),
+    # A FlowJo rectangle on a biex axis on FlowJo's 4,096-channel table and a standard flog with a
+    # bound, open below on x, with the axes and the bound FlowJo's rule opened.
+    flowjoRect = paste0(
+      '"flowjoRect":{"gate_id":"flowjoRect","name":"flowjoRect","gate_type":"rectangle",',
+      '"x_channel":"CD3","y_channel":"CD19",',
+      '"vertices":[[-1.7976931348623157e+308,0.2],[0.8,0.2],[0.8,0.9],[-1.7976931348623157e+308,0.9]],',
+      '"color":"#e41a1c","label_offset":null,"space":"display","transforms":{',
+      '"CD3":{"kind":"biex","maxValue":262144,"pos":4.418541234567891,"neg":0,"widthBasis":-10,',
+      '"channelRange":256,"tableChannels":4096},',
+      '"CD19":{"kind":"flog","T":262144,"M":5,"standard":true,"bounds":{"min":0.1}}},',
+      '"flowjo_axes":{"CD3":{"kind":"wsplog","offset":3,"decades":5},',
+      '"CD19":{"kind":"linear","minRange":0,"maxRange":262144}},',
+      '"flowjo_bounds":{"CD3":[3,null],"CD19":[null,null]}}'
+    )
+  )
+  population <- function(id) {
+    paste0(
+      '"', id, '":{"population_id":"', id, '","name":"', id, '","gate_refs":[{"gate_id":"',
+      id, '","include":true}],"gate_logic":"and","parent_id":"root","children":[],',
+      '"event_count":0,"percent_of_parent":0}'
+    )
+  }
+  ids <- if (is.null(gate_ids)) {
+    c("rawRect", "noSpaceRect", "dispRect", "dispPoly", "dispEllipse")
+  } else {
+    gate_ids
+  }
+  gates <- gates[ids]
+  paste0(
+    '{"format":"gatelab-workspace","version":', version, ',',
+    if (is.null(required_features)) "" else
+      paste0('"requiredFeatures":["', paste(required_features, collapse = '","'), '"],'),
+    '"workspaceId":"w",',
+    '"savedAt":"2026-09-24T00:00:00Z","app":"GateLab","samples":[',
+    paste(samples, collapse = ","), '],"activeSample":0,"gating":{"gates":{',
+    paste(gates, collapse = ","), '},"gate_order":["', paste(ids, collapse = '","'), '"],',
+    '"populations":{"root":{"population_id":"root","name":"All Events","gate_refs":[],',
+    '"gate_logic":"and","parent_id":null,"children":["', paste(ids, collapse = '","'), '"],',
+    '"event_count":0,"percent_of_parent":100},',
+    paste(vapply(ids, population, character(1)), collapse = ","),
+    '},"root_population_id":"root","active_population_id":"root","selected_gate_id":null},',
+    '"scales":{"globalScales":{}},"display":{"xChannel":"CD3","yChannel":"CD19",',
+    '"mode":"pseudocolor","maxEvents":50000,"contourThreshold":5}}'
+  )
+}
+
+# Write what the host serves for this SCE: the dataset, each sample's events, and the envelope the
+# host sends with the canonical record and with the mirror alone.
+mirror_core_fixture <- function(sce, instrument_mode, gate_ids = NULL, ...) {
+  dataset_id <- "mirror-sce"
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = dataset_id,
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = mirror_core_workspace_json(sce, dataset_id, instrument_mode, gate_ids, ...)
+  )$sce
+  mirror_only <- written
+  S4Vectors::metadata(mirror_only)$gatelab_workspace <- NULL
+
+  dir <- tempfile("mirror-core-")
+  dir.create(dir)
+  to_json <- function(value, file) {
+    writeLines(
+      jsonlite::toJSON(value, auto_unbox = TRUE, null = "null", na = "null", digits = NA),
+      file.path(dir, file)
+    )
+  }
+  to_json(GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = dataset_id), "dataset.json")
+  to_json(GateLabR:::.gatelabr_host_workspace_envelope(written, dataset_id), "canonical.json")
+  to_json(GateLabR:::.gatelabr_host_workspace_envelope(mirror_only, dataset_id), "mirror.json")
+  partition <- GateLabR:::.gatelabr_sample_partition(sce, include_metadata = FALSE)
+  for (index in seq_along(partition$samples)) {
+    rows <- partition$event_indices[[index]]
+    id <- partition$samples[[index]]$id
+    GateLabR:::.gatelabr_write_assay_payload(sce, "counts", file.path(dir, paste0(id, "-counts.bin")), rows)
+    GateLabR:::.gatelabr_write_event_index_payload(rows, file.path(dir, paste0(id, "-index.bin")))
+  }
+  list(
+    dir = dir,
+    instrument = GateLabR:::.gatelabr_sce_instrument(sce),
+    mirror_space = S4Vectors::metadata(written)$gating_workspace$gate_value_space
+  )
+}
+
+# Restore both envelopes in the embedded core and return the core's result for each.
+mirror_core_restore <- function(fixture) {
+  on.exit(unlink(fixture$dir, recursive = TRUE), add = TRUE)
+  node <- Sys.which("node")
+  testthat::skip_if_not(nzchar(node), "node is needed to run the embedded GateLab core")
+  script <- testthat::test_path("mirror-core-restore.mjs")
+  bundle <- file.path(GateLabR:::.gatelabr_react_asset_dir(), "gatelab-embed.js")
+  output <- suppressWarnings(system2(
+    node,
+    c(shQuote(script), shQuote(bundle), shQuote(fixture$dir), "canonical.json", "mirror.json"),
+    stdout = TRUE,
+    stderr = TRUE
+  ))
+  status <- attr(output, "status")
+  if (!is.null(status) && status != 0L) {
+    stop("node failed:\n", paste(output, collapse = "\n"), call. = FALSE)
+  }
+  restored <- jsonlite::fromJSON(paste(output, collapse = "\n"), simplifyVector = FALSE)
+  list(canonical = restored[["canonical.json"]], mirror = restored[["mirror.json"]])
+}
+
+# What the core selects events by: geometry, the space it lives in and the transforms it was drawn
+# under.
+selecting_fields <- function(gate) {
+  geometry <- switch(
+    gate$gate_type,
+    ellipse = c("mean", "covariance", "distance_square"),
+    quadrant = "center",
+    "vertices"
+  )
+  gate[intersect(c("gate_type", "x_channel", "y_channel", "space", "transforms", geometry), names(gate))]
+}
+
+expect_mirror_restores_like_canonical <- function(restored) {
+  expect_null(restored$canonical$error)
+  expect_null(restored$mirror$error, label = "restoring the mirror alone")
+  if (!is.null(restored$mirror$error)) return(invisible())
+  expect_identical(names(restored$mirror$gates), names(restored$canonical$gates))
+  for (gate_id in names(restored$canonical$gates)) {
+    expect_equal(
+      selecting_fields(restored$mirror$gates[[gate_id]]),
+      selecting_fields(restored$canonical$gates[[gate_id]]),
+      tolerance = 1e-9,
+      label = paste0("gate '", gate_id, "' restored from the mirror")
+    )
+  }
+}
+
+test_that("a mirror of an SCE whose instrument R cannot tell restores the same gates in the core", {
+  # Plain marker names and no instrument metadata: R says "unknown" and the core falls back to
+  # flow. The mirror declared its gates "display", so the core converted every non-ellipse gate
+  # from display to raw, including gates whose own space already said display: the display
+  # rectangle and polygon then selected no events, and the raw rectangle failed to load at all.
+  fixture <- mirror_core_fixture(mirror_core_sce(), instrument_mode = "auto")
+  expect_identical(fixture$instrument, "unknown")
+  expect_null(fixture$mirror_space)
+  restored <- mirror_core_restore(fixture)
+  expect_identical(restored$canonical$gatingSpace, "raw")
+  expect_mirror_restores_like_canonical(restored)
+
+  # Without the raw rectangle the mirror loaded, but its display gates had moved.
+  display_only <- mirror_core_restore(mirror_core_fixture(
+    mirror_core_sce(),
+    instrument_mode = "auto",
+    gate_ids = c("dispRect", "dispPoly", "dispEllipse")
+  ))
+  expect_mirror_restores_like_canonical(display_only)
+})
+
+test_that("a mirror of a flow or CyTOF SCE restores the same gates in the core", {
+  flow <- mirror_core_fixture(mirror_core_sce("flow"), instrument_mode = "flow")
+  expect_identical(flow$mirror_space, "raw")
+  expect_mirror_restores_like_canonical(mirror_core_restore(flow))
+
+  cytof <- mirror_core_fixture(mirror_core_sce("cytof"), instrument_mode = "cytof")
+  expect_identical(cytof$mirror_space, "display")
+  restored <- mirror_core_restore(cytof)
+  expect_identical(restored$canonical$gatingSpace, "display")
+  expect_mirror_restores_like_canonical(restored)
+})
+
+test_that("a mirror restores an unbounded edge and every digit of a vertex in the core", {
+  # The host wrote the mirror with 15 significant digits. GateLab writes an unbounded edge as the
+  # largest double, 1.7976931348623157e308, which at 15 digits became 1.79769313486232e+308: a
+  # number above the largest double, read as infinite, so the core refused the mirror's
+  # vertices. A vertex needing 16 or 17 digits was restored as another number.
+  fixture <- mirror_core_fixture(
+    mirror_core_sce("flow"),
+    instrument_mode = "flow",
+    gate_ids = c("openRect", "finePoly")
+  )
+  restored <- mirror_core_restore(fixture)
+  expect_mirror_restores_like_canonical(restored)
+  if (!is.null(restored$mirror$error)) return(invisible())
+  for (gate_id in c("openRect", "finePoly")) {
+    expect_identical(
+      restored$mirror$gates[[gate_id]]$vertices,
+      restored$canonical$gates[[gate_id]]$vertices,
+      label = paste0("gate '", gate_id, "' vertices restored from the mirror")
+    )
+  }
+  expect_identical(
+    restored$canonical$gates$openRect$vertices[[1]][[2]],
+    -.Machine$double.xmax
+  )
+  expect_identical(
+    restored$canonical$gates$finePoly$vertices[[2]][[1]],
+    jsonlite::fromJSON("[30000.123456789013]")
+  )
+})
+
+test_that("a version 4 workspace stored by R restores in the embedded core, from the record and the mirror", {
+  # GateLab writes a hosted save as version 4, the version 2 layout with requiredFeatures, when it
+  # holds a half-open rectangle, a polygon on FlowJo's grid, a biex axis on FlowJo's table or a
+  # matrix a workspace supplied. GateLabR stores the JSON as written and mirrors each gate with its
+  # edge rule and FlowJo fields; the embedded core must read both back and hold the same gates, or
+  # the rectangle counts an event on its max again and the grid polygon loses FlowJo's vertices.
+  matrix <- paste0(
+    '{"label":"Synthetic matrix","channels":["CD3","CD19","CD4"],',
+    '"matrix":[[1,0.1,0],[0.02,1,0],[0,0,1]],"leftOut":["CD4"]}'
+  )
+  features <- c("flowjo-grid", "flowjo-biex-table", "external-spillover", "half-open-rectangle")
+  fixture <- mirror_core_fixture(
+    mirror_core_sce("flow"),
+    instrument_mode = "flow",
+    gate_ids = c("halfOpenRect", "gridPoly", "flowjoRect", "rawRect"),
+    version = 4L,
+    required_features = features,
+    external_spillover = matrix
+  )
+  restored <- mirror_core_restore(fixture)
+  expect_mirror_restores_like_canonical(restored)
+  if (!is.null(restored$canonical$error) || !is.null(restored$mirror$error)) return(invisible())
+
+  kept <- c("bounds", "flowjo_vertices", "flowjo_polygon", "flowjo_axes", "flowjo_bounds")
+  for (source in c("canonical", "mirror")) {
+    gates <- restored[[source]]$gates
+    expect_identical(gates$halfOpenRect$bounds, "half-open", label = paste(source, "halfOpenRect bounds"))
+    expect_identical(gates$gridPoly$transforms$CD3$kind, "flowjoChannels", label = paste(source, "grid axis"))
+    expect_identical(gates$flowjoRect$transforms$CD3$tableChannels, 4096L, label = paste(source, "biex table"))
+    expect_identical(gates$flowjoRect$vertices[[1]][[1]], -.Machine$double.xmax, label = paste(source, "open edge"))
+    expect_identical(
+      gates$gridPoly$flowjo_vertices[[1]][[1]],
+      jsonlite::fromJSON("[30000.123456789013]"),
+      label = paste(source, "FlowJo vertex")
+    )
+  }
+  # The mirror keeps every field the record has that the core keeps for these gates. A rectangle
+  # with no edge rule is closed: the core leaves the field out when it reads the record and writes
+  # "closed" when it reads the mirror, which select the same events.
+  edge_rule <- function(gate) {
+    if (identical(gate$gate_type, "rectangle") && is.null(gate$bounds)) gate$bounds <- "closed"
+    gate[kept]
+  }
+  for (gate_id in names(restored$canonical$gates)) {
+    expect_identical(
+      edge_rule(restored$mirror$gates[[gate_id]]),
+      edge_rule(restored$canonical$gates[[gate_id]]),
+      label = paste0("gate '", gate_id, "' FlowJo fields and edge rule restored from the mirror")
+    )
+  }
+
+  # The record keeps the matrix the workspace supplied, with what it left out, on its sample.
+  spillover <- restored$canonical$samples[[1]]$externalSpillover
+  expect_identical(spillover$label, "Synthetic matrix")
+  expect_identical(unlist(spillover$leftOut), "CD4")
+  expect_null(restored$canonical$samples[[2]]$externalSpillover)
+})

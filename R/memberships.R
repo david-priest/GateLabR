@@ -38,6 +38,55 @@
   paste(labels, collapse = if (identical(gate_logic, "or")) " or " else " and ")
 }
 
+# The bitsets are positional against the object as it was when saved. Positions do not survive
+# a reorder, a subset or a cbind, and neither the column count nor a digest of column names and
+# sample partition can tell: CATALYST::prepData() builds its SCE with no column names, so two
+# events of one sample can swap places unseen. An explicit save therefore writes each event's own
+# id to colData, where it travels with the event, and the read maps every event back to its saved
+# position through it.
+.gatelabr_event_id_column <- "gatelab_event_id"
+
+# The ids of one save are offset + 1, offset + 3, ..., offset + 2N - 1. The offset is drawn per
+# save, so events that reach one object from two separate saves (cbind) do not share ids. It comes
+# from a hash of the moment, not from R's random number generator: pressing "Save to SCE" must not
+# move the user's .Random.seed.
+#
+# Every id is an odd integer between 2^48 and 2^49, so a double holds it exactly and 15
+# significant digits (as write.csv() writes a double) carry it in full. An id that loses precision
+# lands on a coarser grid, and every such grid is even: through a 32-bit float (an FCS channel, a
+# float32 array) it becomes a multiple of 2^25, and rounded to 14 significant digits or fewer a
+# multiple of ten. Consecutive ids put such a rounded id on another event of the same save, which
+# then lent it its membership with no error. No save writes an even id, so the read refuses one.
+.gatelabr_event_id_stride <- 2
+
+.gatelabr_event_id_offset <- function(saved_at, revision, event_count) {
+  hex <- digest::digest(
+    list(saved_at, revision, event_count, Sys.getpid(), as.numeric(Sys.time())),
+    algo = "sha256"
+  )
+  # 48 bits of the hash, in two halves because strtoi() stops at 31 bits.
+  draw <- strtoi(substr(hex, 1L, 6L), 16L) * 2^24 + strtoi(substr(hex, 7L, 12L), 16L)
+  # Even, and low enough that the last id, offset + 2N - 1, stays below 2^49.
+  2^48 + 2 * (draw %% (2^47 - event_count))
+}
+
+# The id of each event of the object being saved, in its order.
+.gatelabr_event_ids <- function(event_ids, event_count) {
+  event_ids$offset + event_ids$stride * seq_len(event_count) - (event_ids$stride - 1)
+}
+
+# The name and version of the stored record. GateLabR 1.4.6 and 1.4.7 accept a record by its name
+# and event count alone and never read its version. Given a record in which a population was not
+# evaluated for some events, they would read those events as outside it (FALSE rather than NA),
+# and they read every event by its position. The record is therefore written under a name those
+# versions do not accept, so they refuse it; GateLabR before 1.4.6 has no reader of it at all.
+# This version reads records under both names, and refuses a record under the current name whose
+# version it does not know, so that a later layout can be refused by its version alone.
+.gatelabr_memberships_format <- "gatelab-sce-population-memberships"
+.gatelabr_memberships_version <- 3L
+# The name of versions 1 (GateLabR 1.4.6 and 1.4.7, without event ids) and 2 (with event ids).
+.gatelabr_memberships_legacy_format <- "gatelab-sce-memberships"
+
 # Validate the payload an explicit save carries and pack it against this SCE's sample layout.
 .gatelabr_pack_host_memberships <- function(
     sce,
@@ -74,6 +123,7 @@
   partition <- .gatelabr_sample_partition(sce, sample_column, include_metadata = FALSE)
   expected_sample_ids <- vapply(partition$samples, `[[`, character(1), "id")
   masks <- list()
+  not_evaluated <- list()
   rows <- lapply(memberships$populations, function(population) {
     if (!is.list(population)) stop("Population memberships: a population is malformed.", call. = FALSE)
     hierarchy_id <- .gatelabr_membership_scalar(population$hierarchyId, "hierarchy id")
@@ -93,7 +143,17 @@
     if (!is.null(masks[[key]])) {
       stop("Population memberships repeat population '", name, "'.", call. = FALSE)
     }
-    masks[[key]] <<- .gatelabr_pack_bits(membership)
+    # An event the population was not evaluated for is kept in a second bitset, with the note
+    # for each such sample, and read back as NA.
+    masks[[key]] <<- .gatelabr_pack_bits(membership %in% TRUE)
+    if (anyNA(membership)) {
+      notes <- attr(membership, "not_evaluated")
+      not_evaluated[[key]] <<- list(
+        events = .gatelabr_pack_bits(is.na(membership)),
+        samples = notes$samples,
+        notes = notes$notes
+      )
+    }
     data.frame(
       hierarchy_id = hierarchy_id,
       hierarchy = hierarchies$hierarchy[match(hierarchy_id, hierarchies$hierarchy_id)],
@@ -102,7 +162,7 @@
       parent_id = parent_id,
       gate_logic = gate_logic,
       gates = .gatelabr_membership_gate_text(population$gates, gate_logic),
-      event_count = sum(membership),
+      event_count = sum(membership, na.rm = TRUE),
       stringsAsFactors = FALSE
     )
   })
@@ -150,16 +210,27 @@
     "depth", "path", "gate_logic", "gates", "event_count"
   )]
 
-  list(
-    format = "gatelab-sce-memberships",
-    version = 1L,
+  record <- list(
+    # Version 3 has the layout of version 2, which added event_ids to version 1, and can also
+    # carry not_evaluated; its new name is what makes GateLabR 1.4.6 and 1.4.7 refuse it.
+    format = .gatelabr_memberships_format,
+    version = .gatelabr_memberships_version,
     revision = as.integer(revision),
     saved_at = saved_at,
     event_count = ncol(sce),
+    event_ids = list(
+      column = .gatelabr_event_id_column,
+      offset = .gatelabr_event_id_offset(saved_at, revision, ncol(sce)),
+      stride = .gatelabr_event_id_stride
+    ),
     hierarchies = hierarchies,
     populations = populations,
     masks = masks
   )
+  # Present only when some population was not evaluated for some sample; a record without it has
+  # every population evaluated for every event.
+  if (length(not_evaluated) > 0L) record$not_evaluated <- not_evaluated
+  record
 }
 
 # The stored record, checked against the object it is being read from.
@@ -167,9 +238,16 @@
   if (!methods::is(sce, "SingleCellExperiment")) {
     stop("sce must be a SingleCellExperiment.", call. = FALSE)
   }
-  workspace <- S4Vectors::metadata(sce)$gatelab_workspace
-  record <- if (is.list(workspace)) workspace$memberships else NULL
-  if (!is.list(record) || !identical(record$format, "gatelab-sce-memberships")) {
+  md <- S4Vectors::metadata(sce)
+  # cbind() keeps every object's metadata, so a combined object carries one workspace record per
+  # object, and `$` reaches only the first. The memberships can be stored in any of them.
+  saves <- Filter(function(workspace) {
+    is.list(workspace) && is.list(workspace$memberships) &&
+      (identical(workspace$memberships$format, .gatelabr_memberships_format) ||
+        identical(workspace$memberships$format, .gatelabr_memberships_legacy_format))
+  }, unname(md[names(md) %in% "gatelab_workspace"]))
+  if (length(saves) == 0L) {
+    workspace <- md$gatelab_workspace
     stale_core <- if (is.list(workspace)) workspace$explicit_without_memberships else NULL
     if (!is.null(stale_core)) {
       stop(
@@ -189,17 +267,35 @@
       call. = FALSE
     )
   }
-  if (!identical(as.integer(record$event_count), ncol(sce))) {
-    stop(
-      "The stored population memberships cover ", record$event_count,
-      " events but this SCE has ", ncol(sce), " columns; they were saved on a ",
-      "different object (subsetting or reordering an SCE does not carry them). ",
-      "Press \"Save to SCE\" in GateLabR on this object.",
-      call. = FALSE
-    )
+  workspace <- .gatelabr_memberships_save(sce, saves)
+  record <- workspace$memberships
+  # A record under the current name whose version this reader does not know may hold a layout it
+  # would read wrongly, so it is refused rather than read.
+  if (identical(record$format, .gatelabr_memberships_format)) {
+    version <- record$version
+    if (!is.numeric(version) || length(version) != 1L || is.na(version) ||
+        version != .gatelabr_memberships_version) {
+      shown <- if (is.numeric(version) && length(version) == 1L) {
+        format(version)
+      } else {
+        paste(deparse(version), collapse = "")
+      }
+      stop(
+        "These population memberships are stored as record version ", shown,
+        ", which this version of GateLabR does not read: they were saved by a later version ",
+        "of GateLabR, or altered since. Update GateLabR to read them, or press ",
+        "\"Save to SCE\" in GateLabR on this object to store them again.",
+        call. = FALSE
+      )
+    }
   }
-  current <- .gatelabr_canonical_workspace_record(sce)
-  current_revision <- if (is.null(current)) 0L else current$revision
+  record$positions <- .gatelabr_membership_positions(sce, record)
+  # Stale against the workspace the memberships were saved with, which on a combined object need
+  # not be the first record.
+  current_revision <- suppressWarnings(as.integer(workspace$revision))
+  if (length(current_revision) != 1L || is.na(current_revision) || current_revision < 0L) {
+    current_revision <- 0L
+  }
   if (!identical(as.integer(record$revision), current_revision) && !isTRUE(allow_stale)) {
     stop(
       "Population memberships were saved at workspace revision ", record$revision,
@@ -210,6 +306,145 @@
     )
   }
   record
+}
+
+# Which of the stored saves this object's events are read from. A record without event ids (saved
+# before ids existed) covers no event by id, so it is not a second save; where it is the only one,
+# the read refuses it. Of several saves, the one that holds every event is read, as the object
+# would have been before it was combined.
+.gatelabr_memberships_save <- function(sce, saves) {
+  offsets <- vapply(saves, function(workspace) {
+    offset <- workspace$memberships$event_ids$offset
+    if (is.numeric(offset) && length(offset) == 1L) offset else NA_real_
+  }, numeric(1))
+  distinct <- which(!is.na(offsets) & !duplicated(offsets))
+  if (length(distinct) == 0L) return(saves[[1L]])
+  if (length(distinct) == 1L) return(saves[[distinct]])
+  for (index in distinct) {
+    record <- saves[[index]]$memberships
+    ids <- SummarizedExperiment::colData(sce)[[record$event_ids$column]]
+    positions <- .gatelabr_saved_positions(ids, record$event_ids, as.numeric(record$event_count))
+    if (!anyNA(positions)) return(saves[[index]])
+  }
+  stop(
+    "This SCE combines events from objects whose population memberships were saved separately ",
+    "(cbind() keeps each object's metadata), and no one save holds all of them. Subset it to ",
+    "the events of one save, or press \"Save to SCE\" in GateLabR on this object to store ",
+    "them again.",
+    call. = FALSE
+  )
+}
+
+# Each event's position in the object a save was made on, or NA where its id is none of that
+# save's.
+.gatelabr_saved_positions <- function(ids, key, saved_count) {
+  if (!is.numeric(ids)) return(rep(NA_real_, length(ids)))
+  stride <- .gatelabr_event_id_stride
+  positions <- (ids - key$offset + stride - 1) / stride
+  known <- !is.na(positions) & positions >= 1 & positions <= saved_count &
+    positions == round(positions)
+  positions[!known] <- NA_real_
+  positions
+}
+
+# Each event's position in the object the memberships were saved on, found through its event id,
+# so that a reordered, subset or combined object reads every event's own membership. Anything that
+# cannot be traced to a saved event stops the read: a positional guess is what misassigned events.
+.gatelabr_membership_positions <- function(sce, record) {
+  resave <- "press \"Save to SCE\" in GateLabR on this object to store them again."
+  key <- record$event_ids
+  if (!is.list(key)) {
+    stop(
+      "These population memberships were saved by an earlier version of GateLabR, which kept ",
+      "them by event position only, so they cannot be matched to this object's events: on a ",
+      "reordered or subset object a positional read gives events each other's memberships. ",
+      "To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  if (!is.character(key$column) || length(key$column) != 1L ||
+      !is.numeric(key$offset) || length(key$offset) != 1L || !is.finite(key$offset) ||
+      !identical(key$stride, .gatelabr_event_id_stride)) {
+    stop(
+      "These population memberships carry event ids in a form this version of GateLabR does ",
+      "not read, so they cannot be matched to this object's events. To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  cd <- SummarizedExperiment::colData(sce)
+  if (!key$column %in% colnames(cd)) {
+    stop(
+      "This SCE has no `", key$column, "` column in colData. \"Save to SCE\" writes it to tie ",
+      "each stored population membership to its event, and without it the memberships cannot ",
+      "be matched to this object's events. To read them, ", resave,
+      call. = FALSE
+    )
+  }
+  ids <- cd[[key$column]]
+  saved_count <- as.numeric(record$event_count)
+  positions <- .gatelabr_saved_positions(ids, key, saved_count)
+  known <- !is.na(positions)
+  # An id that lost precision is even, and no save writes one (see .gatelabr_event_id_offset).
+  rounded <- if (is.numeric(ids)) {
+    !known & is.finite(ids) & ids >= 2^48 & ids <= 2^49 & ids %% 2 == 0
+  } else {
+    FALSE
+  }
+  if (any(rounded)) {
+    stop(
+      sum(rounded), " of this SCE's ", length(known), " events have a `", key$column,
+      "` that lost precision, as an id does when stored as a 32-bit float (an FCS channel, a ",
+      "float32 array) or written with fewer than 15 significant digits, so it no longer names ",
+      "its saved event and the event's memberships are unknown. Read them from an object whose ",
+      "ids were kept in full, or ", resave,
+      call. = FALSE
+    )
+  }
+  if (!all(known)) {
+    stop(
+      sum(!known), " of this SCE's ", length(known), " events are not among the ",
+      saved_count, " events the population memberships were saved on, so their memberships ",
+      "are unknown: they came from another object, for example through cbind(). Subset this ",
+      "SCE to the saved events, or ", resave,
+      call. = FALSE
+    )
+  }
+  as.integer(positions)
+}
+
+# One population's membership for every event of this object, in this object's order: NA for an
+# event of a sample the population was not evaluated for.
+.gatelabr_population_membership <- function(record, key) {
+  event_count <- as.integer(record$event_count)
+  saved <- .gatelabr_unpack_bits(record$masks[[key]], event_count)
+  unevaluated <- record$not_evaluated[[key]]
+  if (!is.null(unevaluated)) {
+    saved[.gatelabr_unpack_bits(unevaluated$events, event_count)] <- NA
+  }
+  saved[record$positions]
+}
+
+# One warning for the populations read here that are NA for some of this object's events, naming
+# each population, the samples it was not evaluated for, and the note GateLab sent for each.
+# `na_counts` is the number of this object's events each row of `rows` is NA for; `lead` is a first
+# line saying what the NA did to the result.
+.gatelabr_warn_not_evaluated <- function(record, rows, na_counts, lead = NULL) {
+  lines <- character(0)
+  for (index in seq_len(nrow(rows))) {
+    if (na_counts[[index]] == 0L) next
+    key <- paste0(rows$hierarchy_id[[index]], "/", rows$population_id[[index]])
+    unevaluated <- record$not_evaluated[[key]]
+    lines <- c(
+      lines,
+      paste0(
+        "Population '", rows$population[[index]], "' is NA for ", na_counts[[index]],
+        " of this object's events, as it was not evaluated for:"
+      ),
+      paste0("  sample '", unevaluated$samples, "': ", unevaluated$notes)
+    )
+  }
+  if (length(lines) > 0L) warning(paste(c(lead, lines), collapse = "\n"), call. = FALSE)
+  invisible(NULL)
 }
 
 .gatelabr_resolve_hierarchy <- function(record, hierarchy = NULL) {
@@ -239,9 +474,24 @@
 #'
 #' Memberships are tied to the workspace revision they were computed at. If gates or populations
 #' changed since (an autosave moved the revision on), reading them is refused unless
-#' \code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them. They are also
-#' refused on an object with a different number of columns, since a subset SCE keeps the metadata
-#' but not the event order the masks assume.
+#' \code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them.
+#'
+#' Memberships follow the events, not their positions. The save writes each event's id to
+#' \code{colData(sce)$gatelab_event_id}, which travels with the event, so a reordered or subset
+#' SCE, or one that repeats saved events, reads every event's own membership. An event that was
+#' not in the saved object, for example one added with \code{cbind()}, has no stored membership,
+#' and reading is refused rather than guessed; so is reading after the id column was removed, or
+#' memberships saved by an earlier version of GateLabR, which kept them by position only.
+#' \code{cbind()} needs the column on both objects: give the object that lacks it the column as
+#' \code{NA} (\code{other$gatelab_event_id <- NA_real_}) rather than dropping it from the saved
+#' one, and the saved events read again once the combined object is subset back to them.
+#'
+#' A population can be \emph{not evaluated} for a sample. GateLab reads each sample's memberships
+#' under the tree that sample is gated under, and when that tree has no counterpart for a
+#' population (a copy whose structure was changed), it sends no membership for the sample's
+#' events, with a note naming the file, the population and the file's tree. Those events are
+#' \code{NA} in that population, never \code{FALSE}, and every read that returns such an
+#' \code{NA} warns with the note.
 #'
 #' @param sce A \code{SingleCellExperiment} gated with GateLabR and saved with
 #'   \dQuote{Save to SCE}.
@@ -252,21 +502,29 @@
 #' @param ungated Label for events that fall in no population below the root.
 #' @param allow_stale Read memberships whose workspace revision is behind the stored workspace.
 #'
+#' @param by How the columns of \code{gatelabPopulations()} are named: by population name,
+#'   disambiguated by id where names repeat, or by the population's path from the root (the
+#'   node path on a GatingSet), which is unique by construction.
 #' @return \code{gatelabHierarchies}: a data frame with one row per hierarchy
 #'   (\code{hierarchy_id}, \code{hierarchy}, \code{active}, \code{populations}).
 #'
 #'   \code{gatelabHierarchy}: a data frame with one row per population of one hierarchy, parents
 #'   before children: \code{population_id}, \code{population}, \code{parent}, \code{depth},
 #'   \code{path} (names from the root joined by \code{" > "}), \code{gates} (the gate names the
-#'   population is defined by, \code{not} marking an excluded gate), and \code{event_count}.
+#'   population is defined by, \code{not} marking an excluded gate), and \code{event_count}, the
+#'   number of this object's events the population holds; events it was not evaluated for are
+#'   not counted.
 #'
 #'   \code{gatelabPopulations}: a logical matrix with one row per SCE column (event) and one
 #'   column per population, named by population; a name shared by two populations of the
-#'   hierarchy is suffixed with the population id.
+#'   hierarchy is suffixed with the population id. An event is \code{NA} in a population that was
+#'   not evaluated for its sample.
 #'
 #'   \code{gatelabLeafPopulation}: a factor with one level per population of the hierarchy in tree
 #'   order plus \code{ungated}, giving each event its deepest population. Where two populations of
-#'   equal depth both hold an event, the one earlier in the tree wins.
+#'   equal depth both hold an event, the one earlier in the tree wins. An event is \code{NA} where
+#'   a population not evaluated for it could hold it (no ancestor is known not to) and would
+#'   outrank the population found.
 #'
 #' @examples
 #' \dontrun{
@@ -280,9 +538,44 @@
 #' @name gatelabMemberships
 NULL
 
+#' The display transform of every channel, as the app drew it
+#'
+#' A \code{SingleCellExperiment} gated in the app carries, in
+#' \code{rowData(sce)$gatelab_transform}, the transform each channel was drawn on at the last
+#' save, as a GatingSet carries its transforms: a logicle with \code{T}, \code{W}, \code{M}
+#' and \code{A}, an arcsinh with its \code{cofactor}, or the identity. A GatingSet reports its
+#' own transforms. Use it to draw the object in R on the axes the app showed, or to build a
+#' \code{transformerList} for flowWorkspace.
+#'
+#' @param sce A \code{SingleCellExperiment} saved from the app, or a flowWorkspace
+#'   \code{GatingSet}.
+#' @return A named list, one entry per channel that states a transform: a list with
+#'   \code{kind} and the parameters of that kind.
+#' @export
+gatelabTransforms <- function(sce) {
+  if (.gatelabr_is_gatingset(sce)) {
+    channels <- .gatelabr_gatingset_channels(sce)$pnn
+    axes <- .gatelabr_gatingset_axes(sce, channels)
+    specs <- lapply(axes, `[[`, "spec")
+    return(Filter(Negate(is.null), specs))
+  }
+  if (!methods::is(sce, "SingleCellExperiment")) {
+    stop("sce must be a SingleCellExperiment or a flowWorkspace GatingSet.", call. = FALSE)
+  }
+  ids <- vapply(.gatelabr_channel_descriptors(sce), `[[`, character(1), "id")
+  specs <- .gatelabr_rowdata_transforms(sce)
+  names(specs) <- ids
+  Filter(Negate(is.null), specs)
+}
+
 #' @rdname gatelabMemberships
 #' @export
 gatelabHierarchies <- function(sce, allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) {
+    hierarchy <- .gatelabr_gatingset_hierarchy(sce)
+    return(data.frame(hierarchy_id = "gatingset", hierarchy = "GatingSet", active = TRUE,
+                      populations = nrow(hierarchy), stringsAsFactors = FALSE))
+  }
   record <- .gatelabr_memberships_record(sce, allow_stale)
   out <- record$hierarchies[, c("hierarchy_id", "hierarchy", "active")]
   out$populations <- vapply(
@@ -297,9 +590,19 @@ gatelabHierarchies <- function(sce, allow_stale = FALSE) {
 #' @rdname gatelabMemberships
 #' @export
 gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_hierarchy(sce))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
+  # The stored counts are the saved object's; a reordered object has the same ones.
+  if (!identical(record$positions, seq_len(as.integer(record$event_count)))) {
+    rows$event_count <- vapply(
+      paste0(rows$hierarchy_id, "/", rows$population_id),
+      function(key) sum(.gatelabr_population_membership(record, key), na.rm = TRUE),
+      integer(1),
+      USE.NAMES = FALSE
+    )
+  }
   out <- rows[, c(
     "population_id", "population", "parent", "depth", "path", "gates", "event_count"
   )]
@@ -309,7 +612,10 @@ gatelabHierarchy <- function(sce, hierarchy = NULL, allow_stale = FALSE) {
 
 #' @rdname gatelabMemberships
 #' @export
-gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_stale = FALSE) {
+gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_stale = FALSE,
+                               by = c("name", "path")) {
+  by <- match.arg(by)
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_populations(sce, populations, by = by))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
@@ -348,20 +654,27 @@ gatelabPopulations <- function(sce, populations = NULL, hierarchy = NULL, allow_
     ncol = nrow(rows),
     dimnames = list(colnames(sce), NULL)
   )
-  labels <- rows$population
+  # A column is named by its population, disambiguated by id where names repeat, or by the
+  # population's path from the root, unique by construction as a GatingSet's node path is.
+  labels <- if (identical(by, "path")) rows$path else rows$population
   duplicated_names <- labels %in% labels[duplicated(labels)]
   labels[duplicated_names] <- paste0(labels[duplicated_names], " (", rows$population_id[duplicated_names], ")")
   colnames(out) <- labels
+  na_counts <- integer(nrow(rows))
   for (index in seq_len(nrow(rows))) {
     key <- paste0(rows$hierarchy_id[[index]], "/", rows$population_id[[index]])
-    out[, index] <- .gatelabr_unpack_bits(record$masks[[key]], event_count)
+    membership <- .gatelabr_population_membership(record, key)
+    na_counts[[index]] <- sum(is.na(membership))
+    out[, index] <- membership
   }
+  .gatelabr_warn_not_evaluated(record, rows, na_counts)
   out
 }
 
 #' @rdname gatelabMemberships
 #' @export
 gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", allow_stale = FALSE) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_leaf_population(sce, ungated))
   record <- .gatelabr_memberships_record(sce, allow_stale)
   hierarchy_id <- .gatelabr_resolve_hierarchy(record, hierarchy)
   rows <- record$populations[record$populations$hierarchy_id == hierarchy_id, ]
@@ -377,13 +690,104 @@ gatelabLeafPopulation <- function(sce, hierarchy = NULL, ungated = "ungated", al
   }
   leaf <- rep(NA_integer_, event_count)
   best_depth <- rep(0L, event_count)
+  unevaluated <- list()
   for (index in seq_len(nrow(below_root))) {
     key <- paste0(below_root$hierarchy_id[[index]], "/", below_root$population_id[[index]])
-    inside <- .gatelabr_unpack_bits(record$masks[[key]], event_count)
-    deeper <- inside & below_root$depth[[index]] > best_depth
+    membership <- .gatelabr_population_membership(record, key)
+    if (anyNA(membership)) unevaluated[[as.character(index)]] <- membership
+    deeper <- membership %in% TRUE & below_root$depth[[index]] > best_depth
     leaf[deeper] <- index
     best_depth[deeper] <- below_root$depth[[index]]
   }
   codes <- ifelse(is.na(leaf), length(levels) + 1L, leaf)
-  factor(c(levels, ungated)[codes], levels = c(levels, ungated))
+  out <- factor(c(levels, ungated)[codes], levels = c(levels, ungated))
+  if (length(unevaluated) == 0L) return(out)
+
+  # A population that is NA for an event could hold it, unless an ancestor is known not to, as a
+  # population holds only events of its parent. Where it could, and would outrank the population
+  # found (deeper, or as deep and earlier in the tree), the event's deepest population is unknown.
+  unknown <- logical(event_count)
+  na_counts <- integer(nrow(below_root))
+  rank <- ifelse(is.na(leaf), Inf, leaf)
+  for (name in names(unevaluated)) {
+    index <- as.integer(name)
+    could_hold <- is.na(unevaluated[[name]])
+    parent_id <- below_root$parent_id[[index]]
+    repeat {
+      parent <- match(parent_id, rows$population_id)
+      if (is.na(parent)) break
+      parent_membership <- .gatelabr_population_membership(
+        record,
+        paste0(rows$hierarchy_id[[parent]], "/", rows$population_id[[parent]])
+      )
+      could_hold <- could_hold & !(parent_membership %in% FALSE)
+      parent_id <- rows$parent_id[[parent]]
+    }
+    depth <- below_root$depth[[index]]
+    outranks <- depth > best_depth | (depth == best_depth & index < rank)
+    if (any(could_hold & outranks)) {
+      unknown <- unknown | (could_hold & outranks)
+      na_counts[[index]] <- sum(is.na(unevaluated[[name]]))
+    }
+  }
+  .gatelabr_warn_not_evaluated(
+    record,
+    below_root,
+    na_counts,
+    lead = paste0("The deepest population of ", sum(unknown), " of this object's events is NA.")
+  )
+  out[unknown] <- NA
+  out
+}
+
+# Whether the readers above would read this object now: "none" when no explicit save stored
+# memberships, "stale" when gates or populations changed since the save, "current" otherwise,
+# and "absent" when the object holds no workspace at all. Never stops: this is for a word at the
+# right moment, not a refusal.
+.gatelabr_memberships_status <- function(sce) {
+  if (.gatelabr_is_gatingset(sce)) return(.gatelabr_gatingset_memberships_status(sce))
+  if (!methods::is(sce, "SingleCellExperiment")) return("absent")
+  md <- S4Vectors::metadata(sce)
+  workspace <- md$gatelab_workspace
+  if (!is.list(workspace)) return("absent")
+  saves <- Filter(function(candidate) {
+    is.list(candidate) && is.list(candidate$memberships) &&
+      (identical(candidate$memberships$format, .gatelabr_memberships_format) ||
+        identical(candidate$memberships$format, .gatelabr_memberships_legacy_format))
+  }, unname(md[names(md) %in% "gatelab_workspace"]))
+  if (length(saves) == 0L) return("none")
+  saved <- .gatelabr_memberships_save(sce, saves)
+  current <- suppressWarnings(as.integer(saved$revision))
+  if (length(current) != 1L || is.na(current) || current < 0L) current <- 0L
+  if (identical(as.integer(saved$memberships$revision), current)) "current" else "stale"
+}
+
+# Said when the app stops: an autosave kept the gates, but the readers need the memberships an
+# explicit save stores, and nothing else in the app's closing says whether one happened.
+.gatelabr_warn_memberships_at_stop <- function(sce_name) {
+  sce <- tryCatch(get(sce_name, envir = .GlobalEnv), error = function(...) NULL)
+  status <- tryCatch(.gatelabr_memberships_status(sce), error = function(...) "absent")
+  if (status == "none" && .gatelabr_is_gatingset(sce)) {
+    warning(
+      "GateLabR stopped without writing the populations to the hierarchy of `", sce_name, "`: ",
+      "it holds the nodes it held at launch. Autosaves keep the workspace as a keyword only; ",
+      "relaunch and press \"Save to GatingSet\" to write the populations as nodes.",
+      call. = FALSE
+    )
+  } else if (status == "none") {
+    warning(
+      "GateLabR stopped with no population memberships stored in `", sce_name, "`: ",
+      "gatelabPopulations() and gatelabHierarchy() will refuse it. Autosaves keep gate ",
+      "geometry only; relaunch and press \"Save to SCE\" to store the memberships.",
+      call. = FALSE
+    )
+  } else if (status == "stale") {
+    warning(
+      "GateLabR stopped with population memberships older than the workspace in `", sce_name,
+      "`: gates or populations changed after the last \"Save to SCE\". Relaunch and save ",
+      "again, or read them as they were with allow_stale = TRUE.",
+      call. = FALSE
+    )
+  }
+  invisible(status)
 }

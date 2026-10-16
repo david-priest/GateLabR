@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Asinh_A1">
+    <transforms:fasinh transforms:T="262144" transforms:M="4.5" transforms:A="1.0"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="FL1_high">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A1" gating:min="0.5573751607116351">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="Scatter_box">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A1" gating:min="0.7773876007471672" gating:max="0.965002856147526">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A1" gating:min="0.7052851255664568" gating:max="0.9374358937747769">
+      <data-type:fcs-dimension data-type:name="SSC-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+</gating:Gating-ML>

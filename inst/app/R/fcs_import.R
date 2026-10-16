@@ -322,7 +322,22 @@ filter_flow_channels <- function(ff) {
   # otherwise keep all channels, using $PnS (marker) as the display name.
   is_unmixed <- !is.na(pns) & nchar(trimws(pns)) > 0 & pns != pnn &
     grepl("-A$", pns, ignore.case = TRUE)
-  if (sum(is_unmixed) < 2) {
+
+  # An unmixed file is defined by carrying raw detectors ALONGSIDE unmixed channels,
+  # so the marker test alone is not enough. An analyser that names the conjugate
+  # rather than the detector — $PnN "FL1-A" with $PnS "FITC-A" — satisfies it on every
+  # fluorescence channel while having no detectors at all, and filtering it drops the
+  # height partners and any spelled-out width. Beckman CytoFLEX lost 5 of 14 channels
+  # this way and Xitogen XTG-1600 lost 14 of 32. So also require at least one channel
+  # the filter would actually drop: not scatter, not LightLoss/Autofluorescence/
+  # Extinction, not QC/timing, and carrying no marker of its own.
+  has_marker <- !is.na(pns) & nchar(trimws(pns)) > 0 & pns != pnn
+  is_raw_detector <- !has_marker &
+    !grepl("^(FSC|SSC)", pnn, ignore.case = TRUE) &
+    !grepl("^(LightLoss|Autofluorescence|Extinction)", pnn, ignore.case = TRUE) &
+    !grepl("^(Time|Event_length|Cell_length)$", pnn, ignore.case = TRUE)
+
+  if (sum(is_unmixed) < 2 || !any(is_raw_detector)) {
     display_name <- ifelse(is.na(pns) | nchar(trimws(pns)) == 0, pnn, pns)
     message("  Conventional flow: keeping all ", length(pnn), " channels")
     return(list(ff = ff, display_names = display_name,

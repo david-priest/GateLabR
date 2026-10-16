@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xsi:schemaLocation="http://www.isac-net.org/std/Gating-ML/v2.0/gating http://flowcyt.sourceforge.net/gating/2.0/xsd/Gating-ML.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/transformations http://flowcyt.sourceforge.net/gating/2.0/xsd/Transformations.v2.0.xsd http://www.isac-net.org/std/Gating-ML/v2.0/datatypes http://flowcyt.sourceforge.net/gating/2.0/xsd/DataTypes.v2.0.xsd">
+  <data-type:custom_info>
+    <cytobank>
+      <about>Gating-ML 2.0 export from GateLab (standard / re-importable; logicle on the Gating-ML 2.0 scale, T at 1)</about>
+      <export_timestamp>2026-01-01T00:00:00</export_timestamp>
+    </cytobank>
+    <gatelab_edge_rule>half-open</gatelab_edge_rule>
+    <gatelab_rectangles>
+      <definition>{"version":1,"rectangles":{"Gate_180000001_Qm91bmRlZF9yZWN0":{"bounds":"half-open","space":"display","transforms":{"x":{"kind":"logicle","T":262144,"W":0.5,"M":4.5,"A":0,"bounds":{"min":0.1,"max":0.9}},"y":{"kind":"logicle","T":262144,"W":0.5,"M":4.5,"A":0,"bounds":{"min":0.1,"max":0.9}}},"x":[0.05,0.6],"y":[0.5,1],"written":["0.05|0.59999999999994","0.5|0.9999999999999"]},"Gate_180000003_TGluX2JvdW5kZWQ.":{"bounds":"half-open","space":"raw","x":[1310.72,1.7976931348623157e+308],"y":[1310.72,1.7976931348623157e+308],"written":["1310.72|"]}}}</definition>
+    </gatelab_rectangles>
+    <gatelabr_scales>
+      <definition>{"version":4,"channels":{"FSC-A":{"cofactor":150},"SSC-A":{"cofactor":150},"FL1-A":{"w":0.902929},"FL2-A":{"w":0.895873},"FL3-A":{"w":0.881328}},"compensation":{"enabled":false,"reference":"dimensions","channels":[]}}</definition>
+    </gatelabr_scales>
+    <gatelab_format>{"version":3,"logicle":"gating-ml","hierarchy":"parent_id","time":"seconds","gain":"gating-ml"}</gatelab_format>
+  </data-type:custom_info>
+  <transforms:transformation transforms:id="Tr_Logicle_FL1_A_W0_5_bounded" transforms:boundMin="0.1" transforms:boundMax="0.9">
+    <transforms:logicle transforms:T="262144" transforms:W="0.5" transforms:M="4.5" transforms:A="0" />
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Gate_180000001_Qm91bmRlZF9yZWN0">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Bounded_rect</name>
+        <id>180000001</id>
+        <gate_id>1</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":0.03307669875842882,"max":0.9130883633201301,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":0.04320409684823496,"max":1.018760703983266,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.32499999999997004,0.74999999999995],"rectangle":{"x1":0.05,"y1":0.5,"x2":0.59999999999994,"y2":0.9999999999999}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.05" gating:max="0.59999999999994" gating:transformation-ref="Tr_Logicle_FL1_A_W0_5_bounded">
+      <data-type:fcs-dimension data-type:name="FL1-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="0.5" gating:max="0.9999999999999" gating:transformation-ref="Tr_Logicle_FL1_A_W0_5_bounded">
+      <data-type:fcs-dimension data-type:name="FL2-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:PolygonGate gating:id="Gate_180000002_Qm91bmRlZF9wb2x5">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Bounded_poly</name>
+        <id>180000002</id>
+        <gate_id>2</gate_id>
+        <type>PolygonGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":5,"argument":"4.5","min":0.045405824314613104,"max":0.912846615760205,"bins":256,"size":256},"y":{"flag":5,"argument":"4.5","min":0.0451619476661546,"max":0.9164776680816983,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[0.575,0.5375000000000001],"polygon":{"vertices":[[0.3,0.2],[0.85,0.4],[0.8,0.85],[0.35,0.7]]}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Logicle_FL1_A_W0_5_bounded">
+      <data-type:fcs-dimension data-type:name="FL1-A" />
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Tr_Logicle_FL1_A_W0_5_bounded">
+      <data-type:fcs-dimension data-type:name="FL3-A" />
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.3" />
+      <gating:coordinate data-type:value="0.2" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.85" />
+      <gating:coordinate data-type:value="0.4" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.8" />
+      <gating:coordinate data-type:value="0.85" />
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.35" />
+      <gating:coordinate data-type:value="0.7" />
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:RectangleGate gating:id="Gate_180000003_TGluX2JvdW5kZWQ.">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Lin_bounded</name>
+        <id>180000003</id>
+        <gate_id>3</gate_id>
+        <type>RectangleGate</type>
+        <version>-1</version>
+        <compensation_id>-2</compensation_id>
+        <fcs_file_id />
+        <tailored>false</tailored>
+        <tailored_per_population>false</tailored_per_population>
+        <tailored_per_population_gateset_id />
+        <fcs_file_filename />
+        <gating_group_id>-1</gating_group_id>
+        <gating_group_name>Default group</gating_group_name>
+        <file_sync_mode>0</file_sync_mode>
+        <pop_sync_mode>0</pop_sync_mode>
+        <definition>{"scale":{"x":{"flag":1,"argument":"1","min":-5604.184375999999,"max":67166.55137599997,"bins":256,"size":256},"y":{"flag":1,"argument":"1","min":-5604.184375999999,"max":67166.55137599997,"bins":256,"size":256}},"positive":false,"negative":false,"locked":false,"label":[34238.63568799999,34238.63568799999],"rectangle":{"x1":1310.72,"y1":1310.72,"x2":1.7976931348623157e+308,"y2":1.7976931348623157e+308}}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="1310.72">
+      <data-type:fcs-dimension data-type:name="FL3-A" />
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="GateSet_36000000">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Bounded_rect</name>
+        <id>36000000</id>
+        <gate_set_id>1</gate_set_id>
+        <version>-1</version>
+        <definition>{"gates":[1],"negGates":[],"booleanExpression":"gate_1"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000001_Qm91bmRlZF9yZWN0" />
+      <gating:gateReference gating:ref="Gate_180000001_Qm91bmRlZF9yZWN0" />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000001">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Bounded_poly</name>
+        <id>36000001</id>
+        <gate_set_id>2</gate_set_id>
+        <version>-1</version>
+        <definition>{"gates":[2],"negGates":[],"booleanExpression":"gate_2"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000002_Qm91bmRlZF9wb2x5" />
+      <gating:gateReference gating:ref="Gate_180000002_Qm91bmRlZF9wb2x5" />
+    </gating:and>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="GateSet_36000002">
+    <data-type:custom_info>
+      <cytobank>
+        <name>Lin_bounded</name>
+        <id>36000002</id>
+        <gate_set_id>3</gate_set_id>
+        <version>-1</version>
+        <definition>{"gates":[3],"negGates":[],"booleanExpression":"gate_3"}</definition>
+      </cytobank>
+    </data-type:custom_info>
+    <gating:and>
+      <gating:gateReference gating:ref="Gate_180000003_TGluX2JvdW5kZWQ." />
+      <gating:gateReference gating:ref="Gate_180000003_TGluX2JvdW5kZWQ." />
+    </gating:and>
+  </gating:BooleanGate>
+</gating:Gating-ML>

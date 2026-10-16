@@ -1,3 +1,7 @@
+# These test the Gating-ML code of the retired Shiny interface (inst/app/R). launchGatingApp() does
+# not run it: the embedded GateLab core imports Gating-ML in the browser, and that importer is
+# tested in GateLab (tests/testthat/test-gatingml-claims.R ties the README to it).
+
 source_app_r_dir <- file.path(getwd(), "inst", "app", "R")
 app_r_dir <- if (dir.exists(source_app_r_dir)) {
   source_app_r_dir
@@ -170,5 +174,5 @@ problem <- tryCatch(
   },
   error = function(e) conditionMessage(e)
 )
-stopifnot(grepl("EllipsoidGate ellipse-1 is not supported", problem, fixed = TRUE))
+stopifnot(grepl("EllipsoidGate ellipse-1 is not an ellipse GateLabR can read", problem, fixed = TRUE))
 stopifnot(grepl("transformation linear-1", problem, fixed = TRUE))

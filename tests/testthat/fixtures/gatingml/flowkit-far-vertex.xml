@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Logicle">
+    <transforms:logicle transforms:T="262144" transforms:W="0.5" transforms:M="4.5" transforms:A="0"/>
+  </transforms:transformation>
+  <gating:PolygonGate gating:id="Far_logicle">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Logicle">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Logicle">
+      <data-type:fcs-dimension data-type:name="FL2-A"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.05"/>
+      <gating:coordinate data-type:value="0.1"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="1.6"/>
+      <gating:coordinate data-type:value="1.9"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.08"/>
+      <gating:coordinate data-type:value="0.5"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+</gating:Gating-ML>

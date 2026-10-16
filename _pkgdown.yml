@@ -27,6 +27,31 @@ reference:
     contents:
       - launchGatingApp
       - launchReactGateLab
+      - gatelabStop
+      - gatelabSync
+  - title: Reading a saved workspace back in R
+    desc: >
+      "Save to SCE" stores which events every population holds, so a gating result
+      can be read back without re-gating. These read that record, the transforms the
+      object was drawn on, and build a GatingSet from a gated SCE.
+    contents:
+      - gatelabHierarchies
+      - gatelabHierarchy
+      - gatelabPopulations
+      - gatelabLeafPopulation
+      - gatelabTransforms
+      - gatelabGatingSet
+  - title: Drawing a gating strategy in R
+    desc: >
+      The gating path to chosen populations as the Strategy tab draws it, made in R
+      from the saved workspace and the stored memberships. The panel, the contours
+      and the event thinning it is built from can be used on their own.
+    contents:
+      - gatelabStrategyPlot
+      - gatelabPanelGrob
+      - gatelabContour
+      - gatelabDisplayEvents
+      - print.gatelab_strategy
   - title: Retired
     desc: >
       Kept as an exported stub so existing scripts fail with an explanation

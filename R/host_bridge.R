@@ -9,6 +9,12 @@
 .gatelabr_coldata_contract_version <- 1L
 .gatelabr_rowdata_contract_version <- 1L
 
+# A workspace R writes for the host is written with 17 significant digits, which name every double
+# exactly. jsonlite's digits = NA writes 15, which moved a number GateLab reads from a file needing
+# 16 or 17, and wrote GateLab's unbounded edge, the largest double, as 1.79769313486232e+308: above
+# the largest double, so R and JavaScript both read it as infinite and GateLab refused the gate.
+.gatelabr_workspace_json_digits <- I(17)
+
 .gatelabr_canonical_workspace_record <- function(sce) {
   canonical <- S4Vectors::metadata(sce)$gatelab_workspace
   if (is.null(canonical)) return(NULL)
@@ -40,7 +46,7 @@
       dataframe = "rows",
       matrix = "rowmajor",
       POSIXt = "ISO8601",
-      digits = NA
+      digits = .gatelabr_workspace_json_digits
     )
   }
   list(workspace_json = as.character(workspace_json), revision = 0L)
@@ -89,7 +95,7 @@
         dataframe = "rows",
         matrix = "rowmajor",
         POSIXt = "ISO8601",
-        digits = NA
+        digits = .gatelabr_workspace_json_digits
       )
   }
 
@@ -103,7 +109,9 @@
 }
 
 .gatelabr_first_rowdata_field <- function(sce, candidates) {
-  rd <- as.data.frame(SummarizedExperiment::rowData(sce))
+  # optional = TRUE keeps each column's name as it is. By default the conversion makes names
+  # syntactic, so "$pnn" and "$pns" became "X.pnn" and "X.pns" and were never found.
+  rd <- as.data.frame(SummarizedExperiment::rowData(sce), optional = TRUE)
   if (ncol(rd) == 0L) return(NULL)
   lowered <- tolower(colnames(rd))
   for (candidate in candidates) {
@@ -114,6 +122,7 @@
 }
 
 .gatelabr_channel_descriptors <- function(sce) {
+  transforms <- .gatelabr_rowdata_transforms(sce)
   labels <- rownames(sce)
   if (is.null(labels)) labels <- rep("", nrow(sce))
   labels <- as.character(labels)
@@ -149,8 +158,45 @@
         nzchar(trimws(display_labels[[index]]))) {
       channel$displayLabel <- trimws(display_labels[[index]])
     }
+    transform <- transforms[[index]]
+    if (!is.null(transform)) channel$transform <- transform
     channel
   })
+}
+
+.gatelabr_transform_column <- "gatelab_transform"
+
+# The display transform each channel was drawn on, as the app last saved it, by channel: the
+# spec kept as JSON in rowData(sce)$gatelab_transform, what gh_get_transformations() gives a
+# GatingSet. A list the length of the rows, NULL where a row states none.
+.gatelabr_rowdata_transforms <- function(sce) {
+  rd <- SummarizedExperiment::rowData(sce)
+  column <- if (.gatelabr_transform_column %in% colnames(rd)) as.character(rd[[.gatelabr_transform_column]]) else NULL
+  lapply(seq_len(nrow(sce)), function(index) {
+    text <- if (is.null(column) || index > length(column)) NA_character_ else column[[index]]
+    if (is.na(text) || !nzchar(text)) return(NULL)
+    spec <- tryCatch(jsonlite::fromJSON(text, simplifyVector = TRUE), error = function(...) NULL)
+    if (!is.list(spec) || !is.character(spec$kind)) NULL else spec
+  })
+}
+
+# Keep the transforms a save states on the object, one JSON spec per row, by channel id.
+.gatelabr_write_rowdata_transforms <- function(sce, transforms) {
+  if (!is.list(transforms) || length(transforms) == 0L) return(sce)
+  ids <- vapply(.gatelabr_channel_descriptors(sce), `[[`, character(1), "id")
+  rd <- SummarizedExperiment::rowData(sce)
+  current <- if (.gatelabr_transform_column %in% colnames(rd)) as.character(rd[[.gatelabr_transform_column]]) else rep(NA_character_, nrow(sce))
+  next_column <- current
+  for (id in names(transforms)) {
+    position <- match(id, ids)
+    spec <- transforms[[id]]
+    if (is.na(position) || !is.list(spec) || !is.character(spec$kind)) next
+    next_column[[position]] <- as.character(jsonlite::toJSON(spec, auto_unbox = TRUE, digits = NA))
+  }
+  if (identical(next_column, current)) return(sce)
+  rd[[.gatelabr_transform_column]] <- next_column
+  SummarizedExperiment::rowData(sce) <- rd
+  sce
 }
 
 .gatelabr_rowdata_revision <- function(sce) {
@@ -172,8 +218,10 @@
   transformed <- any(tokens %in% c(
     "expr", "exprs", "expression", "transformed", "asinh", "logicle", "display"
   )) || grepl("exprs|expression", normalized)
+  # `normcounts`, `compcounts`: counts under a prefix are counts, linear values.
   counts <- any(tokens %in% c("count", "counts", "raw")) ||
-    normalized %in% c("original", "uncomp", "uncompensated")
+    normalized %in% c("original", "uncomp", "uncompensated") ||
+    grepl("counts?$", normalized)
   compensated <- !uncompensated && (
     any(tokens %in% c("comp", "compensated")) ||
       grepl("^comp(count|counts|expr|exprs|expression)$", normalized) ||
@@ -225,8 +273,59 @@
   "other"
 }
 
+# The cofactor of the arcsinh a display assay is in: metadata(sce)$cofactor, else
+# int_metadata(sce)$cofactor where CATALYST records it as one number, else 5, the convention,
+# said to be assumed (a per-channel cofactor is not one number, and 5 stands in for it too).
+.gatelabr_display_cofactor <- function(sce) {
+  for (candidate in list(
+    S4Vectors::metadata(sce)$cofactor,
+    tryCatch(SingleCellExperiment::int_metadata(sce)$cofactor, error = function(...) NULL)
+  )) {
+    cofactor <- suppressWarnings(as.numeric(candidate))
+    if (length(cofactor) == 1L && is.finite(cofactor) && cofactor > 0) {
+      return(list(cofactor = cofactor, stated = TRUE))
+    }
+  }
+  list(cofactor = 5, stated = FALSE)
+}
+
+# What the app will draw: every assay by name, its space and how it is drawn, and which one the
+# app opens on. Said at launch so that nothing about the assays is assumed in silence.
+.gatelabr_assay_note <- function(sce) {
+  descriptor <- .gatelabr_sce_dataset_descriptor(
+    sce,
+    sample_column = NULL,
+    sample_partition = .gatelabr_sample_partition(sce, NULL, include_metadata = FALSE)
+  )
+  lines <- vapply(descriptor$assays, function(assay) {
+    paste0(
+      "  ", assay$id, ": ", assay$coordinateSpace,
+      if (.gatelabr_assay_space_inferred(sce, assay$id)) " (inferred from its values)" else "",
+      ", role ", assay$role, ", ",
+      if (identical(assay$coordinateSpace, "display")) {
+        paste0(
+          "drawn as stored (arcsinh, cofactor ", assay$displayCofactor,
+          if (isTRUE(assay$displayCofactorStated)) "" else ", assumed: the object records none",
+          ")"
+        )
+      } else {
+        "drawn through the app's transform (arcsinh for mass cytometry)"
+      }
+    )
+  }, character(1))
+  paste0(
+    "GateLabR offers the SCE's assays in the app's header; it opens on `",
+    descriptor$defaultAssayId, "`.\n",
+    paste(lines, collapse = "\n"),
+    "\n  To change what an assay is: metadata(sce)$gatelabr_assay_roles <- list(<assay> = ",
+    "\"counts\" | \"transformed\" | \"compensated\" | \"other\"), and ",
+    "metadata(sce)$gatelabr_assay_coordinate_spaces <- list(<assay> = \"linear\" | \"display\")."
+  )
+}
+
 # Describe any pre-compensation GateLabR inferred, so the assumption is stated
-# rather than silent. NULL when nothing was inferred.
+# rather than silent. NULL when nothing was inferred. Not said at launch since the assays
+# are offered by name (.gatelabr_assay_note); kept for callers that ask what was inferred.
 .gatelabr_precompensation_note <- function(sce) {
   names <- tryCatch(SummarizedExperiment::assayNames(sce), error = function(...) NULL)
   if (is.null(names)) return(NULL)
@@ -276,6 +375,9 @@
 # CATALYST and related R pipelines leave the spillover matrix in metadata().
 # Finding it both proves compensation happened and supplies the matrix itself,
 # so a pre-compensated SCE need not be re-derived or hand-declared.
+# The matrix an SCE carries for the app: metadata(sce)$spillover, as flowCore::spillover()
+# returns one (sources as row names, receivers as column names), is the documented name; the
+# three others are read for objects that used them.
 .gatelabr_sce_spillover_matrix <- function(sce) {
   md <- S4Vectors::metadata(sce)
   for (key in c("spillover", "spillover_matrix", "spilloverMatrix", "sm")) {
@@ -305,11 +407,7 @@
 .gatelabr_transformed_assay_matches_counts <- function(sce, assay_name,
                                                        counts_name,
                                                        tolerance = 1e-6) {
-  md <- S4Vectors::metadata(sce)
-  cofactor <- suppressWarnings(as.numeric(md$cofactor))
-  if (length(cofactor) != 1L || !is.finite(cofactor) || cofactor <= 0) {
-    cofactor <- 5
-  }
+  cofactor <- .gatelabr_display_cofactor(sce)$cofactor
   n_events <- ncol(sce)
   if (n_events == 0L) return(NA)
   # Bounded, evenly spread sample: enough to separate "identical transform"
@@ -380,7 +478,32 @@
   traits <- .gatelabr_assay_name_traits(assay_name)
   if (traits$transformed) return("display")
   role <- .gatelabr_assay_role(assay_name, sce)
-  if (role %in% c("counts", "compensated")) "linear" else "display"
+  if (role %in% c("counts", "compensated")) return("linear")
+  # A name that says nothing: the values do. Every arcsinh of a count a cytometer records is
+  # below 20; larger values are linear. Said as inferred in the launch note.
+  .gatelabr_assay_space_from_values(sce, assay_name)
+}
+
+.gatelabr_assay_space_from_values <- function(sce, assay_name) {
+  n_events <- ncol(sce)
+  if (n_events == 0L) return("linear")
+  index <- if (n_events > 2000L) unique(round(seq(1, n_events, length.out = 2000L))) else seq_len(n_events)
+  values <- tryCatch(
+    as.matrix(SummarizedExperiment::assay(sce, assay_name)[, index, drop = FALSE]),
+    error = function(...) NULL
+  )
+  if (is.null(values) || !is.numeric(values)) return("linear")
+  finite <- values[is.finite(values)]
+  if (length(finite) == 0L) return("linear")
+  if (max(finite) <= 20) "display" else "linear"
+}
+
+# Whether an assay's space came from its values rather than its name or an override.
+.gatelabr_assay_space_inferred <- function(sce, assay_name) {
+  overrides <- S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces
+  if (is.list(overrides) && !is.null(overrides[[assay_name]])) return(FALSE)
+  traits <- .gatelabr_assay_name_traits(assay_name)
+  !traits$transformed && !.gatelabr_assay_role(assay_name, sce) %in% c("counts", "compensated")
 }
 
 .gatelabr_assay_revision <- function(sce, assay_name) {
@@ -408,7 +531,10 @@
   cd <- SummarizedExperiment::colData(sce)
   candidates <- c("sample_id", "sample", "file_name", "filename", "fcs_file")
   include_metadata <- isTRUE(include_metadata)
-  metadata_cd <- if (include_metadata) as.data.frame(cd) else NULL
+  # optional = TRUE keeps every name as colData has it. The default runs make.names(), which
+  # turned a population column such as "CD4-CD8+ T cells" into "CD4.CD8..T.cells" and so sent
+  # the browser a metadata field no colData column has.
+  metadata_cd <- if (include_metadata) as.data.frame(cd, optional = TRUE) else NULL
 
   if (!is.null(sample_column)) {
     if (length(sample_column) != 1L || !sample_column %in% colnames(cd)) {
@@ -437,7 +563,8 @@
     rows <- event_indices[[level_index]]
     metadata <- list()
     if (include_metadata && ncol(metadata_cd) > 0L) {
-      for (field in colnames(metadata_cd)) {
+      # An event id is unique to its event, never a sample attribute, even in a one-event sample.
+      for (field in setdiff(colnames(metadata_cd), .gatelabr_event_id_column)) {
         values <- metadata_cd[[field]][rows]
         comparable <- as.character(values)
         comparable <- comparable[!is.na(comparable)]
@@ -604,7 +731,12 @@
     function(assay_name) .gatelabr_assay_coordinate_space(sce, assay_name),
     character(1)
   )
-  default_assay <- if ("counts" %in% assay_names) {
+  # The app draws the default assay first. A transformed assay named `exprs` is what an analysis
+  # in R works on, corrected or not, so it is drawn as stored when the object has one; the app
+  # offers every assay by name, and a workspace saved from the object records which was drawn.
+  default_assay <- if ("exprs" %in% assay_names && assay_spaces[["exprs"]] == "display") {
+    "exprs"
+  } else if ("counts" %in% assay_names) {
     "counts"
   } else if (any(assay_spaces == "linear")) {
     assay_names[[which(assay_spaces == "linear")[[1]]]]
@@ -618,15 +750,24 @@
     sample_partition <- .gatelabr_sample_partition(sce, sample_column)
   }
 
+  display_cofactor <- .gatelabr_display_cofactor(sce)
   assays <- lapply(assay_names, function(assay_name) {
-    list(
+    space <- .gatelabr_assay_coordinate_space(sce, assay_name)
+    assay <- list(
       id = assay_name,
       label = assay_name,
       role = .gatelabr_assay_role(assay_name, sce),
-      coordinateSpace = .gatelabr_assay_coordinate_space(sce, assay_name),
+      coordinateSpace = space,
       revision = .gatelabr_assay_revision(sce, assay_name),
       encoding = "channel-major-float32-le"
     )
+    # The arcsinh a display assay is in, so the app draws it as stored through its own arcsinh
+    # at that cofactor, which puts a gate drawn on it and one drawn on counts in one space.
+    if (identical(space, "display")) {
+      assay$displayCofactor <- display_cofactor$cofactor
+      assay$displayCofactorStated <- display_cofactor$stated
+    }
+    assay
   })
 
   list(
@@ -943,6 +1084,20 @@
     } else {
       normalized$vertices <- .gatelabr_json_vertices(gate$vertices, gate_id)
     }
+    # The space a gate's numbers live in, and the transforms it was drawn under, are part of the
+    # gate. Without them the core, reloading this mirror when the canonical record is gone, reads
+    # the gate in the workspace default below (raw values for flow): an ellipse, any gate drawn in
+    # display space and every FlowJo biex or log gate would select other events.
+    if (!is.null(gate$space)) normalized$space <- as.character(gate$space)
+    if (!is.null(gate$transforms)) normalized$transforms <- gate$transforms
+    # A rectangle's edge rule, and what a gate imported from FlowJo carries of FlowJo's own
+    # definition, are part of the gate too: without `bounds` a half-open rectangle reloaded from
+    # the mirror counts an event on its max, and without the FlowJo fields a grid polygon loses
+    # the vertices FlowJo saved and a FlowJo rectangle the bounds FlowJo's rule opened. Each is
+    # carried as GateLab wrote it.
+    for (field in c("bounds", "flowjo_vertices", "flowjo_axes", "flowjo_bounds", "flowjo_polygon")) {
+      if (!is.null(gate[[field]])) normalized[[field]] <- gate[[field]]
+    }
     normalized
   })
   names(normalized_gates) <- gate_ids
@@ -1016,11 +1171,17 @@
       label = "global scale range"
     )
   }
-  gate_value_space <- if (identical(.gatelabr_sce_instrument(sce), "flow")) {
-    "raw"
-  } else {
-    "display"
-  }
+  # The space the core converts every gate from when it reloads this mirror, towards the space it
+  # gates the sample in. Where R cannot tell the instrument the core decides for itself (flow when
+  # nothing says otherwise), and a stamp of either space made it convert gates whose own `space`
+  # already said where they live: display rectangles and polygons then selected no events. With
+  # no stamp the core converts nothing, as it does for the canonical record in that case.
+  gate_value_space <- switch(
+    .gatelabr_sce_instrument(sce),
+    flow = "raw",
+    cytof = "display",
+    NULL
+  )
   workspace <- list(
     gates = normalized_gates,
     gate_order = .gatelabr_json_character_vector(gating$gate_order, "gate_order"),
@@ -1057,14 +1218,22 @@
   if (!is.list(parsed) || !identical(parsed$format, "gatelab-workspace")) {
     stop("GateLab supplied an unsupported workspace format.", call. = FALSE)
   }
-  version <- suppressWarnings(as.integer(parsed$version))
-  if (length(version) != 1L || is.na(version) ||
-      !version %in% c(2L, 3L)) {
+  # Version 4 is the version 2 layout of a workspace that needs a feature an older GateLab would
+  # misread (a grid gate, FlowJo's biex table, a half-open rectangle, a matrix a workspace
+  # supplied), listed in requiredFeatures. GateLab writes it for a hosted save as for a file, so
+  # that a GateLab predating the feature refuses the SCE's copy by its version. The JSON is stored
+  # as written, and the mirror below is built from the version 2 layout it shares.
+  # The version must be the number 2, 3 or 4. It was read with as.integer(), so 4.5 and the string
+  # "4" were stored as version 4, as 2.5 and 3.5 were as 2 and 3.
+  version <- parsed$version
+  if (!is.numeric(version) || length(version) != 1L || is.na(version) ||
+      !version %in% c(2, 3, 4)) {
     stop(
-      "GateLabR can store GateLab workspace versions 2 and 3 only.",
+      "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
       call. = FALSE
     )
   }
+  version <- as.integer(version)
 
   partition <- .gatelabr_sample_partition(
     sce,
@@ -1146,16 +1315,19 @@
     character(1),
     "id"
   )
-  invalid_gates <- .gatelabr_validate_workspace_channels(legacy, channel_ids)
-  if (length(invalid_gates)) {
-    stop(
-      "The workspace refers to channels that are absent from this SCE: ",
-      paste(invalid_gates, collapse = ", "),
-      ".",
-      call. = FALSE
-    )
-  }
-  list(parsed = parsed, legacy = legacy, channel_ids = channel_ids)
+  # A gate on a channel this SCE lacks selects no events, and is stored and named rather than
+  # refused: a refusal stopped every save of the session, and so every edit, from reaching the
+  # object (workspace_channels.R).
+  absent_gates <- .gatelabr_gates_on_absent_channels(
+    .gatelabr_workspace_gate_records(parsed),
+    channel_ids
+  )
+  list(
+    parsed = parsed,
+    legacy = legacy,
+    channel_ids = channel_ids,
+    absent_gates = absent_gates
+  )
 }
 
 # A revision conflict carries the numbers the browser needs to recover, not just a message.
@@ -1242,6 +1414,14 @@
     tz = "UTC"
   )
   md <- S4Vectors::metadata(sce)
+  # cbind() keeps every object's metadata, so a combined object can hold several records under
+  # each name, and `$` reaches only the first. The records written below are this object's; the
+  # others describe objects it no longer is. Left in place, a second memberships record kept a
+  # combined object refused even after the save the refusal asks for (memberships.R).
+  for (name in c("gatelab_workspace", "gating_workspace")) {
+    extra <- which(names(md) == name)[-1L]
+    if (length(extra) > 0L) md <- md[-extra]
+  }
   # Memberships arrive with an explicit save and stay with the record through every autosave
   # after it, which carries geometry only. Their own revision says which workspace they belong to.
   previous <- md$gatelab_workspace
@@ -1275,6 +1455,13 @@
   if (!is.null(stored_memberships)) {
     md$gatelab_workspace$memberships <- stored_memberships
   }
+  # A save that brought memberships gives every event the id they are read back through, so they
+  # follow the events through a reorder, a subset or a cbind (memberships.R).
+  if (!is.null(memberships)) {
+    event_ids <- stored_memberships$event_ids
+    SummarizedExperiment::colData(sce)[[event_ids$column]] <-
+      .gatelabr_event_ids(event_ids, ncol(sce))
+  }
   # An explicit save that brought no memberships came from a core that predates them. Recording
   # the revision lets the accessors say so, instead of asking the user to press a button that
   # will not help until the core is updated.
@@ -1286,6 +1473,8 @@
   # in progress. The canonical JSON above remains authoritative.
   md$gating_workspace <- validated$legacy
   S4Vectors::metadata(sce) <- md
+  # The axes the save was drawn on stay on the object's rows, as a GatingSet keeps its transforms.
+  sce <- .gatelabr_write_rowdata_transforms(sce, validated$parsed$hostedChannelTransforms)
   result <- list(
     revision = revision,
     clientRevision = client_revision,
@@ -1297,7 +1486,17 @@
       populations = nrow(stored_memberships$populations)
     )
   }
-  list(sce = sce, result = result)
+  absent <- validated$absent_gates
+  if (nrow(absent)) {
+    result$gatesOnAbsentChannels <- lapply(seq_len(nrow(absent)), function(index) {
+      list(
+        gateId = absent$gate_id[[index]],
+        name = absent$name[[index]],
+        channels = I(absent$channels[[index]])
+      )
+    })
+  }
+  list(sce = sce, result = result, absent_gates = absent)
 }
 
 .gatelabr_decode_membership_bits <- function(encoded, event_count) {
@@ -1355,6 +1554,7 @@
     )
   }
   membership <- logical(sum(lengths(partition$event_indices)))
+  unevaluated <- list(samples = character(0), events = integer(0), notes = character(0))
   for (sample_index in seq_along(expected_sample_ids)) {
     sample_id <- expected_sample_ids[[sample_index]]
     mask <- sample_masks[[match(sample_id, sample_ids)]]
@@ -1368,13 +1568,62 @@
         call. = FALSE
       )
     }
+    label <- partition$samples[[sample_index]]$label
+    note <- .gatelabr_not_evaluated_note(mask, population_name, label)
+    if (!is.null(note)) {
+      membership[partition$event_indices[[sample_index]]] <- NA
+      unevaluated$samples <- c(unevaluated$samples, label)
+      unevaluated$events <- c(unevaluated$events, expected_events)
+      unevaluated$notes <- c(unevaluated$notes, note)
+      next
+    }
     membership[partition$event_indices[[sample_index]]] <-
       .gatelabr_decode_membership_bits(
         mask$membershipBitsBase64,
         expected_events
       )
   }
+  if (length(unevaluated$samples) > 0L) {
+    warning(
+      "Population '", population_name, "' was not evaluated for ",
+      length(unevaluated$samples),
+      if (length(unevaluated$samples) == 1L) " sample" else " samples",
+      ", so its events there are NA, not outside:\n",
+      paste0(
+        "  sample '", unevaluated$samples, "' (", unevaluated$events,
+        ifelse(unevaluated$events == 1L, " event", " events"), "): ", unevaluated$notes,
+        collapse = "\n"
+      ),
+      call. = FALSE
+    )
+    # The notes travel with the membership so a save can keep them for the readers to repeat.
+    attr(membership, "not_evaluated") <- unevaluated[c("samples", "notes")]
+  }
   membership
+}
+
+# A sample's note that a population was not evaluated for it, or NULL when it was. GateLab sends
+# a population that the tree a file is gated under has no counterpart for (a copy whose structure
+# was changed) with no bits and this note. Its events there are unknown, not outside, so they
+# become NA; FALSE would read in R as a finding that they are outside.
+.gatelabr_not_evaluated_note <- function(mask, population_name, sample_label) {
+  note <- mask$notEvaluated
+  if (is.null(note)) return(NULL)
+  if (!is.character(note) || length(note) != 1L || is.na(note) || !nzchar(trimws(note))) {
+    stop(
+      "Population '", population_name, "' has a malformed not-evaluated note for sample '",
+      sample_label, "'.",
+      call. = FALSE
+    )
+  }
+  if (!identical(mask$membershipBitsBase64, "")) {
+    stop(
+      "Population '", population_name, "' is marked not evaluated for sample '",
+      sample_label, "' but carries membership bits.",
+      call. = FALSE
+    )
+  }
+  note
 }
 
 .gatelabr_write_host_coldata <- function(
@@ -1459,6 +1708,7 @@
 
   cd <- SummarizedExperiment::colData(sce)
   for (entry in prepared) {
+    # An event of a sample the population was not evaluated for stays NA, under neither label.
     cd[[entry$column_name]] <- factor(
       entry$membership,
       levels = c(TRUE, FALSE),
@@ -1472,7 +1722,7 @@
       list(
         columnName = entry$column_name,
         populationId = entry$population_id,
-        memberCount = sum(entry$membership)
+        memberCount = sum(entry$membership, na.rm = TRUE)
       )
     }))
   )
@@ -1746,6 +1996,10 @@
       !identical(payload$datasetId, dataset_id)) {
     stop("The host request targets a different SCE dataset.", call. = FALSE)
   }
+  # A GatingSet is written in place, on its own parts (gatingset_host.R).
+  if (.gatelabr_is_gatingset(sce)) {
+    return(.gatelabr_handle_gatingset_request(sce, request, dataset_id = dataset_id, session = session))
+  }
 
   if (identical(request$operation, "write-workspace")) {
     return(.gatelabr_store_host_workspace(
@@ -1890,6 +2144,12 @@
       !is.function(session$registerDataObj) ||
       !is.function(session$sendCustomMessage)) {
     stop("session must provide registerDataObj() and sendCustomMessage().", call. = FALSE)
+  }
+  # A GatingSet is served from its own parts (gatingset_host.R).
+  if (.gatelabr_is_gatingset(sce)) {
+    return(.gatelabr_register_gatingset_manifest(
+      session, sce, dataset_id = dataset_id, label = label, message_type = message_type
+    ))
   }
   partition <- .gatelabr_sample_partition(sce, sample_column)
   descriptor <- .gatelabr_sce_dataset_descriptor(

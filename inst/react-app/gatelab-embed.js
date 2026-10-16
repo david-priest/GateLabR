@@ -1,20 +1,21 @@
-import { G as s, w as t, x as A, y as T, A as o, B as O, E as _, H as E, I as S, J as r, K as C, L as H, M as R, N as d, O as G, P as L, Q as N } from "./embed-y1J25p5o.js";
+import { aZ as s, a_ as t, a$ as T, b0 as o, b1 as A, b2 as b, b3 as _, b4 as O, b5 as r, b6 as S, b7 as C, b8 as E, b9 as d, ba as H, bb as R, bc as G, bd as L, be as c } from "./embed-BNZTyHG9.js";
 export {
   s as GATELAB_DATASET_CONTRACT_VERSION,
   t as GATELAB_HOST_COLDATA_CONTRACT_VERSION,
-  A as GATELAB_HOST_CONTRACT_VERSION,
-  T as GATELAB_HOST_ROWDATA_CONTRACT_VERSION,
-  o as GATELAB_HOST_WORKSPACE_CONTRACT_VERSION,
-  O as GateLabHostProvider,
+  T as GATELAB_HOST_CONTRACT_VERSION,
+  o as GATELAB_HOST_ROWDATA_CONTRACT_VERSION,
+  A as GATELAB_HOST_WORKSPACE_CONTRACT_VERSION,
+  b as GateLabHostProvider,
   _ as convertHostedGateSpace,
-  E as createBrowserHost,
-  S as createShinySceHost,
-  r as decodeChannelMajorFloat32,
+  O as createBrowserHost,
+  r as createShinySceHost,
+  S as decodeChannelMajorFloat32,
   C as decodeEventIndexUint32,
-  H as loadHostedDataset,
-  R as mountGateLab,
-  d as packMembershipBits,
+  E as importGatingML,
+  d as loadHostedDataset,
+  H as mountGateLab,
+  R as packMembershipBits,
   G as readHostedWorkspace,
   L as useGateLabHost,
-  N as useOptionalGateLabHost
+  c as useOptionalGateLabHost
 };

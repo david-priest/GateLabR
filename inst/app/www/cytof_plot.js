@@ -619,6 +619,7 @@
         // Without this the KDE stays frozen at the old view while gates move. (Ported from GateLab.)
         var parts = [n, pd.x_label, pd.y_label, pd.kde_bandwidth || 0,
                      pd.contour_threshold || 5,
+                     pd.contour_levels || 18,
                      (pd.x_range || []).join(','), (pd.y_range || []).join(',')];
         for (var i = 0; i < n; i += step) {
             parts.push(x[i], y[i]);
@@ -1242,7 +1243,7 @@
             var outerDensity = Math.max(peakDensity * (threshold / 100), peakDensity * 0.005);
 
             // Step 3: 18 log-spaced thresholds from outerDensity to peakDensity
-            var nLevels = 18;
+            var nLevels = Math.max(2, Math.min(30, Math.round(Number(_plotData.contour_levels) || 18)));
             var logThresholds = d3.range(nLevels).map(function(i) {
                 return Math.exp(Math.log(outerDensity) + (Math.log(peakDensity) - Math.log(outerDensity)) * i / (nLevels - 1));
             });
@@ -1292,7 +1293,7 @@
         // Outlier dots (small solid black, outside the outermost contour)
         _ctx.fillStyle = '#111111';
         _ctx.globalAlpha = (_plotData.point_alpha || 0.6);
-        var dotR = 0.9 / _zt.k;
+        var dotR = _pointRadius() / _zt.k;
         cc.outlierPts.forEach(function (pt) {
             _ctx.beginPath();
             _ctx.arc(pt[0], pt[1], dotR, 0, 6.2832);

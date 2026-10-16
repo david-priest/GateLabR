@@ -16,7 +16,8 @@ gatelabPopulations(
   sce,
   populations = NULL,
   hierarchy = NULL,
-  allow_stale = FALSE
+  allow_stale = FALSE,
+  by = c("name", "path")
 )
 
 gatelabLeafPopulation(
@@ -38,6 +39,10 @@ the memberships were saved.}
 \item{populations}{Population names (or ids) to return; \code{NULL} means every population of
 the hierarchy, root included.}
 
+\item{by}{How the columns of \code{gatelabPopulations()} are named: by population name,
+disambiguated by id where names repeat, or by the population's path from the root (the
+node path on a GatingSet), which is unique by construction.}
+
 \item{ungated}{Label for events that fall in no population below the root.}
 }
 \value{
@@ -47,15 +52,20 @@ the hierarchy, root included.}
   \code{gatelabHierarchy}: a data frame with one row per population of one hierarchy, parents
   before children: \code{population_id}, \code{population}, \code{parent}, \code{depth},
   \code{path} (names from the root joined by \code{" > "}), \code{gates} (the gate names the
-  population is defined by, \code{not} marking an excluded gate), and \code{event_count}.
+  population is defined by, \code{not} marking an excluded gate), and \code{event_count}, the
+  number of this object's events the population holds; events it was not evaluated for are
+  not counted.
 
   \code{gatelabPopulations}: a logical matrix with one row per SCE column (event) and one
   column per population, named by population; a name shared by two populations of the
-  hierarchy is suffixed with the population id.
+  hierarchy is suffixed with the population id. An event is \code{NA} in a population that was
+  not evaluated for its sample.
 
   \code{gatelabLeafPopulation}: a factor with one level per population of the hierarchy in tree
   order plus \code{ungated}, giving each event its deepest population. Where two populations of
-  equal depth both hold an event, the one earlier in the tree wins.
+  equal depth both hold an event, the one earlier in the tree wins. An event is \code{NA} where
+  a population not evaluated for it could hold it (no ancestor is known not to) and would
+  outrank the population found.
 }
 \description{
 An explicit \dQuote{Save to SCE} in GateLabR stores, beside the workspace, which events every
@@ -64,9 +74,24 @@ population holds, for every hierarchy. These functions read that back without re
 \details{
 Memberships are tied to the workspace revision they were computed at. If gates or populations
 changed since (an autosave moved the revision on), reading them is refused unless
-\code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them. They are also
-refused on an object with a different number of columns, since a subset SCE keeps the metadata
-but not the event order the masks assume.
+\code{allow_stale = TRUE}; press \dQuote{Save to SCE} again to refresh them.
+
+Memberships follow the events, not their positions. The save writes each event's id to
+\code{colData(sce)$gatelab_event_id}, which travels with the event, so a reordered or subset
+SCE, or one that repeats saved events, reads every event's own membership. An event that was
+not in the saved object, for example one added with \code{cbind()}, has no stored membership,
+and reading is refused rather than guessed; so is reading after the id column was removed, or
+memberships saved by an earlier version of GateLabR, which kept them by position only.
+\code{cbind()} needs the column on both objects: give the object that lacks it the column as
+\code{NA} (\code{other$gatelab_event_id <- NA_real_}) rather than dropping it from the saved
+one, and the saved events read again once the combined object is subset back to them.
+
+A population can be \emph{not evaluated} for a sample. GateLab reads each sample's memberships
+under the tree that sample is gated under, and when that tree has no counterpart for a
+population (a copy whose structure was changed), it sends no membership for the sample's
+events, with a note naming the file, the population and the file's tree. Those events are
+\code{NA} in that population, never \code{FALSE}, and every read that returns such an
+\code{NA} warns with the note.
 }
 \examples{
 \dontrun{

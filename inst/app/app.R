@@ -1513,7 +1513,8 @@ server <- function(input, output, session) {
     session$sendCustomMessage(type = "runjs", message = code)
   }
 
-  import_gatingml_via_subprocess <- function(file_path, session_channels, pnn_to_channel = NULL) {
+  import_gatingml_via_subprocess <- function(file_path, session_channels, pnn_to_channel = NULL,
+                                             instrument = NULL, cytof_cofactor = NULL) {
     in_rds <- tempfile("gml_in_", fileext = ".rds")
     out_rds <- tempfile("gml_out_", fileext = ".rds")
     script_path <- tempfile("gml_import_", fileext = ".R")
@@ -1523,6 +1524,8 @@ server <- function(input, output, session) {
       file_path = normalizePath(file_path, winslash = "/", mustWork = TRUE),
       session_channels = as.character(session_channels),
       pnn_to_channel = pnn_to_channel %||% list(),
+      instrument = instrument,
+      cytof_cofactor = cytof_cofactor,
       app_dir = app_dir
     )
     saveRDS(payload, in_rds)
@@ -1539,7 +1542,9 @@ server <- function(input, output, session) {
       "res <- import_gatingml_from_cytobank(",
       "  file_path = x$file_path,",
       "  session_channels = x$session_channels,",
-      "  pnn_to_channel = x$pnn_to_channel",
+      "  pnn_to_channel = x$pnn_to_channel,",
+      "  instrument = x$instrument,",
+      "  cytof_cofactor = x$cytof_cofactor",
       ")",
       "saveRDS(res, outp)"
     ), con = script_path)
@@ -9692,11 +9697,16 @@ server <- function(input, output, session) {
       native_pnn_map <- S4Vectors::metadata(rv$sce)$pnn_to_channel
       has_native_pnn_map <- is.list(native_pnn_map) && length(native_pnn_map) > 0
       pnn_map <- build_gatingml_channel_map(rv$sce, rv$channels)
+      gml_instrument <- if (is_flow_session(rv$sce)) "flow" else "cytof"
+      gml_cofactor <- suppressWarnings(as.numeric(S4Vectors::metadata(rv$sce)$cofactor %||% 5))
+      if (length(gml_cofactor) != 1L || !is.finite(gml_cofactor) || gml_cofactor <= 0) gml_cofactor <- 5
       parsed <- tryCatch(
         import_gatingml_from_cytobank(
           file_path = f$datapath,
           session_channels = rv$channels,
-          pnn_to_channel = pnn_map
+          pnn_to_channel = pnn_map,
+          instrument = gml_instrument,
+          cytof_cofactor = gml_cofactor
         ),
         error = function(e) {
           msg <- conditionMessage(e)
@@ -9715,7 +9725,9 @@ server <- function(input, output, session) {
           import_gatingml_via_subprocess(
             file_path = f$datapath,
             session_channels = rv$channels,
-            pnn_to_channel = pnn_map
+            pnn_to_channel = pnn_map,
+            instrument = gml_instrument,
+            cytof_cofactor = gml_cofactor
           )
         }
       )
@@ -9725,7 +9737,8 @@ server <- function(input, output, session) {
         compensation = parsed$compensation,
         dimension_refs = parsed$compensation_refs %||% character(0),
         is_flow = is_flow_session(rv$sce),
-        spillover_matrix = rv$spillover_matrix
+        spillover_matrix = rv$spillover_matrix,
+        spectrum_matrix = parsed$spectrum_matrix
       )
 
       if (length(parsed$gates) == 0) {
@@ -9768,6 +9781,12 @@ server <- function(input, output, session) {
             "This strategy was gated without compensation; the current data are already uncompensated."
           } else {
             "This strategy was gated without compensation, so importing will disable the current compensation setting."
+          }
+        } else if (identical(comp_res$source, "matrix")) {
+          comp_note <- if (already_set) {
+            "The spillover matrix this file defines exactly matches the loaded FCS; compensation is already enabled."
+          } else {
+            "The spillover matrix this file defines exactly matches the loaded FCS, so importing will enable compensation."
           }
         } else if (target_on) {
           comp_note <- paste(

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Refuse a commit that adds an identifier from an unpublished experiment. See
+# tools/check-identifiers.mjs. Bypass with `git commit --no-verify` when a match is genuinely fine.
+exec node "$(git rev-parse --show-toplevel)/tools/check-identifiers.mjs" --staged

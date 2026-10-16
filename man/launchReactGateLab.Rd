@@ -9,17 +9,37 @@ launchReactGateLab(
   sample_column = NULL,
   port = NULL,
   launch.browser = TRUE,
-  sce_name = NULL
+  sce_name = NULL,
+  agent = NULL,
+  blocking = NULL
 )
 }
 \arguments{
-\item{sce}{A \code{SingleCellExperiment}. If \code{NULL}, the first SCE in
-the global environment is used.}
+\item{sce}{A \code{SingleCellExperiment}, or a flowWorkspace \code{GatingSet},
+which is served from the object itself: its samples with the \code{pData()}
+columns as metadata, each sample's values read from its cytoframe as the
+app asks for them and put back to linear through the channel's inverse
+transform, and the hierarchy it holds opened as the app's gates, each in
+the transformed space the object evaluates it in. The app's axes take the
+object's transforms (a logicle as the object's own, an arcsinh at its
+cofactor). The workspace is kept as the keyword \code{GATELAB_WORKSPACE} on
+every sample's cytoframe, which \code{save_gs()} keeps, and "Save to
+GatingSet" writes every population of the tree back to the hierarchy in
+place: as a flowWorkspace gate where the space allows (a rectangle under
+any transforms; a polygon or ellipse when the app's space is the object's)
+and as the exact per-sample membership otherwise. If \code{NULL}, the first
+SCE in the global environment is used, else the first GatingSet.}
 
 \item{sample_column}{Optional \code{colData} column defining samples. When
 omitted, common sample columns such as \code{sample_id} are detected.}
 
-\item{port}{Port for Shiny (default: auto-select).}
+\item{port}{Port for Shiny. By default the app is served on one port from
+session to session (\code{getOption("gatelabr.port", 4283)}), because the
+browser keeps what the app remembers on its own account (the language, the
+gate edge mode, snapping) per address, and a port chosen afresh in each R
+session loses it. When that port is in use, for instance by a second
+GateLabR session, Shiny chooses one and a message says so.
+\code{options(gatelabr.port = FALSE)} always leaves the choice to Shiny.}
 
 \item{launch.browser}{Whether to open a browser window (default: \code{TRUE}).}
 
@@ -28,9 +48,32 @@ populations and \code{colData} are written back to. Defaults to the symbol
 the caller passed as \code{sce}. Delegating wrappers must forward the user's
 symbol explicitly, because \code{substitute()} would otherwise resolve to
 the wrapper's own parameter name.}
+
+\item{agent}{Open the tab connected to an agent's relay: \code{TRUE} reads the
+address the relay recorded in \code{~/.gatelab/agent-relay.json}, or give the
+\code{ws://} address itself. The agent then reads the gating as you see it
+and proposes gates, which appear in the tab with a badge; saving stays yours.
+\code{NULL} (the default) opens the tab as usual; the Agent menu in the
+header can connect it later.}
+
+\item{blocking}{Whether the call returns only when the app stops. \code{NULL}
+(the default) returns at once when the installed Shiny can run an app in the
+background (\code{shiny::startApp()}, Shiny 1.14 and later) and otherwise
+blocks as before, saying so. \code{FALSE} insists on returning at once and
+is an error with an older Shiny; \code{TRUE} blocks.}
 }
 \value{
-Invisibly \code{NULL}; runs the Shiny app (blocking).
+Invisibly the running app's handle when the call returns at once (its
+  \code{$stop()} stops the app, as does \code{\link{gatelabStop}}), otherwise
+  invisibly \code{NULL} once the app has stopped. The app is serviced while R
+  is idle at the prompt, so a long computation pauses it until the prompt
+  returns. While it runs, the console may change the object it was launched
+  on: the app then refuses to save over that change until
+  \code{\link{gatelabSync}} hands it the console's object. When the app
+  stops with no population memberships stored in the object, or with
+  memberships older than the workspace, a warning says so: the readers
+  (\code{\link{gatelabPopulations}}, \code{\link{gatelabHierarchy}}) need an
+  explicit "Save to SCE", which autosaves do not replace.
 }
 \description{
 Starts the shared GateLab TypeScript/React application with a thin Shiny

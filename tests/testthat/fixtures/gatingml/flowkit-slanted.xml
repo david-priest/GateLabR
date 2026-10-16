@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Logicle">
+    <transforms:logicle transforms:T="262144" transforms:W="0.5" transforms:M="4.5" transforms:A="0"/>
+  </transforms:transformation>
+  <transforms:transformation transforms:id="Asinh_A1">
+    <transforms:fasinh transforms:T="262144" transforms:M="4.5" transforms:A="1.0"/>
+  </transforms:transformation>
+  <gating:PolygonGate gating:id="Slant_logicle">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Logicle">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Logicle">
+      <data-type:fcs-dimension data-type:name="FL2-A"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="-0.16537882175099333"/>
+      <gating:coordinate data-type:value="0.19205475735369576"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.4918385271341961"/>
+      <gating:coordinate data-type:value="-0.18424837741737662"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.8461374774851476"/>
+      <gating:coordinate data-type:value="0.6079067563622337"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.26488405292004474"/>
+      <gating:coordinate data-type:value="0.8436773629896014"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+  <gating:PolygonGate gating:id="Slant_asinh">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A1">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+    </gating:dimension>
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Asinh_A1">
+      <data-type:fcs-dimension data-type:name="SSC-A"/>
+    </gating:dimension>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.6943005163757837"/>
+      <gating:coordinate data-type:value="0.8636203637004787"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.9063196790725253"/>
+      <gating:coordinate data-type:value="0.6505789659833245"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.9724311027345085"/>
+      <gating:coordinate data-type:value="0.9095085107364734"/>
+    </gating:vertex>
+    <gating:vertex>
+      <gating:coordinate data-type:value="0.8822466614002866"/>
+      <gating:coordinate data-type:value="0.9594442205389363"/>
+    </gating:vertex>
+  </gating:PolygonGate>
+</gating:Gating-ML>

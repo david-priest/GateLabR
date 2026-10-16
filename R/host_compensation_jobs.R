@@ -144,10 +144,18 @@
   if (!identical(manager$active, job) || isTRUE(job$cancelled)) {
     return(invisible(NULL))
   }
-  committed <- tryCatch(
-    .gatelabr_commit_host_compensation(sce_state(), job$prepared),
-    error = identity
-  )
+  # The commit writes the global object, so it is refused like any other write when the
+  # console replaced the object since the app last wrote it (live.R). A manager built without a
+  # live record writes as before.
+  refused <- if (is.null(manager$live)) NULL else .gatelabr_check_write_back(manager$live, sce_name)
+  committed <- if (is.null(refused)) {
+    tryCatch(
+      .gatelabr_commit_host_compensation(sce_state(), job$prepared),
+      error = identity
+    )
+  } else {
+    simpleError(refused)
+  }
   if (inherits(committed, "error")) {
     manager$active <- NULL
     .gatelabr_send_host_response(
@@ -159,7 +167,11 @@
     return(invisible(NULL))
   }
   sce_state(committed$sce)
-  assign(sce_name, committed$sce, envir = .GlobalEnv)
+  if (is.null(manager$live)) {
+    assign(sce_name, committed$sce, envir = .GlobalEnv)
+  } else {
+    .gatelabr_write_back(manager$live, sce_name, committed$sce)
+  }
   if (.gatelabr_host_session_open(job$session)) {
     committed$result$targets <-
       .gatelabr_register_host_compensation_targets(

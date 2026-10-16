@@ -174,6 +174,7 @@
             } else if (!hasOverlay && displayMode === 'contour') {
                 _drawContour(ctx, x, y, xScale, yScale, M, W, H, {
                     contour_threshold: cfg.contour_threshold,
+                    contour_levels: cfg.contour_levels,
                     point_alpha: cfg.point_alpha,
                     kde_bandwidth: cfg.kde_bandwidth,
                     line_color: cfg.pop_color || '#111111',
@@ -183,6 +184,7 @@
                 if (hasDual) {
                     _drawContour(ctx, xBack, yBack, xScale, yScale, M, W, H, {
                         contour_threshold: cfg.contour_threshold,
+                        contour_levels: cfg.contour_levels,
                         point_alpha: cfg.point_alpha,
                         kde_bandwidth: cfg.kde_bandwidth,
                         line_color: cfg.back_color || '#d95f02',
@@ -514,7 +516,10 @@
         // Scale contour level count with the panel's inner dimension so shrinking a panel (e.g. more
         // Strategy/Illustration columns) doesn't cram a fixed 18 lines into a tiny plot. Baseline
         // ~270px = the original 18 levels. (Ported from GateLab.)
-        var nLevels = Math.max(6, Math.min(18, Math.round(18 * Math.min(W, H) / 270)));
+        var requestedLevels = Number((cfg || {}).contour_levels);
+        var nLevels = isFinite(requestedLevels) && requestedLevels > 0
+            ? Math.max(2, Math.min(30, Math.round(requestedLevels)))
+            : Math.max(6, Math.min(18, Math.round(18 * Math.min(W, H) / 270)));
         var logThresholds = d3.range(nLevels).map(function (i) {
             return Math.exp(Math.log(outerDensity) + (Math.log(peakDensity) - Math.log(outerDensity)) * i / (nLevels - 1));
         });

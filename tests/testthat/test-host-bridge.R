@@ -83,7 +83,8 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
   expect_identical(descriptor$id, "test-sce")
   expect_identical(descriptor$instrument, "cytof")
   expect_identical(descriptor$eventCount, 3L)
-  expect_identical(descriptor$defaultAssayId, "counts")
+  # exprs is what an analysis in R works on, so the app opens on it, drawn as stored.
+  expect_identical(descriptor$defaultAssayId, "exprs")
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "id"), c("CD3", "CD19"))
   expect_identical(vapply(descriptor$channels, `[[`, character(1), "pnn"), c("Nd142Di", "Eu151Di"))
   expect_identical(vapply(descriptor$assays, `[[`, character(1), "role"), c("counts", "transformed"))
@@ -91,6 +92,11 @@ test_that("SCE host descriptors preserve assays, channels, and sample metadata",
     vapply(descriptor$assays, `[[`, character(1), "coordinateSpace"),
     c("linear", "display")
   )
+  # A display assay says which arcsinh it is in, and whether that was recorded or assumed; a
+  # linear one has nothing to say.
+  expect_null(descriptor$assays[[1]]$displayCofactor)
+  expect_identical(descriptor$assays[[2]]$displayCofactor, 5)
+  expect_false(descriptor$assays[[2]]$displayCofactorStated)
   expect_identical(vapply(descriptor$samples, `[[`, integer(1), "eventCount"), c(2L, 1L))
   expect_identical(descriptor$samples[[1]]$metadata$batch, "one")
   expect_identical(descriptor$samples[[1]]$assayByteLength, 16)
@@ -222,6 +228,29 @@ test_that("React host corrects stale auto modality but respects explicit choices
 
   S4Vectors::metadata(sce)$instrument_mode_choice <- "flow"
   expect_identical(GateLabR:::.gatelabr_sce_instrument(sce), "flow")
+})
+
+test_that("rowData columns named $pnn and $pns reach the channel descriptors", {
+  # FCS keyword names are a common choice of rowData column. as.data.frame() made them syntactic,
+  # "X.pnn" and "X.pns", so neither was found: the channels went to the app without their $PnN and
+  # $PnS, and instrument detection lost the $PnN evidence.
+  sce <- make_host_instrument_sce(c("Y89Di", "Nd142Di", "Eu151Di"))
+  rd <- SummarizedExperiment::rowData(sce)
+  rd$gatelabr_pnn <- NULL
+  rd[["$pnn"]] <- c("Y89Di", "Nd142Di", "Eu151Di")
+  rd[["$pns"]] <- c("CD45", "CD3", "CD19")
+  SummarizedExperiment::rowData(sce) <- rd
+  expect_identical(colnames(SummarizedExperiment::rowData(sce)), c("$pnn", "$pns"))
+
+  expect_identical(
+    GateLabR:::.gatelabr_first_rowdata_field(sce, "$pnn"),
+    c("Y89Di", "Nd142Di", "Eu151Di")
+  )
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce)
+  expect_identical(vapply(descriptor$channels, `[[`, character(1), "pnn"), c("Y89Di", "Nd142Di", "Eu151Di"))
+  expect_identical(vapply(descriptor$channels, `[[`, character(1), "pns"), c("CD45", "CD3", "CD19"))
+  # The row names ("Marker 1" to "Marker 3") say nothing of the instrument; the $PnN do.
+  expect_identical(descriptor$instrument, "cytof")
 })
 
 test_that("React host recognizes conventional flow channel identities", {
@@ -666,6 +695,114 @@ test_that("packed browser population masks write back in original SCE event orde
   )
 })
 
+test_that("a population not evaluated for a sample writes NA for its events, not the outside label", {
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 2L,
+    reason = "explicit",
+    workspace_json = canonical_host_workspace_json()
+  )
+  column <- list(
+    populationId = "child",
+    populationName = "CD3+",
+    columnName = "CD3_positive",
+    inLabel = "in",
+    outLabel = "out",
+    sampleMasks = list(
+      list(
+        sampleId = "sample-0",
+        eventCount = 2L,
+        membershipBitsBase64 = base64enc::base64encode(as.raw(1L))
+      ),
+      list(
+        sampleId = "sample-1",
+        eventCount = 1L,
+        membershipBitsBase64 = "",
+        notEvaluated = paste(
+          "'CD3+' of 'Main' was not evaluated for Donor B:",
+          "the tree it is gated under, 'Main copy', has no such population."
+        )
+      )
+    )
+  )
+  expect_warning(
+    written <- GateLabR:::.gatelabr_write_host_coldata(
+      stored$sce,
+      dataset_id = "test-sce",
+      workspace_revision = 1L,
+      columns = list(column)
+    ),
+    "Population 'CD3\\+' was not evaluated for 1 sample.*sample 'Donor B' \\(1 event\\).*has no such population"
+  )
+  written_column <- SummarizedExperiment::colData(written$sce)$CD3_positive
+  expect_identical(as.character(written_column), c("in", "out", NA))
+  expect_identical(levels(written_column), c("in", "out"))
+  expect_identical(written$result$columns[[1]]$memberCount, 1L)
+})
+
+test_that("sample metadata keeps colData names exactly as GateLab writes them", {
+  stored <- GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 2L,
+    reason = "explicit",
+    workspace_json = canonical_host_workspace_json()
+  )
+  # Population names become colData names verbatim. Both of these are one sample's value
+  # throughout, so both are sample metadata; make.names() would turn them into
+  # CD4.CD8..T.cells and CD4.CD8..T.cells.1.
+  population_column <- function(name, first, second) {
+    list(
+      populationId = name,
+      populationName = name,
+      columnName = name,
+      inLabel = "in",
+      outLabel = "out",
+      sampleMasks = list(
+        list(
+          sampleId = "sample-0",
+          eventCount = 2L,
+          membershipBitsBase64 = base64enc::base64encode(as.raw(first))
+        ),
+        list(
+          sampleId = "sample-1",
+          eventCount = 1L,
+          membershipBitsBase64 = base64enc::base64encode(as.raw(second))
+        )
+      )
+    )
+  }
+  written <- GateLabR:::.gatelabr_write_host_coldata(
+    stored$sce,
+    dataset_id = "test-sce",
+    workspace_revision = 1L,
+    columns = list(
+      population_column("CD4-CD8+ T cells", 3L, 0L),
+      population_column("CD4+CD8- T cells", 0L, 1L)
+    )
+  )
+
+  partition <- GateLabR:::.gatelabr_sample_partition(written$sce)
+  metadata <- partition$samples[[1]]$metadata
+  expect_identical(
+    names(metadata),
+    c("sample_id", "batch", "CD4-CD8+ T cells", "CD4+CD8- T cells")
+  )
+  expect_identical(metadata[["CD4-CD8+ T cells"]], "in")
+  expect_identical(metadata[["CD4+CD8- T cells"]], "out")
+  expect_identical(partition$samples[[2]]$metadata[["CD4+CD8- T cells"]], "in")
+
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(
+    written$sce,
+    dataset_id = "test-sce",
+    sample_partition = partition
+  )
+  expect_true(all(names(metadata) %in% descriptor$colDataColumns))
+})
+
 test_that("categorical sample and event annotations write atomically in SCE event order", {
   sce <- make_host_bridge_sce()
   column <- list(
@@ -801,6 +938,226 @@ test_that("the mirrored ellipse carries a boundary anything reading vertices can
   expect_equal(quadratic, rep(1, 64L), tolerance = 1e-9)
 })
 
+test_that("the legacy mirror keeps each gate's space and transforms", {
+  # An ellipse is always stored in display space, as is any gate drawn in display space and every
+  # FlowJo biex or log gate. The mirror dropped `space` and `transforms` and declared the whole
+  # workspace raw for a flow object, so a host reloading the mirror (no canonical record, e.g. the
+  # mirror copied onto a rebuilt SCE) read display-space coordinates as raw values.
+  sce <- make_host_bridge_sce()
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  S4Vectors::metadata(sce)$instrument_type_source <- "user"
+  workspace_json <- sub(
+    '"label_offset":null}}',
+    paste0(
+      '"label_offset":null,"space":"display","transforms":{',
+      '"CD3":{"kind":"logicle","T":262144,"W":0.5,"M":4.5,"A":0},',
+      '"CD19":{"kind":"asinh","cofactor":150}}}}'
+    ),
+    ellipse_host_workspace_json(),
+    fixed = TRUE
+  )
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = workspace_json
+  )
+  mirror <- S4Vectors::metadata(written$sce)$gating_workspace
+  expect_identical(mirror$gate_value_space, "raw")
+  expect_identical(mirror$gates[["gate-1"]]$space, "display")
+  expect_equal(
+    mirror$gates[["gate-1"]]$transforms,
+    list(
+      CD3 = list(kind = "logicle", T = 262144, W = 0.5, M = 4.5, A = 0),
+      CD19 = list(kind = "asinh", cofactor = 150)
+    )
+  )
+
+  # The host reads the mirror only when the canonical record is gone; the gate must arrive with
+  # its space, which the core's legacy reader honours per gate.
+  bare <- written$sce
+  S4Vectors::metadata(bare)$gatelab_workspace <- NULL
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(bare, dataset_id = "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelabr-legacy")
+  sent <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)$gates[["gate-1"]]
+  expect_identical(sent$space, "display")
+  expect_identical(sent$transforms$CD3$kind, "logicle")
+  expect_equal(sent$transforms$CD19$cofactor, 150)
+
+  # A gate that never had a space keeps none, and the workspace default still applies to it.
+  plain <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = canonical_host_workspace_json()
+  )
+  expect_null(S4Vectors::metadata(plain$sce)$gating_workspace$gates[["gate-1"]]$space)
+})
+
+# A workspace of the version 2 layout that needs features an older GateLab would misread, as
+# GateLab writes it for a hosted save: version 4, the features listed, a half-open rectangle, a
+# polygon on FlowJo's grid with the vertices FlowJo saved, a FlowJo rectangle with the axes and
+# the bound its rule opened, a biex axis on FlowJo's table, a standard flog with bounds, and a
+# file compensated with a matrix a workspace supplied. The FlowJo rectangle's open edge is the
+# largest double, as GateLab writes an unbounded edge, and a FlowJo vertex and a biex parameter
+# need 16 and 17 significant digits, as numbers GateLab reads from a file can.
+version_four_host_workspace_json <- function(dataset_id = "test-sce") {
+  gates <- paste0(
+    '"gates":{',
+    '"gate-1":{"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle",',
+    '"x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,2],[3,4],[1,4]],',
+    '"bounds":"half-open","color":"#e41a1c","label_offset":null},',
+    '"gate-2":{"gate_id":"gate-2","name":"Grid","gate_type":"polygon",',
+    '"x_channel":"CD3","y_channel":"CD19","vertices":[[10,20],[200,40],[180,150],[40,90]],',
+    '"space":"display","transforms":{',
+    '"CD3":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"linear","minRange":0,"maxRange":262144}},',
+    '"CD19":{"kind":"flowjoChannels","channels":256,"axis":{"kind":"biex","maxValue":262144,',
+    '"pos":4.41854,"neg":0,"widthBasis":-10,"channelRange":256}}},',
+    '"flowjo_vertices":[[30000.123456789013,-150],[200000,40],[180000,150000],[40000,90000]],',
+    '"flowjo_polygon":{"quadId":-1,"gateResolution":256},',
+    '"color":"#377eb8","label_offset":null},',
+    '"gate-3":{"gate_id":"gate-3","name":"FlowJo box","gate_type":"rectangle",',
+    '"x_channel":"CD3","y_channel":"CD19",',
+    '"vertices":[[-1.7976931348623157e+308,2],[5,2],[5,8],[-1.7976931348623157e+308,8]],',
+    '"space":"display","transforms":{',
+    '"CD3":{"kind":"biex","maxValue":262144,"pos":4.418541234567891,"neg":0,"widthBasis":-10,',
+    '"channelRange":256,"tableChannels":4096},',
+    '"CD19":{"kind":"flog","T":262144,"M":5,"standard":true,"bounds":{"min":0.1}}},',
+    '"flowjo_axes":{"CD3":{"kind":"wsplog","offset":3,"decades":5},',
+    '"CD19":{"kind":"linear","minRange":0,"maxRange":262144}},',
+    '"flowjo_bounds":{"CD3":[3,null],"CD19":[null,null]},',
+    '"color":"#4daf4a","label_offset":null}}'
+  )
+  json <- sub(
+    '"gates":{"gate-1":{"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle","x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,4]],"color":"#e41a1c","label_offset":null}}',
+    gates,
+    canonical_host_workspace_json(dataset_id),
+    fixed = TRUE
+  )
+  json <- sub('"gate_order":["gate-1"]', '"gate_order":["gate-1","gate-2","gate-3"]', json, fixed = TRUE)
+  json <- sub(
+    '"version":2,',
+    paste0(
+      '"version":4,"requiredFeatures":["flowjo-grid","flowjo-biex-table",',
+      '"external-spillover","half-open-rectangle"],'
+    ),
+    json,
+    fixed = TRUE
+  )
+  sub(
+    '"labels":{},"metadata":{}},',
+    paste0(
+      '"labels":{},"metadata":{},"externalSpillover":{"label":"Synthetic matrix",',
+      '"channels":["CD3","CD19"],"matrix":[[1,0.1],[0.02,1]]}},'
+    ),
+    json,
+    fixed = TRUE
+  )
+}
+
+test_that("a version 4 workspace is stored as GateLab wrote it, and its mirror keeps every gate field", {
+  # GateLab writes a hosted workspace as version 4, the version 2 layout with requiredFeatures,
+  # whenever it holds a grid gate, FlowJo's biex table, a matrix a workspace supplied or a
+  # half-open rectangle. GateLabR stored versions 2 and 3 only, so every such save was refused.
+  sce <- make_host_bridge_sce()
+  workspace_json <- version_four_host_workspace_json()
+  sent <- jsonlite::fromJSON(workspace_json, simplifyVector = FALSE)
+  expect_identical(sent$version, 4L)
+
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = workspace_json
+  )
+  expect_identical(written$result$revision, 1L)
+  # The canonical record is the JSON as written, requiredFeatures and externalSpillover included.
+  canonical <- S4Vectors::metadata(written$sce)$gatelab_workspace
+  expect_identical(canonical$workspace_json, workspace_json)
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(written$sce, dataset_id = "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelab-workspace")
+  expect_identical(envelope$workspaceJson, workspace_json)
+
+  # The mirror keeps each gate's edge rule, transforms and FlowJo fields exactly.
+  mirror <- S4Vectors::metadata(written$sce)$gating_workspace
+  expect_silent(validate_workspace_graph(mirror))
+  fields <- c("space", "transforms", "bounds", "flowjo_vertices", "flowjo_axes", "flowjo_bounds",
+              "flowjo_polygon")
+  for (gate_id in c("gate-1", "gate-2", "gate-3")) {
+    for (field in fields) {
+      expect_identical(mirror$gates[[gate_id]][[field]], sent$gating$gates[[gate_id]][[field]],
+                       info = paste(gate_id, field))
+    }
+  }
+  expect_identical(mirror$gates[["gate-1"]]$bounds, "half-open")
+
+  # And a host reloading the mirror, with the canonical record gone, sends them back unchanged:
+  # the same doubles, the open edge still the largest double and not written as one that reads as
+  # infinite, and every digit of the 16- and 17-digit numbers.
+  bare <- written$sce
+  S4Vectors::metadata(bare)$gatelab_workspace <- NULL
+  legacy <- GateLabR:::.gatelabr_host_workspace_envelope(bare, dataset_id = "test-sce")
+  expect_identical(legacy$sourceFormat, "gatelabr-legacy")
+  reloaded <- jsonlite::fromJSON(legacy$workspaceJson, simplifyVector = FALSE)$gates
+  # JSON has one number type; jsonlite reads a whole number as an integer and R writes a whole
+  # double back without a decimal point, so compare the numbers as doubles.
+  as_doubles <- function(value) {
+    if (is.list(value)) return(lapply(value, as_doubles))
+    if (is.integer(value)) as.double(value) else value
+  }
+  for (gate_id in c("gate-1", "gate-2", "gate-3")) {
+    for (field in c("vertices", setdiff(fields, "space"))) {
+      expect_identical(as_doubles(reloaded[[gate_id]][[field]]),
+                       as_doubles(sent$gating$gates[[gate_id]][[field]]),
+                       info = paste(gate_id, field))
+    }
+  }
+  expect_identical(reloaded[["gate-3"]]$vertices[[1]][[1]], -.Machine$double.xmax)
+
+  # A version GateLabR does not know is still refused, and so is a version that only truncates to
+  # a known one: 4.5 and the string "4" were read as 4, as 2.5 and 3.5 were as 2 and 3.
+  for (unknown in c('"version":5,', '"version":4.5,', '"version":"4",', '"version":2.5,',
+                    '"version":3.5,', '"version":true,')) {
+    expect_error(
+      GateLabR:::.gatelabr_store_host_workspace(
+        sce,
+        dataset_id = "test-sce",
+        expected_revision = 0L,
+        client_revision = 1L,
+        reason = "explicit",
+        workspace_json = sub('"version":4,', unknown, workspace_json, fixed = TRUE)
+      ),
+      "GateLabR can store GateLab workspace versions 2, 3 and 4 only.",
+      fixed = TRUE,
+      info = unknown
+    )
+  }
+})
+
+test_that("a canonical workspace held as a list reaches the host with every digit", {
+  # A canonical workspace stored as a parsed list, not as JSON, is written for the host by R with
+  # the same 17 digits as the mirror, so its open edge and 17-digit numbers arrive unchanged.
+  sce <- make_host_bridge_sce()
+  sent <- jsonlite::fromJSON(version_four_host_workspace_json(), simplifyVector = FALSE)
+  S4Vectors::metadata(sce)$gatelab_workspace <- sent
+  envelope <- GateLabR:::.gatelabr_host_workspace_envelope(sce, dataset_id = "test-sce")
+  expect_identical(envelope$sourceFormat, "gatelab-workspace")
+  received <- jsonlite::fromJSON(envelope$workspaceJson, simplifyVector = FALSE)$gating$gates
+  for (gate_id in c("gate-2", "gate-3")) {
+    for (field in c("vertices", "transforms", "flowjo_vertices")) {
+      expect_identical(received[[gate_id]][[field]], sent$gating$gates[[gate_id]][[field]],
+                       info = paste(gate_id, field))
+    }
+  }
+  expect_identical(received[["gate-3"]]$vertices[[1]][[1]], -.Machine$double.xmax)
+})
+
 test_that("a revision conflict carries the data a browser needs to resync", {
   # The browser learns the stored revision only from a successful write, so a write whose reply
   # is lost leaves it behind for good. Reported live as "expected revision 14 but the SCE is at
@@ -870,4 +1227,419 @@ test_that("a conflict is unattributable when the stored write carried no writer 
     gatelabr_revision_conflict = function(cause) cause
   )
   expect_true(is.na(conflict$writer_id))
+})
+
+# A gate names its channels by the SCE's rownames. Reported from a live session on an object whose
+# rows were renamed after its workspace was saved: every save was refused with "The workspace
+# refers to channels that are absent from this SCE: <gate id>", so nothing drawn reached the object.
+stored_host_workspace_sce <- function(workspace_json = canonical_host_workspace_json()) {
+  GateLabR:::.gatelabr_store_host_workspace(
+    make_host_bridge_sce(),
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = workspace_json
+  )$sce
+}
+
+test_that("a gate on a channel the SCE lacks is stored and named, not refused", {
+  sce <- make_host_bridge_sce()
+  rownames(sce) <- c("CD3", "CD20")
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "autosave",
+    workspace_json = canonical_host_workspace_json()
+  )
+
+  expect_identical(written$result$revision, 1L)
+  expect_identical(
+    S4Vectors::metadata(written$sce)$gatelab_workspace$workspace_json,
+    canonical_host_workspace_json()
+  )
+  expect_identical(written$absent_gates$gate_id, "gate-1")
+  expect_identical(written$absent_gates$channels, list("CD19"))
+  expect_identical(
+    written$result$gatesOnAbsentChannels,
+    list(list(gateId = "gate-1", name = "CD3 positive", channels = I("CD19")))
+  )
+  expect_match(
+    GateLabR:::.gatelabr_absent_channel_gates_text(written$absent_gates),
+    "1 gate names channels this SCE does not have, and selects no events until they are restored or the gate is redrawn: 'CD3 positive' (CD19).",
+    fixed = TRUE
+  )
+
+  # The dispatcher passes the gates through to the server, which names them in the console.
+  handled <- GateLabR:::.gatelabr_handle_host_request(
+    sce,
+    list(
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = 0L,
+        clientRevision = 1L,
+        reason = "autosave",
+        workspaceJson = canonical_host_workspace_json()
+      )
+    ),
+    dataset_id = "test-sce"
+  )
+  expect_identical(handled$absent_gates$gate_id, "gate-1")
+})
+
+test_that("the console names gates on absent channels once, not at every autosave", {
+  sce_name <- ".gatelabr_absent_channel_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+  sce <- make_host_bridge_sce()
+  rownames(sce) <- c("CD3", "CD20")
+  sce_state <- shiny::reactiveVal(sce)
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce"
+  )
+  write <- function(request_id, expected_revision, client_revision) {
+    list(
+      requestId = request_id,
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = expected_revision,
+        clientRevision = client_revision,
+        reason = "autosave",
+        workspaceJson = canonical_host_workspace_json()
+      )
+    )
+  }
+  messages <- character(0)
+  withCallingHandlers(
+    suppressWarnings(shiny::testServer(server, {
+      session$flushReact()
+      session$setInputs(gatelabr_host_request = write("write-1", 0L, 1L))
+      session$flushReact()
+      session$setInputs(gatelabr_host_request = write("write-2", 1L, 2L))
+      session$flushReact()
+    })),
+    message = function(condition) {
+      messages <<- c(messages, conditionMessage(condition))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  expect_identical(
+    GateLabR:::.gatelabr_canonical_workspace_record(shiny::isolate(sce_state()))$revision,
+    2L
+  )
+  named <- grep("does not have", messages, value = TRUE, fixed = TRUE)
+  expect_length(named, 1L)
+  expect_match(named, "GateLabR saved the workspace to `.gatelabr_absent_channel_test_sce`.", fixed = TRUE)
+  expect_match(named, "'CD3 positive' (CD19)", fixed = TRUE)
+})
+
+test_that("a renamed channel list is recognised only when it differs by renames alone", {
+  rename_map <- GateLabR:::.gatelabr_channel_rename_map
+  expect_identical(rename_map(c("A", "B", "C"), c("A", "B2", "C")), c(B = "B2"))
+  expect_identical(
+    rename_map(c("A", "B", "C"), c("A2", "B", "C2")),
+    c(A = "A2", C = "C2")
+  )
+  # Another length, a row moved, a rename onto a name the saved list held, nothing recorded.
+  expect_length(rename_map(c("A", "B", "C"), c("A", "B")), 0L)
+  expect_length(rename_map(c("A", "B"), c("B", "A")), 0L)
+  expect_length(rename_map(c("A", "B", "C"), c("A", "C", "C2")), 0L)
+  expect_length(rename_map(NULL, c("A", "B")), 0L)
+  expect_length(rename_map(c("A", "B"), c("A", "B")), 0L)
+})
+
+test_that("a launch restates the gates on rows renamed since the save", {
+  saved <- stored_host_workspace_sce()
+  rownames(saved) <- c("CD3e", "CD19")
+
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(saved)
+
+  expect_identical(reconciled$renamed, c(CD3 = "CD3e"))
+  expect_identical(reconciled$restated, "CD3 positive")
+  expect_identical(nrow(reconciled$absent), 0L)
+  record <- S4Vectors::metadata(reconciled$sce)$gatelab_workspace
+  parsed <- jsonlite::fromJSON(record$workspace_json, simplifyVector = FALSE)
+  expected <- jsonlite::fromJSON(canonical_host_workspace_json(), simplifyVector = FALSE)
+  expected$gating$gates[["gate-1"]]$x_channel <- "CD3e"
+  expected$display$xChannel <- "CD3e"
+  names(expected$scales$globalScales)[[1]] <- "CD3e"
+  expect_equal(parsed, expected, tolerance = 0)
+  expect_identical(
+    S4Vectors::metadata(reconciled$sce)$gating_workspace$gates[["gate-1"]]$x_channel,
+    "CD3e"
+  )
+  # The revision stays as saved, so the app's first save does not conflict; the channel list is
+  # the current one, as the gates now are.
+  expect_identical(record$revision, 1L)
+  expect_identical(record$channel_ids, c("CD3e", "CD19"))
+
+  rewritten <- GateLabR:::.gatelabr_store_host_workspace(
+    reconciled$sce,
+    dataset_id = "test-sce",
+    expected_revision = 1L,
+    client_revision = 2L,
+    reason = "autosave",
+    workspace_json = record$workspace_json
+  )
+  expect_identical(nrow(rewritten$absent_gates), 0L)
+  expect_identical(
+    S4Vectors::metadata(rewritten$sce)$gatelab_workspace$channel_ids,
+    c("CD3e", "CD19")
+  )
+
+  report <- GateLabR:::.gatelabr_workspace_channel_report(reconciled, "sce")
+  expect_match(
+    report,
+    "GateLabR: 1 row was renamed after the GateLab workspace in `sce` was saved (CD3 -> CD3e), recognised from the channel list the save recorded. The gate 'CD3 positive' now names the renamed channels. The change reaches `sce` with the app's next save.",
+    fixed = TRUE
+  )
+})
+
+test_that("a launch restates a stored tree's gates as well as the active tree's", {
+  with_stored_tree <- sub(
+    '"active_population_id":"child","selected_gate_id":"gate-1"}',
+    paste0(
+      '"active_population_id":"child","selected_gate_id":"gate-1",',
+      '"stored_hierarchies":[{"id":"tree-2","name":"Copy",',
+      '"gates":{"gate-2":{"gate_id":"gate-2","name":"CD19 positive",',
+      '"gate_type":"rectangle","x_channel":"CD19","y_channel":"CD3",',
+      '"vertices":[[1,2],[3,4]],"color":"#377eb8","label_offset":null}},',
+      '"populations":{},"root_population_id":null,"active_population_id":null}]}'
+    ),
+    canonical_host_workspace_json(),
+    fixed = TRUE
+  )
+  expect_false(identical(with_stored_tree, canonical_host_workspace_json()))
+  saved <- stored_host_workspace_sce(with_stored_tree)
+  rownames(saved) <- c("CD3e", "CD19")
+
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(saved)
+
+  expect_setequal(reconciled$restated, c("CD3 positive", "CD19 positive"))
+  parsed <- jsonlite::fromJSON(
+    S4Vectors::metadata(reconciled$sce)$gatelab_workspace$workspace_json,
+    simplifyVector = FALSE
+  )
+  stored_gate <- parsed$gating$stored_hierarchies[[1]]$gates[["gate-2"]]
+  expect_identical(c(stored_gate$x_channel, stored_gate$y_channel), c("CD19", "CD3e"))
+  # An empty object stays an object.
+  expect_identical(parsed$gating$stored_hierarchies[[1]]$populations, structure(list(), names = character(0)))
+})
+
+test_that("a channel list that differs by more than renames leaves the workspace as saved", {
+  saved <- stored_host_workspace_sce()
+  moved <- saved[c(2L, 1L), ]
+  rownames(moved) <- c("CD19", "CD3e")
+
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(moved)
+
+  expect_length(reconciled$renamed, 0L)
+  expect_identical(S4Vectors::metadata(reconciled$sce), S4Vectors::metadata(moved))
+  expect_identical(reconciled$absent$gate_id, "gate-1")
+  expect_identical(reconciled$absent$channels, list("CD3"))
+  expect_identical(
+    GateLabR:::.gatelabr_workspace_channel_report(reconciled, "sce"),
+    paste0(
+      "GateLabR: 1 gate names channels this SCE does not have, and selects no events until ",
+      "they are restored or the gate is redrawn: 'CD3 positive' (CD3). Saving is not affected."
+    )
+  )
+})
+
+test_that("a launch over an SCE whose gates have their channels changes nothing", {
+  saved <- stored_host_workspace_sce()
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(saved)
+  expect_identical(reconciled$sce, saved)
+  expect_null(GateLabR:::.gatelabr_workspace_channel_report(reconciled, "sce"))
+
+  bare <- make_host_bridge_sce()
+  expect_identical(GateLabR:::.gatelabr_reconcile_workspace_channels(bare)$sce, bare)
+})
+
+test_that("a workspace held only as the legacy mirror is named, not restated", {
+  sce <- add_host_bridge_workspace(make_host_bridge_sce())
+  rownames(sce) <- c("CD3e", "CD19")
+  reconciled <- GateLabR:::.gatelabr_reconcile_workspace_channels(sce)
+  expect_identical(reconciled$sce, sce)
+  expect_identical(reconciled$absent$gate_id, "gate-1")
+  expect_identical(reconciled$absent$channels, list("CD3"))
+})
+
+test_that("the app opens on exprs when the object has one, else on the linear counts", {
+  sce <- make_host_bridge_sce()
+  only_counts <- sce
+  SummarizedExperiment::assays(only_counts) <- SummarizedExperiment::assays(only_counts)["counts"]
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(only_counts, dataset_id = "test-sce")$defaultAssayId,
+    "counts"
+  )
+  # An exprs declared linear is not drawn as stored, so it is not the default either.
+  S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(exprs = "linear")
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$defaultAssayId,
+    "counts"
+  )
+})
+
+test_that("the launch note names every assay, how it is drawn, and the one the app opens on", {
+  note <- GateLabR:::.gatelabr_assay_note(make_host_bridge_sce())
+  expect_match(note, "opens on `exprs`", fixed = TRUE)
+  expect_match(note, "counts: linear, role counts, drawn through the app's transform", fixed = TRUE)
+  expect_match(note, "exprs: display, role transformed, drawn as stored (arcsinh, cofactor 5, assumed: the object records none)", fixed = TRUE)
+  expect_match(note, "gatelabr_assay_roles", fixed = TRUE)
+})
+
+test_that("a display assay carries the cofactor the object records", {
+  sce <- make_host_bridge_sce()
+  S4Vectors::metadata(sce)$cofactor <- 10
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")
+  expect_identical(descriptor$assays[[2]]$displayCofactor, 10)
+  expect_true(descriptor$assays[[2]]$displayCofactorStated)
+  # The probe that tells a transformed exprs from a compensated one reads the same cofactor.
+  expect_identical(descriptor$assays[[2]]$role, "compensated")
+  SummarizedExperiment::assay(sce, "exprs") <- asinh(SummarizedExperiment::assay(sce, "counts") / 10)
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$role,
+    "transformed"
+  )
+  S4Vectors::metadata(sce)$cofactor <- NULL
+  SingleCellExperiment::int_metadata(sce)$cofactor <- 150
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$displayCofactor,
+    150
+  )
+  # A per-channel cofactor is not one number, and the convention stands in.
+  SingleCellExperiment::int_metadata(sce)$cofactor <- c(CD3 = 5, CD19 = 10)
+  expect_identical(
+    GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")$assays[[2]]$displayCofactor,
+    5
+  )
+})
+
+test_that("an assay named for its counts is linear, and an unnamed one is placed by its values", {
+  sce <- make_host_bridge_sce()
+  counts <- SummarizedExperiment::assay(sce, "counts")
+  SummarizedExperiment::assay(sce, "normcounts") <- counts * 1.1
+  SummarizedExperiment::assay(sce, "scores") <- asinh(counts / 5) - 0.5
+  SummarizedExperiment::assay(sce, "wide") <- counts * 100
+  descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce, dataset_id = "test-sce")
+  spaces <- vapply(descriptor$assays, `[[`, character(1), "coordinateSpace")
+  names(spaces) <- vapply(descriptor$assays, `[[`, character(1), "id")
+  expect_identical(spaces[["normcounts"]], "linear")
+  expect_identical(spaces[["scores"]], "display")
+  expect_identical(spaces[["wide"]], "linear")
+  note <- GateLabR:::.gatelabr_assay_note(sce)
+  expect_match(note, "normcounts: linear, role counts", fixed = TRUE)
+  expect_match(note, "scores: display (inferred from its values), role other, drawn as stored", fixed = TRUE)
+  expect_match(note, "wide: linear (inferred from its values), role other", fixed = TRUE)
+  # The default is still exprs; a declared space is not inferred.
+  expect_identical(descriptor$defaultAssayId, "exprs")
+  S4Vectors::metadata(sce)$gatelabr_assay_coordinate_spaces <- list(scores = "linear")
+  expect_no_match(GateLabR:::.gatelabr_assay_note(sce), "scores: linear (inferred", fixed = TRUE)
+})
+
+test_that("the host refuses to write over an object the console replaced, until it is handed over", {
+  sce_name <- ".gatelabr_write_guard_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+  live <- GateLabR:::.gatelabr_live
+  on.exit(rm(list = ls(live, all.names = TRUE), envir = live), add = TRUE)
+  sce <- make_host_bridge_sce()
+  assign(sce_name, sce, envir = .GlobalEnv)
+  sce_state <- shiny::reactiveVal(sce)
+  # The record as the launcher fills it: the object last written to the global name, and its
+  # address, which the guard compares against the binding before every write.
+  live$sce_name <- sce_name
+  live$set_sce <- function(object) sce_state(object)
+  live$get_sce <- function() shiny::isolate(sce_state())
+  live$written <- sce
+  live$address <- GateLabR:::.gatelabr_object_address(sce)
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce",
+    live = live
+  )
+  write <- function(request_id, expected_revision, client_revision) {
+    list(
+      requestId = request_id,
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = expected_revision,
+        clientRevision = client_revision,
+        reason = "autosave",
+        workspaceJson = canonical_host_workspace_json()
+      )
+    )
+  }
+  read <- list(
+    requestId = "read-1",
+    operation = "read-categorical-coldata",
+    payload = list(datasetId = "test-sce", contractVersion = 1L, columnName = "batch")
+  )
+  run <- function(request) {
+    messages <- character(0)
+    withCallingHandlers(
+      suppressWarnings(shiny::testServer(server, {
+        session$flushReact()
+        session$setInputs(gatelabr_host_request = request)
+        session$flushReact()
+      })),
+      message = function(condition) {
+        messages <<- c(messages, conditionMessage(condition))
+        invokeRestart("muffleMessage")
+      }
+    )
+    messages
+  }
+  revision <- function(object) {
+    GateLabR:::.gatelabr_canonical_workspace_record(object)$revision
+  }
+  global <- function() get(sce_name, envir = .GlobalEnv)
+
+  # The first save lands on the global object, as before.
+  run(write("write-1", 0L, 1L))
+  expect_identical(revision(global()), 1L)
+  expect_identical(live$address, GateLabR:::.gatelabr_object_address(global()))
+
+  # The console changes the object: a new colData column rebinds the name to a new object.
+  console <- global()
+  console$console_column <- c("a", "b", "c")
+  assign(sce_name, console, envir = .GlobalEnv)
+
+  # A read goes ahead and leaves the console's object where it is.
+  expect_length(run(read), 0L)
+  expect_identical(global(), console)
+
+  # A write is refused, said once at the console, and the app's own copy stays as it was: the
+  # browser's save failed rather than silently undoing the console's change.
+  messages <- run(write("write-2", 1L, 2L))
+  expect_match(messages, "gatelabSync(\".gatelabr_write_guard_test_sce\")", fixed = TRUE, all = FALSE)
+  expect_identical(global(), console)
+  expect_identical(revision(shiny::isolate(sce_state())), 1L)
+  expect_length(run(write("write-2b", 1L, 2L)), 0L)
+
+  # Handing the console's object over makes the next save land on it, with the column kept.
+  expect_message(GateLabR::gatelabSync(sce_name), "now works on")
+  expect_length(run(write("write-3", 1L, 3L)), 0L)
+  after <- global()
+  expect_identical(revision(after), 2L)
+  expect_true("console_column" %in% colnames(SummarizedExperiment::colData(after)))
+  expect_identical(shiny::isolate(sce_state()), after)
 })

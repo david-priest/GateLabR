@@ -128,3 +128,34 @@ test_that("programmatic FCS export uses the same raw gating space", {
   expect_equal(as.numeric(exported_mat), as.numeric(expected_mat),
                tolerance = 1e-6)
 })
+
+test_that("the R export declares a $PnR that covers its data", {
+  # .matrix_to_flowframe() passes range = 2^18, which read as the $PnR written to the file; it is
+  # not. flowCore::flowFrame() replaces it with ceiling(max) + 1, so a scatter value far above
+  # 2^18 is inside the declared range and a default flowCore read returns it unclipped.
+  skip_if_not_installed("flowCore")
+  mat <- cbind(FSC_A = c(12, 3.5e6, 4.1e5), CD3 = c(1, 2, 3))
+  path <- tempfile(fileext = ".fcs")
+  flowCore::write.FCS(.matrix_to_flowframe(mat, colnames(mat)), path)
+  written <- flowCore::keyword(
+    flowCore::read.FCS(path, transformation = FALSE, truncate_max_range = FALSE)
+  )
+  expect_gt(as.numeric(written[["$P1R"]]), 3.5e6)
+  expect_gt(as.numeric(written[["$P2R"]]), 3)
+  read_default <- suppressWarnings(flowCore::read.FCS(path))
+  expect_equal(max(flowCore::exprs(read_default)[, "FSC_A"]), 3.5e6)
+})
+
+test_that("metadata(sce)$spillover is the documented slot, read before the older names", {
+  spill <- matrix(c(1, 0.1, 0.05, 1), nrow = 2, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  older <- matrix(c(1, 0.3, 0.2, 1), nrow = 2, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  sce <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = matrix(1, nrow = 2, ncol = 3, dimnames = list(c("FL1-H", "FL2-H"), NULL))))
+  expect_null(GateLabR:::.gatelabr_sce_spillover_matrix(sce))
+  S4Vectors::metadata(sce)$spillover_matrix <- older
+  expect_identical(GateLabR:::.gatelabr_sce_spillover_matrix(sce), older)
+  S4Vectors::metadata(sce)$spillover <- spill
+  expect_identical(GateLabR:::.gatelabr_sce_spillover_matrix(sce), spill)
+  # A value under the documented name that is not a named numeric matrix is passed over, not an error.
+  S4Vectors::metadata(sce)$spillover <- "not a matrix"
+  expect_identical(GateLabR:::.gatelabr_sce_spillover_matrix(sce), older)
+})

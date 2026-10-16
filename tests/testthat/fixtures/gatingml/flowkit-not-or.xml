@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<gating:Gating-ML xmlns:gating="http://www.isac-net.org/std/Gating-ML/v2.0/gating" xmlns:data-type="http://www.isac-net.org/std/Gating-ML/v2.0/datatypes" xmlns:transforms="http://www.isac-net.org/std/Gating-ML/v2.0/transformations">
+  <transforms:transformation transforms:id="Logicle">
+    <transforms:logicle transforms:T="262144" transforms:W="0.5" transforms:M="4.5" transforms:A="0"/>
+  </transforms:transformation>
+  <gating:RectangleGate gating:id="Cells">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:min="18794.0">
+      <data-type:fcs-dimension data-type:name="FSC-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="FL1_pos" gating:parent_id="Cells">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Logicle" gating:min="0.3735191834889171">
+      <data-type:fcs-dimension data-type:name="FL1-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:RectangleGate gating:id="FL3_pos" gating:parent_id="Cells">
+    <gating:dimension gating:compensation-ref="uncompensated" gating:transformation-ref="Logicle" gating:min="0.362633066274742">
+      <data-type:fcs-dimension data-type:name="FL3-A"/>
+    </gating:dimension>
+  </gating:RectangleGate>
+  <gating:BooleanGate gating:id="FL1_neg" gating:parent_id="Cells">
+    <gating:not>
+      <gating:gateReference gating:ref="FL1_pos"/>
+    </gating:not>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="Either" gating:parent_id="Cells">
+    <gating:or>
+      <gating:gateReference gating:ref="FL1_pos"/>
+      <gating:gateReference gating:ref="FL3_pos"/>
+    </gating:or>
+  </gating:BooleanGate>
+  <gating:BooleanGate gating:id="FL1_not_FL3" gating:parent_id="Cells">
+    <gating:and>
+      <gating:gateReference gating:ref="FL1_pos"/>
+      <gating:gateReference gating:ref="FL3_pos" gating:use-as-complement="true"/>
+    </gating:and>
+  </gating:BooleanGate>
+</gating:Gating-ML>
