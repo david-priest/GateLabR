@@ -138,11 +138,14 @@ launchReactGateLab <- function(
     message(.gatelabr_gatingset_launch_note(gatingset))
   }
   absent_gates <- NULL
+  # What this launch has warned about, so that a warning the launch note and every page load's
+  # manifest would repeat is said once.
+  notices <- new.env(parent = emptyenv())
   if (is.null(gatingset)) {
     # Likewise for the assays: the user must know what the app draws, and from which assay,
     # before they gate on it.
     assay_note <- tryCatch(
-      .gatelabr_assay_note(sce),
+      .gatelabr_assay_note(sce, notices),
       error = function(cause) {
         # Never fail a launch over an advisory note, but never swallow it either: a silent NULL
         # is indistinguishable from "nothing to say".
@@ -223,7 +226,8 @@ launchReactGateLab <- function(
     dataset_id = dataset_id,
     sample_column = sample_column,
     absent_gates = absent_gates,
-    live = live
+    live = live,
+    notices = notices
   )
   # Everything that must happen when the app stops, whichever way it stops and whether or not
   # this call is still on the stack: the app registers it as its own stop callback. The
@@ -309,7 +313,8 @@ launchReactGateLab <- function(
     dataset_id,
     sample_column = NULL,
     absent_gates = NULL,
-    live = NULL) {
+    live = NULL,
+    notices = NULL) {
   force(sce_state)
   force(sce_name)
   force(dataset_id)
@@ -343,7 +348,8 @@ launchReactGateLab <- function(
         sce_state(),
         dataset_id = dataset_id,
         label = sce_name,
-        sample_column = sample_column
+        sample_column = sample_column,
+        notices = notices
       )
     }, once = TRUE, ignoreInit = TRUE)
     shiny::observeEvent(input$gatelabr_host_request, {

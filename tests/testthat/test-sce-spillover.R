@@ -136,6 +136,18 @@ test_that("unmatched or ambiguous matrix names are reported without guessing a m
   expect_null(result$compensationMatrix)
 })
 
+test_that("a matrix naming a channel the SCE lacks is refused whole, and the warning says so", {
+  # CATALYST's spillover matrices carry receiver columns for every mass the instrument reads,
+  # most of which a panel does not use.
+  sce <- spillover_sce("cytof")
+  SummarizedExperiment::rowData(sce)$pnn <- c("Nd142Di", "Nd145Di")
+  S4Vectors::metadata(sce)$spillover <- matrix(c(1, 0.02, 0.01, 0.03, 1, 0.02), nrow = 2, byrow = TRUE,
+    dimnames = list(c("Nd142Di", "Nd145Di"), c("Nd142Di", "Nd145Di", "Sm147Di")))
+  expect_warning(descriptor <- GateLabR:::.gatelabr_sce_dataset_descriptor(sce),
+                 "Sm147Di does not\\).*refused whole")
+  expect_null(descriptor$compensationMatrix)
+})
+
 test_that("a stored matrix does not supply an unknown instrument or nonfinite coefficients", {
   sce <- spillover_sce("cytof")
   spill <- diag(2)
