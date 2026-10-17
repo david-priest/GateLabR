@@ -1354,7 +1354,19 @@
   spill <- spill[, rownames(spill), drop = FALSE]
   chosen <- .gatelabr_gatingset_compensation_targets(gs, targets)
   tryCatch(
-    flowWorkspace::compensate(gs, spill),
+    {
+      # flowWorkspace::compensate() records the matrix on the hierarchy before it writes the
+      # values, so on a read-only object it fails with the matrix recorded and the values
+      # unchanged, and the object then reads as compensated (and survives save_gs() so). One
+      # value written back through a view of each sample meets the same read-only guard first.
+      for (sample in flowWorkspace::sampleNames(gs)) {
+        frame <- flowWorkspace::gs_cyto_data(gs)[[sample]]
+        if (nrow(frame) == 0L) next
+        probe <- frame[1, 1]
+        flowCore::exprs(probe) <- flowCore::exprs(probe)
+      }
+      flowWorkspace::compensate(gs, spill)
+    },
     error = function(cause) {
       message <- conditionMessage(cause)
       if (grepl("read-only", message, ignore.case = TRUE)) {

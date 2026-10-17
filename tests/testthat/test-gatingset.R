@@ -853,6 +853,9 @@ test_that("compensation from the app is refused with the reason where flowWorksp
   expect_error(GateLabR:::.gatelabr_handle_host_request(
     loaded, compensation_request("apply-compensation", gatingset_compensation_profile(), samples), dataset_id = "gatingset-gs"
   ), "read-only")
+  # The refusal leaves the object as it was: flowWorkspace::compensate() alone would have recorded
+  # the matrix on the hierarchy before failing on the values.
+  expect_false(GateLabR:::.gatelabr_gatingset_compensated(loaded))
 })
 
 # ── the manifest and the launcher ─────────────────────────────────────────────
