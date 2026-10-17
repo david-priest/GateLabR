@@ -150,7 +150,7 @@
   refused <- if (is.null(manager$live)) NULL else .gatelabr_check_write_back(manager$live, sce_name)
   committed <- if (is.null(refused)) {
     tryCatch(
-      .gatelabr_commit_host_compensation(sce_state(), job$prepared),
+      .gatelabr_commit_host_compensation(shiny::isolate(sce_state()), job$prepared),
       error = identity
     )
   } else {
@@ -362,12 +362,15 @@
   job$cancel_task <- NULL
   manager$active <- job
 
+  # The callbacks below run from R's event loop, outside any reactive context, so the app's
+  # state, a shiny::reactiveVal, is read with isolate(): read bare, it fails there with
+  # "Operation not allowed without an active reactive context".
   later::later(function() {
     if (!identical(manager$active, job) || isTRUE(job$cancelled)) return(NULL)
     payload <- request$payload
     prepared <- tryCatch(
       .gatelabr_prepare_host_compensation(
-        sce_state(),
+        shiny::isolate(sce_state()),
         dataset_id = dataset_id,
         profile_json = payload$profileJson,
         targets = payload$targets,
