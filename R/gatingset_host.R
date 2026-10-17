@@ -1327,6 +1327,14 @@
   list(samples = samples, active = active)
 }
 
+# A square matrix with the same channels on both axes, ones on the diagonal and zeros elsewhere.
+.gatelabr_gatingset_identity_matrix <- function(spill, tolerance = 1e-9) {
+  if (!is.matrix(spill) || nrow(spill) != ncol(spill) || !identical(rownames(spill), colnames(spill))) {
+    return(FALSE)
+  }
+  isTRUE(all(abs(spill - diag(nrow(spill))) <= tolerance))
+}
+
 # Apply a spillover matrix to the object in place, with flowWorkspace::compensate(), which is
 # what a GatingSet user does in R. After it the object's one assay is `compensated`; the
 # uncompensated values are gone from the object, as they are after compensate() at the prompt.
@@ -1352,6 +1360,20 @@
   }
   # Square, in source order: flowCore's spillover has one name set on both axes.
   spill <- spill[, rownames(spill), drop = FALSE]
+  # An identity changes no values, but compensate() records it, and the object then reads as
+  # compensated and refuses the matrix that follows: the Compensation tab's "Start from an empty
+  # matrix" applies one before the user edits it. The app sends coefficients as float64, so an
+  # identity arrives as exact zeros and ones; the tolerance only absorbs rounding.
+  if (.gatelabr_gatingset_identity_matrix(spill)) {
+    stop(
+      "The matrix is the identity, which changes no values, and a GatingSet is compensated once, ",
+      "in place: flowWorkspace::compensate() would record it, and the object would then read as ",
+      "compensated and refuse the matrix that follows (\"Start from an empty matrix\" applies an ",
+      "identity first). Send the full matrix in one Apply, or compensate in R before launching ",
+      "(flowWorkspace::compensate(gs, spillover)).",
+      call. = FALSE
+    )
+  }
   chosen <- .gatelabr_gatingset_compensation_targets(gs, targets)
   tryCatch(
     {
