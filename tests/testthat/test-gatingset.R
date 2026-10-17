@@ -858,6 +858,83 @@ test_that("compensation from the app is refused with the reason where flowWorksp
   expect_false(GateLabR:::.gatelabr_gatingset_compensated(loaded))
 })
 
+# The app's Apply as a live session carries it: the request through the React server's observer,
+# then anything it scheduled run from the event loop, outside any reactive context, as R runs
+# later::later() callbacks while it is idle. The response is what the page receives.
+live_apply <- function(gs, request, name = ".gatelabr_gatingset_live_apply_test") {
+  assign(name, gs, envir = .GlobalEnv)
+  on.exit(if (exists(name, envir = .GlobalEnv, inherits = FALSE)) rm(list = name, envir = .GlobalEnv), add = TRUE)
+  state <- shiny::reactiveVal(gs)
+  server <- GateLabR:::.gatelabr_react_server(sce_state = state, sce_name = name, dataset_id = "gatingset-gs")
+  sent <- list()
+  suppressWarnings(shiny::testServer(server, {
+    unlockBinding("sendCustomMessage", session)
+    session$sendCustomMessage <- function(type, message) {
+      sent[[length(sent) + 1L]] <<- list(type = type, message = message)
+    }
+    session$flushReact()
+    session$setInputs(gatelabr_host_request = request)
+    session$flushReact()
+  }))
+  deadline <- Sys.time() + 5
+  while (Sys.time() < deadline && !length(Filter(function(m) identical(m$type, "gatelabr-host-response"), sent))) {
+    later::run_now(0.05)
+  }
+  responses <- Filter(function(m) identical(m$type, "gatelabr-host-response") &&
+                        identical(m$message$requestId, request$requestId), sent)
+  list(responses = lapply(responses, `[[`, "message"), state = shiny::isolate(state()))
+}
+
+live_apply_request <- function(samples, profile_json = gatingset_compensation_profile()) {
+  request <- compensation_request("apply-compensation", profile_json, samples)
+  request$requestId <- "live-apply-1"
+  request$payload$workerCount <- 1L
+  request
+}
+
+test_that("the app's Apply on a GatingSet host compensates the object in place, as a live session sends it", {
+  gs <- flowWorkspace::GatingSet(gvhd())
+  samples <- flowWorkspace::sampleNames(gs)
+  spill <- matrix(c(1, 0.1, 0.05, 1), nrow = 2, byrow = TRUE, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  applied <- live_apply(gs, live_apply_request(samples[[1]]))
+  expect_length(applied$responses, 1L)
+  response <- applied$responses[[1]]
+  expect_true(isTRUE(response$ok), info = as.character(response$error))
+  expect_identical(response$result$application$execution, "computed")
+  expect_identical(response$result$application$outputAssay$id, "compensated")
+  expect_identical(as.character(response$result$application$targetSampleIds), samples)
+  expect_length(response$result$targets, 2L)
+  # The object itself, in place: flowWorkspace holds the matrix, the record is the keyword, and the
+  # one assay is now `compensated` at revision 1.
+  expect_identical(applied$state, gs)
+  expect_equal(unname(flowWorkspace::gh_get_compensations(gs[[1]])@spillover), unname(spill))
+  expect_equal(flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[2]]))[, "FL1-H"],
+               flowCore::exprs(flowCore::compensate(gvhd()[[2]], spill))[, "FL1-H"], tolerance = 1e-6)
+  expect_identical(GateLabR:::.gatelabr_gatingset_compensation_record(gs)$execution, "computed")
+  keyword <- flowWorkspace::keyword(flowWorkspace::gs_cyto_data(gs)[[2]])[["GATELAB_COMPENSATION"]]
+  expect_identical(jsonlite::fromJSON(jsonlite::fromJSON(keyword)$profile_json)$profileId, "gs-test-apply")
+  descriptor <- GateLabR:::.gatelabr_gatingset_dataset_descriptor(gs, dataset_id = "gatingset-gs")
+  expect_identical(descriptor$assays[[1]]$id, "compensated")
+  expect_identical(descriptor$assays[[1]]$revision, 1L)
+
+  # The refusals reach the page on the same route, and leave the object as it was.
+  again <- live_apply(gs, live_apply_request(samples))$responses
+  expect_false(isTRUE(again[[1]]$ok))
+  expect_match(again[[1]]$error, "compensated already")
+  transformed <- make_gatingset()
+  refused <- live_apply(transformed, live_apply_request(samples))$responses
+  expect_false(isTRUE(refused[[1]]$ok))
+  expect_match(refused[[1]]$error, "compensation precedes transformation")
+  expect_false(GateLabR:::.gatelabr_gatingset_compensated(transformed))
+  dir <- withr::local_tempdir()
+  flowWorkspace::save_gs(flowWorkspace::GatingSet(gvhd()), dir)
+  loaded <- flowWorkspace::load_gs(dir)
+  refused <- live_apply(loaded, live_apply_request(samples))$responses
+  expect_false(isTRUE(refused[[1]]$ok))
+  expect_match(refused[[1]]$error, "read-only")
+  expect_false(GateLabR:::.gatelabr_gatingset_compensated(loaded))
+})
+
 # ── the manifest and the launcher ─────────────────────────────────────────────
 
 test_that("the manifest registers one lazy resource per sample and the hierarchy envelope", {

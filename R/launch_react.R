@@ -372,8 +372,13 @@ launchReactGateLab <- function(
         )
         return(invisible(NULL))
       }
+      # The chunked job below compensates an SCE assay. A GatingSet is compensated in place by
+      # flowWorkspace::compensate(), in one call, so its Apply takes the request path further
+      # down to .gatelabr_gatingset_compensate() (gatingset_host.R), with the write-back guard
+      # and the response every other write has.
       if (is.list(request) &&
-          identical(request$operation, "apply-compensation")) {
+          identical(request$operation, "apply-compensation") &&
+          !.gatelabr_is_gatingset(sce_state())) {
         validation_error <- tryCatch(
           {
             if (!is.character(request_id) || length(request_id) != 1L ||
