@@ -935,6 +935,38 @@ test_that("the app's Apply on a GatingSet host compensates the object in place, 
   expect_false(GateLabR:::.gatelabr_gatingset_compensated(loaded))
 })
 
+test_that("an identity matrix is refused on a GatingSet host before anything is recorded, and a real matrix still applies", {
+  gs <- flowWorkspace::GatingSet(gvhd())
+  samples <- flowWorkspace::sampleNames(gs)
+  before <- flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[1]]))
+  # "Start from an empty matrix" applies the identity first; on a GatingSet that would be its one
+  # compensation, and the matrix the user then edits would be refused.
+  identity <- gatingset_compensation_profile(spill = diag(2))
+  refused <- live_apply(gs, live_apply_request(samples, profile_json = identity))$responses
+  expect_length(refused, 1L)
+  expect_false(isTRUE(refused[[1]]$ok))
+  expect_match(refused[[1]]$error, "identity")
+  expect_match(refused[[1]]$error, "full matrix in one Apply")
+  expect_error(GateLabR:::.gatelabr_handle_host_request(
+    gs, compensation_request("apply-compensation", identity, samples), dataset_id = "gatingset-gs"
+  ), "identity")
+  # Nothing reached the object: uncompensated, no record, values as they were.
+  expect_false(GateLabR:::.gatelabr_gatingset_compensated(gs))
+  expect_null(GateLabR:::.gatelabr_gatingset_compensation_record(gs))
+  for (sample in samples) {
+    expect_null(flowWorkspace::keyword(flowWorkspace::gs_cyto_data(gs)[[sample]])[["GATELAB_COMPENSATION"]])
+  }
+  expect_identical(flowCore::exprs(flowWorkspace::gh_pop_get_data(gs[[1]])), before)
+  # So the full matrix still applies.
+  spill <- matrix(c(1, 0.1, 0.05, 1), nrow = 2, byrow = TRUE, dimnames = list(c("FL1-H", "FL2-H"), c("FL1-H", "FL2-H")))
+  applied <- live_apply(gs, live_apply_request(samples))$responses
+  expect_true(isTRUE(applied[[1]]$ok), info = as.character(applied[[1]]$error))
+  expect_identical(applied[[1]]$result$application$execution, "computed")
+  expect_true(GateLabR:::.gatelabr_gatingset_compensated(gs))
+  expect_equal(unname(flowWorkspace::gh_get_compensations(gs[[1]])@spillover), unname(spill))
+  expect_false(is.null(flowWorkspace::keyword(flowWorkspace::gs_cyto_data(gs)[[1]])[["GATELAB_COMPENSATION"]]))
+})
+
 # ── the manifest and the launcher ─────────────────────────────────────────────
 
 test_that("the manifest registers one lazy resource per sample and the hierarchy envelope", {
