@@ -1,9 +1,11 @@
 # Build the pkgdown site and deploy it to the gh-pages branch.
 # Standard r-lib workflow. After the first successful run, enable GitHub Pages
 # (Settings -> Pages -> Build from branch -> gh-pages / root).
+#
+# Not on every push (2026-10-22): each build is about 5 hosted minutes of the account's
+# shared private-repository allowance, which ran out that day. Build on a published
+# release, or by hand (Actions > pkgdown.yaml > Run workflow).
 on:
-  push:
-    branches: [main, master]
   release:
     types: [published]
   workflow_dispatch:
