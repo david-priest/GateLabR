@@ -1,5 +1,5 @@
-import { aY as Va, aM as il } from "./embed-BNZTyHG9.js";
-import { _ as La } from "./jspdf.es.min-KaZ2ucd2.js";
+import { b6 as Va, aW as il } from "./embed-BEBIXb3n.js";
+import { _ as La } from "./jspdf.es.min-Dv77Xhdd.js";
 var fn = {}, cn = {}, cr, vn;
 function Q() {
   if (vn) return cr;
@@ -56,7 +56,7 @@ function se() {
   }, tt;
 }
 var it = {}, mn;
-function Wl() {
+function Yl() {
   if (mn) return it;
   mn = 1;
   var n = {}.propertyIsEnumerable, e = Object.getOwnPropertyDescriptor, r = e && !n.call({ 1: 2 }, 1);
@@ -334,10 +334,10 @@ function ne() {
     return r(o, l) || (o[l] = i && r(s, l) ? s[l] : u("Symbol." + l)), o[l];
   }, Nt;
 }
-var _t, Yn;
+var _t, Wn;
 function Kl() {
-  if (Yn) return _t;
-  Yn = 1;
+  if (Wn) return _t;
+  Wn = 1;
   var n = se(), e = ye(), r = ol(), t = nr(), i = Xl(), a = ne(), s = TypeError, o = a("toPrimitive");
   return _t = function(u, l) {
     if (!e(u) || r(u)) return u;
@@ -349,10 +349,10 @@ function Kl() {
     return l === void 0 && (l = "number"), i(u, l);
   }, _t;
 }
-var Mt, Wn;
+var Mt, Yn;
 function ll() {
-  if (Wn) return Mt;
-  Wn = 1;
+  if (Yn) return Mt;
+  Yn = 1;
   var n = Kl(), e = ol();
   return Mt = function(r) {
     var t = n(r, "string");
@@ -385,7 +385,7 @@ var Qn;
 function Dr() {
   if (Qn) return Zr;
   Qn = 1;
-  var n = we(), e = se(), r = Wl(), t = Ua(), i = dr(), a = ll(), s = Ae(), o = hl(), u = Object.getOwnPropertyDescriptor;
+  var n = we(), e = se(), r = Yl(), t = Ua(), i = dr(), a = ll(), s = Ae(), o = hl(), u = Object.getOwnPropertyDescriptor;
   return Zr.f = n ? u : function(h, c) {
     if (h = i(h), c = a(c), o) try {
       return u(h, c);
@@ -418,7 +418,7 @@ function he() {
   }, kt;
 }
 var es;
-function We() {
+function Ye() {
   if (es) return Vt;
   es = 1;
   var n = we(), e = hl(), r = fl(), t = he(), i = ll(), a = TypeError, s = Object.defineProperty, o = Object.getOwnPropertyDescriptor, u = "enumerable", l = "configurable", h = "writable";
@@ -445,7 +445,7 @@ var jt, rs;
 function yr() {
   if (rs) return jt;
   rs = 1;
-  var n = we(), e = We(), r = Ua();
+  var n = we(), e = Ye(), r = Ua();
   return jt = n ? function(t, i, a) {
     return e.f(t, i, r(1, a));
   } : function(t, i, a) {
@@ -465,7 +465,7 @@ function Vr() {
   }, Ft;
 }
 var Ut, is;
-function Ya() {
+function Wa() {
   if (is) return Ut;
   is = 1;
   var n = J(), e = re(), r = za(), t = n(Function.toString);
@@ -481,7 +481,7 @@ function Ql() {
   return Gt = e(r) && /native code/.test(String(r)), Gt;
 }
 var $t, ns;
-function Wa() {
+function Ya() {
   if (ns) return $t;
   ns = 1;
   var n = Ha(), e = ul(), r = n("keys");
@@ -497,7 +497,7 @@ var Ht, os;
 function Lr() {
   if (os) return Ht;
   os = 1;
-  var n = Ql(), e = Q(), r = ye(), t = yr(), i = Ae(), a = za(), s = Wa(), o = Xa(), u = "Object already initialized", l = e.TypeError, h = e.WeakMap, c, v, f, g = function(m) {
+  var n = Ql(), e = Q(), r = ye(), t = yr(), i = Ae(), a = za(), s = Ya(), o = Xa(), u = "Object already initialized", l = e.TypeError, h = e.WeakMap, c, v, f, g = function(m) {
     return f(m) ? v(m) : c(m, {});
   }, d = function(m) {
     return function(b) {
@@ -540,7 +540,7 @@ var us;
 function cl() {
   if (us) return Bt.exports;
   us = 1;
-  var n = J(), e = Z(), r = re(), t = Ae(), i = we(), a = Vr().CONFIGURABLE, s = Ya(), o = Lr(), u = o.enforce, l = o.get, h = String, c = Object.defineProperty, v = n("".slice), f = n("".replace), g = n([].join), d = i && !e(function() {
+  var n = J(), e = Z(), r = re(), t = Ae(), i = we(), a = Vr().CONFIGURABLE, s = Wa(), o = Lr(), u = o.enforce, l = o.get, h = String, c = Object.defineProperty, v = n("".slice), f = n("".replace), g = n([].join), d = i && !e(function() {
     return c(function() {
     }, "length", { value: 8 }).length !== 8;
   }), p = String(String).split("String"), y = Bt.exports = function(m, b, x) {
@@ -556,12 +556,12 @@ function cl() {
     return r(this) && l(this).source || s(this);
   }, "toString"), Bt.exports;
 }
-var Yt, ls;
+var Wt, ls;
 function tr() {
-  if (ls) return Yt;
+  if (ls) return Wt;
   ls = 1;
-  var n = re(), e = We(), r = cl(), t = $a();
-  return Yt = function(i, a, s, o) {
+  var n = re(), e = Ye(), r = cl(), t = $a();
+  return Wt = function(i, a, s, o) {
     o || (o = {});
     var u = o.enumerable, l = o.name !== void 0 ? o.name : a;
     if (n(s) && r(s, l, o), o.global)
@@ -579,9 +579,9 @@ function tr() {
       });
     }
     return i;
-  }, Yt;
+  }, Wt;
 }
-var Wt = {}, Xt, hs;
+var Yt = {}, Xt, hs;
 function Zl() {
   if (hs) return Xt;
   hs = 1;
@@ -682,12 +682,12 @@ function Qa() {
 }
 var ms;
 function eh() {
-  if (ms) return Wt;
+  if (ms) return Yt;
   ms = 1;
   var n = gl(), e = Qa(), r = e.concat("length", "prototype");
-  return Wt.f = Object.getOwnPropertyNames || function(i) {
+  return Yt.f = Object.getOwnPropertyNames || function(i) {
     return n(i, r);
-  }, Wt;
+  }, Yt;
 }
 var ii = {}, bs;
 function rh() {
@@ -707,7 +707,7 @@ var ni, Os;
 function ih() {
   if (Os) return ni;
   Os = 1;
-  var n = Ae(), e = th(), r = Dr(), t = We();
+  var n = Ae(), e = th(), r = Dr(), t = Ye();
   return ni = function(i, a, s) {
     for (var o = e(a), u = t.f, l = r.f, h = 0; h < o.length; h++) {
       var c = o[h];
@@ -819,7 +819,7 @@ var di, Ns;
 function Br() {
   if (Ns) return di;
   Ns = 1;
-  var n = We().f, e = Ae(), r = ne(), t = r("toStringTag");
+  var n = Ye().f, e = Ae(), r = ne(), t = r("toStringTag");
   return di = function(i, a, s) {
     i && !s && (i = i.prototype), i && !e(i, t) && n(i, t, { configurable: !0, value: a });
   }, di;
@@ -828,7 +828,7 @@ var pi, _s;
 function uh() {
   if (_s) return pi;
   _s = 1;
-  var n = cl(), e = We();
+  var n = cl(), e = Ye();
   return pi = function(r, t, i) {
     return i.get && n(i.get, t, { getter: !0 }), i.set && n(i.set, t, { setter: !0 }), e.f(r, t, i);
   }, pi;
@@ -886,7 +886,7 @@ var Oi, Ls;
 function ch() {
   if (Ls) return Oi;
   Ls = 1;
-  var n = J(), e = Z(), r = re(), t = Za(), i = rr(), a = Ya(), s = function() {
+  var n = J(), e = Z(), r = re(), t = Za(), i = rr(), a = Wa(), s = function() {
   }, o = i("Reflect", "construct"), u = /^\s*(?:class|function)\b/, l = n(u.exec), h = !u.test(s), c = function(g) {
     if (!r(g)) return !1;
     try {
@@ -995,10 +995,10 @@ function Ol() {
   var n = pr();
   return Ii = /ipad|iphone|ipod/i.test(n) && /applewebkit/i.test(n), Ii;
 }
-var Ni, Ys;
+var Ni, Ws;
 function Tl() {
-  if (Ys) return Ni;
-  Ys = 1;
+  if (Ws) return Ni;
+  Ws = 1;
   var n = Q(), e = bl(), r = Ja(), t = re(), i = Ae(), a = Z(), s = xl(), o = gh(), u = qr(), l = dh(), h = Ol(), c = jr(), v = n.setImmediate, f = n.clearImmediate, g = n.process, d = n.Dispatch, p = n.Function, y = n.MessageChannel, m = n.String, b = 0, x = {}, S = "onreadystatechange", E, T, R, P;
   a(function() {
     E = n.location;
@@ -1040,10 +1040,10 @@ function Tl() {
     clear: f
   }, Ni;
 }
-var _i, Ws;
+var _i, Ys;
 function ph() {
-  if (Ws) return _i;
-  Ws = 1;
+  if (Ys) return _i;
+  Ys = 1;
   var n = Q(), e = we(), r = Object.getOwnPropertyDescriptor;
   return _i = function(t) {
     if (!e) return n[t];
@@ -1145,7 +1145,7 @@ var Bi, to;
 function br() {
   if (to) return Bi;
   to = 1;
-  var n = Q(), e = mr(), r = re(), t = dl(), i = Ya(), a = ne(), s = pl(), o = Me(), u = Ga(), l = e && e.prototype, h = a("species"), c = !1, v = r(n.PromiseRejectionEvent), f = t("Promise", function() {
+  var n = Q(), e = mr(), r = re(), t = dl(), i = Wa(), a = ne(), s = pl(), o = Me(), u = Ga(), l = e && e.prototype, h = a("species"), c = !1, v = r(n.PromiseRejectionEvent), f = t("Promise", function() {
     var g = i(e), d = g !== String(e);
     if (!d && u === 66 || o && !(l.catch && l.finally)) return !0;
     if (!u || u < 51 || !/native code/.test(g)) {
@@ -1190,9 +1190,9 @@ function Oh() {
     var F;
     return v(C) && c(F = C.then) ? F : !1;
   }, xe = function(C, F) {
-    var z = F.value, H = F.state === oe, Y = H ? C.ok : C.fail, Te = C.resolve, Le = C.reject, Se = C.domain, Ee, lr, hr;
+    var z = F.value, H = F.state === oe, W = H ? C.ok : C.fail, Te = C.resolve, Le = C.reject, Se = C.domain, Ee, lr, hr;
     try {
-      Y ? (H || (F.rejection === Ge && $e(F), F.rejection = Ue), Y === !0 ? Ee = z : (Se && Se.enter(), Ee = Y(z), Se && (Se.exit(), hr = !0)), Ee === C.promise ? Le(new N("Promise-chain cycle")) : (lr = ve(Ee)) ? a(lr, Ee, Te, Le) : Te(Ee)) : Le(z);
+      W ? (H || (F.rejection === Ge && $e(F), F.rejection = Ue), W === !0 ? Ee = z : (Se && Se.enter(), Ee = W(z), Se && (Se.exit(), hr = !0)), Ee === C.promise ? Le(new N("Promise-chain cycle")) : (lr = ve(Ee)) ? a(lr, Ee, Te, Le) : Te(Ee)) : Le(z);
     } catch (fr) {
       Se && !hr && Se.exit(), Le(fr);
     }
@@ -1203,15 +1203,15 @@ function Oh() {
       C.notified = !1, F && !C.rejection && Xe(C);
     }));
   }, Ve = function(C, F, z) {
-    var H, Y;
-    L ? (H = j.createEvent("Event"), H.promise = F, H.reason = z, H.initEvent(C, !1, !0), t.dispatchEvent(H)) : H = { promise: F, reason: z }, !A && (Y = t["on" + C]) ? Y(H) : C === $ && y("Unhandled promise rejection", z);
+    var H, W;
+    L ? (H = j.createEvent("Event"), H.promise = F, H.reason = z, H.initEvent(C, !1, !0), t.dispatchEvent(H)) : H = { promise: F, reason: z }, !A && (W = t["on" + C]) ? W(H) : C === $ && y("Unhandled promise rejection", z);
   }, Xe = function(C) {
     a(d, t, function() {
-      var F = C.facade, z = C.value, H = ur(C), Y;
-      if (H && (Y = m(function() {
+      var F = C.facade, z = C.value, H = ur(C), W;
+      if (H && (W = m(function() {
         r ? _.emit("unhandledRejection", z, F) : Ve($, F, z);
-      }), C.rejection = r || ur(C) ? Ge : Ue, Y.error))
-        throw Y.value;
+      }), C.rejection = r || ur(C) ? Ge : Ue, W.error))
+        throw W.value;
     });
   }, ur = function(C) {
     return C.rejection !== Ue && !C.parent;
@@ -1233,20 +1233,20 @@ function Oh() {
         if (C.facade === F) throw new N("Promise can't be resolved itself");
         var H = ve(F);
         H ? p(function() {
-          var Y = { done: !1 };
+          var W = { done: !1 };
           try {
             a(
               H,
               F,
-              ge(Oe, Y, C),
-              ge(de, Y, C)
+              ge(Oe, W, C),
+              ge(de, W, C)
             );
           } catch (Te) {
-            de(Y, Te, C);
+            de(W, Te, C);
           }
         }) : (C.value = F, C.state = oe, De(C, !1));
-      } catch (Y) {
-        de({ done: !1 }, Y, C);
+      } catch (W) {
+        de({ done: !1 }, W, C);
       }
     }
   };
@@ -1270,10 +1270,10 @@ function Oh() {
       value: null
     });
   }, ce.prototype = s(B, "then", function(F, z) {
-    var H = I(this), Y = q(g(this, V));
-    return H.parent = !0, Y.ok = c(F) ? F : !0, Y.fail = c(z) && z, Y.domain = r ? _.domain : void 0, H.state === ae ? H.reactions.add(Y) : p(function() {
-      xe(Y, H);
-    }), Y.promise;
+    var H = I(this), W = q(g(this, V));
+    return H.parent = !0, W.ok = c(F) ? F : !0, W.fail = c(z) && z, W.domain = r ? _.domain : void 0, H.state === ae ? H.reactions.add(W) : p(function() {
+      xe(W, H);
+    }), W.promise;
   }), Ne = function() {
     var C = new ce(), F = I(C);
     this.promise = C, this.resolve = ge(Oe, F), this.reject = ge(de, F);
@@ -1282,8 +1282,8 @@ function Oh() {
   }, !e && c(S) && w !== Object.prototype)) {
     be = w.then, D || s(w, "then", function(F, z) {
       var H = this;
-      return new V(function(Y, Te) {
-        a(be, H, Y, Te);
+      return new V(function(W, Te) {
+        a(be, H, W, Te);
       }).then(F, z);
     }, { unsafe: !0 });
     try {
@@ -1351,14 +1351,14 @@ function Eh() {
     return e(s), a;
   }, Hi;
 }
-var Yi, fo;
+var Wi, fo;
 function Rl() {
-  if (fo) return Yi;
+  if (fo) return Wi;
   fo = 1;
   var n = Ja(), e = se(), r = he(), t = _r(), i = Th(), a = Ka(), s = Nr(), o = Sh(), u = El(), l = Eh(), h = TypeError, c = function(f, g) {
     this.stopped = f, this.result = g;
   }, v = c.prototype;
-  return Yi = function(f, g, d) {
+  return Wi = function(f, g, d) {
     var p = d && d.that, y = !!(d && d.AS_ENTRIES), m = !!(d && d.IS_RECORD), b = !!(d && d.IS_ITERATOR), x = !!(d && d.INTERRUPTED), S = n(g, p), E, T, R, P, A, D, I, k = function(B) {
       var N = E;
       return E = void 0, N && l(N, "normal"), new c(!0, B);
@@ -1389,11 +1389,11 @@ function Rl() {
       if (typeof A == "object" && A && s(v, A)) return A;
     }
     return new c(!1);
-  }, Yi;
+  }, Wi;
 }
-var Wi, co;
+var Yi, co;
 function Rh() {
-  if (co) return Wi;
+  if (co) return Yi;
   co = 1;
   var n = ne(), e = n("iterator"), r = !1;
   try {
@@ -1412,7 +1412,7 @@ function Rh() {
     });
   } catch {
   }
-  return Wi = function(a, s) {
+  return Yi = function(a, s) {
     try {
       if (!s && !r) return !1;
     } catch {
@@ -1431,7 +1431,7 @@ function Rh() {
     } catch {
     }
     return o;
-  }, Wi;
+  }, Yi;
 }
 var Xi, vo;
 function Cl() {
@@ -1609,7 +1609,7 @@ var Mo;
 function qh() {
   if (Mo) return ea;
   Mo = 1;
-  var n = we(), e = fl(), r = We(), t = he(), i = dr(), a = Mh();
+  var n = we(), e = fl(), r = Ye(), t = he(), i = dr(), a = Mh();
   return ea.f = n && !e ? Object.defineProperties : function(o, u) {
     t(o);
     for (var l = i(u), h = a(u), c = h.length, v = 0, f; c > v; ) r.f(o, f = h[v++], l[f]);
@@ -1620,7 +1620,7 @@ var ta, qo;
 function Ur() {
   if (qo) return ta;
   qo = 1;
-  var n = he(), e = qh(), r = Qa(), t = Xa(), i = xl(), a = qr(), s = Wa(), o = ">", u = "<", l = "prototype", h = "script", c = s("IE_PROTO"), v = function() {
+  var n = he(), e = qh(), r = Qa(), t = Xa(), i = xl(), a = qr(), s = Ya(), o = ">", u = "<", l = "prototype", h = "script", c = s("IE_PROTO"), v = function() {
   }, f = function(m) {
     return u + h + o + m + u + "/" + h + o;
   }, g = function(m) {
@@ -1854,10 +1854,10 @@ function Bh() {
   }), wo;
 }
 Bh();
-var Ho = {}, ca, Yo;
+var Ho = {}, ca, Wo;
 function Fh() {
-  if (Yo) return ca;
-  Yo = 1;
+  if (Wo) return ca;
+  Wo = 1;
   var n = J(), e = Mr(), r = Math.floor, t = n("".charAt), i = n("".replace), a = n("".slice), s = /\$([$&'`]|\d{1,2}|<[^>]*>)/g, o = /\$([$&'`]|\d{1,2})/g;
   return ca = function(u, l, h, c, v, f) {
     var g = h + u.length, d = c.length, p = o;
@@ -1888,10 +1888,10 @@ function Fh() {
     });
   }, ca;
 }
-var Wo;
+var Yo;
 function Uh() {
-  if (Wo) return Ho;
-  Wo = 1;
+  if (Yo) return Ho;
+  Yo = 1;
   var n = bl(), e = se(), r = J(), t = tn(), i = Z(), a = he(), s = re(), o = ye(), u = kr(), l = sr(), h = qe(), c = Pe(), v = an(), f = nr(), g = Fh(), d = Gr(), p = nn(), y = ne(), m = y("replace"), b = Math.max, x = Math.min, S = r([].concat), E = r([].push), T = r("".indexOf), R = r("".slice), P = function(k) {
     return k === void 0 ? k : String(k);
   }, A = (function() {
@@ -2008,7 +2008,7 @@ var pa, eu;
 function zh() {
   if (eu) return pa;
   eu = 1;
-  var n = ne(), e = Ur(), r = We().f, t = n("unscopables"), i = Array.prototype;
+  var n = ne(), e = Ur(), r = Ye().f, t = n("unscopables"), i = Array.prototype;
   return i[t] === void 0 && r(i, t, {
     configurable: !0,
     value: e(null)
@@ -2031,7 +2031,7 @@ var ma, tu;
 function Al() {
   if (tu) return ma;
   tu = 1;
-  var n = Ae(), e = re(), r = Mr(), t = Wa(), i = Hh(), a = t("IE_PROTO"), s = Object, o = s.prototype;
+  var n = Ae(), e = re(), r = Mr(), t = Ya(), i = Hh(), a = t("IE_PROTO"), s = Object, o = s.prototype;
   return ma = i ? s.getPrototypeOf : function(u) {
     var l = r(u);
     if (n(l, a)) return l[a];
@@ -2057,7 +2057,7 @@ function Il() {
   }, ba;
 }
 var xa, au;
-function Yh() {
+function Wh() {
   if (au) return xa;
   au = 1;
   var n = Il().IteratorPrototype, e = Ur(), r = Ua(), t = Br(), i = Or(), a = function() {
@@ -2069,10 +2069,10 @@ function Yh() {
   }, xa;
 }
 var Oa, nu;
-function Wh() {
+function Yh() {
   if (nu) return Oa;
   nu = 1;
-  var n = fe(), e = se(), r = Me(), t = Vr(), i = re(), a = Yh(), s = Al(), o = yl(), u = Br(), l = yr(), h = tr(), c = ne(), v = Or(), f = Il(), g = t.PROPER, d = t.CONFIGURABLE, p = f.IteratorPrototype, y = f.BUGGY_SAFARI_ITERATORS, m = c("iterator"), b = "keys", x = "values", S = "entries", E = function() {
+  var n = fe(), e = se(), r = Me(), t = Vr(), i = re(), a = Wh(), s = Al(), o = yl(), u = Br(), l = yr(), h = tr(), c = ne(), v = Or(), f = Il(), g = t.PROPER, d = t.CONFIGURABLE, p = f.IteratorPrototype, y = f.BUGGY_SAFARI_ITERATORS, m = c("iterator"), b = "keys", x = "values", S = "entries", E = function() {
     return this;
   };
   return Oa = function(T, R, P, A, D, I, k) {
@@ -2121,7 +2121,7 @@ var Sa, ou;
 function Nl() {
   if (ou) return Sa;
   ou = 1;
-  var n = dr(), e = zh(), r = Or(), t = Lr(), i = We().f, a = Wh(), s = Xh(), o = Me(), u = we(), l = "Array Iterator", h = t.set, c = t.getterFor(l);
+  var n = dr(), e = zh(), r = Or(), t = Lr(), i = Ye().f, a = Yh(), s = Xh(), o = Me(), u = we(), l = "Array Iterator", h = t.set, c = t.getterFor(l);
   Sa = a(Array, "Array", function(f, g) {
     h(this, {
       type: l,
@@ -3229,19 +3229,19 @@ function Af(n, e, r, t, i, a) {
   }
   for (var $e = 0; $e < t; $e++) {
     b = $e << 2;
-    var ge = s[b], de = s[b + 1], Oe = s[b + 2], C = s[b + 3], F = h * ge, z = h * de, H = h * Oe, Y = h * C, Te = c * ge, Le = c * de, Se = c * Oe, Ee = c * C;
+    var ge = s[b], de = s[b + 1], Oe = s[b + 2], C = s[b + 3], F = h * ge, z = h * de, H = h * Oe, W = h * C, Te = c * ge, Le = c * de, Se = c * Oe, Ee = c * C;
     f = v;
     for (var lr = 0; lr < h; lr++)
       f.r = ge, f.g = de, f.b = Oe, f.a = C, f = f.next;
-    for (var hr = t, fr = 0, Wr = 0, Xr = 0, Kr = 0, Sr = 1; Sr <= a; Sr++) {
+    for (var hr = t, fr = 0, Yr = 0, Xr = 0, Kr = 0, Sr = 1; Sr <= a; Sr++) {
       b = hr + $e << 2;
       var Er = h - Sr;
-      Te += (f.r = ge = s[b]) * Er, Le += (f.g = de = s[b + 1]) * Er, Se += (f.b = Oe = s[b + 2]) * Er, Ee += (f.a = C = s[b + 3]) * Er, Kr += ge, fr += de, Wr += Oe, Xr += C, f = f.next, Sr < l && (hr += t);
+      Te += (f.r = ge = s[b]) * Er, Le += (f.g = de = s[b + 1]) * Er, Se += (f.b = Oe = s[b + 2]) * Er, Ee += (f.a = C = s[b + 3]) * Er, Kr += ge, fr += de, Yr += Oe, Xr += C, f = f.next, Sr < l && (hr += t);
     }
     b = $e, p = v, y = g;
     for (var Qr = 0; Qr < i; Qr++) {
       var pe = b << 2;
-      s[pe + 3] = C = Ee * x >>> S, C > 0 ? (C = 255 / C, s[pe] = (Te * x >>> S) * C, s[pe + 1] = (Le * x >>> S) * C, s[pe + 2] = (Se * x >>> S) * C) : s[pe] = s[pe + 1] = s[pe + 2] = 0, Te -= F, Le -= z, Se -= H, Ee -= Y, F -= p.r, z -= p.g, H -= p.b, Y -= p.a, pe = $e + ((pe = Qr + h) < l ? pe : l) * t << 2, Te += Kr += p.r = s[pe], Le += fr += p.g = s[pe + 1], Se += Wr += p.b = s[pe + 2], Ee += Xr += p.a = s[pe + 3], p = p.next, F += ge = y.r, z += de = y.g, H += Oe = y.b, Y += C = y.a, Kr -= ge, fr -= de, Wr -= Oe, Xr -= C, y = y.next, b += t;
+      s[pe + 3] = C = Ee * x >>> S, C > 0 ? (C = 255 / C, s[pe] = (Te * x >>> S) * C, s[pe + 1] = (Le * x >>> S) * C, s[pe + 2] = (Se * x >>> S) * C) : s[pe] = s[pe + 1] = s[pe + 2] = 0, Te -= F, Le -= z, Se -= H, Ee -= W, F -= p.r, z -= p.g, H -= p.b, W -= p.a, pe = $e + ((pe = Qr + h) < l ? pe : l) * t << 2, Te += Kr += p.r = s[pe], Le += fr += p.g = s[pe + 1], Se += Yr += p.b = s[pe + 2], Ee += Xr += p.a = s[pe + 3], p = p.next, F += ge = y.r, z += de = y.g, H += Oe = y.b, W += C = y.a, Kr -= ge, fr -= de, Yr -= Oe, Xr -= C, y = y.next, b += t;
     }
   }
   return n;
@@ -3344,10 +3344,10 @@ function zu(n, e) {
 function Hu(n) {
   return n * n * n;
 }
-function Yu(n) {
+function Wu(n) {
   return 3 * n * n * (1 - n);
 }
-function Wu(n) {
+function Yu(n) {
   return 3 * n * (1 - n) * (1 - n);
 }
 function Xu(n) {
@@ -3846,13 +3846,13 @@ class $r {
 $r.defaultWindow = kl;
 $r.defaultFetch = jl;
 var {
-  defaultFetch: Yf
-} = $r, Wf = typeof DOMParser < "u" ? DOMParser : null;
+  defaultFetch: Wf
+} = $r, Yf = typeof DOMParser < "u" ? DOMParser : null;
 class Da {
   constructor() {
     var {
-      fetch: e = Yf,
-      DOMParser: r = Wf
+      fetch: e = Wf,
+      DOMParser: r = Yf
     } = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
     this.fetch = e, this.DOMParser = r;
   }
@@ -4543,7 +4543,7 @@ class ir extends K {
     super.clearContext(e), this.modifiedEmSizeStack && this.document.popEmSize();
   }
 }
-class W extends ir {
+class Y extends ir {
   constructor(e, r, t) {
     super(e, r, t), this.type = "path", this.pathParser = null, this.pathParser = new G(this.getAttribute("d").getString());
   }
@@ -4628,7 +4628,7 @@ class W extends ir {
       pathParser: t
     } = this, {
       point: i
-    } = W.pathM(t), {
+    } = Y.pathM(t), {
       x: a,
       y: s
     } = i;
@@ -4649,7 +4649,7 @@ class W extends ir {
     } = this, {
       current: i,
       point: a
-    } = W.pathL(t), {
+    } = Y.pathL(t), {
       x: s,
       y: o
     } = a;
@@ -4671,7 +4671,7 @@ class W extends ir {
     } = this, {
       current: i,
       point: a
-    } = W.pathH(t), {
+    } = Y.pathH(t), {
       x: s,
       y: o
     } = a;
@@ -4693,7 +4693,7 @@ class W extends ir {
     } = this, {
       current: i,
       point: a
-    } = W.pathV(t), {
+    } = Y.pathV(t), {
       x: s,
       y: o
     } = a;
@@ -4718,7 +4718,7 @@ class W extends ir {
       point: a,
       controlPoint: s,
       currentPoint: o
-    } = W.pathC(t);
+    } = Y.pathC(t);
     t.addMarker(o, s, a), r.addBezierCurve(i.x, i.y, a.x, a.y, s.x, s.y, o.x, o.y), e && e.bezierCurveTo(a.x, a.y, s.x, s.y, o.x, o.y);
   }
   static pathS(e) {
@@ -4740,7 +4740,7 @@ class W extends ir {
       point: a,
       controlPoint: s,
       currentPoint: o
-    } = W.pathS(t);
+    } = Y.pathS(t);
     t.addMarker(o, s, a), r.addBezierCurve(i.x, i.y, a.x, a.y, s.x, s.y, o.x, o.y), e && e.bezierCurveTo(a.x, a.y, s.x, s.y, o.x, o.y);
   }
   static pathQ(e) {
@@ -4760,7 +4760,7 @@ class W extends ir {
       current: i,
       controlPoint: a,
       currentPoint: s
-    } = W.pathQ(t);
+    } = Y.pathQ(t);
     t.addMarker(s, a, a), r.addQuadraticCurve(i.x, i.y, a.x, a.y, s.x, s.y), e && e.quadraticCurveTo(a.x, a.y, s.x, s.y);
   }
   static pathT(e) {
@@ -4782,7 +4782,7 @@ class W extends ir {
       current: i,
       controlPoint: a,
       currentPoint: s
-    } = W.pathT(t);
+    } = Y.pathT(t);
     t.addMarker(s, a, a), r.addQuadraticCurve(i.x, i.y, a.x, a.y, s.x, s.y), e && e.quadraticCurveTo(a.x, a.y, s.x, s.y);
   }
   static pathA(e) {
@@ -4823,7 +4823,7 @@ class W extends ir {
       centp: l,
       a1: h,
       ad: c
-    } = W.pathA(t), v = 1 - o ? 1 : -1, f = h + v * (c / 2), g = new ee(l.x + a * Math.cos(f), l.y + s * Math.sin(f));
+    } = Y.pathA(t), v = 1 - o ? 1 : -1, f = h + v * (c / 2), g = new ee(l.x + a * Math.cos(f), l.y + s * Math.sin(f));
     if (t.addMarkerAngle(g, f - v * Math.PI / 2), t.addMarkerAngle(i, f - v * Math.PI), r.addPoint(i.x, i.y), e && !isNaN(h) && !isNaN(c)) {
       var d = a > s ? a : s, p = a > s ? 1 : a / s, y = a > s ? s / a : 1;
       e.translate(l.x, l.y), e.rotate(u), e.scale(p, y), e.arc(0, 0, d, h, h + c, !!(1 - o)), e.scale(1 / p, 1 / y), e.rotate(-u), e.translate(-l.x, -l.y);
@@ -4833,17 +4833,17 @@ class W extends ir {
     e.current = e.start;
   }
   pathZ(e, r) {
-    W.pathZ(this.pathParser), e && r.x1 !== r.x2 && r.y1 !== r.y2 && e.closePath();
+    Y.pathZ(this.pathParser), e && r.x1 !== r.x2 && r.y1 !== r.y2 && e.closePath();
   }
 }
-class Ul extends W {
+class Ul extends Y {
   constructor(e, r, t) {
     super(e, r, t), this.type = "glyph", this.horizAdvX = this.getAttribute("horiz-adv-x").getNumber(), this.unicode = this.getAttribute("unicode").getString(), this.arabicForm = this.getAttribute("arabic-form").getString();
   }
 }
-class Ye extends ir {
+class We extends ir {
   constructor(e, r, t) {
-    super(e, r, new.target === Ye ? !0 : t), this.type = "text", this.x = 0, this.y = 0, this.measureCache = -1;
+    super(e, r, new.target === We ? !0 : t), this.type = "text", this.x = 0, this.y = 0, this.measureCache = -1;
   }
   setContext(e) {
     var r = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : !1;
@@ -5016,7 +5016,7 @@ class Ye extends ir {
    * @returns The attribute value or null.
    */
   getInheritedAttribute(e) {
-    for (var r = this; r instanceof Ye && r.isFirstChild(); ) {
+    for (var r = this; r instanceof We && r.isFirstChild(); ) {
       var t = r.parent.getAttribute(e);
       if (t.hasValue(!0))
         return t.getValue("0");
@@ -5025,7 +5025,7 @@ class Ye extends ir {
     return null;
   }
 }
-class zr extends Ye {
+class zr extends We {
   constructor(e, r, t) {
     super(e, r, new.target === zr ? !0 : t), this.type = "tspan", this.text = this.children.length > 0 ? "" : this.getTextFromNode();
   }
@@ -5101,7 +5101,7 @@ class Tr extends ir {
     }
   }
 }
-class Gl extends W {
+class Gl extends Y {
   constructor() {
     super(...arguments), this.type = "rect";
   }
@@ -5117,7 +5117,7 @@ class Gl extends W {
     return null;
   }
 }
-class uc extends W {
+class uc extends Y {
   constructor() {
     super(...arguments), this.type = "circle";
   }
@@ -5129,7 +5129,7 @@ class uc extends W {
     return null;
   }
 }
-class lc extends W {
+class lc extends Y {
   constructor() {
     super(...arguments), this.type = "ellipse";
   }
@@ -5141,7 +5141,7 @@ class lc extends W {
     return null;
   }
 }
-class hc extends W {
+class hc extends Y {
   constructor() {
     super(...arguments), this.type = "line";
   }
@@ -5163,7 +5163,7 @@ class hc extends W {
     return [[e, t], [r, t]];
   }
 }
-class $l extends W {
+class $l extends Y {
   constructor(e, r, t) {
     super(e, r, t), this.type = "polyline", this.points = [], this.points = ee.parsePath(this.getAttribute("points").getString());
   }
@@ -5470,12 +5470,12 @@ class Oc extends K {
     super(e, r, t), this.type = "font-face", this.ascent = this.getAttribute("ascent").getNumber(), this.descent = this.getAttribute("descent").getNumber(), this.unitsPerEm = this.getAttribute("units-per-em").getNumber();
   }
 }
-class Tc extends W {
+class Tc extends Y {
   constructor() {
     super(...arguments), this.type = "missing-glyph", this.horizAdvX = 0;
   }
 }
-class Sc extends Ye {
+class Sc extends We {
   constructor() {
     super(...arguments), this.type = "tref";
   }
@@ -5489,7 +5489,7 @@ class Sc extends Ye {
     return "";
   }
 }
-class Ec extends Ye {
+class Ec extends We {
   constructor(e, r, t) {
     super(e, r, t), this.type = "a";
     var {
@@ -5548,7 +5548,7 @@ function Rr(n) {
   }
   return n;
 }
-class Rc extends Ye {
+class Rc extends We {
   constructor(e, r, t) {
     super(e, r, t), this.type = "textPath", this.textWidth = 0, this.textHeight = 0, this.pathLength = -1, this.glyphInfo = null, this.letterSpacingCache = [], this.measuresCache = /* @__PURE__ */ new Map([["", 0]]);
     var i = this.getHrefAttribute().getDefinition();
@@ -5711,7 +5711,7 @@ class Rc extends Ye {
           l = this.pathA(t);
           break;
         case G.CLOSE_PATH:
-          W.pathZ(t);
+          Y.pathZ(t);
           break;
       }
       o.type !== G.CLOSE_PATH ? r.push({
@@ -5734,28 +5734,28 @@ class Rc extends Ye {
     var {
       x: t,
       y: i
-    } = W.pathM(e).point;
+    } = Y.pathM(e).point;
     r.push(t, i);
   }
   pathL(e, r) {
     var {
       x: t,
       y: i
-    } = W.pathL(e).point;
+    } = Y.pathL(e).point;
     return r.push(t, i), G.LINE_TO;
   }
   pathH(e, r) {
     var {
       x: t,
       y: i
-    } = W.pathH(e).point;
+    } = Y.pathH(e).point;
     return r.push(t, i), G.LINE_TO;
   }
   pathV(e, r) {
     var {
       x: t,
       y: i
-    } = W.pathV(e).point;
+    } = Y.pathV(e).point;
     return r.push(t, i), G.LINE_TO;
   }
   pathC(e, r) {
@@ -5763,7 +5763,7 @@ class Rc extends Ye {
       point: t,
       controlPoint: i,
       currentPoint: a
-    } = W.pathC(e);
+    } = Y.pathC(e);
     r.push(t.x, t.y, i.x, i.y, a.x, a.y);
   }
   pathS(e, r) {
@@ -5771,21 +5771,21 @@ class Rc extends Ye {
       point: t,
       controlPoint: i,
       currentPoint: a
-    } = W.pathS(e);
+    } = Y.pathS(e);
     return r.push(t.x, t.y, i.x, i.y, a.x, a.y), G.CURVE_TO;
   }
   pathQ(e, r) {
     var {
       controlPoint: t,
       currentPoint: i
-    } = W.pathQ(e);
+    } = Y.pathQ(e);
     r.push(t.x, t.y, i.x, i.y);
   }
   pathT(e, r) {
     var {
       controlPoint: t,
       currentPoint: i
-    } = W.pathT(e);
+    } = Y.pathT(e);
     return r.push(t.x, t.y, i.x, i.y), G.QUAD_TO;
   }
   pathA(e) {
@@ -5797,7 +5797,7 @@ class Rc extends Ye {
       centp: s,
       a1: o,
       ad: u
-    } = W.pathA(e);
+    } = Y.pathA(e);
     return i === 0 && u > 0 && (u -= 2 * Math.PI), i === 1 && u < 0 && (u += 2 * Math.PI), [s.x, s.y, r, t, o, u, a, i];
   }
   calcLength(e, r, t, i) {
@@ -5899,7 +5899,7 @@ class Rc extends Ye {
     return this.pathLength === -1 && (this.pathLength = this.dataArray.reduce((e, r) => r.pathLength > 0 ? e + r.pathLength : e, 0)), this.pathLength;
   }
   getPointOnCubicBezier(e, r, t, i, a, s, o, u, l) {
-    var h = u * Hu(e) + s * Yu(e) + i * Wu(e) + r * Xu(e), c = l * Hu(e) + o * Yu(e) + a * Wu(e) + t * Xu(e);
+    var h = u * Hu(e) + s * Wu(e) + i * Yu(e) + r * Xu(e), c = l * Hu(e) + o * Wu(e) + a * Yu(e) + t * Xu(e);
     return {
       x: h,
       y: c
@@ -6148,7 +6148,7 @@ function te(n, e, r) {
 function je(n, e, r, t) {
   return e + Math.cos(n) * r + Math.sin(n) * t;
 }
-class Yl extends K {
+class Wl extends K {
   constructor(e, r, t) {
     super(e, r, t), this.type = "feColorMatrix";
     var i = me(this.getAttribute("values").getString());
@@ -6197,7 +6197,7 @@ class Hr extends K {
       }), i = Math.floor(u.x1), a = Math.floor(u.y1), s = Math.floor(u.width), o = Math.floor(u.height);
     }
     var l = this.removeStyles(r, Hr.ignoreStyles), h = t.createCanvas(i + s, a + o), c = h.getContext("2d");
-    t.screen.setDefaults(c), this.renderChildren(c), new Yl(t, {
+    t.screen.setDefaults(c), this.renderChildren(c), new Wl(t, {
       nodeType: 1,
       childNodes: [],
       attributes: [{
@@ -6238,7 +6238,7 @@ class Nc extends K {
   render(e) {
   }
 }
-class Yr extends K {
+class Wr extends K {
   constructor() {
     super(...arguments), this.type = "filter";
   }
@@ -6255,7 +6255,7 @@ class Yr extends K {
       });
       var u = Math.floor(a.width), l = Math.floor(a.height), h = u + 2 * s, c = l + 2 * o;
       if (!(h < 1 || c < 1)) {
-        var v = Math.floor(a.x), f = Math.floor(a.y), g = this.removeStyles(r, Yr.ignoreStyles), d = t.createCanvas(h, c), p = d.getContext("2d");
+        var v = Math.floor(a.x), f = Math.floor(a.y), g = this.removeStyles(r, Wr.ignoreStyles), d = t.createCanvas(h, c), p = d.getContext("2d");
         t.screen.setDefaults(p), p.translate(-v + s, -f + o), r.render(p), i.forEach((y) => {
           typeof y.apply == "function" && y.apply(p, 0, 0, h, c);
         }), e.drawImage(d, 0, 0, h, c, v - s, f - o, h, c), this.restoreStyles(r, g);
@@ -6265,7 +6265,7 @@ class Yr extends K {
   render(e) {
   }
 }
-Yr.ignoreStyles = ["filter", "transform", "clip-path"];
+Wr.ignoreStyles = ["filter", "transform", "clip-path"];
 class _c extends K {
   constructor(e, r, t) {
     super(e, r, t), this.type = "feDropShadow", this.addStylesFromStyleDefinition();
@@ -6317,7 +6317,7 @@ var kc = {
   line: hc,
   polyline: $l,
   polygon: fc,
-  path: W,
+  path: Y,
   pattern: cc,
   marker: vc,
   defs: gc,
@@ -6331,7 +6331,7 @@ var kc = {
   "font-face": Oc,
   "missing-glyph": Tc,
   glyph: Ul,
-  text: Ye,
+  text: We,
   tspan: zr,
   tref: Sc,
   a: Ec,
@@ -6343,11 +6343,11 @@ var kc = {
   use: Ic,
   mask: Hr,
   clipPath: Nc,
-  filter: Yr,
+  filter: Wr,
   feDropShadow: _c,
   feMorphology: Mc,
   feComposite: qc,
-  feColorMatrix: Yl,
+  feColorMatrix: Wl,
   feGaussianBlur: Dc,
   title: Vc,
   desc: Lc
@@ -6610,8 +6610,8 @@ export {
   bc as AnimateTransformElement,
   Ie as BoundingBox,
   Hu as CB1,
-  Yu as CB2,
-  Wu as CB3,
+  Wu as CB2,
+  Yu as CB3,
   Xu as CB4,
   gr as Canvg,
   uc as CircleElement,
@@ -6621,12 +6621,12 @@ export {
   He as Document,
   K as Element,
   lc as EllipseElement,
-  Yl as FeColorMatrixElement,
+  Wl as FeColorMatrixElement,
   qc as FeCompositeElement,
   _c as FeDropShadowElement,
   Dc as FeGaussianBlurElement,
   Mc as FeMorphologyElement,
-  Yr as FilterElement,
+  Wr as FilterElement,
   le as Font,
   xc as FontElement,
   Oc as FontFaceElement,
@@ -6643,7 +6643,7 @@ export {
   Hf as Mouse,
   ar as PSEUDO_ZERO,
   Da as Parser,
-  W as PathElement,
+  Y as PathElement,
   G as PathParser,
   cc as PatternElement,
   ee as Point,
@@ -6669,7 +6669,7 @@ export {
   Pc as SymbolElement,
   Sc as TRefElement,
   zr as TSpanElement,
-  Ye as TextElement,
+  We as TextElement,
   Rc as TextPathElement,
   Vc as TitleElement,
   Je as Transform,
