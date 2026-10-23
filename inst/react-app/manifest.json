@@ -1,10 +1,10 @@
 {
-  "_CellInspector-DC5FdSdH.js": {
-    "file": "CellInspector-DC5FdSdH.js",
+  "_CellInspector-BIKacaBn.js": {
+    "file": "CellInspector-BIKacaBn.js",
     "name": "CellInspector",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
+      "_embed-BEBIXb3n.js",
       "_cvwDecode-CKHzN2J_.js",
       "src/imaging/imageService.ts"
     ]
@@ -13,16 +13,16 @@
     "file": "cvwDecode-CKHzN2J_.js",
     "name": "cvwDecode"
   },
-  "_embed-BNZTyHG9.js": {
-    "file": "embed-BNZTyHG9.js",
+  "_embed-BEBIXb3n.js": {
+    "file": "embed-BEBIXb3n.js",
     "name": "embed",
     "dynamicImports": [
       "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
-      "_jspdf.es.min-KaZ2ucd2.js",
+      "_jspdf.es.min-Dv77Xhdd.js",
       "src/ui/CompensationTab.tsx",
       "src/ui/LayoutTab.tsx",
       "src/imaging/CellHoverProbe.tsx",
-      "_CellInspector-DC5FdSdH.js",
+      "_CellInspector-BIKacaBn.js",
       "src/imaging/CellMarker.tsx",
       "src/imaging/ImagesTab.tsx",
       "src/imaging/PlotThumbnails.tsx",
@@ -35,12 +35,12 @@
       "src/imaging/attach.ts"
     ]
   },
-  "_jspdf.es.min-KaZ2ucd2.js": {
-    "file": "jspdf.es.min-KaZ2ucd2.js",
+  "_jspdf.es.min-Dv77Xhdd.js": {
+    "file": "jspdf.es.min-Dv77Xhdd.js",
     "name": "jspdf.es.min",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js"
+      "_embed-BEBIXb3n.js"
     ],
     "dynamicImports": [
       "node_modules/html2canvas/dist/html2canvas.esm.js",
@@ -53,13 +53,13 @@
     "name": "plotGeometry"
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "index.es-BJ413tS-.js",
+    "file": "index.es-DUL7vkcF.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
-      "_jspdf.es.min-KaZ2ucd2.js"
+      "_embed-BEBIXb3n.js",
+      "_jspdf.es.min-Dv77Xhdd.js"
     ]
   },
   "node_modules/dompurify/dist/purify.es.mjs": {
@@ -75,13 +75,13 @@
     "isDynamicEntry": true
   },
   "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js": {
-    "file": "svg2pdf.es.min-DryabU_D.js",
+    "file": "svg2pdf.es.min-Dhcpr4fA.js",
     "name": "svg2pdf.es.min",
     "src": "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
-      "_jspdf.es.min-KaZ2ucd2.js"
+      "_embed-BEBIXb3n.js",
+      "_jspdf.es.min-Dv77Xhdd.js"
     ]
   },
   "src/embed.ts": {
@@ -90,69 +90,69 @@
     "src": "src/embed.ts",
     "isEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js"
+      "_embed-BEBIXb3n.js"
     ]
   },
   "src/imaging/CellHoverProbe.tsx": {
-    "file": "CellHoverProbe-CG0SZOel.js",
+    "file": "CellHoverProbe-DdVTpcgb.js",
     "name": "CellHoverProbe",
     "src": "src/imaging/CellHoverProbe.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
+      "_embed-BEBIXb3n.js",
       "_plotGeometry-CJtfGMFK.js"
     ]
   },
   "src/imaging/CellMarker.tsx": {
-    "file": "CellMarker-kdwpIrJD.js",
+    "file": "CellMarker-CQ1VKxrM.js",
     "name": "CellMarker",
     "src": "src/imaging/CellMarker.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
+      "_embed-BEBIXb3n.js",
       "_plotGeometry-CJtfGMFK.js"
     ]
   },
   "src/imaging/ImagesTab.tsx": {
-    "file": "ImagesTab-B6ij9jtj.js",
+    "file": "ImagesTab-D4idnSsZ.js",
     "name": "ImagesTab",
     "src": "src/imaging/ImagesTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
-      "_CellInspector-DC5FdSdH.js",
+      "_embed-BEBIXb3n.js",
+      "_CellInspector-BIKacaBn.js",
       "_cvwDecode-CKHzN2J_.js"
     ]
   },
   "src/imaging/LayoutCellPanel.tsx": {
-    "file": "LayoutCellPanel-DB1mpvpS.js",
+    "file": "LayoutCellPanel-CoqHvBzo.js",
     "name": "LayoutCellPanel",
     "src": "src/imaging/LayoutCellPanel.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
+      "_embed-BEBIXb3n.js",
       "_cvwDecode-CKHzN2J_.js",
       "src/imaging/LayoutImageWall.tsx"
     ]
   },
   "src/imaging/LayoutImageWall.tsx": {
-    "file": "LayoutImageWall-CZwD4ksi.js",
+    "file": "LayoutImageWall-Deo0h0eQ.js",
     "name": "LayoutImageWall",
     "src": "src/imaging/LayoutImageWall.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
+      "_embed-BEBIXb3n.js",
       "_cvwDecode-CKHzN2J_.js"
     ]
   },
   "src/imaging/PlotThumbnails.tsx": {
-    "file": "PlotThumbnails-Bk344cMe.js",
+    "file": "PlotThumbnails-CdOKsq8a.js",
     "name": "PlotThumbnails",
     "src": "src/imaging/PlotThumbnails.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js",
-      "_CellInspector-DC5FdSdH.js",
+      "_embed-BEBIXb3n.js",
+      "_CellInspector-BIKacaBn.js",
       "_cvwDecode-CKHzN2J_.js",
       "_plotGeometry-CJtfGMFK.js"
     ]
@@ -173,27 +173,27 @@
     "isDynamicEntry": true
   },
   "src/ui/CompensationTab.tsx": {
-    "file": "CompensationTab-DEVcu1xS.js",
+    "file": "CompensationTab-CrS05FVE.js",
     "name": "CompensationTab",
     "src": "src/ui/CompensationTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js"
+      "_embed-BEBIXb3n.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-KaZ2ucd2.js"
+      "_jspdf.es.min-Dv77Xhdd.js"
     ]
   },
   "src/ui/LayoutTab.tsx": {
-    "file": "LayoutTab-DWTmb5Hl.js",
+    "file": "LayoutTab-YZZaG4Na.js",
     "name": "LayoutTab",
     "src": "src/ui/LayoutTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-BNZTyHG9.js"
+      "_embed-BEBIXb3n.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-KaZ2ucd2.js",
+      "_jspdf.es.min-Dv77Xhdd.js",
       "src/imaging/LayoutImageWall.tsx",
       "src/imaging/LayoutCellPanel.tsx"
     ]
