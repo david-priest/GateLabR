@@ -4,6 +4,7 @@
 
 skip_if_not_installed("flowWorkspace")
 skip_if_not_installed("flowCore")
+skip_if_not_installed("sp")
 
 gvhd <- function() {
   data_env <- new.env()

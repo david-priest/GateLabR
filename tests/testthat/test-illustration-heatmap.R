@@ -113,6 +113,7 @@ test_that("illustration heatmap supports mean summaries and selected order", {
 })
 
 test_that("illustration heatmap exports labelled vector SVG", {
+  skip_if_not_installed("gridSVG")
   file <- tempfile(fileext = ".svg")
   payload <- list(
     plot_type = "heatmap",
