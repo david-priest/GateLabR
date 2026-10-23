@@ -111,12 +111,22 @@ mirror_core_workspace_json <- function(sce, dataset_id, instrument_mode, gate_id
       '"flowjo_axes":{"CD3":{"kind":"wsplog","offset":3,"decades":5},',
       '"CD19":{"kind":"linear","minRange":0,"maxRange":262144}},',
       '"flowjo_bounds":{"CD3":[3,null],"CD19":[null,null]}}'
-    )
+    ),
+    # A spider quadrant: four arms leaning from the centre to the edges of the box their ends span.
+    spiderQuad = gate(
+      "spiderQuad", "quadrant",
+      paste0('"center":[1000,1000],"arms":{"down":[2000,-5000],"right":[300000,3000],',
+             '"up":[-500,300000],"left":[-5000,-500]}'),
+      "raw"
+    ),
+    # A curly quadrant: FlowJo's bend beyond the centre.
+    curlyQuad = gate("curlyQuad", "quadrant", '"center":[1000,1000],"curl":{"power":1.5,"kx":0.012,"ky":0.012}', "raw")
   )
   population <- function(id) {
     paste0(
       '"', id, '":{"population_id":"', id, '","name":"', id, '","gate_refs":[{"gate_id":"',
-      id, '","include":true}],"gate_logic":"and","parent_id":"root","children":[],',
+      id, '","include":true', if (grepl("Quad$", id)) ',"quadrant":2' else "", '}],',
+      '"gate_logic":"and","parent_id":"root","children":[],',
       '"event_count":0,"percent_of_parent":0}'
     )
   }
@@ -211,7 +221,7 @@ selecting_fields <- function(gate) {
   geometry <- switch(
     gate$gate_type,
     ellipse = c("mean", "covariance", "distance_square"),
-    quadrant = "center",
+    quadrant = c("center", "curl", "arms"),
     "vertices"
   )
   gate[intersect(c("gate_type", "x_channel", "y_channel", "space", "transforms", geometry), names(gate))]
@@ -351,4 +361,22 @@ test_that("a version 4 workspace stored by R restores in the embedded core, from
   expect_identical(spillover$label, "Synthetic matrix")
   expect_identical(unlist(spillover$leftOut), "CD4")
   expect_null(restored$canonical$samples[[2]]$externalSpillover)
+})
+
+test_that("a mirror keeps a spider quadrant's arms and a curly quadrant's curl, and the core restores them", {
+  # The mirror kept a quadrant's centre alone, so the core, reloading it with the canonical record
+  # gone, held a straight crosshair where the spider's arms or the curly quadrant's bend had been,
+  # and its quadrants held other events.
+  fixture <- mirror_core_fixture(mirror_core_sce("flow"), instrument_mode = "flow", gate_ids = c("spiderQuad", "curlyQuad"))
+  restored <- mirror_core_restore(fixture)
+  expect_mirror_restores_like_canonical(restored)
+  if (!is.null(restored$mirror$error)) return(invisible())
+  for (source in c("canonical", "mirror")) {
+    gates <- restored[[source]]$gates
+    expect_equal(unlist(gates$spiderQuad$arms$down), c(2000, -5000), label = paste(source, "spider down arm"))
+    expect_equal(unlist(gates$spiderQuad$arms$up), c(-500, 300000), label = paste(source, "spider up arm"))
+    expect_null(gates$spiderQuad$curl, label = paste(source, "spider curl"))
+    expect_equal(gates$curlyQuad$curl, list(power = 1.5, kx = 0.012, ky = 0.012), label = paste(source, "curl"))
+    expect_null(gates$curlyQuad$arms, label = paste(source, "curly arms"))
+  }
 })
