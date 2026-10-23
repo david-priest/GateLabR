@@ -1,5 +1,39 @@
 # Changelog
 
+## GateLabR 1.6.3
+
+- The embedded GateLab core is GateLab 0.10.0 (GateLab-dev 822e42b), up
+  from 0.9.3 (ec0c0c6). From the core: spider quadrants, whose four arms
+  move separately, drawn in the Gating tab and read from FlowJo 10
+  workspaces as one gate; FlowJo 11 workbenches (`.flowjo`) read and
+  written; a histogram view of the X channel with Range and Bisector
+  tools; a file’s own version of a gate, turned on from the gate’s row
+  for the viewed file or its group; the gate list and population tree
+  without tick boxes, the highlighted rows being the selection; gates
+  drawn in black unless Coloured gates is on; a width slider on a
+  biexponential axis, which changes the display only; a Matrices list
+  for compensation; and the restyled interface. Workspaces saved into an
+  object by 1.6.2 open, their gates drawn black unless Coloured gates is
+  turned on.
+- A workspace this version saves into an object is refused, with a
+  message, by GateLabR 1.6.2 (the 0.9.3 core) when it holds a spider
+  quadrant, a Hyperlog axis, a gate on FlowJo 11’s grid, a named or
+  active compensation matrix, or a biexponential axis shown at other
+  than its recorded parameters. Other workspaces open in both. Earlier
+  versions were not tried.
+- “Save to GatingSet” and
+  [`gatelabGatingSet()`](https://david-priest.github.io/GateLabR/reference/gatelabGatingSet.md)
+  write every quadrant, spider quadrants included, and every gate in a
+  Hyperlog space or on FlowJo 11’s grid as its exact per-sample
+  membership, as they write every population that has no flowWorkspace
+  gate.
+- [`gatelabStrategyPlot()`](https://david-priest.github.io/GateLabR/reference/gatelabStrategyPlot.md)
+  draws a spider or curly quadrant as a straight crosshair at its
+  centre. A quadrant’s share is the stored membership’s where a
+  population was made for it; a quadrant no population was made for is
+  counted on that crosshair, which differs from the app’s count for a
+  spider or curly quadrant.
+
 ## GateLabR 1.6.2
 
 - A GatingSet whose gates differ between samples now opens with each
