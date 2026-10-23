@@ -83,10 +83,11 @@ is a \code{\link{gatelabPanelGrob}}.
 Counts and percentages are of the pooled samples. A population made by one gate
   takes its count from the stored memberships (\code{\link{gatelabPopulations}}), so it is
   the app's own; a gate of a population made by several is counted from the gate's geometry,
-  as are quadrants no population was made for. That is exact where gates are stored in
-  display units, as on a \code{SingleCellExperiment} hosted on its transformed assay. An
-  event a population was not evaluated for, which \code{gatelabPopulations()} returns as
-  \code{NA} with a warning, is counted as outside it.
+  as are quadrants no population was made for, by the app's rule for a curly or a spider
+  quadrant too (an event outside a spider's box is in none of its quadrants). That is exact
+  where gates are stored in display units, as on a \code{SingleCellExperiment} hosted on
+  its transformed assay. An event a population was not evaluated for, which
+  \code{gatelabPopulations()} returns as \code{NA} with a warning, is counted as outside it.
 
   Events are drawn as the assay holds them and gates as the workspace holds them, with no
   transform applied. A workspace drawn on a linear assay, which the app shows through a
