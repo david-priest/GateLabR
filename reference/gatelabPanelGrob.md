@@ -65,8 +65,11 @@ gatelabPanelGrob(
   `label_offset` and `label_placed` for an outlined gate, or `center`,
   `quadrant_pcts` (four values, in the order top left, top right, bottom
   right, bottom left) and `quadrant_label_offsets` for a quadrant gate.
-  A `gate_id` is optional: it names the gate's entry in the `anchors`
-  attribute.
+  A quadrant gate may also carry GateLab's `curl` (a curly quadrant:
+  `power`, `kx`, `ky`) or `arms` (a spider quadrant: `down`, `right`,
+  `up` and `left`, each the `c(x, y)` end of an arm), in display units;
+  a curl or arms GateLab would refuse are ignored. A `gate_id` is
+  optional: it names the gate's entry in the `anchors` attribute.
 
 - plot_size:
 
@@ -147,7 +150,10 @@ Ported from GateLab's `renderMiniPlot` with the margin, label and
 quadrant rules GateLab applies to it. Contour mode only: the app's other
 plot modes are not drawn. A quadrant's shares are written in the corners
 of the plot unless `quadrant_labels = "centre"`, which is where the app
-writes them.
+writes them. A curly quadrant is drawn with its arms bent beyond the
+centre, out to the axes' ends; a spider quadrant with its four leaning
+arms and the dashed box their ends span, its shares, when centred,
+inside their own sectors. Arms and box are cut at the axes.
 
 The panel is a grid `gTree` of a fixed size.
 [`print()`](https://rdrr.io/r/base/print.html) and

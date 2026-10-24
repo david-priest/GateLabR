@@ -425,7 +425,8 @@ renders formatted citations in several styles.
 
 ## License
 
-MIT — see [`LICENSE`](https://david-priest.github.io/GateLabR/LICENSE).
+MIT — see
+[`LICENSE.md`](https://david-priest.github.io/GateLabR/LICENSE.md).
 
 ## Acknowledgements
 

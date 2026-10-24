@@ -41,7 +41,7 @@ panel is the same picture as in the app at any scale."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>One gating panel, drawn as GateLab draws it</h1>
-      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/v1.6.3/R/strategy_panel.R" class="external-link"><code>R/strategy_panel.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/main/R/strategy_panel.R" class="external-link"><code>R/strategy_panel.R</code></a></small>
       <div class="d-none name"><code>gatelabPanelGrob.Rd</code></div>
     </div>
 
@@ -107,8 +107,12 @@ panel is the same picture as in the app at any <code>scale</code>.</p>
 <code>color</code>, and <code>vertices</code> (two-column matrix, display units), <code>percent</code>,
 <code>label_offset</code> and <code>label_placed</code> for an outlined gate, or <code>center</code>,
 <code>quadrant_pcts</code> (four values, in the order top left, top right, bottom right, bottom
-left) and <code>quadrant_label_offsets</code> for a quadrant gate. A <code>gate_id</code> is
-optional: it names the gate's entry in the <code>anchors</code> attribute.</p></dd>
+left) and <code>quadrant_label_offsets</code> for a quadrant gate. A quadrant gate may also
+carry GateLab's <code>curl</code> (a curly quadrant: <code>power</code>, <code>kx</code>, <code>ky</code>) or
+<code>arms</code> (a spider quadrant: <code>down</code>, <code>right</code>, <code>up</code> and <code>left</code>,
+each the <code>c(x, y)</code> end of an arm), in display units; a curl or arms GateLab would
+refuse are ignored. A <code>gate_id</code> is optional: it names the gate's entry in the
+<code>anchors</code> attribute.</p></dd>
 
 
 <dt id="arg-plot-size">plot_size<a class="anchor" aria-label="anchor" href="#arg-plot-size"></a></dt>
@@ -185,7 +189,10 @@ tick labels keep the minus sign.</p></dd>
     <p>Ported from GateLab's <code>renderMiniPlot</code> with the margin, label and quadrant
   rules GateLab applies to it. Contour mode only: the app's other plot modes are not drawn.
   A quadrant's shares are written in the corners of the plot unless
-  <code>quadrant_labels = "centre"</code>, which is where the app writes them.</p>
+  <code>quadrant_labels = "centre"</code>, which is where the app writes them. A curly quadrant
+  is drawn with its arms bent beyond the centre, out to the axes' ends; a spider quadrant
+  with its four leaning arms and the dashed box their ends span, its shares, when centred,
+  inside their own sectors. Arms and box are cut at the axes.</p>
 <p>The panel is a grid <code>gTree</code> of a fixed size. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> draw it
   on a new page of the current device; <code><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid::grid.draw()</a></code> adds it to the page as it
   is.</p>
