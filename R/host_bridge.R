@@ -1056,6 +1056,11 @@
         gate$center,
         paste0("centre for gate '", gate_id, "'")
       )
+      # A curly quadrant's bend and a spider quadrant's arms decide its quadrants: without them
+      # the core, reloading the mirror, holds a straight crosshair at the centre.
+      for (field in c("curl", "arms")) {
+        if (!is.null(gate[[field]])) normalized[[field]] <- gate[[field]]
+      }
     } else if (identical(normalized$gate_type, "ellipse")) {
       # An ellipse carries the Gating-ML form and no vertices at all, so requiring vertices
       # here rejected every workspace holding one -- which surfaced as a failed SCE autosave.

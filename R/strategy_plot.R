@@ -17,10 +17,11 @@
 #' @details Counts and percentages are of the pooled samples. A population made by one gate
 #'   takes its count from the stored memberships (\code{\link{gatelabPopulations}}), so it is
 #'   the app's own; a gate of a population made by several is counted from the gate's geometry,
-#'   as are quadrants no population was made for. That is exact where gates are stored in
-#'   display units, as on a \code{SingleCellExperiment} hosted on its transformed assay. An
-#'   event a population was not evaluated for, which \code{gatelabPopulations()} returns as
-#'   \code{NA} with a warning, is counted as outside it.
+#'   as are quadrants no population was made for, by the app's rule for a curly or a spider
+#'   quadrant too (an event outside a spider's box is in none of its quadrants). That is exact
+#'   where gates are stored in display units, as on a \code{SingleCellExperiment} hosted on
+#'   its transformed assay. An event a population was not evaluated for, which
+#'   \code{gatelabPopulations()} returns as \code{NA} with a warning, is counted as outside it.
 #'
 #'   Events are drawn as the assay holds them and gates as the workspace holds them, with no
 #'   transform applied. A workspace drawn on a linear assay, which the app shows through a
@@ -260,7 +261,8 @@ gatelabStrategyPlot <- function(sce, populations, hierarchy = NULL, sample_colum
                                                  key = node$key, stringsAsFactors = FALSE)
         xlim <<- widen(xlim, gate$center[1]); ylim <<- widen(ylim, gate$center[2])
         return(list(type = "quadrant", gate_id = gate$gate_id, name = gate$name, color = gate$color,
-                    center = gate$center, quadrant_pcts = pcts, quadrant_label_offsets = gate$quadrant_label_offsets))
+                    center = gate$center, curl = gate$curl, arms = gate$arms, quadrant_pcts = pcts,
+                    quadrant_label_offsets = gate$quadrant_label_offsets))
       }
       inside <- if (nrow(pop$gate_refs) == 1L) member(pop$id) else {
         hit <- .gatelabr_strategy_in_gate(gate, gx, gy); parent & (if (entry$include) hit else !hit)
@@ -494,7 +496,8 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
 #
 # Each gate has `gate_id`, `name`, `type` ("polygon", "rectangle", "ellipse" or "quadrant"),
 # `x_channel`, `y_channel`, `vertices` (a two-column matrix; the four corners for a rectangle, the
-# sampled outline for an ellipse, NULL for a quadrant), `center` (quadrant), `color`,
+# sampled outline for an ellipse, NULL for a quadrant), `center`, `curl` and `arms` (quadrant;
+# see .gatelabr_quadrant_curl() and .gatelabr_quadrant_arms(), NULL when absent), `color`,
 # `label_offset` (NULL when the label was never moved) and `quadrant_label_offsets`. Each
 # population has `id`, `name`, `parent_id`, `children` and `gate_refs` (a data frame of `gate_id`,
 # `include`, `quadrant`).
@@ -520,9 +523,14 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
                       distance_square = as.numeric(g$distance_square))
       vertices <- .gatelabr_strategy_ellipse_outline(ellipse)
     }
+    center <- pair(g$center)
+    # A curly quadrant's bend and a spider quadrant's arms, read as the core reads them: a curl
+    # only when usable, and arms only without a curl and when they make a spider about the centre.
+    curl <- if (identical(type, "quadrant")) .gatelabr_quadrant_curl(g$curl) else NULL
+    arms <- if (identical(type, "quadrant") && is.null(curl)) .gatelabr_quadrant_arms(center, g$arms) else NULL
     list(gate_id = as.character(g$gate_id), name = as.character(g$name), type = type,
          x_channel = as.character(g$x_channel), y_channel = as.character(g$y_channel),
-         vertices = vertices, center = pair(g$center), ellipse = ellipse,
+         vertices = vertices, center = center, curl = curl, arms = arms, ellipse = ellipse,
          color = if (is.null(g$color)) "#e41a1c" else as.character(g$color),
          label_offset = pair(g$label_offset),
          quadrant_label_offsets = if (is.null(g$quadrant_label_offsets)) NULL else
@@ -578,12 +586,36 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
 }
 
 # Which events fall inside a gate, from its geometry. Quadrants are numbered as GateLab numbers
-# them (1 x- y+, 2 x+ y+, 3 x+ y-, 4 x- y-), an event on the crosshair counting as positive.
+# them (1 x- y+, 2 x+ y+, 3 x+ y-, 4 x- y-), an event on a divider counting as on its upper side.
+# Ported from the core's gateMaskQuadrant() (src/engine/gates.ts): with a curl the dividers bend
+# beyond the centre, and an event is right of the vertical divider where its x is at or beyond the
+# divider's x at the event's own y, and above the horizontal one likewise; with arms the dividers
+# are the four leaning arms, and an event outside the box their ends span is in no quadrant. An
+# event with an undefined coordinate is in no quadrant.
 .gatelabr_strategy_in_gate <- function(gate, gx, gy, quadrant = NA_integer_) {
   if (identical(gate$type, "quadrant")) {
-    right <- gx >= gate$center[1]; up <- gy >= gate$center[2]
-    return(switch(as.character(quadrant), "1" = !right & up, "2" = right & up, "3" = right & !up,
-                  "4" = !right & !up, stop("A quadrant gate needs a quadrant from 1 to 4.", call. = FALSE)))
+    if (!as.character(quadrant) %in% c("1", "2", "3", "4"))
+      stop("A quadrant gate needs a quadrant from 1 to 4.", call. = FALSE)
+    cx <- gate$center[1]; cy <- gate$center[2]
+    xdiv <- rep(cx, length(gx)); ydiv <- rep(cy, length(gy))
+    inside <- !is.na(gx) & !is.na(gy)
+    curl <- gate$curl; arms <- gate$arms
+    if (!is.null(curl)) {
+      above <- inside & gy > cy; beyond <- inside & gx > cx
+      xdiv[above] <- cx + curl$ky * (gy[above] - cy)^curl$power
+      ydiv[beyond] <- cy + curl$kx * (gx[beyond] - cx)^curl$power
+    } else if (!is.null(arms)) {
+      box <- .gatelabr_spider_box(arms)
+      inside <- inside & gx >= box[1] & gx <= box[2] & gy >= box[3] & gy <= box[4]
+      # Each arm's run along its divider per unit across it: zero for an arm on its axis.
+      run <- c(down = (arms$down[1] - cx) / (arms$down[2] - cy), up = (arms$up[1] - cx) / (arms$up[2] - cy),
+               left = (arms$left[2] - cy) / (arms$left[1] - cx), right = (arms$right[2] - cy) / (arms$right[1] - cx))
+      xdiv[inside] <- cx + (gy[inside] - cy) * ifelse(gy[inside] > cy, run[["up"]], run[["down"]])
+      ydiv[inside] <- cy + (gx[inside] - cx) * ifelse(gx[inside] > cx, run[["right"]], run[["left"]])
+    }
+    right <- gx >= xdiv; up <- gy >= ydiv
+    hit <- switch(as.character(quadrant), "1" = !right & up, "2" = right & up, "3" = right & !up, "4" = !right & !up)
+    return(inside & !is.na(hit) & hit)
   }
   if (identical(gate$type, "ellipse")) {
     d <- rbind(gx - gate$ellipse$mean[1], gy - gate$ellipse$mean[2])
@@ -594,3 +626,39 @@ plot.gatelab_panel <- function(x, ...) .gatelabr_draw_on_new_page(x)
            gy >= min(gate$vertices[, 2]) & gy <= max(gate$vertices[, 2]))
   .gatelabr_in_ring(gx, gy, gate$vertices[, 1], gate$vertices[, 2])
 }
+
+# A quadrant gate's curl (the core's QuadrantCurl: `power`, `kx`, `ky`) as a list, or NULL when it
+# has none or none that bends: the core holds a curl only with a positive finite power and finite
+# coefficients, and one with a zero power or both coefficients zero leaves the dividers straight.
+.gatelabr_quadrant_curl <- function(curl) {
+  if (!is.list(curl)) return(NULL)
+  value <- function(name) {
+    v <- curl[[name]]
+    if (length(v) == 1L && is.numeric(v) && is.finite(v)) as.numeric(v) else NA_real_
+  }
+  out <- list(power = value("power"), kx = value("kx"), ky = value("ky"))
+  if (anyNA(unlist(out)) || out$power <= 0 || (out$kx == 0 && out$ky == 0)) return(NULL)
+  out
+}
+
+# A spider quadrant's arms (the core's QuadrantArms: `down`, `right`, `up` and `left`, each the
+# [x, y] end of an arm running from the centre), or NULL unless they make a spider about `center`
+# as the core's validArms() requires: every end finite, the centre strictly inside the box the ends
+# span, and each end on its own edge of that box, within it.
+.gatelabr_quadrant_arms <- function(center, arms) {
+  if (!is.list(arms) || length(center) != 2L || !all(is.finite(center))) return(NULL)
+  ends <- lapply(c(down = "down", right = "right", up = "up", left = "left"), function(key) {
+    p <- suppressWarnings(as.numeric(unlist(arms[[key]])))
+    if (length(p) == 2L && all(is.finite(p))) p else NULL
+  })
+  if (any(vapply(ends, is.null, logical(1)))) return(NULL)
+  box <- .gatelabr_spider_box(ends)
+  within <- function(v, lo, hi) v >= lo && v <= hi
+  if (!(box[1] < center[1] && center[1] < box[2] && box[3] < center[2] && center[2] < box[4])) return(NULL)
+  if (!(within(ends$down[1], box[1], box[2]) && within(ends$up[1], box[1], box[2]) &&
+        within(ends$left[2], box[3], box[4]) && within(ends$right[2], box[3], box[4]))) return(NULL)
+  ends
+}
+
+# The box a spider quadrant's arm ends span, c(xmin, xmax, ymin, ymax): the edges they lie on.
+.gatelabr_spider_box <- function(arms) c(arms$left[1], arms$right[1], arms$down[2], arms$up[2])

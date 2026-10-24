@@ -24,7 +24,6 @@ biocViews: FlowCytometry, SingleCell, Software
 Imports:
     shiny,
     methods,
-    DT,
     digest,
     future,
     jsonlite,
@@ -33,26 +32,30 @@ Imports:
     promises,
     rlang,
     base64enc,
-    uuid,
-    sp,
-    png,
     grid,
-    gridSVG,
-    ggplot2,
-    MASS,
     SingleCellExperiment,
     SummarizedExperiment,
     S4Vectors,
     flowCore,
-    stringi,
-    xml2
+    stringi
 Suggests:
     BiocManager,
     flowWorkspace,
     knitr,
     testthat (>= 3.0.0),
     rmarkdown,
-    pkgdown
+    pkgdown,
+    htmltools,
+    ragg,
+    withr,
+    DT,
+    MASS,
+    ggplot2,
+    gridSVG,
+    png,
+    sp,
+    uuid,
+    xml2
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 RoxygenNote: 7.3.3

@@ -1643,3 +1643,40 @@ test_that("the host refuses to write over an object the console replaced, until 
   expect_true("console_column" %in% colnames(SummarizedExperiment::colData(after)))
   expect_identical(shiny::isolate(sce_state()), after)
 })
+
+test_that("the legacy mirror keeps a quadrant's arms and curl", {
+  # A spider quadrant's arms and a curly quadrant's curl decide which events each quadrant holds;
+  # the mirror kept the centre alone.
+  sce <- make_host_bridge_sce()
+  quadrants <- paste0(
+    '"gates":{',
+    '"spider":{"gate_id":"spider","name":"Spider","gate_type":"quadrant","x_channel":"CD3","y_channel":"CD19",',
+    '"center":[2,2],"arms":{"down":[3,0],"right":[4,3],"up":[1,4],"left":[0,1]},',
+    '"color":"#e41a1c","label_offset":null},',
+    '"curly":{"gate_id":"curly","name":"Curly","gate_type":"quadrant","x_channel":"CD3","y_channel":"CD19",',
+    '"center":[2,2],"curl":{"power":1.5,"kx":0.012,"ky":0.012},"color":"#377eb8","label_offset":null}}'
+  )
+  json <- sub(
+    '"gates":{"gate-1":{"gate_id":"gate-1","name":"CD3 positive","gate_type":"rectangle","x_channel":"CD3","y_channel":"CD19","vertices":[[1,2],[3,4]],"color":"#e41a1c","label_offset":null}}',
+    quadrants,
+    canonical_host_workspace_json("test-sce"),
+    fixed = TRUE
+  )
+  json <- sub('"gate_order":["gate-1"]', '"gate_order":["spider","curly"]', json, fixed = TRUE)
+  json <- sub('"selected_gate_id":"gate-1"', '"selected_gate_id":"spider"', json, fixed = TRUE)
+  json <- gsub('"gate_id":"gate-1","include":true', '"gate_id":"spider","include":true,"quadrant":2', json, fixed = TRUE)
+  sent <- jsonlite::fromJSON(json, simplifyVector = FALSE)
+  written <- GateLabR:::.gatelabr_store_host_workspace(
+    sce,
+    dataset_id = "test-sce",
+    expected_revision = 0L,
+    client_revision = 1L,
+    reason = "explicit",
+    workspace_json = json
+  )
+  mirror <- S4Vectors::metadata(written$sce)$gating_workspace
+  expect_identical(mirror$gates$spider$arms, sent$gating$gates$spider$arms)
+  expect_identical(mirror$gates$curly$curl, sent$gating$gates$curly$curl)
+  expect_null(mirror$gates$spider$curl)
+  expect_null(mirror$gates$curly$arms)
+})
