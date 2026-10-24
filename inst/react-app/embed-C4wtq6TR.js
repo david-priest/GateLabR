@@ -853,7 +853,7 @@ function j5() {
       v !== null && (v.selected = !0);
     }
   }
-  function gt(f, v) {
+  function mt(f, v) {
     if (v.dangerouslySetInnerHTML != null) throw Error(n(91));
     return re({}, v, { value: void 0, defaultValue: void 0, children: "" + f._wrapperState.initialValue });
   }
@@ -893,7 +893,7 @@ function j5() {
   function Re(f, v) {
     return f == null || f === "http://www.w3.org/1999/xhtml" ? Ce(v) : f === "http://www.w3.org/2000/svg" && v === "foreignObject" ? "http://www.w3.org/1999/xhtml" : f;
   }
-  var se, we = (function(f) {
+  var se, ve = (function(f) {
     return typeof MSApp < "u" && MSApp.execUnsafeLocalFunction ? function(v, A, R, $) {
       MSApp.execUnsafeLocalFunction(function() {
         return f(v, A, R, $);
@@ -1189,7 +1189,7 @@ function j5() {
     }
     return null;
   }
-  var $t = t.unstable_scheduleCallback, Qt = t.unstable_cancelCallback, on = t.unstable_shouldYield, mt = t.unstable_requestPaint, Ot = t.unstable_now, sn = t.unstable_getCurrentPriorityLevel, On = t.unstable_ImmediatePriority, an = t.unstable_UserBlockingPriority, Vt = t.unstable_NormalPriority, ta = t.unstable_LowPriority, jn = t.unstable_IdlePriority, kn = null, In = null;
+  var $t = t.unstable_scheduleCallback, Qt = t.unstable_cancelCallback, on = t.unstable_shouldYield, gt = t.unstable_requestPaint, Ot = t.unstable_now, sn = t.unstable_getCurrentPriorityLevel, On = t.unstable_ImmediatePriority, an = t.unstable_UserBlockingPriority, Vt = t.unstable_NormalPriority, ta = t.unstable_LowPriority, jn = t.unstable_IdlePriority, kn = null, In = null;
   function Sn(f) {
     if (In && typeof In.onCommitFiberRoot == "function") try {
       In.onCommitFiberRoot(kn, f, void 0, (f.current.flags & 128) === 128);
@@ -3621,7 +3621,7 @@ Error generating stack: ` + ae.message + `
           $ = re({}, $, { value: void 0 }), R = re({}, R, { value: void 0 }), ae = [];
           break;
         case "textarea":
-          $ = gt(f, $), R = gt(f, R), ae = [];
+          $ = mt(f, $), R = mt(f, R), ae = [];
           break;
         default:
           typeof $.onClick != "function" && typeof R.onClick == "function" && (f.onclick = _h);
@@ -3800,7 +3800,7 @@ Error generating stack: ` + ae.message + `
                   f._wrapperState = { wasMultiple: !!R.multiple }, $ = re({}, R, { value: void 0 }), Dr("invalid", f);
                   break;
                 case "textarea":
-                  jt(f, R), $ = gt(f, R), Dr("invalid", f);
+                  jt(f, R), $ = mt(f, R), Dr("invalid", f);
                   break;
                 default:
                   $ = R;
@@ -3808,7 +3808,7 @@ Error generating stack: ` + ae.message + `
               Be(A, $), We = $;
               for (ae in We) if (We.hasOwnProperty(ae)) {
                 var tt = We[ae];
-                ae === "style" ? pe(f, tt) : ae === "dangerouslySetInnerHTML" ? (tt = tt ? tt.__html : void 0, tt != null && we(f, tt)) : ae === "children" ? typeof tt == "string" ? (A !== "textarea" || tt !== "") && le(f, tt) : typeof tt == "number" && le(f, "" + tt) : ae !== "suppressContentEditableWarning" && ae !== "suppressHydrationWarning" && ae !== "autoFocus" && (r.hasOwnProperty(ae) ? tt != null && ae === "onScroll" && Dr("scroll", f) : tt != null && S(f, ae, tt, ke));
+                ae === "style" ? pe(f, tt) : ae === "dangerouslySetInnerHTML" ? (tt = tt ? tt.__html : void 0, tt != null && ve(f, tt)) : ae === "children" ? typeof tt == "string" ? (A !== "textarea" || tt !== "") && le(f, tt) : typeof tt == "number" && le(f, "" + tt) : ae !== "suppressContentEditableWarning" && ae !== "suppressHydrationWarning" && ae !== "autoFocus" && (r.hasOwnProperty(ae) ? tt != null && ae === "onScroll" && Dr("scroll", f) : tt != null && S(f, ae, tt, ke));
               }
               switch (A) {
                 case "input":
@@ -4236,7 +4236,7 @@ Error generating stack: ` + ae.message + `
             var Nt = ze(We, ae);
             for (ke = 0; ke < tt.length; ke += 2) {
               var mn = tt[ke], _n = tt[ke + 1];
-              mn === "style" ? pe($, _n) : mn === "dangerouslySetInnerHTML" ? we($, _n) : mn === "children" ? le($, _n) : S($, mn, _n, Nt);
+              mn === "style" ? pe($, _n) : mn === "dangerouslySetInnerHTML" ? ve($, _n) : mn === "children" ? le($, _n) : S($, mn, _n, Nt);
             }
             switch (We) {
               case "input":
@@ -4982,7 +4982,7 @@ Error generating stack: ` + ae.message + `
       var ke = en;
       en = 1;
       var We = pr;
-      pr |= 4, Sc.current = null, Cy(f, A), xa(A, f), ox(Ms), La = !!au, Ms = au = null, f.current = A, cm(A), mt(), pr = We, en = ke, zs.transition = ae;
+      pr |= 4, Sc.current = null, Cy(f, A), xa(A, f), ox(Ms), La = !!au, Ms = au = null, f.current = A, cm(A), gt(), pr = We, en = ke, zs.transition = ae;
     } else f.current = A;
     if (hm && (hm = !1, Cc = f, ys = $), ae = f.pendingLanes, ae === 0 && (bu = null), Sn(A.stateNode), Li(f, Ot()), v !== null) for (R = f.onRecoverableError, A = 0; A < v.length; A++) $ = v[A], R($.value, { componentStack: $.stack, digest: $.digest });
     if (fm) throw fm = !1, f = Py, Py = null, f;
@@ -11882,9 +11882,9 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
       Re && (Ce.parent_id = Re), S[Qe] = Ce;
       continue;
     }
-    const gt = Je.localName === "BooleanGate" ? [] : sB(Je);
-    if (gt.length) {
-      I.push(`${Nd(Je)} has ${gt.join("; ")}.`);
+    const mt = Je.localName === "BooleanGate" ? [] : sB(Je);
+    if (mt.length) {
+      I.push(`${Nd(Je)} has ${mt.join("; ")}.`);
       continue;
     }
     if (Je.localName === "RectangleGate") {
@@ -11917,8 +11917,8 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
           I.push(`${Nd(Je)} has a gateReference with no ref.`), Re = !0;
           continue;
         }
-        const { problem: we } = N0(se);
-        we && (I.push(`${Nd(Je)} references ${Xn(se, "ref")} with ${we}.`), Re = !0);
+        const { problem: ve } = N0(se);
+        ve && (I.push(`${Nd(Je)} references ${Xn(se, "ref")} with ${ve}.`), Re = !0);
       }
       if (Re) continue;
     }
@@ -11947,17 +11947,17 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
     const Je = new Set(r.matrixChannels), Qe = /* @__PURE__ */ new Map();
     for (const Mt of Object.values(S))
       if (Mt.gate_type !== "boolean")
-        for (const gt of new Set(Mt.dims ?? [])) {
-          if (((Ve = gt.compensation_ref) == null ? void 0 : Ve.trim().toLowerCase()) !== "fcs") continue;
-          const jt = Xm(gt.channel, t, n, a);
+        for (const mt of new Set(Mt.dims ?? [])) {
+          if (((Ve = mt.compensation_ref) == null ? void 0 : Ve.trim().toLowerCase()) !== "fcs") continue;
+          const jt = Xm(mt.channel, t, n, a);
           if (jt === null || Je.has(jt) || Mr(jt) || Gi(jt)) continue;
           const It = Qe.get(jt) ?? [];
           It.includes(Mt.name) || It.push(Mt.name), Qe.set(jt, It);
         }
     if (Qe.size) {
-      const Mt = [...new Set([...Qe.values()].flat())], gt = [...Qe.keys()];
+      const Mt = [...new Set([...Qe.values()].flat())], mt = [...Qe.keys()];
       I.push(
-        `${Mt.length === 1 ? "The gate" : "The gates"} ${Mt.slice(0, 3).map((jt) => `"${jt}"`).join(", ")}${Mt.length > 3 ? `, and ${Mt.length - 3} more,` : ""} ${Mt.length === 1 ? "was" : "were"} drawn on compensated values of ${gt.join(", ")}, and no spillover matrix that applies to this file covers ${gt.length === 1 ? "it" : "them"}: neither the workspace's nor the FCS file's own. Evaluated on the stored values, they would not hold the events the workspace counted in them.`
+        `${Mt.length === 1 ? "The gate" : "The gates"} ${Mt.slice(0, 3).map((jt) => `"${jt}"`).join(", ")}${Mt.length > 3 ? `, and ${Mt.length - 3} more,` : ""} ${Mt.length === 1 ? "was" : "were"} drawn on compensated values of ${mt.join(", ")}, and no spillover matrix that applies to this file covers ${mt.length === 1 ? "it" : "them"}: neither the workspace's nor the FCS file's own. Evaluated on the stored values, they would not hold the events the workspace counted in them.`
       );
     }
   }
@@ -11973,8 +11973,8 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
         if (!Mt) I.push(`${Je.gml_id} references missing gate ${Qe.gate_id}.`);
         else if (!(Mt.gate_type === "boolean" && c.parentIdHierarchy && !_)) {
           if (Mt.gate_type === "boolean" && (_ || h || c.parentIdHierarchy)) {
-            const gt = Je.pop_parent_indices ?? [], jt = N.indexOf(Qe.gate_id) + 1, It = Mt.gate_set_id;
-            !_ && gt.some(
+            const mt = Je.pop_parent_indices ?? [], jt = N.indexOf(Qe.gate_id) + 1, It = Mt.gate_set_id;
+            !_ && mt.some(
               (Ce) => Ce === jt || It != null && Ce === It
             ) || I.push(
               `${Je.gml_id} contains a nested Boolean reference to ${Qe.gate_id} that cannot be represented safely.`
@@ -11999,28 +11999,28 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
   if (a === "flow") {
     const Je = new Set(G), Qe = Je.has("FCS") || Je.has("missing") || ((rt = L.compensation) == null ? void 0 : rt.enabled) === !0;
     if (Qe || Je.has("matrix")) {
-      const Mt = r.compensatedChannels, gt = new Set(Qe && Mt && !Je.has("missing") ? Mt : []), jt = Qe && (!Mt || Je.has("missing"));
+      const Mt = r.compensatedChannels, mt = new Set(Qe && Mt && !Je.has("missing") ? Mt : []), jt = Qe && (!Mt || Je.has("missing"));
       for (const Re of (D == null ? void 0 : D.channels) ?? []) {
         const se = Xm(Re, t, n, a);
-        se && gt.add(se);
+        se && mt.add(se);
       }
-      const It = (Re) => gt.has(Re) || jt && !Mr(Re) && !Gi(Re), Pt = (Re) => Object.values(S).filter((se) => se.gate_type !== "boolean" && !se.lost_reason).flatMap((se) => (se.dims ?? []).filter((we) => {
+      const It = (Re) => mt.has(Re) || jt && !Mr(Re) && !Gi(Re), Pt = (Re) => Object.values(S).filter((se) => se.gate_type !== "boolean" && !se.lost_reason).flatMap((se) => (se.dims ?? []).filter((ve) => {
         var le;
-        return ((le = we.compensation_ref) == null ? void 0 : le.trim().toLowerCase()) === Re;
-      }).map((we) => Xm(we.channel, t, n, a)).filter((we) => we !== null)), Ce = Je.has("FCS") && !Je.has("matrix") && !Je.has("missing") && !L.compensation && !Pt("fcs").some(It) && Pt("uncompensated").some(It);
+        return ((le = ve.compensation_ref) == null ? void 0 : le.trim().toLowerCase()) === Re;
+      }).map((ve) => Xm(ve.channel, t, n, a)).filter((ve) => ve !== null)), Ce = Je.has("FCS") && !Je.has("matrix") && !Je.has("missing") && !L.compensation && !Pt("fcs").some(It) && Pt("uncompensated").some(It);
       Ce && (V = [...G.filter((Re) => Re !== "FCS"), ...Je.has("uncompensated") ? [] : ["uncompensated"]]);
       for (const Re of Ce ? [] : Object.values(S)) {
         if (Re.gate_type === "boolean" || Re.lost_reason) continue;
-        const se = [...new Set(Re.dims ?? [])].filter((we) => {
+        const se = [...new Set(Re.dims ?? [])].filter((ve) => {
           var le;
-          return ((le = we.compensation_ref) == null ? void 0 : le.trim().toLowerCase()) === "uncompensated";
-        }).filter((we) => {
-          const le = Xm(we.channel, t, n, a);
+          return ((le = ve.compensation_ref) == null ? void 0 : le.trim().toLowerCase()) === "uncompensated";
+        }).filter((ve) => {
+          const le = Xm(ve.channel, t, n, a);
           return le !== null && It(le);
-        }).map((we) => we.channel);
+        }).map((ve) => ve.channel);
         if (se.length) {
-          const we = [...new Set(se)];
-          Re.lost_reason = `declares uncompensated values on ${we.join(", ")}, which the file's other gates compensate; GateLab evaluates a sample on one compensation. Redraw it on the compensated parameter (${we.map((le) => `Comp-${le}`).join(", ")} in the workspace) and import again, or redraw it in GateLab after import`;
+          const ve = [...new Set(se)];
+          Re.lost_reason = `declares uncompensated values on ${ve.join(", ")}, which the file's other gates compensate; GateLab evaluates a sample on one compensation. Redraw it on the compensated parameter (${ve.map((le) => `Comp-${le}`).join(", ")} in the workspace) and import again, or redraw it in GateLab after import`;
         }
       }
     }
@@ -12035,14 +12035,14 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
       X++, K.set(Je, Qe.lost_reason);
       continue;
     }
-    const Mt = [...new Set(Qe.channels)], gt = {};
-    for (const Me of Mt) gt[Me] = Xm(Me, t, n, a);
-    const jt = Mt.filter((Me) => gt[Me] == null);
+    const Mt = [...new Set(Qe.channels)], mt = {};
+    for (const Me of Mt) mt[Me] = Xm(Me, t, n, a);
+    const jt = Mt.filter((Me) => mt[Me] == null);
     if (jt.length) {
       re.push(...jt), X++, K.set(Je, `names a channel not in the loaded data (${jt.join(", ")})`);
       continue;
     }
-    const It = gt[Qe.x_channel], Pt = gt[Qe.y_channel];
+    const It = mt[Qe.x_channel], Pt = mt[Qe.y_channel];
     if (!It || !Pt) {
       X++, K.set(Je, "names a channel not in the loaded data");
       continue;
@@ -12050,8 +12050,8 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
     const Ce = (Le = (_t = Qe.dims) == null ? void 0 : _t[0]) == null ? void 0 : Le.transformation_ref, Re = (Xe = (Ze = Qe.dims) == null ? void 0 : Ze[1]) == null ? void 0 : Xe.transformation_ref, se = (Me, Be) => {
       const ze = Be ? PS(l[Be], c.logicleUnit, g) : PS(void 0);
       return ze && m && b !== null && T.has(Me) ? M0(ze, b) : ze;
-    }, we = se(It, Ce), le = se(Pt, Re);
-    if (!Qe.wsp_space && It === Pt && we && le && JSON.stringify(we.spec) !== JSON.stringify(le.spec)) {
+    }, ve = se(It, Ce), le = se(Pt, Re);
+    if (!Qe.wsp_space && It === Pt && ve && le && JSON.stringify(ve.spec) !== JSON.stringify(le.spec)) {
       X++, K.set(Je, "puts one channel on both axes under two different transforms, which GateLab cannot hold on one gate");
       continue;
     }
@@ -12069,21 +12069,21 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
       Me && ((yt = Qe.wsp_space.raw) == null ? void 0 : yt.length) === Se.length && (Pe = Qe.wsp_space.raw);
     } else if (Qe.grid_mark && Qe.gate_type === "polygon")
       Se = Qe.grid_mark.vertices.map(([Me, Be]) => [Me, Be]), Fe = { space: "display", transforms: { [It]: Qe.grid_mark.x, [Pt]: Qe.grid_mark.y } }, Pe = Qe.grid_mark.raw;
-    else if (we && le) {
+    else if (ve && le) {
       const Me = (Ke, Ue) => {
         const qe = Qe.gate_type === "rectangle" && y ? Ke.rawRect : void 0, ft = (Qe.vertices ?? []).map((Yt) => Yt[Ue]);
         if (!(qe != null && qe.rectEdge) || !ft.length) return null;
         const ut = [qe.rectEdge(Math.min(...ft), "lo"), qe.rectEdge(Math.max(...ft), "hi")];
         return ut[0] <= ut[1] ? ut : null;
       };
-      let Be = Me(we, 0), ze = Me(le, 1);
+      let Be = Me(ve, 0), ze = Me(le, 1);
       It === Pt && !Be != !ze && (Be = ze = null);
       const st = !Be && hj(Ce ? l[Ce] : void 0) || !ze && hj(Re ? l[Re] : void 0);
       if (st) {
         X++, K.set(Je, st);
         continue;
       }
-      const nt = Be ? we.rawRect : we, pt = ze ? le.rawRect : le, Ft = (Ke) => ir(Ke) ? Ke : nt.toGateUnits(Ke), Ye = (Ke) => ir(Ke) ? Ke : pt.toGateUnits(Ke);
+      const nt = Be ? ve.rawRect : ve, pt = ze ? le.rawRect : le, Ft = (Ke) => ir(Ke) ? Ke : nt.toGateUnits(Ke), Ye = (Ke) => ir(Ke) ? Ke : pt.toGateUnits(Ke);
       if (Se = (Qe.vertices ?? []).map((Ke) => [Ft(Ke[0]), Ye(Ke[1])]), Qe.gate_type === "rectangle" && (nt.rectEdge || pt.rectEdge) && Se.length) {
         const Ke = (Yt, qt, Ut) => {
           const rn = Yt === 0 ? Be : ze;
@@ -12146,15 +12146,15 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
       continue;
     }
     if (Qe.gate_type === "ellipse" && Qe.ellipse) {
-      if (!(we && le)) continue;
-      const Me = we.toGateUnits(1) - we.toGateUnits(0), Be = le.toGateUnits(1) - le.toGateUnits(0), ze = Qe.ellipse;
+      if (!(ve && le)) continue;
+      const Me = ve.toGateUnits(1) - ve.toGateUnits(0), Be = le.toGateUnits(1) - le.toGateUnits(0), ze = Qe.ellipse;
       U[pe] = {
         gate_id: pe,
         name: Qe.name,
         gate_type: "ellipse",
         x_channel: It,
         y_channel: Pt,
-        mean: [we.toGateUnits(ze.mean[0]), le.toGateUnits(ze.mean[1])],
+        mean: [ve.toGateUnits(ze.mean[0]), le.toGateUnits(ze.mean[1])],
         covariance: [
           [ze.covariance[0][0] * Me * Me, ze.covariance[0][1] * Me * Be],
           [ze.covariance[1][0] * Be * Me, ze.covariance[1][1] * Be * Be]
@@ -12197,9 +12197,9 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
     let Qe = !1;
     for (const Mt of me) {
       if (F[Mt]) continue;
-      const gt = S[Mt].refs ?? [];
-      if (gt.length === 0) continue;
-      gt.every((It) => F[It.gate_id] || me.includes(It.gate_id)) && (F[Mt] = Mt, Qe = !0);
+      const mt = S[Mt].refs ?? [];
+      if (mt.length === 0) continue;
+      mt.every((It) => F[It.gate_id] || me.includes(It.gate_id)) && (F[Mt] = Mt, Qe = !0);
     }
     if (!Qe) break;
   }
@@ -12208,14 +12208,14 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
   const xe = [], ce = {
     lostGates: K,
     lostOperand: (Je) => {
-      var Qe, Mt, gt;
+      var Qe, Mt, mt;
       for (const jt of ((Qe = S[Je]) == null ? void 0 : Qe.refs) ?? []) {
         const It = S[jt.gate_id];
         if (It) {
           if (It.gate_type !== "boolean") {
             if (K.has(jt.gate_id)) return jt.gate_id;
           } else if (It.operand_helper) {
-            const Pt = (gt = (Mt = It.refs) == null ? void 0 : Mt[0]) == null ? void 0 : gt.gate_id;
+            const Pt = (mt = (Mt = It.refs) == null ? void 0 : Mt[0]) == null ? void 0 : mt.gate_id;
             if (Pt && K.has(Pt)) return Pt;
           }
         }
@@ -12232,36 +12232,36 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
       xe.push(`"${Je}" negates or combines gates in a way that is not one AND of gates, each included or excluded, which GateLab cannot represent; it and anything below it were skipped.`);
     },
     warnOutside: (Je, Qe, Mt) => {
-      const gt = (jt) => {
+      const mt = (jt) => {
         var It;
         return ((It = S[jt]) == null ? void 0 : It.name) ?? jt;
       };
-      xe.push(`"${Je}" uses the gate "${gt(Qe)}", which sits beneath "${gt(Mt)}", not above "${Je}"; GateLab cannot represent that as a population within one parent, so it and anything below it were skipped.`);
+      xe.push(`"${Je}" uses the gate "${mt(Qe)}", which sits beneath "${mt(Mt)}", not above "${Je}"; GateLab cannot represent that as a population within one parent, so it and anything below it were skipped.`);
     },
     warnLost: (Je, Qe) => {
       var jt;
-      const Mt = ((jt = S[Qe]) == null ? void 0 : jt.name) ?? Qe, gt = K.get(Qe) ?? "could not be imported";
-      xe.push(Je === Mt ? `"${Je}" ${gt}; it and anything below it were skipped.` : `"${Je}" uses the gate "${Mt}", which ${gt}; it and anything below it were skipped.`);
+      const Mt = ((jt = S[Qe]) == null ? void 0 : jt.name) ?? Qe, mt = K.get(Qe) ?? "could not be imported";
+      xe.push(Je === Mt ? `"${Je}" ${mt}; it and anything below it were skipped.` : `"${Je}" uses the gate "${Mt}", which ${mt}; it and anything below it were skipped.`);
     }
   };
   if (_) {
     const Je = (Qe, Mt) => {
       var le, Se;
-      const gt = Xn(Qe, "gate-ref"), jt = N0(Qe).value, It = ma(Qe, "name");
+      const mt = Xn(Qe, "gate-ref"), jt = N0(Qe).value, It = ma(Qe, "name");
       let Pt = It ? zL(It.textContent ?? "") : "";
-      Pt.trim() || (Pt = ""), !Pt && gt && S[gt] && (Pt = S[gt].name), Pt || (Pt = "Population");
-      const Ce = gt ? K.has(gt) ? gt : ((le = S[gt]) == null ? void 0 : le.gate_type) === "boolean" ? ce.lostOperand(gt) : null : null;
+      Pt.trim() || (Pt = ""), !Pt && mt && S[mt] && (Pt = S[mt].name), Pt || (Pt = "Population");
+      const Ce = mt ? K.has(mt) ? mt : ((le = S[mt]) == null ? void 0 : le.gate_type) === "boolean" ? ce.lostOperand(mt) : null : null;
       if (Ce) {
         ce.warnLost(Pt, Ce);
         return;
       }
-      if (gt && ((Se = S[gt]) == null ? void 0 : Se.operation) === "or") {
+      if (mt && ((Se = S[mt]) == null ? void 0 : Se.operation) === "or") {
         ce.warnOr(Pt);
         return;
       }
       let Re = [], se = "and";
-      if (gt && F[gt]) {
-        const Fe = S[gt];
+      if (mt && F[mt]) {
+        const Fe = S[mt];
         if (Fe && Fe.gate_type === "boolean") {
           Fe.operation === "or" && (se = "or");
           const Pe = /* @__PURE__ */ new Set();
@@ -12274,15 +12274,15 @@ function E0(e, t, n = {}, a = "cytof", r = {}) {
           }
           jt && (Re = Re.map((pe) => bs(pe.gate_id, !pe.include, pe.quadrant)), Fe.operation !== "not" && (se = se === "and" ? "or" : "and"));
         } else
-          Re = [bs(F[gt], !jt)];
+          Re = [bs(F[mt], !jt)];
       }
       if (Re.length === 0) {
         ce.warnNoGates(Pt);
         return;
       }
-      const we = as(Pt, Re, Mt, se);
-      de[we.population_id] = we, de = wl(de, we.population_id, Mt);
-      for (const Fe of Co(Qe, "PopulationGatePair")) Je(Fe, we.population_id);
+      const ve = as(Pt, Re, Mt, se);
+      de[ve.population_id] = ve, de = wl(de, ve.population_id, Mt);
+      for (const Fe of Co(Qe, "PopulationGatePair")) Je(Fe, ve.population_id);
     };
     for (const Qe of Co(_, "PopulationGatePair")) Je(Qe, Y);
   } else c.parentIdHierarchy ? de = zB(S, N, F, de, Y, ce) : HB(
@@ -12521,9 +12521,9 @@ function HB(e, t, n, a, r, o, i, s = [], l = null, u, c = !0, h = /* @__PURE__ *
       if (kt.operation === "or") return null;
       const Je = [];
       for (const Mt of kt.refs ?? []) {
-        const gt = de(Mt.gate_id, Mt.complement, Xe, yt + 1);
-        if (!Array.isArray(gt)) return gt;
-        for (const jt of gt) Je.some((It) => It.gml === jt.gml && It.include === jt.include) || Je.push(jt);
+        const mt = de(Mt.gate_id, Mt.complement, Xe, yt + 1);
+        if (!Array.isArray(mt)) return mt;
+        for (const jt of mt) Je.some((It) => It.gml === jt.gml && It.include === jt.include) || Je.push(jt);
       }
       return kt.operation === "not" !== Ze ? Je.length === 1 ? [{ gml: Je[0].gml, include: !Je[0].include }] : null : Je;
     }, xe = (Le) => {
@@ -13412,8 +13412,8 @@ function _j(e, t, n, a, r, o) {
   const l = s.length;
   if (l < 3) return i();
   const u = (Ce, Re) => !!Re && (Re.lo !== void 0 && Ce <= Re.lo || Re.hi !== void 0 && Ce >= Re.hi), c = (Ce, Re) => Number.isFinite(Ce) && Math.abs(Ce) < Vc && !u(Ce, Re), h = (Ce, Re) => {
-    const se = Re === 0 ? r.x : r.y, we = Math.max(1, Math.floor(Ce.length / 8192)), le = [];
-    for (let pe = 0; pe < Ce.length; pe += we) c(Ce[pe], se) && le.push(Ce[pe]);
+    const se = Re === 0 ? r.x : r.y, ve = Math.max(1, Math.floor(Ce.length / 8192)), le = [];
+    for (let pe = 0; pe < Ce.length; pe += ve) c(Ce[pe], se) && le.push(Ce[pe]);
     le.sort((pe, Me) => pe - Me);
     const Se = le.length ? [le[Math.floor(0.05 * (le.length - 1))], le[Math.ceil(0.95 * (le.length - 1))]] : s.map((pe) => pe[Re]).filter((pe) => c(pe, se));
     if (Se.length < 2) return 0;
@@ -13422,39 +13422,39 @@ function _j(e, t, n, a, r, o) {
   }, g = h(t, 0), y = h(n, 1);
   if (!(g > 0) || !(y > 0)) return i();
   const m = t9, b = 50 * m, w = 0.01, x = 4096 * m, C = (Ce, Re, se) => {
-    let we = !1;
+    let ve = !1;
     for (let le = 0, Se = Ce.length - 1; le < Ce.length; Se = le++) {
       const [Fe, Pe] = Ce[le], [pe, Me] = Ce[Se];
-      Pe > se != Me > se && Re < (pe - Fe) * (se - Pe) / (Me - Pe) + Fe && (we = !we);
+      Pe > se != Me > se && Re < (pe - Fe) * (se - Pe) / (Me - Pe) + Fe && (ve = !ve);
     }
-    return we;
+    return ve;
   }, S = (Ce, Re, se = 0.5) => {
-    const we = s[Ce], le = s[(Ce + 1) % l], Se = (le[0] - we[0]) / Re[0], Fe = (le[1] - we[1]) / Re[1], Pe = Math.hypot(Se, Fe);
+    const ve = s[Ce], le = s[(Ce + 1) % l], Se = (le[0] - ve[0]) / Re[0], Fe = (le[1] - ve[1]) / Re[1], Pe = Math.hypot(Se, Fe);
     if (!(Pe > 0) || !Number.isFinite(Pe)) return null;
     const pe = -Fe / Pe, Me = Se / Pe;
     let Be = 0, ze = 1;
     for (let Ye = 0; Ye < l; Ye++) {
       if (Ye === Ce) continue;
-      const lt = s[Ye], Ke = s[(Ye + 1) % l], Ue = (le[0] - we[0]) * (Ke[1] - lt[1]) - (le[1] - we[1]) * (Ke[0] - lt[0]);
+      const lt = s[Ye], Ke = s[(Ye + 1) % l], Ue = (le[0] - ve[0]) * (Ke[1] - lt[1]) - (le[1] - ve[1]) * (Ke[0] - lt[0]);
       if (Ue === 0 || !Number.isFinite(Ue)) continue;
-      const qe = ((lt[0] - we[0]) * (Ke[1] - lt[1]) - (lt[1] - we[1]) * (Ke[0] - lt[0])) / Ue, ft = ((lt[0] - we[0]) * (le[1] - we[1]) - (lt[1] - we[1]) * (le[0] - we[0])) / Ue;
+      const qe = ((lt[0] - ve[0]) * (Ke[1] - lt[1]) - (lt[1] - ve[1]) * (Ke[0] - lt[0])) / Ue, ft = ((lt[0] - ve[0]) * (le[1] - ve[1]) - (lt[1] - ve[1]) * (le[0] - ve[0])) / Ue;
       qe > 0 && qe < 1 && ft > 0 && ft < 1 && (qe < se && qe > Be && (Be = qe), qe > se && qe < ze && (ze = qe));
     }
-    const st = (Be + ze) / 2, nt = ze - Be, pt = we[0] + st * (le[0] - we[0]), Ft = we[1] + st * (le[1] - we[1]);
+    const st = (Be + ze) / 2, nt = ze - Be, pt = ve[0] + st * (le[0] - ve[0]), Ft = ve[1] + st * (le[1] - ve[1]);
     for (let Ye = Math.min(1e-4 * Pe * nt, 1e-3); Ye > 1e-13 * Math.min(1, Pe * nt); Ye /= 1e3) {
       const lt = C(s, pt + Ye * pe * Re[0], Ft + Ye * Me * Re[1]), Ke = C(s, pt - Ye * pe * Re[0], Ft - Ye * Me * Re[1]);
       if (lt !== Ke) return lt ? [-pe, -Me] : [pe, Me];
     }
     return null;
-  }, N = (Ce, Re, se, we, le) => {
-    const Se = (we[0] - se[0]) / le[0], Fe = (we[1] - se[1]) / le[1], Pe = (Ce - se[0]) / le[0], pe = (Re - se[1]) / le[1], Me = Se * Se + Fe * Fe, Be = Me > 0 ? Math.max(0, Math.min(1, (Pe * Se + pe * Fe) / Me)) : 0;
+  }, N = (Ce, Re, se, ve, le) => {
+    const Se = (ve[0] - se[0]) / le[0], Fe = (ve[1] - se[1]) / le[1], Pe = (Ce - se[0]) / le[0], pe = (Re - se[1]) / le[1], Me = Se * Se + Fe * Fe, Be = Me > 0 ? Math.max(0, Math.min(1, (Pe * Se + pe * Fe) / Me)) : 0;
     return { d: Math.hypot(Pe - Be * Se, pe - Be * Fe), u: Be, len: Math.sqrt(Me) };
   }, _ = l > 64 ? Math.min(1024, l >> 2) : 1, I = s.map((Ce) => Ce[1]).filter((Ce) => Number.isFinite(Ce) && Math.abs(Ce) < Vc), M = I.length ? Math.min(...I) : 0, P = I.length ? Math.max(...I) : 1, j = (P - M) / _, L = (Ce) => _ === 1 || !(j > 0) ? 1 : Ce < M ? 0 : Ce >= P ? _ + 1 : 1 + Math.min(_ - 1, Math.floor((Ce - M) / j)), G = Array.from({ length: _ + 2 }, () => []);
   s.forEach((Ce, Re) => {
     const se = s[(Re + 1) % l];
     if (Ce[0] === se[0] && Ce[1] === se[1] || ![Ce[0], Ce[1], se[0], se[1]].every(Number.isFinite)) return;
-    const we = 2 * x * Math.max(1e-3 * y, ...[Ce[1], se[1]].map((le) => Math.min(Math.abs(le), Vc)));
-    for (let le = L(Math.min(Ce[1], se[1]) - we); le <= L(Math.max(Ce[1], se[1]) + we); le++) G[le].push(Re);
+    const ve = 2 * x * Math.max(1e-3 * y, ...[Ce[1], se[1]].map((le) => Math.min(Math.abs(le), Vc)));
+    for (let le = L(Math.min(Ce[1], se[1]) - ve); le <= L(Math.max(Ce[1], se[1]) + ve); le++) G[le].push(Re);
   });
   const D = /* @__PURE__ */ new Map(), q = new Float64Array(l), H = new Float64Array(l);
   for (let Ce = 0; Ce < l; Ce++) {
@@ -13465,22 +13465,22 @@ function _j(e, t, n, a, r, o) {
   for (let Ce = 0; Ce < t.length; Ce++) {
     const Re = t[Ce], se = n[Ce];
     if (!Number.isFinite(Re) || !Number.isFinite(se)) continue;
-    const we = Math.max(Math.abs(Re), 1e-3 * g, w, ((It = o[0]) == null ? void 0 : It.call(o, Re)) ?? 0), le = Math.max(Math.abs(se), 1e-3 * y, w, ((Pt = o[1]) == null ? void 0 : Pt.call(o, se)) ?? 0), Se = 2 * x * we;
+    const ve = Math.max(Math.abs(Re), 1e-3 * g, w, ((It = o[0]) == null ? void 0 : It.call(o, Re)) ?? 0), le = Math.max(Math.abs(se), 1e-3 * y, w, ((Pt = o[1]) == null ? void 0 : Pt.call(o, se)) ?? 0), Se = 2 * x * ve;
     let Fe = x, Pe = -1, pe = 0;
     for (const Be of G[L(se)]) {
       if (Re < q[Be] - Se || Re > H[Be] + Se) continue;
-      const ze = s[Be], st = s[(Be + 1) % l], nt = (st[0] - ze[0]) / we, pt = (st[1] - ze[1]) / le, Ft = (Re - ze[0]) / we, Ye = (se - ze[1]) / le, lt = nt * nt + pt * pt, Ke = lt > 0 ? Math.max(0, Math.min(1, (Ft * nt + Ye * pt) / lt)) : 0, Ue = Math.hypot(Ft - Ke * nt, Ye - Ke * pt);
+      const ze = s[Be], st = s[(Be + 1) % l], nt = (st[0] - ze[0]) / ve, pt = (st[1] - ze[1]) / le, Ft = (Re - ze[0]) / ve, Ye = (se - ze[1]) / le, lt = nt * nt + pt * pt, Ke = lt > 0 ? Math.max(0, Math.min(1, (Ft * nt + Ye * pt) / lt)) : 0, Ue = Math.hypot(Ft - Ke * nt, Ye - Ke * pt);
       Ue < Fe && (Fe = Ue, Pe = Be, pe = Ke);
     }
     if (Pe < 0 || (F.push(Ce), !(Fe < m) || !c(Re, r.x) || !c(se, r.y))) continue;
     const Me = `${Re},${se}`;
-    D.has(Me) || D.set(Me, { x: Re, y: se, want: !!a[Ce], edge: Pe, u: pe, R: [we, le] });
+    D.has(Me) || D.set(Me, { x: Re, y: se, want: !!a[Ce], edge: Pe, u: pe, R: [ve, le] });
   }
   if (!D.size) return i();
   {
-    const Ce = [...D.values()], Re = [Math.max(...Ce.map((le) => le.R[0])), Math.max(...Ce.map((le) => le.R[1]))], se = s[0], we = s.find((le) => le[0] !== se[0] || le[1] !== se[1]);
-    if (we && (Ce.every((le) => le.want) || Ce.every((le) => !le.want))) {
-      const le = Ce[0].want, Se = (we[0] - se[0]) / Re[0], Fe = (we[1] - se[1]) / Re[1], Pe = Math.hypot(Se, Fe), [pe, Me] = [Se / Pe, Fe / Pe], Be = (st) => (st[0] - se[0]) / Re[0] * Me - (st[1] - se[1]) / Re[1] * pe, ze = (st) => (st[0] - se[0]) / Re[0] * pe + (st[1] - se[1]) / Re[1] * Me;
+    const Ce = [...D.values()], Re = [Math.max(...Ce.map((le) => le.R[0])), Math.max(...Ce.map((le) => le.R[1]))], se = s[0], ve = s.find((le) => le[0] !== se[0] || le[1] !== se[1]);
+    if (ve && (Ce.every((le) => le.want) || Ce.every((le) => !le.want))) {
+      const le = Ce[0].want, Se = (ve[0] - se[0]) / Re[0], Fe = (ve[1] - se[1]) / Re[1], Pe = Math.hypot(Se, Fe), [pe, Me] = [Se / Pe, Fe / Pe], Be = (st) => (st[0] - se[0]) / Re[0] * Me - (st[1] - se[1]) / Re[1] * pe, ze = (st) => (st[0] - se[0]) / Re[0] * pe + (st[1] - se[1]) / Re[1] * Me;
       if (Pe > 0 && s.every((st) => Be(st) === 0)) {
         const st = s.map(ze), nt = Math.min(...st), pt = Math.max(...st), Ft = (lt, Ke) => [se[0] + (lt * pe - Ke * Me) * Re[0], se[1] + (lt * Me + Ke * pe) * Re[1]], Ye = [];
         for (const lt of [2, 1, 4, 8]) {
@@ -13502,21 +13502,21 @@ function _j(e, t, n, a, r, o) {
     }
   }
   const U = (Ce) => (Ce.u >= 1 ? Ce.edge + 1 : Ce.edge + Ce.u) % l, J = (Ce) => [Math.max(...Ce.map((Re) => Re.R[0])), Math.max(...Ce.map((Re) => Re.R[1]))], X = (Ce) => (Ce % l + l) % l, K = (Ce, Re) => {
-    const se = s[X(Ce)], we = s[X(Ce + 1)];
-    return Math.hypot((we[0] - se[0]) / Re[0], (we[1] - se[1]) / Re[1]);
+    const se = s[X(Ce)], ve = s[X(Ce + 1)];
+    return Math.hypot((ve[0] - se[0]) / Re[0], (ve[1] - se[1]) / Re[1]);
   }, re = (Ce, Re, se) => {
-    let we = 0;
+    let ve = 0;
     for (let le = Ce; le < Re; ) {
       const Se = Math.floor(le), Fe = Math.min(Re, Se + 1);
-      we += (Fe - le) * K(Se, se), le = Fe;
+      ve += (Fe - le) * K(Se, se), le = Fe;
     }
-    return we;
-  }, V = (Ce, Re, se, we) => {
+    return ve;
+  }, V = (Ce, Re, se, ve) => {
     let le = Ce, Se = Re;
     for (let Fe = 0; Fe <= 2 * l; Fe++) {
-      const Pe = we > 0 ? Math.floor(le) : Math.ceil(le) - 1, pe = K(Pe, se), Me = we > 0 ? Pe + 1 - le : le - Pe;
-      if (Me * pe >= Se) return pe > 0 ? le + we * Se / pe : le;
-      Se -= Me * pe, le = we > 0 ? Pe + 1 : Pe;
+      const Pe = ve > 0 ? Math.floor(le) : Math.ceil(le) - 1, pe = K(Pe, se), Me = ve > 0 ? Pe + 1 - le : le - Pe;
+      if (Me * pe >= Se) return pe > 0 ? le + ve * Se / pe : le;
+      Se -= Me * pe, le = ve > 0 ? Pe + 1 : Pe;
     }
     return null;
   }, T = (Ce) => {
@@ -13524,8 +13524,8 @@ function _j(e, t, n, a, r, o) {
     return se === 0 ? s[X(Re)] : me(X(Re), se);
   };
   function me(Ce, Re) {
-    const se = s[Ce], we = s[(Ce + 1) % l];
-    return [se[0] + Re * (we[0] - se[0]), se[1] + Re * (we[1] - se[1])];
+    const se = s[Ce], ve = s[(Ce + 1) % l];
+    return [se[0] + Re * (ve[0] - se[0]), se[1] + Re * (ve[1] - se[1])];
   }
   const be = [...D.values()].sort((Ce, Re) => U(Ce) - U(Re)), Y = (Ce, Re) => [Math.max(Ce.R[0], Re.R[0]), Math.max(Ce.R[1], Re.R[1])], de = (Ce, Re) => {
     let se = Ce;
@@ -13548,21 +13548,21 @@ function _j(e, t, n, a, r, o) {
       const pe = U(Ce[Pe]), Me = de(U(Ce[(Pe + 1) % Ce.length]), pe + (Ce.length === 1 ? 1e-9 : 0)), Be = re(pe, Me, Y(Ce[Pe], Ce[(Pe + 1) % Ce.length]));
       Be > se && (se = Be, Re = Pe);
     }
-    const we = [...Ce.slice(Re + 1), ...Ce.slice(0, Re + 1)], le = U(we[0]), Se = de(U(Ce[Re]), le - l), Fe = Ce.length === 1 ? le - l / 2 : (Se + le) / 2;
-    xe[0] = { ties: we, a: le, b: de(U(we[we.length - 1]), le), lo: Fe, hi: Fe + l };
+    const ve = [...Ce.slice(Re + 1), ...Ce.slice(0, Re + 1)], le = U(ve[0]), Se = de(U(Ce[Re]), le - l), Fe = Ce.length === 1 ? le - l / 2 : (Se + le) / 2;
+    xe[0] = { ties: ve, a: le, b: de(U(ve[ve.length - 1]), le), lo: Fe, hi: Fe + l };
   }
   xe.length > 1 && xe.forEach((Ce, Re) => {
-    const se = xe[(Re + xe.length - 1) % xe.length], we = xe[(Re + 1) % xe.length], le = de(se.b, Ce.a - l);
-    Ce.lo = (le + Ce.a) / 2, Ce.hi = (Ce.b + de(we.a, Ce.b)) / 2;
+    const se = xe[(Re + xe.length - 1) % xe.length], ve = xe[(Re + 1) % xe.length], le = de(se.b, Ce.a - l);
+    Ce.lo = (le + Ce.a) / 2, Ce.hi = (Ce.b + de(ve.a, Ce.b)) / 2;
   });
   const ce = 4 * b, Te = (Ce) => {
     const Re = s[X(Ce)], se = s[X(Ce + 1)];
     return Re[0] === se[0] || Re[1] === se[1];
   }, He = 4, Ve = (Ce, Re) => {
-    const se = S(X(Ce - 1), Re, 1), we = S(X(Ce), Re, 0);
-    if (!se || !we) return !0;
-    const le = 1 + se[0] * we[0] + se[1] * we[1];
-    return !(Math.hypot(se[0] + we[0], se[1] + we[1]) / le <= He);
+    const se = S(X(Ce - 1), Re, 1), ve = S(X(Ce), Re, 0);
+    if (!se || !ve) return !0;
+    const le = 1 + se[0] * ve[0] + se[1] * ve[1];
+    return !(Math.hypot(se[0] + ve[0], se[1] + ve[1]) / le <= He);
   }, rt = /* @__PURE__ */ new Map(), _t = [], Le = (Ce) => {
     for (const Re of [Ce.edge, Ce.edge + 1]) {
       const se = s[X(Re)];
@@ -13579,21 +13579,21 @@ function _j(e, t, n, a, r, o) {
       Ze.delete(Ce);
       continue;
     }
-    const se = J(Re), we = V(Ce, 2 * b, se, -1), le = V(Ce, 2 * b, se, 1);
-    if (we === null || le === null) {
+    const se = J(Re), ve = V(Ce, 2 * b, se, -1), le = V(Ce, 2 * b, se, 1);
+    if (ve === null || le === null) {
       Ze.delete(Ce);
       continue;
     }
     const Se = Re.map((Fe) => de(U(Fe), Ce - l / 2));
-    rt.set(Ce, [we, le]), _t.push({ ties: Re, a: Math.min(...Se), b: Math.max(...Se), lo: we, hi: le });
+    rt.set(Ce, [ve, le]), _t.push({ ties: Re, a: Math.min(...Se), b: Math.max(...Se), lo: ve, hi: le });
   }
   const Xe = new Set([...Ze.values()].flat()), yt = [..._t];
   for (const Ce of xe) {
     const Re = Ce.ties.filter((pe) => !Xe.has(pe));
     if (!Re.length) continue;
     const se = { ...Ce, ties: Re, a: de(U(Re[0]), Ce.a) };
-    let we = [se.ties[0]], le = se.a, Se = se.lo, Fe = se.a;
-    const Pe = (pe, Me) => yt.push({ ties: we, a: le, b: pe, lo: Se, hi: Me });
+    let ve = [se.ties[0]], le = se.a, Se = se.lo, Fe = se.a;
+    const Pe = (pe, Me) => yt.push({ ties: ve, a: le, b: pe, lo: Se, hi: Me });
     for (let pe = 1; pe < se.ties.length; pe++) {
       const Me = se.ties[pe], Be = de(U(Me), Fe), ze = Y(se.ties[pe - 1], Me);
       let nt = !(Math.floor(Fe) === Math.floor(Be) && Fe !== Math.floor(Fe) && Te(Math.floor(Fe))) && re(Fe, Be, ze) > ce ? [(Fe + Be) / 2, (Fe + Be) / 2] : null;
@@ -13601,19 +13601,19 @@ function _j(e, t, n, a, r, o) {
         const Ft = rt.get(X(pt));
         Ft ? nt = [Ft[0] + (pt - X(pt)), Ft[1] + (pt - X(pt))] : Ve(pt, ze) && (nt = [pt, pt]);
       }
-      nt !== null ? (Pe(Fe, nt[0]), we = [Me], le = Be, Se = nt[1]) : we.push(Me), Fe = Be;
+      nt !== null ? (Pe(Fe, nt[0]), ve = [Me], le = Be, Se = nt[1]) : ve.push(Me), Fe = Be;
     }
     Pe(Fe, se.hi);
   }
   for (const Ce of yt)
     if (!_t.includes(Ce))
       for (const [Re, se] of rt.values())
-        for (const we of [-1, 0, 1])
-          se + we * l <= Ce.a && se + we * l > Ce.lo && (Ce.lo = se + we * l), Re + we * l >= Ce.b && Re + we * l < Ce.hi && (Ce.hi = Re + we * l);
+        for (const ve of [-1, 0, 1])
+          se + ve * l <= Ce.a && se + ve * l > Ce.lo && (Ce.lo = se + ve * l), Re + ve * l >= Ce.b && Re + ve * l < Ce.hi && (Ce.hi = Re + ve * l);
   const kt = (Ce) => {
-    const Re = J(Ce.ties), se = V(Ce.a, b, Re, -1), we = V(Ce.b, b, Re, 1);
-    if (se === null || we === null) return [];
-    const le = Math.max(se, Ce.lo), Se = Math.min(we, Ce.hi);
+    const Re = J(Ce.ties), se = V(Ce.a, b, Re, -1), ve = V(Ce.b, b, Re, 1);
+    if (se === null || ve === null) return [];
+    const le = Math.max(se, Ce.lo), Se = Math.min(ve, Ce.hi);
     if (!(le < Ce.a) || !(Se > Ce.b) || !(Se - le < l)) return [];
     const Fe = (le + Ce.a) / 2, Pe = (Ce.b + Se) / 2, pe = /* @__PURE__ */ new Map(), Me = (pt, Ft) => {
       const Ye = X(pt), lt = `${Ye}|${Ft}`;
@@ -13670,29 +13670,29 @@ function _j(e, t, n, a, r, o) {
     return st;
   }, Je = (Ce) => {
     if (!Ce.length) return s;
-    const Re = (Se) => Ce.some((Fe) => [Se, Se + l, Se - l, Se + 2 * l].some((Pe) => Pe >= Fe.s0 && Pe <= Fe.e0)), se = (Ce[0].e0 % l + l) % l, we = [];
-    for (let Se = Math.floor(se) + 1; Se <= Math.floor(se) + l; Se++) Re(Se) || we.push({ pos: Se, pts: [s[X(Se)]] });
-    for (const Se of Ce) we.push({ pos: de(Se.s0, se), pts: Se.pts });
-    we.sort((Se, Fe) => Se.pos - Fe.pos);
+    const Re = (Se) => Ce.some((Fe) => [Se, Se + l, Se - l, Se + 2 * l].some((Pe) => Pe >= Fe.s0 && Pe <= Fe.e0)), se = (Ce[0].e0 % l + l) % l, ve = [];
+    for (let Se = Math.floor(se) + 1; Se <= Math.floor(se) + l; Se++) Re(Se) || ve.push({ pos: Se, pts: [s[X(Se)]] });
+    for (const Se of Ce) ve.push({ pos: de(Se.s0, se), pts: Se.pts });
+    ve.sort((Se, Fe) => Se.pos - Fe.pos);
     const le = [];
-    for (const Se of we)
+    for (const Se of ve)
       for (const Fe of Se.pts) {
         const Pe = le[le.length - 1];
         (!Pe || Pe[0] !== Fe[0] || Pe[1] !== Fe[1]) && le.push(Fe);
       }
     for (; le.length > 1 && le[0][0] === le[le.length - 1][0] && le[0][1] === le[le.length - 1][1]; ) le.pop();
     return le;
-  }, Qe = (Ce, Re, se, we) => {
+  }, Qe = (Ce, Re, se, ve) => {
     let le = 1 / 0;
-    for (let Se = 0, Fe = Ce.length - 1; Se < Ce.length; Fe = Se++) le = Math.min(le, N(Re, se, Ce[Fe], Ce[Se], we).d);
+    for (let Se = 0, Fe = Ce.length - 1; Se < Ce.length; Fe = Se++) le = Math.min(le, N(Re, se, Ce[Fe], Ce[Se], ve).d);
     return le;
   }, Mt = (Ce, Re) => {
     var ze, st;
     const se = [...Ce.pts];
     for (let nt = Math.ceil(Ce.s0); nt <= Ce.e0; nt++) se.push(s[X(nt)]);
     if (se.some((nt) => !Number.isFinite(nt[0]) || !Number.isFinite(nt[1]) || u(nt[0], r.x) || u(nt[1], r.y))) return !1;
-    const we = Je([...Re, Ce]), le = Math.min(...se.map((nt) => nt[0])) - 4 * m * Ce.R[0], Se = Math.max(...se.map((nt) => nt[0])) + 4 * m * Ce.R[0], Fe = Math.min(...se.map((nt) => nt[1])) - 4 * m * Ce.R[1], Pe = Math.max(...se.map((nt) => nt[1])) + 4 * m * Ce.R[1], pe = F.filter((nt) => t[nt] >= le && t[nt] <= Se && n[nt] >= Fe && n[nt] <= Pe), Me = Xc(pe.map((nt) => t[nt]), pe.map((nt) => n[nt]), we, [1, 1]);
-    if (pe.some((nt, pt) => !!Me[pt] != !!a[nt]) || Ce.ties.some((nt) => Qe(we, nt.x, nt.y, Ce.R) < m / 2)) return !1;
+    const ve = Je([...Re, Ce]), le = Math.min(...se.map((nt) => nt[0])) - 4 * m * Ce.R[0], Se = Math.max(...se.map((nt) => nt[0])) + 4 * m * Ce.R[0], Fe = Math.min(...se.map((nt) => nt[1])) - 4 * m * Ce.R[1], Pe = Math.max(...se.map((nt) => nt[1])) + 4 * m * Ce.R[1], pe = F.filter((nt) => t[nt] >= le && t[nt] <= Se && n[nt] >= Fe && n[nt] <= Pe), Me = Xc(pe.map((nt) => t[nt]), pe.map((nt) => n[nt]), ve, [1, 1]);
+    if (pe.some((nt, pt) => !!Me[pt] != !!a[nt]) || Ce.ties.some((nt) => Qe(ve, nt.x, nt.y, Ce.R) < m / 2)) return !1;
     const Be = new Set(Ce.ties.map((nt) => `${nt.x},${nt.y}`));
     for (const nt of pe) {
       if (Be.has(`${t[nt]},${n[nt]}`)) continue;
@@ -13700,21 +13700,21 @@ function _j(e, t, n, a, r, o) {
       for (let Ft = 0; Ft + 1 < Ce.pts.length; Ft++) if (N(t[nt], n[nt], Ce.pts[Ft], Ce.pts[Ft + 1], pt).d < m / 2) return !1;
     }
     return !0;
-  }, gt = [], jt = [...yt];
+  }, mt = [], jt = [...yt];
   for (; jt.length; ) {
-    const Ce = jt.shift(), Re = kt(Ce).find((Me) => Mt(Me, gt));
+    const Ce = jt.shift(), Re = kt(Ce).find((Me) => Mt(Me, mt));
     if (Re) {
-      gt.push(Re);
+      mt.push(Re);
       continue;
     }
     if (Ce.ties.length < 2) continue;
-    let se = 0, we = -1;
+    let se = 0, ve = -1;
     for (let Me = 0; Me + 1 < Ce.ties.length; Me++) {
       const Be = U(Ce.ties[Me]);
       let ze = U(Ce.ties[Me + 1]);
       for (; ze < Be; ) ze += l;
       const st = re(Be, ze, Y(Ce.ties[Me], Ce.ties[Me + 1]));
-      st > we && (we = st, se = Me);
+      st > ve && (ve = st, se = Me);
     }
     const le = Ce.ties.slice(0, se + 1), Se = Ce.ties.slice(se + 1), Fe = de(U(le[le.length - 1]), Ce.a), Pe = de(U(Se[0]), Fe), pe = (Fe + Pe) / 2;
     jt.unshift(
@@ -13722,7 +13722,7 @@ function _j(e, t, n, a, r, o) {
       { ties: Se, a: Pe, b: Ce.b, lo: pe, hi: Ce.hi }
     );
   }
-  return gt.length ? Je(gt) : i();
+  return mt.length ? Je(mt) : i();
 }
 const a9 = 1e-4, r9 = 1e-6, Vc = 1e15;
 function o9(e) {
@@ -14033,7 +14033,7 @@ function p9(e, t = {}) {
   });
 }
 function Ej(e) {
-  var gt, jt, It, Pt, Ce, Re;
+  var mt, jt, It, Pt, Ce, Re;
   const { root_population_id: t, sample: n } = e;
   if (!e.gates || Object.keys(e.gates).length === 0) throw new Error("No gates to export.");
   const { gates: a, gate_order: r, populations: o } = WB(e.gates, e.gate_order, e.populations), i = new Set(r.filter((se) => !e.gates[se])), l = (e.format ?? "cytobank") === "cytobank";
@@ -14047,18 +14047,18 @@ function Ej(e) {
       `This workspace contains ${u.gateIds.length} unsupported curved or spider quadrant gate(s) and ${u.populationIds.length} dependent population(s). Export again only after explicitly accepting their omission; the .gatelab workspace preserves them in full.`
     );
   const c = n.instrument === "flow", h = (se) => {
-    const we = n.index(se), le = we !== void 0 ? n.channels[we].pnn : void 0;
+    const ve = n.index(se), le = ve !== void 0 ? n.channels[ve].pnn : void 0;
     return le && le.length ? le : se;
   }, g = l ? /* @__PURE__ */ new Map() : wC(n), y = JB(n, a, r, l, g, i), m = y.trDefs, b = p9(n, e.globalScales), w = 1, x = `Spill_${w}`, S = n.instrument === "flow" && n.embeddedCompensationEnabled ? n.spillover : null, N = !l && S !== null && n.spilloverOrigin.kind === "external", _ = new Set(n.channels.flatMap((se) => [se.pnn, se.key]));
   let I = "Comp_";
   for (; S != null && S.channels.some((se) => _.has(`${I}${h(se)}`)); ) I = `_${I}`;
   const M = (se) => `${I}${se}`, P = (se) => {
-    var we;
-    return c && n.embeddedCompensationEnabled && !!((we = n.spillover) != null && we.channels.includes(se));
-  }, j = (se) => P(se) ? N ? x : "FCS" : "uncompensated", L = (se) => N && P(se) ? M(h(se)) : h(se), G = (se, we) => {
-    const le = n.index(we);
+    var ve;
+    return c && n.embeddedCompensationEnabled && !!((ve = n.spillover) != null && ve.channels.includes(se));
+  }, j = (se) => P(se) ? N ? x : "FCS" : "uncompensated", L = (se) => N && P(se) ? M(h(se)) : h(se), G = (se, ve) => {
+    const le = n.index(ve);
     if (le === void 0) return;
-    const Se = n.rawColumnData(le), Fe = P(we);
+    const Se = n.rawColumnData(le), Fe = P(ve);
     if (se.trId === null && !Fe) return;
     const Pe = Se instanceof Float32Array;
     return (pe) => {
@@ -14070,11 +14070,11 @@ function Ej(e) {
       }
       return ze;
     };
-  }, D = (se, we) => {
-    if (se.trId === null || !we || se.convert(0.5) === 0.5 && se.convert(0.25) === 0.25) return;
+  }, D = (se, ve) => {
+    if (se.trId === null || !ve || se.convert(0.5) === 0.5 && se.convert(0.25) === 0.25) return;
     let le = 1 / 0, Se = -1 / 0;
-    for (let Me = 0; Me < we.length; Me++) {
-      const Be = we[Me];
+    for (let Me = 0; Me < ve.length; Me++) {
+      const Be = ve[Me];
       Number.isFinite(Be) && (Be < le && (le = Be), Be > Se && (Se = Be));
     }
     if (!(Se > le)) return;
@@ -14086,16 +14086,16 @@ function Ej(e) {
       const Be = Math.max(0, Math.min(Fe, (Me - le) / (Se - le) * Fe)), ze = Math.min(Fe - 1, Math.floor(Be));
       return Math.max(pe[ze], pe[ze + 1]);
     };
-  }, q = (se, we) => {
+  }, q = (se, ve) => {
     const le = se.trId !== null ? m.get(se.trId) : void 0;
     if (!le) return null;
     const Se = se.readScale ?? 1, Fe = le.type === "logicle" || le.type === "hyperlog" ? { kind: le.type, T: le.T / Se, W: le.W, M: le.M, A: le.A } : le.type === "flog" ? { kind: "flog", T: le.T / Se, M: le.M, standard: !0 } : le.type === "fasinh" && le.A === 0 ? { kind: "asinh", cofactor: le.T / Math.sinh(le.M * Math.log(10)) / Se } : null;
     if (!Fe) return null;
     const Pe = Pr(Fe).forward;
-    return Fe.kind === "hyperlog" ? Float64Array.from(we, (pe) => Pe(pe)) : Float32Array.from(we, (pe) => Pe(pe));
-  }, H = (se, we = y.axis(se.gate_id, se.x_channel), le = y.axis(se.gate_id, se.y_channel), Se = se) => {
+    return Fe.kind === "hyperlog" ? Float64Array.from(ve, (pe) => Pe(pe)) : Float32Array.from(ve, (pe) => Pe(pe));
+  }, H = (se, ve = y.axis(se.gate_id, se.x_channel), le = y.axis(se.gate_id, se.y_channel), Se = se) => {
     var Ut, rn, En, Ne;
-    const Fe = (ht) => [we.convert(ht[0]), le.convert(ht[1])], Pe = { x: { lo: (Ut = we.clamp) == null ? void 0 : Ut.lo, hi: (rn = we.clamp) == null ? void 0 : rn.hi }, y: { lo: (En = le.clamp) == null ? void 0 : En.lo, hi: (Ne = le.clamp) == null ? void 0 : Ne.hi } }, pe = Se.gate_type === "ellipse" ? bj(Se) : AC(se.vertices), Me = kj(pe, Pe, se.name), Be = Me === pe ? se.vertices : Array.from({ length: Me.pieces }, (ht, Tt) => Me.at(Tt, 0)), ze = se.gate_type === "polygon" ? n.gatingDataFor(Se) : null, st = ze ? Ao(Se, ze) : null, nt = ze == null ? void 0 : ze.column(Se.x_channel), pt = ze == null ? void 0 : ze.column(Se.y_channel), Ft = Se.gate_type === "polygon" && nt && pt ? yM(Se.vertices, nt, pt) : void 0, Ye = st && nt && pt && Se.gate_type === "polygon" ? n9(Be, nt, pt, st, { x: we.clamp, y: le.clamp }, [D(we, nt), D(le, pt)]) : Be, lt = Ye.map(Fe), Ke = (ht) => ht.clamp && ht.trId === null ? {
+    const Fe = (ht) => [ve.convert(ht[0]), le.convert(ht[1])], Pe = { x: { lo: (Ut = ve.clamp) == null ? void 0 : Ut.lo, hi: (rn = ve.clamp) == null ? void 0 : rn.hi }, y: { lo: (En = le.clamp) == null ? void 0 : En.lo, hi: (Ne = le.clamp) == null ? void 0 : Ne.hi } }, pe = Se.gate_type === "ellipse" ? bj(Se) : AC(se.vertices), Me = kj(pe, Pe, se.name), Be = Me === pe ? se.vertices : Array.from({ length: Me.pieces }, (ht, Tt) => Me.at(Tt, 0)), ze = se.gate_type === "polygon" ? n.gatingDataFor(Se) : null, st = ze ? Ao(Se, ze) : null, nt = ze == null ? void 0 : ze.column(Se.x_channel), pt = ze == null ? void 0 : ze.column(Se.y_channel), Ft = Se.gate_type === "polygon" && nt && pt ? yM(Se.vertices, nt, pt) : void 0, Ye = st && nt && pt && Se.gate_type === "polygon" ? n9(Be, nt, pt, st, { x: ve.clamp, y: le.clamp }, [D(ve, nt), D(le, pt)]) : Be, lt = Ye.map(Fe), Ke = (ht) => ht.clamp && ht.trId === null ? {
       ...ht.clamp.lo !== void 0 ? { lo: ht.clamp.toRaw(ht.clamp.lo) / (ht.clamp.gain ?? 1) } : {},
       ...ht.clamp.hi !== void 0 ? { hi: ht.clamp.toRaw(ht.clamp.hi) / (ht.clamp.gain ?? 1) } : {}
     } : {}, Ue = (ht) => {
@@ -14126,13 +14126,13 @@ function Ej(e) {
         const kn = iv(an, Vt, ta, gn), In = $t ? iv(an, Vt, ta, gn, $t) : kn;
         return Number.isFinite(In) ? In : kn;
       };
-      let on, mt;
+      let on, gt;
       if (ht.trId === null || !ht.clamp) {
         const an = ht.convert(0), Vt = ht.convert(1) - an, ta = ht.back ?? ((kn) => Vt !== 0 ? (kn - an) / Vt : kn);
         on = ta(Bn);
         const jn = Qt(Bn, on, ta, (kn) => ht.convert(kn));
         if (!Number.isFinite(jn)) return NaN;
-        mt = gn === "lo" ? jn : jp(jn, 1);
+        gt = gn === "lo" ? jn : jp(jn, 1);
       } else {
         const an = ht.convert(0), Vt = ht.convert(1) - an, ta = ht.back ?? ((Nn) => Vt !== 0 ? (Nn - an) / Vt : Nn);
         on = ta(Bn);
@@ -14140,13 +14140,13 @@ function Ej(e) {
         if (!Number.isFinite(In)) return NaN;
         const Sn = ht.rawToExport(In);
         if (!Number.isFinite(Sn)) return Et ? NaN : Bn;
-        mt = gn === "lo" ? Sn : jp(Sn, 1);
+        gt = gn === "lo" ? Sn : jp(Sn, 1);
       }
-      if (!st || !Tt || !Ct || !Lt || Kt === void 0) return mt;
+      if (!st || !Tt || !Ct || !Lt || Kt === void 0) return gt;
       const Ot = 1e-4 * Math.max(1, Math.abs(on)), sn = new Float64Array(Tt.length).fill(NaN);
       for (let an = 0; an < Tt.length; an++)
         !(yn === "lo" ? Lt[an] <= Kt : Lt[an] >= Kt) || !(Math.abs(Tt[an] - on) <= Ot) || (sn[an] = st[an] ? on : gn === "lo" ? on - Ot / 2 : on + Ot / 2);
-      return LS(mt, gn, sn, on, (an) => ht.rawToExport(Ct[an]), ht.trId !== null, 4e-9 * Math.max(1, Math.abs(mt)), !1, G(ht, xn));
+      return LS(gt, gn, sn, on, (an) => ht.rawToExport(Ct[an]), ht.trId !== null, 4e-9 * Math.max(1, Math.abs(gt)), !1, G(ht, xn));
     }, ft = (ht, Tt, Ct, Rt) => {
       var Bn;
       const Lt = Ke(ht), hn = {}, xn = G(ht, Rt);
@@ -14155,69 +14155,69 @@ function Ej(e) {
         if (yn === void 0 || Et === void 0 || !Tt) continue;
         const Kt = gn === "lo" ? 1 : -1, $t = Math.fround(Et);
         let Qt = yn, on = 1 / 0;
-        const mt = (On) => Ct ? gn === "lo" ? Ct[On] <= $t : Ct[On] >= $t : (Tt[On] - yn) * Kt <= 0;
-        for (let On = 0; On < Tt.length; On++) mt(On) && (Tt[On] - Qt) * Kt > 0 && (Qt = Tt[On]);
+        const gt = (On) => Ct ? gn === "lo" ? Ct[On] <= $t : Ct[On] >= $t : (Tt[On] - yn) * Kt <= 0;
+        for (let On = 0; On < Tt.length; On++) gt(On) && (Tt[On] - Qt) * Kt > 0 && (Qt = Tt[On]);
         let Ot = 0;
         for (let On = 0; On < Tt.length; On++) {
           const an = (Tt[On] - Qt) * Kt;
-          an > 0 && an < on && !mt(On) && (on = an), xn && mt(On) && (Ot = Math.max(Ot, an + xn(On) / 2));
+          an > 0 && an < on && !gt(On) && (on = an), xn && gt(On) && (Ot = Math.max(Ot, an + xn(On) / 2));
         }
         const sn = Math.min(Math.max(1e-8 * Math.max(1, Math.abs(yn)), Ot), on / 2);
         sn > 2e-9 && (hn[gn] = Qt + Kt * sn);
       }
       return hn;
-    }, ut = [ft(we, Ue(se.x_channel), nt, se.x_channel), ft(le, Ue(se.y_channel), pt, se.y_channel)], Yt = (ht, Tt) => {
+    }, ut = [ft(ve, Ue(se.x_channel), nt, se.x_channel), ft(le, Ue(se.y_channel), pt, se.y_channel)], Yt = (ht, Tt) => {
       var xn, Bn;
-      const Ct = (xn = we.clamp) == null ? void 0 : xn[ht], Rt = (Bn = le.clamp) == null ? void 0 : Bn[Tt];
+      const Ct = (xn = ve.clamp) == null ? void 0 : xn[ht], Rt = (Bn = le.clamp) == null ? void 0 : Bn[Tt];
       if (Ct === void 0 || Rt === void 0) return !1;
       const Lt = [Math.fround(Ct)], hn = [Math.fround(Rt)];
       return Se.gate_type === "polygon" ? Xc(Lt, hn, Se.vertices, Ft)[0] === 1 : Se.gate_type === "ellipse" ? yC(Lt, hn, Se)[0] === 1 : !1;
-    }, qt = (ht) => se.gate_type === "polygon" ? i9(ht, Ke(we), Ke(le), [
-      qe(we, nt, Ue(se.x_channel), le, pt, !0, se.x_channel),
-      qe(le, pt, Ue(se.y_channel), we, nt, !1, se.y_channel)
+    }, qt = (ht) => se.gate_type === "polygon" ? i9(ht, Ke(ve), Ke(le), [
+      qe(ve, nt, Ue(se.x_channel), le, pt, !0, se.x_channel),
+      qe(le, pt, Ue(se.y_channel), ve, nt, !1, se.y_channel)
     ], ut, Yt) : ht;
     if (Me.point) {
       const ht = Fe(Me.at(0, 0)), Tt = qt([ht, ht]);
       return { ...se, vertices: Tt.length >= 3 ? Tt : [Tt[0], Tt[0], Tt[0]] };
     }
-    if (se.gate_type === "polygon" && [we, le].some((ht) => ht.needsDensify)) {
-      const ht = (on) => on.back ?? ((mt) => {
+    if (se.gate_type === "polygon" && [ve, le].some((ht) => ht.needsDensify)) {
+      const ht = (on) => on.back ?? ((gt) => {
         const Ot = on.convert(0), sn = on.convert(1) - Ot;
-        return sn !== 0 ? (mt - Ot) / sn : mt;
-      }), Tt = ht(we), Ct = ht(le), Rt = n.index(se.x_channel), Lt = n.index(se.y_channel), hn = Rt !== void 0 ? Float64Array.from(n.rawColumnData(Rt), (on) => we.rawToExport(on)) : void 0, xn = Lt !== void 0 ? Float64Array.from(n.rawColumnData(Lt), (on) => le.rawToExport(on)) : void 0, Bn = Rt !== void 0 ? q(we, n.rawColumnData(Rt)) : null, gn = Lt !== void 0 ? q(le, n.rawColumnData(Lt)) : null, yn = Se.gate_type === "ellipse" && hn && xn && st ? (() => {
+        return sn !== 0 ? (gt - Ot) / sn : gt;
+      }), Tt = ht(ve), Ct = ht(le), Rt = n.index(se.x_channel), Lt = n.index(se.y_channel), hn = Rt !== void 0 ? Float64Array.from(n.rawColumnData(Rt), (on) => ve.rawToExport(on)) : void 0, xn = Lt !== void 0 ? Float64Array.from(n.rawColumnData(Lt), (on) => le.rawToExport(on)) : void 0, Bn = Rt !== void 0 ? q(ve, n.rawColumnData(Rt)) : null, gn = Lt !== void 0 ? q(le, n.rawColumnData(Lt)) : null, yn = Se.gate_type === "ellipse" && hn && xn && st ? (() => {
         const on = gC(Se);
         if (!on.valid) return Se;
-        const [mt, Ot] = Se.mean, sn = (ta, jn) => Float64Array.from(ta, (kn, In) => {
-          const Sn = Tt(kn) - mt, Nn = Ct(jn[In]) - Ot;
+        const [gt, Ot] = Se.mean, sn = (ta, jn) => Float64Array.from(ta, (kn, In) => {
+          const Sn = Tt(kn) - gt, Nn = Ct(jn[In]) - Ot;
           return on.ia * Sn * Sn + 2 * on.ib * Sn * Nn + on.ic * Nn * Nn;
         }), On = Se.distance_square, an = () => 3e-7 * On, Vt = [{ q: sn(hn, xn), slack: an }];
         return (Bn || gn) && Vt.push({ q: sn(Bn ?? hn, gn ?? xn), slack: an }), { ...Se, distance_square: xj(On, st, Vt) };
-      })() : Se, Et = yn.gate_type === "ellipse" ? kj(bj(yn), Pe, se.name) : AC(QB(Ye, we.knots, le.knots)), Kt = hn && xn ? {
+      })() : Se, Et = yn.gate_type === "ellipse" ? kj(bj(yn), Pe, se.name) : AC(QB(Ye, ve.knots, le.knots)), Kt = hn && xn ? {
         x: hn,
         y: xn,
         inside: st ?? Ao(Se, n.gatingDataFor(Se)),
         finish: qt,
         ...Bn || gn ? { back: { x: Bn ?? hn, y: gn ?? xn } } : {}
-      } : void 0, $t = [we, le].some((on) => on.needsDensify && on.trId !== null) ? r9 : a9, Qt = ZB(Et, Fe, (on) => [Tt(on[0]), Ct(on[1])], $t, Kt);
+      } : void 0, $t = [ve, le].some((on) => on.needsDensify && on.trId !== null) ? r9 : a9, Qt = ZB(Et, Fe, (on) => [Tt(on[0]), Ct(on[1])], $t, Kt);
       return { ...se, vertices: qt([...Qt, Qt[0]]) };
     }
     return { ...se, vertices: qt(lt) };
   }, F = /* @__PURE__ */ new Map(), U = /* @__PURE__ */ new Map(), J = /* @__PURE__ */ new Map();
-  r.forEach((se, we) => {
+  r.forEach((se, ve) => {
     const le = a[se];
     if (!le || le.gate_type === "quadrant")
       return;
-    const Se = 18e7 + (we + 1);
-    U.set(se, Se), F.set(se, KB(Se, le.name)), J.set(se, we + 1);
+    const Se = 18e7 + (ve + 1);
+    U.set(se, Se), F.set(se, KB(Se, le.name)), J.set(se, ve + 1);
   });
-  const X = /* @__PURE__ */ new Map(), K = (se, we) => {
+  const X = /* @__PURE__ */ new Map(), K = (se, ve) => {
     if (!e.allowQuadrantOmission)
       throw new Error(
-        `The quadrant region "${we}" cannot be written in the ${l ? "Cytobank-compatible" : "standard"} format without moving events between regions: no boundary the file can state lies between the events either side of its divider. Export again only after explicitly accepting its omission; the .gatelab workspace preserves it in full.`
+        `The quadrant region "${ve}" cannot be written in the ${l ? "Cytobank-compatible" : "standard"} format without moving events between regions: no boundary the file can state lies between the events either side of its divider. Export again only after explicitly accepting its omission; the .gatelab workspace preserves it in full.`
       );
-    X.set(se, we), F.delete(se);
-  }, re = /* @__PURE__ */ new Map(), V = (se, we) => {
-    const le = `${se}|${we.trId ?? "raw"}`, Se = re.get(le);
+    X.set(se, ve), F.delete(se);
+  }, re = /* @__PURE__ */ new Map(), V = (se, ve) => {
+    const le = `${se}|${ve.trId ?? "raw"}`, Se = re.get(le);
     if (Se !== void 0) return Se;
     let Fe = null;
     const Pe = n.channels.findIndex((pe) => pe.key === se);
@@ -14226,14 +14226,14 @@ function Ej(e) {
       if (Me > 0) {
         const Be = Math.max(1, Math.floor(Me / 2e4)), ze = new Float64Array(Math.ceil(Me / Be));
         let st = 0;
-        for (let nt = 0; nt < Me; nt += Be) ze[st++] = we.rawToExport(pe[nt]);
+        for (let nt = 0; nt < Me; nt += Be) ze[st++] = ve.rawToExport(pe[nt]);
         Fe = U0(ze.subarray(0, st));
       }
     }
     return re.set(le, Fe), Fe;
   }, T = /* @__PURE__ */ new Map(), me = (se) => {
-    const we = T.get(se);
-    if (we) return we;
+    const ve = T.get(se);
+    if (ve) return ve;
     let le = "float64";
     const Se = n.channels.findIndex((Fe) => Fe.key === se);
     if (Se >= 0 && n.rawPrecision(se) === "float32") le = "float32";
@@ -14249,13 +14249,13 @@ function Ej(e) {
     return T.set(se, le), le;
   }, be = [];
   if (S && (l || N)) {
-    const se = S.channels.map((le) => h(le)), we = n.spilloverOrigin.kind === "external" ? n.spilloverOrigin.label : "FCS $SPILLOVER";
+    const se = S.channels.map((le) => h(le)), ve = n.spilloverOrigin.kind === "external" ? n.spilloverOrigin.label : "FCS $SPILLOVER";
     be.push(
       `  <transforms:spectrumMatrix transforms:id="Spill_${w}">`,
       "    <data-type:custom_info>",
       "      <cytobank>",
       `        <cytobank_compensation_id>${w}</cytobank_compensation_id>`,
-      `        <cytobank_compensation_name>${Vf(we)}</cytobank_compensation_name>`,
+      `        <cytobank_compensation_name>${Vf(ve)}</cytobank_compensation_name>`,
       "      </cytobank>",
       "    </data-type:custom_info>",
       "    <transforms:fluorochromes>",
@@ -14273,7 +14273,7 @@ function Ej(e) {
     );
   }
   const Y = [], de = /* @__PURE__ */ new Map();
-  r.forEach((se, we) => {
+  r.forEach((se, ve) => {
     const le = c9(a[se]);
     if (!le || le.gate_type === "quadrant") return;
     const Se = { x: y.axis(se, le.x_channel), y: y.axis(se, le.y_channel) }, Fe = le.gate_type === "ellipse" ? o9(le) : null, Pe = !!Fe && (_b(Se.x, Fe[0]) !== Se.x || _b(Se.y, Fe[1]) !== Se.y), pe = le.gate_type === "ellipse" && (Se.x.needsDensify || Se.y.needsDensify || Pe) ? { ...le, gate_type: "polygon", vertices: Ys(le) } : le;
@@ -14297,7 +14297,7 @@ function Ej(e) {
         { ...pe, distance_square: Nr },
         Dt,
         dn,
-        we + 1,
+        ve + 1,
         Mn,
         $n,
         c,
@@ -14435,20 +14435,20 @@ function Ej(e) {
     }
     if (Et.vertices.some((Dt) => !Number.isFinite(Dt[0]) || !Number.isFinite(Dt[1])))
       throw new Error(`The gate "${pe.name}" has a vertex that cannot be written in this format.`);
-    const $t = Ne.trId, Qt = ht.trId, on = L(pe.x_channel), mt = L(pe.y_channel), Ot = j(pe.x_channel), sn = j(pe.y_channel), On = Ne.cofactor, an = ht.cofactor, Vt = Et.vertices.filter((Dt) => Math.abs(Dt[0]) < Vc && Math.abs(Dt[1]) < Vc), ta = (Kt == null ? void 0 : Kt.x) ?? (hn ? yn(hn.x) : Vt.map((Dt) => Dt[0])), jn = (Kt == null ? void 0 : Kt.y) ?? (hn ? yn(hn.y) : Vt.map((Dt) => Dt[1])), kn = Cb(V(pe.x_channel, Ne), Math.min(...ta), Math.max(...ta)), In = Cb(V(pe.y_channel, ht), Math.min(...jn), Math.max(...jn)), Nn = (Ot !== "uncompensated" || sn !== "uncompensated") && l ? n.spilloverOrigin.kind === "fcs" ? 0 : w : -2;
+    const $t = Ne.trId, Qt = ht.trId, on = L(pe.x_channel), gt = L(pe.y_channel), Ot = j(pe.x_channel), sn = j(pe.y_channel), On = Ne.cofactor, an = ht.cofactor, Vt = Et.vertices.filter((Dt) => Math.abs(Dt[0]) < Vc && Math.abs(Dt[1]) < Vc), ta = (Kt == null ? void 0 : Kt.x) ?? (hn ? yn(hn.x) : Vt.map((Dt) => Dt[0])), jn = (Kt == null ? void 0 : Kt.y) ?? (hn ? yn(hn.y) : Vt.map((Dt) => Dt[1])), kn = Cb(V(pe.x_channel, Ne), Math.min(...ta), Math.max(...ta)), In = Cb(V(pe.y_channel, ht), Math.min(...jn), Math.max(...jn)), Nn = (Ot !== "uncompensated" || sn !== "uncompensated") && l ? n.spilloverOrigin.kind === "fcs" ? 0 : w : -2;
     if (hn && !xn) {
       Y.push(...Nj(
         Et,
         Be,
         ze,
-        we + 1,
+        ve + 1,
         $t,
         Qt,
         c,
         On,
         an,
         on,
-        mt,
+        gt,
         Ot,
         sn,
         kn,
@@ -14462,14 +14462,14 @@ function Ej(e) {
         Et,
         Be,
         ze,
-        we + 1,
+        ve + 1,
         $t,
         Qt,
         c,
         On,
         an,
         on,
-        mt,
+        gt,
         Ot,
         sn,
         kn,
@@ -14484,14 +14484,14 @@ function Ej(e) {
         Et,
         Be,
         ze,
-        we + 1,
+        ve + 1,
         $t,
         Qt,
         c,
         On,
         an,
         on,
-        mt,
+        gt,
         Ot,
         sn,
         kn,
@@ -14508,17 +14508,17 @@ function Ej(e) {
   if (X.size) {
     const se = QL(new Set(X.keys()), o).filter((Se) => !He.has(Se));
     for (const Se of se) He.add(Se);
-    const we = [...X.values()], le = we.length === 1;
-    (gt = e.warnings) == null || gt.push(
-      `The quadrant region${le ? "" : "s"} ${we.map((Se) => `"${Se}"`).join(", ")} ${le ? "was" : "were"} left out, with the ${se.length} population${se.length === 1 ? " that uses" : "s that use"} ${le ? "it" : "them"} and everything beneath: no boundary the file can state lies between the events either side of the divider (they lie closer together than its numbers can separate, or at an infinite or undefined value). The .gatelab workspace keeps ${le ? "it" : "them"}.`
+    const ve = [...X.values()], le = ve.length === 1;
+    (mt = e.warnings) == null || mt.push(
+      `The quadrant region${le ? "" : "s"} ${ve.map((Se) => `"${Se}"`).join(", ")} ${le ? "was" : "were"} left out, with the ${se.length} population${se.length === 1 ? " that uses" : "s that use"} ${le ? "it" : "them"} and everything beneath: no boundary the file can state lies between the events either side of the divider (they lie closer together than its numbers can separate, or at an infinite or undefined value). The .gatelab workspace keeps ${le ? "it" : "them"}.`
     );
   }
   if (l) {
     const se = YL(o, t);
-    for (const we of se.populationIds) {
-      if (He.has(we)) continue;
-      He.add(we);
-      const le = o[we], Se = le.parent_id ? o[le.parent_id] : null;
+    for (const ve of se.populationIds) {
+      if (He.has(ve)) continue;
+      He.add(ve);
+      const le = o[ve], Se = le.parent_id ? o[le.parent_id] : null;
       Se && Se.gate_logic === "or" && Se.gate_refs.length > 1 && ((jt = e.warnings) == null || jt.push(
         `"${le.name}" sits beneath the OR population "${Se.name}", which the Cytobank-compatible format cannot hold anything beneath; it and anything below it were left out. The standard format writes them for other Gating-ML readers, and the .gatelab workspace keeps them.`
       ));
@@ -14531,8 +14531,8 @@ function Ej(e) {
     xe.set(se, Se), ce.set(se, `GateSet_${Se}`), (It = e.populationElementIds) == null || It.set(se, `GateSet_${Se}`);
   }
   const rt = [], _t = /* @__PURE__ */ new Map(), Le = (se) => {
-    const we = _t.get(se);
-    if (we) return we;
+    const ve = _t.get(se);
+    if (ve) return ve;
     const le = F.get(se), Se = `Not_${le}`;
     return _t.set(se, Se), rt.push(
       `  <gating:BooleanGate gating:id="${Se}">`,
@@ -14547,10 +14547,10 @@ function Ej(e) {
   }, Ze = [], Xe = /* @__PURE__ */ new Map();
   for (const se of Ve) {
     if (se === t) continue;
-    const we = o[se], le = (we.gate_refs ?? []).filter((Be) => F.has(Be.gate_id));
+    const ve = o[se], le = (ve.gate_refs ?? []).filter((Be) => F.has(Be.gate_id));
     if (le.length === 0) continue;
     const Se = xe.get(se), Fe = ce.get(se);
-    let Pe = null, pe = null, Me = we.parent_id;
+    let Pe = null, pe = null, Me = ve.parent_id;
     for (; Me && Me !== t; ) {
       if (ce.has(Me)) {
         Pe = ce.get(Me), pe = Me;
@@ -14560,16 +14560,16 @@ function Ej(e) {
     }
     if (l) {
       Xe.set(Fe, Pe);
-      const Be = we.gate_logic === "or" && le.length > 1 ? "or" : "and";
+      const Be = ve.gate_logic === "or" && le.length > 1 ? "or" : "and";
       if (Be === "or" && Pe)
         throw new Error(
-          `The Cytobank-compatible format cannot represent the OR population "${we.name}" beneath another population, because it ANDs every population with its whole ancestry. The standard format writes it for other Gating-ML readers, but GateLab leaves OR populations out when it imports Gating-ML; the .gatelab workspace keeps it.`
+          `The Cytobank-compatible format cannot represent the OR population "${ve.name}" beneath another population, because it ANDs every population with its whole ancestry. The standard format writes it for other Gating-ML readers, but GateLab leaves OR populations out when it imports Gating-ML; the .gatelab workspace keeps it.`
         );
       const ze = [], st = /* @__PURE__ */ new Set(), nt = (qe) => {
         const ft = `${qe.gate_id}|${qe.include}`;
         st.has(ft) || (st.add(ft), ze.push(qe));
       }, pt = [];
-      for (let qe = we.parent_id; qe && qe !== t; qe = ((Ce = o[qe]) == null ? void 0 : Ce.parent_id) ?? null)
+      for (let qe = ve.parent_id; qe && qe !== t; qe = ((Ce = o[qe]) == null ? void 0 : Ce.parent_id) ?? null)
         pt.unshift(qe);
       for (const qe of pt)
         for (const ft of ((Re = o[qe]) == null ? void 0 : Re.gate_refs) ?? [])
@@ -14589,7 +14589,7 @@ function Ej(e) {
         `  <gating:BooleanGate gating:id="${Fe}">`,
         "    <data-type:custom_info>",
         "      <cytobank>",
-        `        <name>${Vf(we.name)}</name>`,
+        `        <name>${Vf(ve.name)}</name>`,
         `        <id>${Se}</id>`,
         `        <gate_set_id>${Se - 36e6 + 1}</gate_set_id>`,
         "        <version>-1</version>",
@@ -14607,7 +14607,7 @@ function Ej(e) {
         "  </gating:BooleanGate>"
       );
     } else {
-      const Be = le.length === 1 ? le[0].include ? "and" : "not" : we.gate_logic === "or" ? "or" : "and";
+      const Be = le.length === 1 ? le[0].include ? "and" : "not" : ve.gate_logic === "or" ? "or" : "and";
       let ze = le.map((Ke) => le.length > 1 && !Ke.include ? Le(Ke.gate_id) : F.get(Ke.gate_id));
       Be === "and" && ze.length === 1 && (ze = [ze[0], ze[0]]);
       const st = Pe ? ` gating:parent_id="${Pe}"` : "", nt = Se - 36e6 + 1, pt = le.map((Ke) => `${Ke.include ? "" : "NOT "}gate_${J.get(Ke.gate_id)}`), Ft = pt.length > 1 && Be === "or" ? `(${pt.join(" OR ")})` : pt.join(" AND "), Ye = pe ? `pop_${xe.get(pe) - 36e6 + 1} AND ${Ft}` : Ft, lt = JSON.stringify({
@@ -14619,7 +14619,7 @@ function Ej(e) {
         `  <gating:BooleanGate gating:id="${Fe}"${st}>`,
         "    <data-type:custom_info>",
         "      <cytobank>",
-        `        <name>${Vf(we.name)}</name>`,
+        `        <name>${Vf(ve.name)}</name>`,
         `        <id>${Se}</id>`,
         `        <gate_set_id>${nt}</gate_set_id>`,
         "        <version>-1</version>",
@@ -14666,7 +14666,7 @@ function Ej(e) {
     "    </gatelabr_scales>",
     `    <${yl}>${Bd(JSON.stringify(Qe))}</${yl}>`,
     "  </data-type:custom_info>",
-    ...[...m.entries()].flatMap(([se, we]) => h9(se, we)),
+    ...[...m.entries()].flatMap(([se, ve]) => h9(se, ve)),
     ...be,
     ...Y,
     ...rt,
@@ -15922,9 +15922,9 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
         !Sn || R9.has(Sn) || (xe.has(ft) || xe.set(ft, /* @__PURE__ */ new Set()), xe.get(ft).add(Sn));
       }
     } else Et && lv(Ne, (jn) => jn / gn, (jn) => jn / yn);
-    const on = j0(qe), mt = Ct ?? (on.length === 1 ? [on[0], on[0]] : null);
-    if (Kt && mt && $t) {
-      const jn = (Mn) => Lu(Mn) ? null : En.gridAxes.get(Mn) ?? En.gridAxes.get(Mn.replace(/^Comp-/, "")) ?? null, kn = jn(mt[0]), In = jn(mt[1]), Sn = Gj(Ne), Nn = (Mn) => Mn === 0 ? gn : yn, Dt = $t.map(([Mn, $n], ea) => {
+    const on = j0(qe), gt = Ct ?? (on.length === 1 ? [on[0], on[0]] : null);
+    if (Kt && gt && $t) {
+      const jn = (Mn) => Lu(Mn) ? null : En.gridAxes.get(Mn) ?? En.gridAxes.get(Mn.replace(/^Comp-/, "")) ?? null, kn = jn(gt[0]), In = jn(gt[1]), Sn = Gj(Ne), Nn = (Mn) => Mn === 0 ? gn : yn, Dt = $t.map(([Mn, $n], ea) => {
         var ca, ga;
         return [
           Mn !== null && ((ca = Sn[ea]) == null ? void 0 : ca[0]) === null ? Mn / Nn(ea) : null,
@@ -15941,7 +15941,7 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
     Ne.setAttributeNS(za, "gating:id", Ot), Ne.setAttributeNS(za, "gating:name", ft), qt && C.set(Ue, Ot);
     const sn = ((ta = Ue.parentElement) == null ? void 0 : ta.parentElement) ?? null, On = sn && wp.has(sn.localName) ? C.get(sn) : void 0;
     return On ? Ne.setAttributeNS(za, "gating:parent_id", On) : ut > 0 && w.push(`"${ft}" sits under a skipped gate, so it was attached to the top level.`), b.appendChild(Ne), qt && S.set(Ue, Ne), He = Ne, !0;
-  }, Je = /* @__PURE__ */ new Map(), Qe = /* @__PURE__ */ new Map(), Mt = /* @__PURE__ */ new Map(), gt = [];
+  }, Je = /* @__PURE__ */ new Map(), Qe = /* @__PURE__ */ new Map(), Mt = /* @__PURE__ */ new Map(), mt = [];
   let jt = 0, It = 0;
   const Pt = (Ue, qe, ft, ut, Yt) => {
     var ht;
@@ -15957,9 +15957,9 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
     }
     return P9(qe) && w.push(
       `"${ft}" declares a curly-quadrant percentage that is not documented; its arms were given the bend fitted to recorded counts.`
-    ), C.set(Ue, `wsp_cq_${++It}`), Qe.set(C.get(Ue), Ne.gateId), gt.push({ pop: Ue, name: ft, gateId: Ne.gateId, quadrant: Yt.quadrant }), !0;
+    ), C.set(Ue, `wsp_cq_${++It}`), Qe.set(C.get(Ue), Ne.gateId), mt.push({ pop: Ue, name: ft, gateId: Ne.gateId, quadrant: Yt.quadrant }), !0;
   }, Ce = /* @__PURE__ */ new Map(), Re = [], se = /* @__PURE__ */ new Map();
-  let we = 0, le = 0;
+  let ve = 0, le = 0;
   const Se = (Ue, qe) => {
     const ft = Ue.parentElement, ut = sv(qe);
     if (!ft || !ut) return null;
@@ -15991,7 +15991,7 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
   }, Fe = (Ue, qe, ft, ut, Yt) => {
     if (ut.failed) return !1;
     if (!ut.gateId) {
-      const rn = `wsp_spider_${++we}`, En = m.importNode(ut.el, !0);
+      const rn = `wsp_spider_${++ve}`, En = m.importNode(ut.el, !0);
       for (const hn of Aa(En, "vertex")) En.removeChild(hn);
       En.removeAttribute("quadId");
       const { center: Ne, down: ht, right: Tt, up: Ct, left: Rt } = ut.spider;
@@ -16038,9 +16038,9 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
   if (N.length) {
     const Ue = (Et) => {
       const Kt = /* @__PURE__ */ new Map(), $t = (Qt, on) => {
-        for (const mt of a1(Qt)) {
-          const Ot = `${on}${mt.getAttribute("name") ?? ""}`;
-          Kt.set(Ot, mt), $t(mt, `${Ot}/`);
+        for (const gt of a1(Qt)) {
+          const Ot = `${on}${gt.getAttribute("name") ?? ""}`;
+          Kt.set(Ot, gt), $t(gt, `${Ot}/`);
         }
       };
       for (const Qt of Et) {
@@ -16060,29 +16060,29 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
       if (Ut.has(Et)) return { why: "its operands refer back to it" };
       Ut.add(Et);
       const $t = ((On = Et.parentElement) == null ? void 0 : On.parentElement) ?? null, Qt = rn(Et), on = [];
-      let mt = Qt.length ? null : "it names no operand";
+      let gt = Qt.length ? null : "it names no operand";
       for (const Vt of Qt) {
-        if (mt) break;
+        if (gt) break;
         const ta = qe.get(Vt), jn = Vt.split("/").pop() || Vt;
         if (!ta)
-          mt = ut(Vt) ? `"${jn}" is in another of this sample's trees, which was not imported with this one` : `"${jn}" does not exist in this tree`;
+          gt = ut(Vt) ? `"${jn}" is in another of this sample's trees, which was not imported with this one` : `"${jn}" does not exist in this tree`;
         else if ((((an = ta.parentElement) == null ? void 0 : an.parentElement) ?? null) !== $t)
-          mt = `"${jn}" is not beside it, and a reference to its gate alone would drop its own ancestry`;
+          gt = `"${jn}" is not beside it, and a reference to its gate alone would drop its own ancestry`;
         else if (ta.localName === "AndNode") {
           const kn = Yt.has(ta) ? En(ta) : { why: "it was itself skipped" };
-          "why" in kn ? mt = `"${jn}" cannot be resolved: ${kn.why}` : on.push(...kn.refs);
+          "why" in kn ? gt = `"${jn}" cannot be resolved: ${kn.why}` : on.push(...kn.refs);
         } else if (ta.localName === "NotNode") {
           const kn = Yt.has(ta) ? Rt(ta) : { why: "it was itself skipped" };
-          "why" in kn ? mt = `"${jn}" cannot be resolved: ${kn.why}` : on.push(...kn.refs);
+          "why" in kn ? gt = `"${jn}" cannot be resolved: ${kn.why}` : on.push(...kn.refs);
         } else if (ta.localName === "OrNode")
-          mt = `"${jn}" combines with OR, which GateLab cannot represent`;
+          gt = `"${jn}" combines with OR, which GateLab cannot represent`;
         else {
           const kn = C.get(ta), In = kn ? se.get(kn) : void 0;
-          kn != null && kn.startsWith("wsp_cq_") ? mt = `"${jn}" is one quadrant of a curly quadrant, which an intersection cannot name yet` : In ? on.push({ gate: In.gate, include: !0, quadrant: In.quadrant }) : kn ? on.push({ gate: kn, include: !0 }) : mt = `"${jn}" was itself skipped`;
+          kn != null && kn.startsWith("wsp_cq_") ? gt = `"${jn}" is one quadrant of a curly quadrant, which an intersection cannot name yet` : In ? on.push({ gate: In.gate, include: !0, quadrant: In.quadrant }) : kn ? on.push({ gate: kn, include: !0 }) : gt = `"${jn}" was itself skipped`;
         }
       }
       Ut.delete(Et);
-      const Ot = [...new Map(on.map((Vt) => [`${Vt.gate}|${Vt.include}|${Vt.quadrant ?? ""}`, Vt])).values()], sn = mt ? { why: mt } : { refs: Ot };
+      const Ot = [...new Map(on.map((Vt) => [`${Vt.gate}|${Vt.include}|${Vt.quadrant ?? ""}`, Vt])).values()], sn = gt ? { why: gt } : { refs: Ot };
       return qt.set(Et, sn), sn;
     }, Ne = /* @__PURE__ */ new Map(), ht = (Et, Kt) => {
       w.push(Kt), Ne.set(Et, [...Ne.get(Et) ?? [], Kt]);
@@ -16096,10 +16096,10 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
       if (Kt.localName === "OrNode") return { why: `"${$t}" combines with OR, which GateLab cannot represent` };
       if (Kt.localName === "NotNode")
         return { why: `"${$t}" is itself a complement in another of this sample's trees, which this importer does not resolve` };
-      const { el: on, unsupported: mt } = hp(Kt);
+      const { el: on, unsupported: gt } = hp(Kt);
       if (!on)
         return {
-          why: mt ? `"${$t}" uses ${mt}, which this importer does not read yet` : `"${$t}" has no gate`
+          why: gt ? `"${$t}" uses ${gt}, which this importer does not read yet` : `"${$t}" has no gate`
         };
       if (on.localName === "CurlyQuad")
         return { why: `"${$t}" is one quadrant of a curly quadrant, which a complement cannot name yet` };
@@ -16122,9 +16122,9 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
       const $t = rn(Et);
       let Qt, on = !1;
       if ($t.length !== 1)
-        on = $t.some((mt) => qe.has(mt) || !!ut(mt)), Qt = { why: $t.length ? `it names ${$t.length} populations` : "it names no population" };
+        on = $t.some((gt) => qe.has(gt) || !!ut(gt)), Qt = { why: $t.length ? `it names ${$t.length} populations` : "it names no population" };
       else {
-        const mt = $t[0], Ot = qe.get(mt), sn = mt.split("/").pop() || mt, On = Ot ? void 0 : ut(mt);
+        const gt = $t[0], Ot = qe.get(gt), sn = gt.split("/").pop() || gt, On = Ot ? void 0 : ut(gt);
         if (on = !!(Ot || On), On)
           Qt = Ct(Et, On, sn);
         else if (!Ot)
@@ -16142,8 +16142,8 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
         }
       }
       if (Ut.delete(Et), "why" in Qt && !on) {
-        const mt = _.get(Et), Ot = Le.get(Et) ?? Et.getAttribute("name") ?? "complement", sn = C.get(Et);
-        mt && kt(Et, mt, Ot, Me(Et) ? 1 : 0, sn) && (OS(m, S.get(Et)), ht(
+        const gt = _.get(Et), Ot = Le.get(Et) ?? Et.getAttribute("name") ?? "complement", sn = C.get(Et);
+        gt && kt(Et, gt, Ot, Me(Et) ? 1 : 0, sn) && (OS(m, S.get(Et)), ht(
           sn,
           `"${Ot}" is the complement of a population that could not be read (${Qt.why}); the copy of the gate the workspace stores inside it was used instead, which can be stale when the workspace tailors gates per sample.`
         ), Qt = { refs: [{ gate: sn, include: !1 }], fallback: !0 });
@@ -16158,9 +16158,9 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
       const Kt = Et.localName === "AndNode", $t = Le.get(Et) ?? Et.getAttribute("name") ?? (Kt ? "intersection" : "complement"), Qt = Kt ? En(Et) : Rt(Et);
       if ("why" in Qt) {
         pe.add(Et);
-        const mt = st(Et);
+        const gt = st(Et);
         w.push(
-          `"${$t}" is ${Kt ? "an intersection" : "a complement"} that was skipped: ${Qt.why}` + (mt ? `; the ${mt} population(s) beneath it went with it.` : ".")
+          `"${$t}" is ${Kt ? "an intersection" : "a complement"} that was skipped: ${Qt.why}` + (gt ? `; the ${gt} population(s) beneath it went with it.` : ".")
         );
         continue;
       }
@@ -16190,7 +16190,7 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
       for (let Kt = 0; Kt < Pe.length; Kt++) {
         const $t = Pe[Kt], Qt = Lt.get($t.id), on = $t.refs.length === 1 ? $t.refs[0] : void 0;
         if (!Qt || Qt.localName !== "NotNode" || !on || on.quadrant !== void 0 || !ze.has(on.gate)) continue;
-        const mt = Lt.get(on.gate), Ot = (mt == null ? void 0 : mt.localName) === "Population" ? hp(mt).el : null;
+        const gt = Lt.get(on.gate), Ot = (gt == null ? void 0 : gt.localName) === "Population" ? hp(gt).el : null;
         if (!Ot || Ot.localName === "CurlyQuad" || !kt(Qt, Ot, $t.name, Me(Qt) ? 1 : 0, $t.id)) continue;
         on.include || OS(m, S.get(Qt)), xn.set(on.gate, [...xn.get(on.gate) ?? [], $t.id]), Bn.set($t.id, on.gate), Pe.splice(Kt, 1);
         const sn = _.get(Qt);
@@ -16211,9 +16211,9 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
         const $t = Pe[Kt], Qt = Lt.get($t.id), on = $t.refs.find((sn) => ze.has(sn.gate));
         if (!on || !Qt) continue;
         Pe.splice(Kt, 1), pe.add(Qt);
-        const mt = st(Qt, $t.name), Ot = Bn.get(on.gate) ?? on.gate;
+        const gt = st(Qt, $t.name), Ot = Bn.get(on.gate) ?? on.gate;
         return ze.set($t.id, ze.get(Ot)), w.push(
-          `"${$t.name}" is ${Qt.localName === "AndNode" ? "an intersection" : "a complement"} that was skipped: it depends on "${hn(Ot)}", which went with "${ze.get(Ot)}" when that was skipped` + (mt ? `; the ${mt} population(s) beneath it went with it.` : ".")
+          `"${$t.name}" is ${Qt.localName === "AndNode" ? "an intersection" : "a complement"} that was skipped: it depends on "${hn(Ot)}", which went with "${ze.get(Ot)}" when that was skipped` + (gt ? `; the ${gt} population(s) beneath it went with it.` : ".")
         ), !0;
       }
       return !1;
@@ -16230,7 +16230,7 @@ function DS(e, t, n = null, a = "Choose one to import it alone.", r = {}) {
           Qt >= 0 && w.splice(Qt, 1);
         }
   }
-  for (const { pop: Ue, name: qe, gateId: ft, quadrant: ut } of [...gt, ...Re]) {
+  for (const { pop: Ue, name: qe, gateId: ft, quadrant: ut } of [...mt, ...Re]) {
     if (Be(Ue)) continue;
     const Yt = Me(Ue);
     Pe.push({
@@ -30456,12 +30456,12 @@ function PW(e) {
 `, Qt = `        _rectCurrent = { dx: zx.invert(px), dy: zy.invert(py) };
 `, on = `        var _snappedRect = _snapToGates(null, px, py, zx, zy, event);
         px = _snappedRect[0]; py = _snappedRect[1];
-`, mt = `                } else {
+`, gt = `                } else {
                     gate.vertices = origVerts.map(function (v) {
                         return [v[0] + ddx, v[1] + ddy];
                     });
                 }
-`, Ot = mt + `                _snapGateMove(gate, zx, zy, flipped, event.sourceEvent);
+`, Ot = gt + `                _snapGateMove(gate, zx, zy, flipped, event.sourceEvent);
 `, sn = `        clearPendingEdit: clearPendingEdit
     };`, On = `        clearPendingEdit: clearPendingEdit,
         extendSelectedGateToEdges: _extendSelectedGateToEdges,
@@ -30472,10 +30472,10 @@ function PW(e) {
       t.split(Et).length - 1,
       t.split($t).length - 1,
       t.split(Qt).length - 1,
-      t.split(mt).length - 1,
+      t.split(gt).length - 1,
       t.split(sn).length - 1
     ];
-    an.join(",") === "1,1,1,1,2,1,1" ? (t = t.replace(xn, Bn + xn), t = t.replace(gn, yn), t = t.replace(Et, Kt), t = t.replace($t, on + $t), t = t.split(Qt).join(on + Qt), t = t.replace(mt, Ot), t = t.replace(sn, On)) : console.warn(`[GateLab] cytof gate-snap patch matched ${an.join("/")} of 1/1/1/1/2/1/1 sites — vertices do not snap to other gates.`);
+    an.join(",") === "1,1,1,1,2,1,1" ? (t = t.replace(xn, Bn + xn), t = t.replace(gn, yn), t = t.replace(Et, Kt), t = t.replace($t, on + $t), t = t.split(Qt).join(on + Qt), t = t.replace(gt, Ot), t = t.replace(sn, On)) : console.warn(`[GateLab] cytof gate-snap patch matched ${an.join("/")} of 1/1/1/1/2/1/1 sites — vertices do not snap to other gates.`);
   }
   const x = "gate.vertices = origVerts.map(";
   if (!t.includes("gate.outline = null; // stale mid-drag")) {
@@ -30957,8 +30957,8 @@ ${X}`;
             }`, Mt = `            if (yTicks.tick_mode === 'asinh' || yTicks.tick_mode === 'logicle') {
                 _hideCompressedLabels(_g.select('.y-axis'), zy, 18);
             }`;
-  let gt = 0;
-  t.includes(Qe) && (gt++, t = t.replace(Qe, "            _hideCompressedLabels(_g.select('.x-axis'), zx, 28);")), t.includes(Mt) && (gt++, t = t.replace(Mt, "            _hideCompressedLabels(_g.select('.y-axis'), zy, 18);")), gt !== 2 && !t.includes("labeled.sort(function (a, b) { return a.mag - b.mag; })") && console.warn(`[GateLab] cytof axis-label thinning patch matched ${gt}/2 axes.`);
+  let mt = 0;
+  t.includes(Qe) && (mt++, t = t.replace(Qe, "            _hideCompressedLabels(_g.select('.x-axis'), zx, 28);")), t.includes(Mt) && (mt++, t = t.replace(Mt, "            _hideCompressedLabels(_g.select('.y-axis'), zy, 18);")), mt !== 2 && !t.includes("labeled.sort(function (a, b) { return a.mag - b.mag; })") && console.warn(`[GateLab] cytof axis-label thinning patch matched ${mt}/2 axes.`);
   const jt = "function _syncGatePointerEvents()", It = "    function _applyMode(newMode) {", Pt = `_g.select('.cytof-overlay').style('cursor',
             newMode === 'navigate' ? 'default' : 'crosshair');`, Ce = "        _ready = true;";
   if (!t.includes(jt)) {
@@ -30990,11 +30990,11 @@ ${It}`
             ${Re}
             if (gate.unbounded) gg.attr('clip-path', 'url(#cytof-clip)');`
   ) : console.warn("[GateLab] cytof open-rectangle clip patch: needle not found — open sides draw past the plot."));
-  const we = "// GateLab: flip the channel picker above the label when it will not fit below.", le = "        document.body.appendChild(panel);";
-  !t.includes(we) && t.includes(le) ? t = t.replace(
+  const ve = "// GateLab: flip the channel picker above the label when it will not fit below.", le = "        document.body.appendChild(panel);";
+  !t.includes(ve) && t.includes(le) ? t = t.replace(
     le,
     `${le}
-        ${we}
+        ${ve}
         (function () {
             var margin = 4;
             var h = panel.getBoundingClientRect().height;
@@ -31009,7 +31009,7 @@ ${It}`
                 panel.style.top = Math.max(margin, window.innerHeight - h - margin) + 'px';
             }
         })();`
-  ) : t.includes(we) || console.warn("[GateLab] cytof channel-picker fit patch did not match — the X picker may open off-screen.");
+  ) : t.includes(ve) || console.warn("[GateLab] cytof channel-picker fit patch did not match — the X picker may open off-screen.");
   const Se = "// GateLab: report whether render() painted or deferred.";
   if (!t.includes(Se)) {
     const xn = [
@@ -31578,7 +31578,7 @@ function FW(e) {
         }
         var densityGrid = blurred;
 
-        // Compute per-point density`, Mt = "densities[i] = grid[gy * extSize + gx];", gt = "densities[i] = densityGrid[gy * extSize + gx];", jt = `        if (!maxDens) return;
+        // Compute per-point density`, Mt = "densities[i] = grid[gy * extSize + gx];", mt = "densities[i] = densityGrid[gy * extSize + gx];", jt = `        if (!maxDens) return;
 
         // Sort by density`, It = `        if (!maxDens) return;
 
@@ -31611,7 +31611,7 @@ function FW(e) {
                     outlier_color: cfg.pop_color || '#111111',`;
   r.includes(Re) ? r = r.replace(Re, `                    line_color: cfg.contour_color || '#111111',
                     outlier_color: cfg.contour_color || '#111111',`) : r.includes("cfg.contour_color") || console.warn("[GateLab] mini_plot contour-colour patch did not match — grid contours stay population-coloured.");
-  const we = "var t = densities[idx] / maxDens;", le = "var t = Math.pow(Math.min(1, _rank[idx]), colourPower);", Se = "        ctx.globalAlpha = pointAlpha;", Fe = `        var _rank = new Float32Array(n);
+  const ve = "var t = densities[idx] / maxDens;", le = "var t = Math.pow(Math.min(1, _rank[idx]), colourPower);", Se = "        ctx.globalAlpha = pointAlpha;", Fe = `        var _rank = new Float32Array(n);
         var _denom = n > 1 ? n - 1 : 1;
         for (var _r = 0; _r < n; ) {
             var _runStart = _r;
@@ -31622,7 +31622,7 @@ function FW(e) {
         }
 
         ctx.globalAlpha = pointAlpha;`;
-  r.includes(_t) && (r = r.replace(_t, Le)), r.includes(Ze) && (r = r.replace(Ze, Xe)), r.includes(yt) && (r = r.replace(yt, kt)), r.includes(Je) && (r = r.replace(Je, Qe)), r.includes(Mt) && (r = r.replace(Mt, gt)), r.includes(jt) && (r = r.replace(jt, It)), r.includes(Se) && (r = r.replace(Se, Fe)), r.includes(we) && (r = r.replace(we, le)), (!r.includes("var _rank = new Float32Array(n);") || !r.includes("_rank[idx]")) && console.warn("[GateLab] mini_plot quantile-rank pseudocolour patch did not match — grids will not match the gating plot.");
+  r.includes(_t) && (r = r.replace(_t, Le)), r.includes(Ze) && (r = r.replace(Ze, Xe)), r.includes(yt) && (r = r.replace(yt, kt)), r.includes(Je) && (r = r.replace(Je, Qe)), r.includes(Mt) && (r = r.replace(Mt, mt)), r.includes(jt) && (r = r.replace(jt, It)), r.includes(Se) && (r = r.replace(Se, Fe)), r.includes(ve) && (r = r.replace(ve, le)), (!r.includes("var _rank = new Float32Array(n);") || !r.includes("_rank[idx]")) && console.warn("[GateLab] mini_plot quantile-rank pseudocolour patch did not match — grids will not match the gating plot.");
   const Pe = `point_alpha: pointAlpha,
                 point_size: pointSize,`, pe = `point_alpha: pointAlpha,
                 density_color_power: data.density_color_power,
@@ -31721,7 +31721,7 @@ function FW(e) {
 `, En = `                    var estH = pctLine ? fsNum * 2.2 : fsNum * 1.1;
 `;
   if (r.includes(ft) && r.includes(Yt) && r.includes(Ut) && r.includes(En) ? r = r.replace(ft, ut).replace(Yt, qt).replace(Ut, rn).replace(En, `                    var estH = _glLines.length > 1 ? fsNum * 2.2 : fsNum * 1.1;
-`) : r.includes("_glFormat") || console.warn("[GateLab] mini_plot label-format patch did not match -- labels keep the name and percentage."), r.includes(Ft) && (r = r.replace(Ft, Ye)), r.includes(lt) && (r = r.replace(lt, Ke)), (!r.includes(Le) || !r.includes(Xe) || !r.includes("var requestedMargins = cfg.plot_margins || {};") || !r.includes("var gridN = 256, pad = blurRadius, extSize = gridN + 2 * pad;") || !r.includes("var integralGrid = new Float64Array(integralStride * integralStride);") || !r.includes(gt) || !r.includes("var requestedCeiling = Number(densityColorCeiling);") || !r.includes(le) || !r.includes("density_color_power: data.density_color_power") || !r.includes("H + xAxisLabelOffset") || !r.includes("-yAxisLabelOffset") || !r.includes("axisTickSize + 2") || !r.includes("axisOuterTickSize === 0")) && console.warn("[GateLab] mini_plot robust-density patch did not match."), a > 0 && !r.includes("GateLab: match the display, capped like the gating plot")) {
+`) : r.includes("_glFormat") || console.warn("[GateLab] mini_plot label-format patch did not match -- labels keep the name and percentage."), r.includes(Ft) && (r = r.replace(Ft, Ye)), r.includes(lt) && (r = r.replace(lt, Ke)), (!r.includes(Le) || !r.includes(Xe) || !r.includes("var requestedMargins = cfg.plot_margins || {};") || !r.includes("var gridN = 256, pad = blurRadius, extSize = gridN + 2 * pad;") || !r.includes("var integralGrid = new Float64Array(integralStride * integralStride);") || !r.includes(mt) || !r.includes("var requestedCeiling = Number(densityColorCeiling);") || !r.includes(le) || !r.includes("density_color_power: data.density_color_power") || !r.includes("H + xAxisLabelOffset") || !r.includes("-yAxisLabelOffset") || !r.includes("axisTickSize + 2") || !r.includes("axisOuterTickSize === 0")) && console.warn("[GateLab] mini_plot robust-density patch did not match."), a > 0 && !r.includes("GateLab: match the display, capped like the gating plot")) {
     const Lt = r;
     r = r.split(t).join(n), r === Lt && console.warn("[GateLab] mini_plot canvas-resolution patch did not match — grids stay at a fixed 2x.");
   }
@@ -33379,7 +33379,7 @@ async function QM(e, t) {
   return new Blob([a], { type: "image/png" });
 }
 async function JC(e, t, n) {
-  const { svg2pdf: a } = await import("./svg2pdf.es.min-Dz1u6B9C.js"), r = document.createElement("div");
+  const { svg2pdf: a } = await import("./svg2pdf.es.min-CE6AGeJY.js"), r = document.createElement("div");
   r.style.cssText = "position:fixed;left:-100000px;top:0;visibility:hidden", r.appendChild(t), document.body.appendChild(r);
   try {
     return await a(t, e, { x: 0, y: 0, width: n.width, height: n.height }), !0;
@@ -33742,7 +33742,7 @@ function Yq({
   }, [S.populations, de]), He = z.useMemo(() => new Set(Te.map((Ke) => Ke.popId)), [Te]), [Ve, rt] = Ra("prop.selectedPops", () => g.selectedPops), _t = z.useMemo(() => {
     const Ke = Ve.filter((Ue) => He.has(Ue));
     return Ke.length || Ve.length === 0 ? Ke : ce;
-  }, [Ve, He, ce]), [Le, Ze] = Ra("prop.includeUngated", g.includeUngated), [Xe, yt] = Ra("prop.groupSel", g.groupSel), [kt, Je] = Ra("prop.unitSel", g.unitSel), [Qe, Mt] = Ra("prop.facetSel", g.facetSel), [gt, jt] = Ra("prop.palette", g.palette), [It, Pt] = Ra("prop.averagePerUnit", g.averagePerUnit), [Ce, Re] = Ra("prop.fontTick", g.fontTick), [se, we] = Ra("prop.fontAxis", g.fontAxis), [le, Se] = Ra("prop.fontLegend", g.fontLegend), Fe = z.useRef(!1);
+  }, [Ve, He, ce]), [Le, Ze] = Ra("prop.includeUngated", g.includeUngated), [Xe, yt] = Ra("prop.groupSel", g.groupSel), [kt, Je] = Ra("prop.unitSel", g.unitSel), [Qe, Mt] = Ra("prop.facetSel", g.facetSel), [mt, jt] = Ra("prop.palette", g.palette), [It, Pt] = Ra("prop.averagePerUnit", g.averagePerUnit), [Ce, Re] = Ra("prop.fontTick", g.fontTick), [se, ve] = Ra("prop.fontAxis", g.fontAxis), [le, Se] = Ra("prop.fontLegend", g.fontLegend), Fe = z.useRef(!1);
   z.useEffect(() => {
     if (!Fe.current) {
       Fe.current = !0;
@@ -33760,7 +33760,7 @@ function Yq({
     Xe,
     kt,
     Qe,
-    gt,
+    mt,
     It,
     Ce,
     se,
@@ -33796,10 +33796,10 @@ function Yq({
     /* @__PURE__ */ d.jsx("option", { value: e_, children: l("File (filename)") }),
     !a.some((Ke) => Ke.name === _l) && /* @__PURE__ */ d.jsx("option", { value: _l, children: "Sample ID" }),
     a.map((Ke) => /* @__PURE__ */ d.jsx("option", { value: Ke.name, children: Ke.name }, Ke.name))
-  ] }), Be = pe.catLevels.length, ze = jD(pe, { palette: gt, includeUngated: Le }, S.populations), st = (Ke, Ue) => Ke.includes(Ue) ? Ke.filter((qe) => qe !== Ue) : [...Ke, Ue], nt = (Ke) => void aU("gl-prop-svg", "proportions", Ke), pt = () => s == null ? void 0 : s({
+  ] }), Be = pe.catLevels.length, ze = jD(pe, { palette: mt, includeUngated: Le }, S.populations), st = (Ke, Ue) => Ke.includes(Ue) ? Ke.filter((qe) => qe !== Ue) : [...Ke, Ue], nt = (Ke) => void aU("gl-prop-svg", "proportions", Ke), pt = () => s == null ? void 0 : s({
     ...Pe,
     plotType: T,
-    palette: gt,
+    palette: mt,
     averagePerUnit: It,
     fontTick: Ce,
     fontAxis: se,
@@ -34044,7 +34044,7 @@ function Yq({
                       /* @__PURE__ */ d.jsx(
                         "select",
                         {
-                          value: gt,
+                          value: mt,
                           onChange: (Ke) => jt(Ke.target.value),
                           children: ek.map((Ke) => /* @__PURE__ */ d.jsx("option", { value: Ke.value, children: Ke.label }, Ke.value))
                         }
@@ -34057,7 +34057,7 @@ function Yq({
                     ] }),
                     /* @__PURE__ */ d.jsxs("label", { className: "gl-field-inline", children: [
                       l("Axis"),
-                      /* @__PURE__ */ d.jsx(Yo, { value: se, min: 5, max: 24, integer: !0, onCommit: we })
+                      /* @__PURE__ */ d.jsx(Yo, { value: se, min: 5, max: 24, integer: !0, onCommit: ve })
                     ] }),
                     /* @__PURE__ */ d.jsxs("label", { className: "gl-field-inline", children: [
                       l("Legend"),
@@ -34202,7 +34202,7 @@ function Yq({
               plotType: T,
               model: pe,
               catColors: ze,
-              palette: gt,
+              palette: mt,
               averagePerUnit: It,
               populations: S.populations,
               valueTitle: DD(re, re === "division" ? zD(pe.divisionWithin) : de === J ? null : ((lt = S.populations[de]) == null ? void 0 : lt.name) ?? null, Le),
@@ -34362,15 +34362,15 @@ function GD({
         if (!a) return `${Math.round(It).toLocaleString("en-US")} events`;
         const Pt = Je.filter((Ce) => Ce.group === jt).length;
         return Pt === 1 ? "1 replicate unit" : `mean of ${Pt} replicate units`;
-      }, Mt = kt.length ? Math.min(64, ce / kt.length * 0.7) : 0, gt = kt.length ? ce / kt.length : 0;
+      }, Mt = kt.length ? Math.min(64, ce / kt.length * 0.7) : 0, mt = kt.length ? ce / kt.length : 0;
       kt.forEach((jt, It) => {
         var Re;
-        const Pt = xe.left + gt * (It + 0.5);
+        const Pt = xe.left + mt * (It + 0.5);
         if (yt.push({ x: Pt, label: jt.group }), b && b.length) {
-          const se = AD(b, jt.segments, o), we = 5;
+          const se = AD(b, jt.segments, o), ve = 5;
           se.forEach((Fe) => {
             if (Fe.y1 - Fe.y0 <= 1e-9) return;
-            const Pe = Math.min(Fe.depth * we, Mt * 0.45), pe = Pt - Mt / 2 + Pe, Me = Ze(Fe.y1), Be = Ze(Fe.y0);
+            const Pe = Math.min(Fe.depth * ve, Mt * 0.45), pe = Pt - Mt / 2 + Pe, Me = Ze(Fe.y1), Be = Ze(Fe.y0);
             Xe.push(
               /* @__PURE__ */ d.jsx(
                 "rect",
@@ -34417,7 +34417,7 @@ function GD({
         let Ce = 0;
         jt.segments.forEach((se) => {
           if (se.value <= 0) return;
-          const we = Ze(Ce), le = Ze(Ce + se.value);
+          const ve = Ze(Ce), le = Ze(Ce + se.value);
           Xe.push(
             /* @__PURE__ */ d.jsx(
               "rect",
@@ -34426,7 +34426,7 @@ function GD({
                 x: Pt - Mt / 2,
                 y: le,
                 width: Mt,
-                height: Math.max(0, we - le),
+                height: Math.max(0, ve - le),
                 fill: n[se.cat],
                 stroke: "#444",
                 strokeWidth: 0.2,
@@ -34439,13 +34439,13 @@ function GD({
         });
       });
     } else {
-      const kt = T ?? 0, Je = GI(L0(me, I), I).filter((Pt) => Pt.cat === kt), Qe = P.length ? ce / P.length : ce, Mt = Math.min(18, Qe * 0.6), gt = (s == null ? void 0 : s.showPoints) !== !1, jt = (Pt, Ce, Re) => gt ? Pt + (Re % Math.min(5, Ce) - (Math.min(5, Ce) - 1) / 2) * 2.1 : Pt, It = /* @__PURE__ */ new Map();
+      const kt = T ?? 0, Je = GI(L0(me, I), I).filter((Pt) => Pt.cat === kt), Qe = P.length ? ce / P.length : ce, Mt = Math.min(18, Qe * 0.6), mt = (s == null ? void 0 : s.showPoints) !== !1, jt = (Pt, Ce, Re) => mt ? Pt + (Re % Math.min(5, Ce) - (Math.min(5, Ce) - 1) / 2) * 2.1 : Pt, It = /* @__PURE__ */ new Map();
       P.forEach((Pt, Ce) => {
         const Re = xe.left + Qe * (Ce + 0.5);
         yt.push({ x: Re, label: Pt });
         const se = Je.find((Me) => Me.group === Pt);
         if (!se) return;
-        const we = j[Ce] ?? "#888", { q1: le, med: Se, q3: Fe, lo: Pe, hi: pe } = se.stats;
+        const ve = j[Ce] ?? "#888", { q1: le, med: Se, q3: Fe, lo: Pe, hi: pe } = se.stats;
         se.units.forEach((Me, Be) => {
           const ze = { x: jt(Re, se.values.length, Be), y: Ze(se.values[Be]) };
           It.set(Me, [...It.get(Me) ?? [], ze]);
@@ -34475,7 +34475,7 @@ function GD({
                     y: Ze(Fe),
                     width: Mt,
                     height: Math.max(0.5, Ze(le) - Ze(Fe)),
-                    fill: we,
+                    fill: ve,
                     fillOpacity: 0.85,
                     stroke: "#333",
                     strokeWidth: 0.5,
@@ -34493,7 +34493,7 @@ function GD({
                     strokeWidth: 1
                   }
                 ),
-                gt && se.values.map((Me, Be) => /* @__PURE__ */ d.jsx(
+                mt && se.values.map((Me, Be) => /* @__PURE__ */ d.jsx(
                   "circle",
                   {
                     cx: jt(Re, se.values.length, Be),
@@ -34761,7 +34761,7 @@ async function aU(e, t, n) {
   if (!a) return;
   const { root: r, width: o, height: i } = a;
   if (XM(r, { widthPx: o, heightPx: i }), n === "pdf") {
-    const h = o * 72 / 96, g = i * 72 / 96, { jsPDF: y } = await import("./jspdf.es.min-D3ev1dxE.js").then((b) => b.j), m = new y({ orientation: h >= g ? "landscape" : "portrait", unit: "pt", format: [h, g], compress: !0 });
+    const h = o * 72 / 96, g = i * 72 / 96, { jsPDF: y } = await import("./jspdf.es.min-hP_fZJxl.js").then((b) => b.j), m = new y({ orientation: h >= g ? "landscape" : "portrait", unit: "pt", format: [h, g], compress: !0 });
     await JC(m, r, { width: h, height: g }) && m.save(`${t}.pdf`);
     return;
   }
@@ -35383,57 +35383,57 @@ function TU({
     var Se;
     const se = (Se = C.current) == null ? void 0 : Se.parentElement;
     if (!se) return;
-    const we = () => {
+    const ve = () => {
       const Fe = se.clientWidth;
       Fe > 0 && _(Math.min(Math.max(380, Fe - 32), 630));
     };
-    we();
-    const le = typeof ResizeObserver == "function" ? new ResizeObserver(we) : null;
+    ve();
+    const le = typeof ResizeObserver == "function" ? new ResizeObserver(ve) : null;
     return le == null || le.observe(se), () => le == null ? void 0 : le.disconnect();
   }, []);
   const j = Math.round(N * 0.72), L = N - qa.left - qa.right, G = j - qa.top - qa.bottom, [D, q] = z.useState(null), H = D ?? t, [F, U] = H, J = (se) => qa.left + (se - F) / (U - F) * L, X = (se) => Math.min(U, Math.max(F, se)), [K, re] = Ra("gating.histogram.style", "smoothed"), [V, T] = Ra("gating.histogram.bins", 256), [me, be] = Ra("gating.histogram.smoothing", 1), Y = z.useMemo(() => e ? MU(e, H, V) : null, [e, F, U, V]), de = z.useMemo(() => {
     if (!Y) return "";
-    const se = K === "smoothed" ? NU(Y, me / 100 * V) : Y, we = Math.max(...se);
-    if (!(we > 0)) return "";
-    const le = L / V, Se = qa.top + G, Fe = (pe) => Se - pe / we * G;
+    const se = K === "smoothed" ? NU(Y, me / 100 * V) : Y, ve = Math.max(...se);
+    if (!(ve > 0)) return "";
+    const le = L / V, Se = qa.top + G, Fe = (pe) => Se - pe / ve * G;
     let Pe = `M${qa.left},${Se}`;
     return se.forEach((pe, Me) => {
       Pe += K === "smoothed" ? `L${qa.left + (Me + 0.5) * le},${Fe(pe)}` : `L${qa.left + Me * le},${Fe(pe)}L${qa.left + (Me + 1) * le},${Fe(pe)}`;
     }), `${Pe}L${qa.left + L},${Se}Z`;
   }, [Y, L, G, V, K, me]), xe = z.useMemo(() => {
-    const se = (Fe) => Fe >= F && Fe <= U, we = n ? n.major_pos.map((Fe, Pe) => ({ p: Fe, label: n.major_labels[Pe] ?? "" })).filter((Fe) => se(Fe.p)) : jU(H).map((Fe) => ({ p: Fe, label: IU(Fe) }));
+    const se = (Fe) => Fe >= F && Fe <= U, ve = n ? n.major_pos.map((Fe, Pe) => ({ p: Fe, label: n.major_labels[Pe] ?? "" })).filter((Fe) => se(Fe.p)) : jU(H).map((Fe) => ({ p: Fe, label: IU(Fe) }));
     let le = -1 / 0;
-    return { major: [...we].sort((Fe, Pe) => Fe.p - Pe.p).map((Fe) => {
+    return { major: [...ve].sort((Fe, Pe) => Fe.p - Pe.p).map((Fe) => {
       const Pe = Fe.label.length * u.tick * 0.6 / 2, pe = J(Fe.p);
       return pe - Pe < le + 4 ? { ...Fe, label: "" } : (le = pe + Pe, Fe);
     }), minor: n ? n.minor_pos.filter(se) : [] };
   }, [n, F, U, L, u.tick]), ce = z.useMemo(() => {
-    const se = [], we = [], le = i.map((Se) => ({ gate: Se, interval: EU(Se) })).filter((Se) => Se.interval !== null).sort((Se, Fe) => Se.interval.lo - Fe.interval.lo);
+    const se = [], ve = [], le = i.map((Se) => ({ gate: Se, interval: EU(Se) })).filter((Se) => Se.interval !== null).sort((Se, Fe) => Se.interval.lo - Fe.interval.lo);
     for (const { gate: Se, interval: Fe } of le) {
       const Pe = J(X(Fe.lo)), pe = J(X(Fe.hi)), Me = (Se.name.length + 7) * u.gate * 0.6 / 2, Be = Math.min(Pe, (Pe + pe) / 2 - Me), ze = Math.max(pe, (Pe + pe) / 2 + Me);
-      let st = we.findIndex((nt) => nt <= Be + 0.5);
-      st < 0 ? (st = we.length, we.push(ze)) : we[st] = ze, se.push({ gate: Se, ...Fe, row: st });
+      let st = ve.findIndex((nt) => nt <= Be + 0.5);
+      st < 0 ? (st = ve.length, ve.push(ze)) : ve[st] = ze, se.push({ gate: Se, ...Fe, row: st });
     }
     return se;
   }, [i, F, U, L, u.gate]), Te = () => {
-    var we;
-    const se = (we = S.current) == null ? void 0 : we.getBoundingClientRect();
+    var ve;
+    const se = (ve = S.current) == null ? void 0 : ve.getBoundingClientRect();
     return se && se.width > 0 ? se.width / N : 1;
   }, He = (se) => {
     var Fe;
-    const we = (Fe = S.current) == null ? void 0 : Fe.getBoundingClientRect(), le = we && we.width > 0 ? we.width / N : 1, Se = (se - ((we == null ? void 0 : we.left) ?? 0)) / le;
+    const ve = (Fe = S.current) == null ? void 0 : Fe.getBoundingClientRect(), le = ve && ve.width > 0 ? ve.width / N : 1, Se = (se - ((ve == null ? void 0 : ve.left) ?? 0)) / le;
     return F + (Se - qa.left) / L * (U - F);
-  }, Ve = L / (U - F), rt = (se, we) => {
+  }, Ve = L / (U - F), rt = (se, ve) => {
     var le, Se;
     I.current = se, P(se);
     try {
-      (Se = (le = S.current) == null ? void 0 : le.setPointerCapture) == null || Se.call(le, we.pointerId);
+      (Se = (le = S.current) == null ? void 0 : le.setPointerCapture) == null || Se.call(le, ve.pointerId);
     } catch {
     }
-    we.stopPropagation(), we.preventDefault();
+    ve.stopPropagation(), ve.preventDefault();
   }, _t = (se) => {
-    var we;
-    return (se - (((we = S.current) == null ? void 0 : we.getBoundingClientRect().left) ?? 0)) / Te();
+    var ve;
+    return (se - (((ve = S.current) == null ? void 0 : ve.getBoundingClientRect().left) ?? 0)) / Te();
   }, Le = (se) => {
     if (se.button !== 0) return;
     if (l === "navigate") {
@@ -35441,24 +35441,24 @@ function TU({
       rt({ kind: "pan", pointerId: se.pointerId, fromP: le, base: [F, U], grab: He(se.clientX), stretch: se.shiftKey || se.altKey, view: [F, U], moved: !1 }, se);
       return;
     }
-    const we = X(He(se.clientX));
-    rt({ kind: l === "draw-bisector" ? "split" : "draw", pointerId: se.pointerId, from: we, to: we }, se);
-  }, Ze = (se, we, le) => {
+    const ve = X(He(se.clientX));
+    rt({ kind: l === "draw-bisector" ? "split" : "draw", pointerId: se.pointerId, from: ve, to: ve }, se);
+  }, Ze = (se, ve, le) => {
     if (l !== "navigate" || se.button !== 0) return;
     const Se = [];
-    we !== "hi" && !le.open[0] && Se.push([le.lo, 0]), we !== "lo" && !le.open[1] && Se.push([le.hi, 1]);
+    ve !== "hi" && !le.open[0] && Se.push([le.lo, 0]), ve !== "lo" && !le.open[1] && Se.push([le.hi, 1]);
     const Fe = se.altKey ? [] : ce.flatMap((Pe) => Pe.gate.gate_id === le.gate.gate_id ? [] : Se.flatMap(([pe, Me]) => {
       const Be = Me === 0 ? 1 : 0, ze = Be === 0 ? Pe.lo : Pe.hi;
       return !Pe.open[Be] && PU(ze, pe) ? [{ gateId: Pe.gate.gate_id, end: Be, lo: Pe.lo, hi: Pe.hi }] : [];
     }));
-    rt({ kind: we, pointerId: se.pointerId, gateId: le.gate.gate_id, from: He(se.clientX), lo: le.lo, hi: le.hi, open: le.open, moved: !1, dx: 0, links: Fe }, se);
+    rt({ kind: ve, pointerId: se.pointerId, gateId: le.gate.gate_id, from: He(se.clientX), lo: le.lo, hi: le.hi, open: le.open, moved: !1, dx: 0, links: Fe }, se);
   }, Xe = (se) => {
-    const we = I.current;
-    if (!we || we.pointerId !== se.pointerId) return;
+    const ve = I.current;
+    if (!ve || ve.pointerId !== se.pointerId) return;
     const le = He(se.clientX);
     let Se;
-    if (we.kind === "pan") {
-      const Fe = _t(se.clientX), Pe = se.shiftKey || se.altKey, pe = Pe === we.stretch ? we : { ...we, fromP: Fe, base: we.view, grab: we.view[0] + (Fe - qa.left) / L * (we.view[1] - we.view[0]), stretch: Pe }, [Me, Be] = pe.base;
+    if (ve.kind === "pan") {
+      const Fe = _t(se.clientX), Pe = se.shiftKey || se.altKey, pe = Pe === ve.stretch ? ve : { ...ve, fromP: Fe, base: ve.view, grab: ve.view[0] + (Fe - qa.left) / L * (ve.view[1] - ve.view[0]), stretch: Pe }, [Me, Be] = pe.base;
       let ze = pe.view;
       if (Pe)
         Fe - qa.left > 10 && pe.grab > Me && (ze = [Me, Me + (pe.grab - Me) * L / (Fe - qa.left)]);
@@ -35466,45 +35466,45 @@ function TU({
         const st = (Fe - pe.fromP) / L * (Be - Me);
         ze = [Me - st, Be - st];
       }
-      Se = { ...pe, view: ze, moved: we.moved || Math.abs(Fe - we.fromP) >= Vb }, Se.moved && q(ze);
-    } else if (we.kind === "label") {
-      const Fe = Te(), Pe = (se.clientX - we.fromX) / Fe, pe = (se.clientY - we.fromY) / Fe;
-      Se = { ...we, dx: Pe, dy: pe, moved: we.moved || Math.hypot(Pe, pe) >= Vb };
-    } else "gateId" in we ? Se = { ...we, dx: le - we.from, moved: we.moved || Math.abs(le - we.from) * Ve >= Vb } : Se = { ...we, to: X(le) };
+      Se = { ...pe, view: ze, moved: ve.moved || Math.abs(Fe - ve.fromP) >= Vb }, Se.moved && q(ze);
+    } else if (ve.kind === "label") {
+      const Fe = Te(), Pe = (se.clientX - ve.fromX) / Fe, pe = (se.clientY - ve.fromY) / Fe;
+      Se = { ...ve, dx: Pe, dy: pe, moved: ve.moved || Math.hypot(Pe, pe) >= Vb };
+    } else "gateId" in ve ? Se = { ...ve, dx: le - ve.from, moved: ve.moved || Math.abs(le - ve.from) * Ve >= Vb } : Se = { ...ve, to: X(le) };
     I.current = Se, P(Se);
   }, yt = (se) => {
     var Pe, pe;
-    const we = I.current;
-    if (!we || we.pointerId !== se.pointerId) return;
+    const ve = I.current;
+    if (!ve || ve.pointerId !== se.pointerId) return;
     I.current = null, P(null);
     try {
       (pe = (Pe = S.current) == null ? void 0 : Pe.releasePointerCapture) == null || pe.call(Pe, se.pointerId);
     } catch {
     }
-    if (we.kind === "draw") {
-      const Me = Math.min(we.from, we.to), Be = Math.max(we.from, we.to);
+    if (ve.kind === "draw") {
+      const Me = Math.min(ve.from, ve.to), Be = Math.max(ve.from, ve.to);
       (Be - Me) * Ve >= Vb && (c == null || c(Me, Be));
       return;
     }
-    if (we.kind === "split") {
-      h == null || h(we.to);
+    if (ve.kind === "split") {
+      h == null || h(ve.to);
       return;
     }
-    if (we.kind === "pan") {
-      we.moved && we.view[1] > we.view[0] && (b == null || b(we.view)), q(null);
+    if (ve.kind === "pan") {
+      ve.moved && ve.view[1] > ve.view[0] && (b == null || b(ve.view)), q(null);
       return;
     }
-    if (we.kind === "label") {
-      w == null || w(we.gateId);
-      const Me = Qe.find((Be) => Be.r.gate.gate_id === we.gateId);
-      we.moved && Me && (m == null || m(we.gateId, Ce(Me, we).offset));
+    if (ve.kind === "label") {
+      w == null || w(ve.gateId);
+      const Me = Qe.find((Be) => Be.r.gate.gate_id === ve.gateId);
+      ve.moved && Me && (m == null || m(ve.gateId, Ce(Me, ve).offset));
       return;
     }
-    if (w == null || w(we.gateId), !we.moved) return;
-    const le = kt(we), Se = { gate_id: we.gateId };
-    if (we.kind !== "hi" && !we.open[0] && (Se.lo = le.lo), we.kind !== "lo" && !we.open[1] && (Se.hi = le.hi), Se.lo === void 0 && Se.hi === void 0) return;
-    const Fe = we.links.map((Me) => {
-      const Be = Je(Me, we.dx);
+    if (w == null || w(ve.gateId), !ve.moved) return;
+    const le = kt(ve), Se = { gate_id: ve.gateId };
+    if (ve.kind !== "hi" && !ve.open[0] && (Se.lo = le.lo), ve.kind !== "lo" && !ve.open[1] && (Se.hi = le.hi), Se.lo === void 0 && Se.hi === void 0) return;
+    const Fe = ve.links.map((Me) => {
+      const Be = Je(Me, ve.dx);
       return Me.end === 0 ? { gate_id: Me.gateId, lo: Be.lo } : { gate_id: Me.gateId, hi: Be.hi };
     });
     g == null || g([Se, ...Fe]);
@@ -35512,19 +35512,19 @@ function TU({
   function kt(se) {
     return se.moved ? aP(se.lo, se.hi, se.kind !== "hi" && !se.open[0], se.kind !== "lo" && !se.open[1], se.dx) : { lo: se.lo, hi: se.hi };
   }
-  function Je(se, we) {
-    return aP(se.lo, se.hi, se.end === 0, se.end === 1, we);
+  function Je(se, ve) {
+    return aP(se.lo, se.hi, se.end === 0, se.end === 1, ve);
   }
   const Qe = ce.filter((se) => se.hi >= F && se.lo <= U).map((se) => {
-    let we = se;
+    let ve = se;
     if (M && "links" in M && M.moved) {
       const le = M.links.find((Se) => Se.gateId === se.gate.gate_id);
-      M.gateId === se.gate.gate_id ? we = kt(M) : le && (we = Je(le, M.dx));
+      M.gateId === se.gate.gate_id ? ve = kt(M) : le && (ve = Je(le, M.dx));
     }
-    return { r: se, a: J(X(we.lo)), b: J(X(we.hi)) };
-  }), Mt = [0, 25, 50, 75, 100], gt = u.gate + 6, jt = Ug(), It = (se) => ZM(se, jt.coloured), Pt = (se) => qa.top + 8 + se * (gt + 14);
-  function Ce(se, we) {
-    const { r: le, a: Se, b: Fe } = se, Pe = le.gate.percent_of_parent, pe = `${le.gate.name}${Pe == null ? "" : ` ${Pe.toFixed(Pe >= 10 ? 1 : 2)}%`}`, Me = pe.length * u.gate * 0.6 + 10, Be = (Se + Fe) / 2, ze = Pt(le.row) + gt / 2, st = y[le.gate.gate_id] ?? [0, 0], nt = we && we.gateId === le.gate.gate_id && we.moved ? [we.start[0] + we.dx / Ve, we.start[1] - we.dy / G * 100] : st, pt = Math.min(qa.left + L - Me / 2, Math.max(qa.left + Me / 2, Be + nt[0] * Ve)), Ft = Math.min(qa.top + G - gt / 2, Math.max(qa.top + gt / 2, ze - nt[1] / 100 * G));
+    return { r: se, a: J(X(ve.lo)), b: J(X(ve.hi)) };
+  }), Mt = [0, 25, 50, 75, 100], mt = u.gate + 6, jt = Ug(), It = (se) => ZM(se, jt.coloured), Pt = (se) => qa.top + 8 + se * (mt + 14);
+  function Ce(se, ve) {
+    const { r: le, a: Se, b: Fe } = se, Pe = le.gate.percent_of_parent, pe = `${le.gate.name}${Pe == null ? "" : ` ${Pe.toFixed(Pe >= 10 ? 1 : 2)}%`}`, Me = pe.length * u.gate * 0.6 + 10, Be = (Se + Fe) / 2, ze = Pt(le.row) + mt / 2, st = y[le.gate.gate_id] ?? [0, 0], nt = ve && ve.gateId === le.gate.gate_id && ve.moved ? [ve.start[0] + ve.dx / Ve, ve.start[1] - ve.dy / G * 100] : st, pt = Math.min(qa.left + L - Me / 2, Math.max(qa.left + Me / 2, Be + nt[0] * Ve)), Ft = Math.min(qa.top + G - mt / 2, Math.max(qa.top + mt / 2, ze - nt[1] / 100 * G));
     return { cx: pt, cy: Ft, w: Me, text: pe, offset: [(pt - Be) / Ve, (ze - Ft) / G * 100] };
   }
   return /* @__PURE__ */ d.jsxs("div", { ref: C, className: "gl-histogram", "data-testid": "histogram-plot", children: [
@@ -35545,15 +35545,15 @@ function TU({
           /* @__PURE__ */ d.jsx("rect", { x: qa.left, y: qa.top, width: L, height: G, fill: "#fff", stroke: "#000", strokeWidth: 1 }),
           de && /* @__PURE__ */ d.jsx("path", { className: "gl-histogram-curve", d: de, fill: "#c8d4e6", stroke: "#1f3b66", strokeWidth: 1 }),
           xe.minor.map((se) => /* @__PURE__ */ d.jsx("line", { x1: J(se), x2: J(se), y1: qa.top + G, y2: qa.top + G + 3, stroke: "#000" }, `m${se}`)),
-          xe.major.map(({ p: se, label: we }) => /* @__PURE__ */ d.jsxs("g", { children: [
+          xe.major.map(({ p: se, label: ve }) => /* @__PURE__ */ d.jsxs("g", { children: [
             /* @__PURE__ */ d.jsx("line", { x1: J(se), x2: J(se), y1: qa.top + G, y2: qa.top + G + 6, stroke: "#000" }),
-            /* @__PURE__ */ d.jsx("text", { x: J(se), y: qa.top + G + 8 + u.tick, textAnchor: "middle", fontSize: u.tick, children: we })
+            /* @__PURE__ */ d.jsx("text", { x: J(se), y: qa.top + G + 8 + u.tick, textAnchor: "middle", fontSize: u.tick, children: ve })
           ] }, `M${se}`)),
           Mt.map((se) => {
-            const we = qa.top + G - se / 100 * G;
+            const ve = qa.top + G - se / 100 * G;
             return /* @__PURE__ */ d.jsxs("g", { children: [
-              /* @__PURE__ */ d.jsx("line", { x1: qa.left - 5, x2: qa.left, y1: we, y2: we, stroke: "#000" }),
-              /* @__PURE__ */ d.jsx("text", { x: qa.left - 8, y: we + u.tick / 3, textAnchor: "end", fontSize: u.tick, children: se })
+              /* @__PURE__ */ d.jsx("line", { x1: qa.left - 5, x2: qa.left, y1: ve, y2: ve, stroke: "#000" }),
+              /* @__PURE__ */ d.jsx("text", { x: qa.left - 8, y: ve + u.tick / 3, textAnchor: "end", fontSize: u.tick, children: se })
             ] }, `y${se}`);
           }),
           /* @__PURE__ */ d.jsx(
@@ -35566,14 +35566,14 @@ function TU({
             }
           ),
           /* @__PURE__ */ d.jsxs("g", { style: { pointerEvents: l === "navigate" ? "auto" : "none" }, children: [
-            Qe.slice().sort((se, we) => we.b - we.a - (se.b - se.a)).map(({ r: se, a: we, b: le }) => /* @__PURE__ */ d.jsx(
+            Qe.slice().sort((se, ve) => ve.b - ve.a - (se.b - se.a)).map(({ r: se, a: ve, b: le }) => /* @__PURE__ */ d.jsx(
               "rect",
               {
                 className: "gl-range-body",
                 "data-gate-id": se.gate.gate_id,
-                x: we,
+                x: ve,
                 y: qa.top,
-                width: Math.max(0, le - we),
+                width: Math.max(0, le - ve),
                 height: G,
                 fill: "transparent",
                 style: { cursor: "move" },
@@ -35582,20 +35582,20 @@ function TU({
               `body-${se.gate.gate_id}`
             )),
             Qe.map((se) => {
-              const { r: we, a: le, b: Se } = se, Fe = Ce(se, (M == null ? void 0 : M.kind) === "label" ? M : null), Pe = Fe.w > Se - le - 20 ? Fe.cy + gt / 2 + 5 : Fe.cy, pe = we.gate.gate_id === s, Me = pe ? jt.lineWidth + 1 : jt.lineWidth;
-              return /* @__PURE__ */ d.jsxs("g", { className: "gl-range-gate" + (pe ? " is-selected" : ""), "data-gate-id": we.gate.gate_id, style: { pointerEvents: "none" }, children: [
-                /* @__PURE__ */ d.jsx("line", { className: "gl-range-bar", x1: le, x2: Se, y1: Pe, y2: Pe, stroke: It(we.gate.color), strokeWidth: Me }),
+              const { r: ve, a: le, b: Se } = se, Fe = Ce(se, (M == null ? void 0 : M.kind) === "label" ? M : null), Pe = Fe.w > Se - le - 20 ? Fe.cy + mt / 2 + 5 : Fe.cy, pe = ve.gate.gate_id === s, Me = pe ? jt.lineWidth + 1 : jt.lineWidth;
+              return /* @__PURE__ */ d.jsxs("g", { className: "gl-range-gate" + (pe ? " is-selected" : ""), "data-gate-id": ve.gate.gate_id, style: { pointerEvents: "none" }, children: [
+                /* @__PURE__ */ d.jsx("line", { className: "gl-range-bar", x1: le, x2: Se, y1: Pe, y2: Pe, stroke: It(ve.gate.color), strokeWidth: Me }),
                 [0, 1].map((Be) => {
                   const ze = Be === 0 ? le : Se, st = Be === 0 ? -1 : 1;
                   return /* @__PURE__ */ d.jsxs("g", { children: [
-                    !we.open[Be] && /* @__PURE__ */ d.jsx("line", { className: "gl-range-bound", x1: ze, x2: ze, y1: qa.top, y2: qa.top + G, stroke: It(we.gate.color), strokeWidth: Me }),
-                    /* @__PURE__ */ d.jsx("path", { className: "gl-range-arrow", d: `M${ze},${Pe}l${-st * 8},-4.5v9z`, fill: It(we.gate.color) })
+                    !ve.open[Be] && /* @__PURE__ */ d.jsx("line", { className: "gl-range-bound", x1: ze, x2: ze, y1: qa.top, y2: qa.top + G, stroke: It(ve.gate.color), strokeWidth: Me }),
+                    /* @__PURE__ */ d.jsx("path", { className: "gl-range-arrow", d: `M${ze},${Pe}l${-st * 8},-4.5v9z`, fill: It(ve.gate.color) })
                   ] }, Be);
                 })
-              ] }, we.gate.gate_id);
+              ] }, ve.gate.gate_id);
             }),
             Qe.map((se) => {
-              const { cx: we, cy: le, w: Se, text: Fe } = Ce(se, (M == null ? void 0 : M.kind) === "label" ? M : null), Pe = se.r.gate.gate_id;
+              const { cx: ve, cy: le, w: Se, text: Fe } = Ce(se, (M == null ? void 0 : M.kind) === "label" ? M : null), Pe = se.r.gate.gate_id;
               return /* @__PURE__ */ d.jsxs(
                 "g",
                 {
@@ -35606,20 +35606,20 @@ function TU({
                     l !== "navigate" || pe.button !== 0 || rt({ kind: "label", pointerId: pe.pointerId, gateId: Pe, fromX: pe.clientX, fromY: pe.clientY, start: Ce(se).offset, dx: 0, dy: 0, moved: !1 }, pe);
                   },
                   children: [
-                    /* @__PURE__ */ d.jsx("rect", { x: we - Se / 2, y: le - gt / 2, width: Se, height: gt, rx: 3, fill: It(se.r.gate.color), fillOpacity: jt.labelBackground }),
-                    /* @__PURE__ */ d.jsx("text", { x: we, y: le + u.gate * 0.35, textAnchor: "middle", fontSize: u.gate, fill: "#fff", style: { userSelect: "none" }, children: Fe })
+                    /* @__PURE__ */ d.jsx("rect", { x: ve - Se / 2, y: le - mt / 2, width: Se, height: mt, rx: 3, fill: It(se.r.gate.color), fillOpacity: jt.labelBackground }),
+                    /* @__PURE__ */ d.jsx("text", { x: ve, y: le + u.gate * 0.35, textAnchor: "middle", fontSize: u.gate, fill: "#fff", style: { userSelect: "none" }, children: Fe })
                   ]
                 },
                 `label-${Pe}`
               );
             }),
-            Qe.map(({ r: se, a: we, b: le }) => [0, 1].map((Se) => se.open[Se] ? null : /* @__PURE__ */ d.jsx(
+            Qe.map(({ r: se, a: ve, b: le }) => [0, 1].map((Se) => se.open[Se] ? null : /* @__PURE__ */ d.jsx(
               "line",
               {
                 className: Se === 0 ? "gl-range-lo" : "gl-range-hi",
                 "data-gate-id": se.gate.gate_id,
-                x1: Se === 0 ? we : le,
-                x2: Se === 0 ? we : le,
+                x1: Se === 0 ? ve : le,
+                x2: Se === 0 ? ve : le,
                 y1: qa.top,
                 y2: qa.top + G,
                 stroke: "transparent",
@@ -37083,13 +37083,13 @@ function pP(e) {
       de && "axis" in xe && X.set(de, w1(de, xe));
     }
     const K = (Y) => {
-      var Je, Qe, Mt, gt, jt, It;
+      var Je, Qe, Mt, mt, jt, It;
       const de = G(Y), xe = q(Y), ce = Number((Je = Y.results) == null ? void 0 : Je.count), Te = Number.isFinite(ce) ? ` count="${ce}"` : "", Ve = `<Subpopulations>${(U.get(Y.uuid) ?? []).map(K).join("")}</Subpopulations>`;
       if (de === "not" || de === "and" || de === "or") {
         const Pt = de === "not" ? "NotNode" : de === "and" ? "AndNode" : "OrNode", Ce = (((Qe = Y.parents) == null ? void 0 : Qe.populations) ?? []).filter((Re) => r[Re]).map((Re) => `<Dependent name="${qo(J(r[Re]))}"/>`).join("");
         return `<${Pt} name="${qo(xe)}"${Te}><Dependents>${Ce}</Dependents>${Ve}</${Pt}>`;
       }
-      const rt = (jt = a[((gt = (Mt = Y.parents) == null ? void 0 : Mt.populationDefinitions) == null ? void 0 : gt[0]) ?? ""]) == null ? void 0 : jt.definition, _t = (rt == null ? void 0 : rt.gateDefinition) ?? {}, Le = (rt == null ? void 0 : rt.desyncTable) ?? {}, Ze = Le[S.uuid] ?? _t, Xe = Number(((It = Y.definition) == null ? void 0 : It.populationNumber) ?? 0), yt = [_t, ...Object.values(Le)].every(gV), kt = yV(Ze, _t, Xe, yt);
+      const rt = (jt = a[((mt = (Mt = Y.parents) == null ? void 0 : Mt.populationDefinitions) == null ? void 0 : mt[0]) ?? ""]) == null ? void 0 : jt.definition, _t = (rt == null ? void 0 : rt.gateDefinition) ?? {}, Le = (rt == null ? void 0 : rt.desyncTable) ?? {}, Ze = Le[S.uuid] ?? _t, Xe = Number(((It = Y.definition) == null ? void 0 : It.populationNumber) ?? 0), yt = [_t, ...Object.values(Le)].every(gV), kt = yV(Ze, _t, Xe, yt);
       return `<Population name="${qo(xe)}"${Te}>${kt.axes}<Gate gating:id="${qo(Y.uuid)}">${kt.element}</Gate>${Ve}</Population>`;
     }, re = (U.get(D.uuid) ?? []).map(K).join(""), V = Number((x = D.results) == null ? void 0 : x.count), T = (((C = S.parents) == null ? void 0 : C.platforms) ?? []).filter((Y) => i.has(Y)), me = T.length ? i.get(T[0]) : null;
     me && u.add(me.uuid);
@@ -38018,34 +38018,37 @@ function DV(e) {
     let Je, Qe = de, Mt = Y.name;
     for (const Re of kt) {
       for (const se of [Y.name, yt]) {
-        const we = S.get(`${Re}\0${se}`);
-        if (we) {
-          Je = we, Qe = Re, Mt = se;
+        const ve = S.get(`${Re}\0${se}`);
+        if (ve) {
+          Je = ve, Qe = Re, Mt = se;
           break;
         }
       }
       if (Je) break;
     }
-    const gt = Je ? w.get(Je) : void 0;
-    gt && gt.vertices.length === Xe.length && (Xe = Xe.map((Re, se) => {
-      const we = gt.vertices[se], le = (Se, Fe) => Math.abs(Se - Fe) <= Math.abs(Fe) * 1e-9 + 1e-9;
-      return { x: le(Re.x, we.x) ? we.x : Re.x, y: le(Re.y, we.y) ? we.y : Re.y };
+    const mt = Je ? w.get(Je) : void 0;
+    mt && mt.vertices.length === Xe.length && (Xe = Xe.map((Re, se) => {
+      const ve = mt.vertices[se], le = (Se, Fe) => Math.abs(Se - Fe) <= Math.abs(Fe) * 1e-9 + 1e-9;
+      return { x: le(Re.x, ve.x) ? ve.x : Re.x, y: le(Re.y, ve.y) ? ve.y : Re.y };
     }));
-    const jt = (gt == null ? void 0 : gt.gateId) ?? String(N++), It = Je ?? `${jt}-1`;
+    const jt = (mt == null ? void 0 : mt.gateId) ?? String(N++), It = Je ?? `${jt}-1`;
     M.set(Y.population_id, It);
-    const Pt = Ve.map((Re) => LV(Re, c, y, h, m)), Ce = {
+    const Pt = Ve.map((Re, se) => {
+      const ve = mt == null ? void 0 : mt.parameters[se];
+      return ve && g(ve) === Re ? ve : LV(Re, c, y, h, m);
+    }), Ce = {
       children: [{ name: Mt, color: FV(Te.color), populationId: It }],
       inputPopulationIds: null,
       parameters: Pt,
       vertices: Xe,
-      ...gt != null && gt.labelOrigin ? { labelOrigin: gt.labelOrigin } : {},
+      ...mt != null && mt.labelOrigin ? { labelOrigin: mt.labelOrigin } : {},
       gateKind: "Polygon",
       // Chorus labels a gate apart from its population ("P3" for "CD45RB-IgD+"); a matched gate
       // keeps its label, a new one is labelled as GateLab names it.
-      name: (gt == null ? void 0 : gt.name) ?? (Te.gate_type === "quadrant" ? `${Te.name} Q${(Ze ?? 0) + 1}` : Te.name),
+      name: (mt == null ? void 0 : mt.name) ?? (Te.gate_type === "quadrant" ? `${Te.name} Q${(Ze ?? 0) + 1}` : Te.name),
       gateId: jt,
       parentPopulationId: Qe,
-      categories: (gt == null ? void 0 : gt.categories) ?? []
+      categories: (mt == null ? void 0 : mt.categories) ?? []
     };
     I.push(Ce), P++;
     for (const Re of Y.children) {
@@ -42263,37 +42266,37 @@ function fT(e) {
   }, ce = [], Te = /* @__PURE__ */ new Map();
   t.forEach((pe, Me) => {
     var gn, yn, Et, Kt, $t, Qt, on;
-    const Be = pe.sample, ze = H[Me], st = lJ(e.fcsFolder, pe.fileName), nt = xe(Me), pt = Be.fcs.nEvents, Ft = Number(Be.fcs.keywords.$TIMESTEP), Ye = (gn = Be.channels.find((mt) => dg(mt.pnn))) == null ? void 0 : gn.key;
+    const Be = pe.sample, ze = H[Me], st = lJ(e.fcsFolder, pe.fileName), nt = xe(Me), pt = Be.fcs.nEvents, Ft = Number(Be.fcs.keywords.$TIMESTEP), Ye = (gn = Be.channels.find((gt) => dg(gt.pnn))) == null ? void 0 : gn.key;
     let lt = 0, Ke = 0;
     if (Ye) {
-      const mt = Be.rawColumnData(Be.channels.findIndex((Ot) => Ot.key === Ye));
+      const gt = Be.rawColumnData(Be.channels.findIndex((Ot) => Ot.key === Ye));
       lt = 1 / 0, Ke = -1 / 0;
-      for (let Ot = 0; Ot < mt.length; Ot++) {
-        const sn = mt[Ot] * (Number.isFinite(Ft) && Ft > 0 ? Ft : 1);
+      for (let Ot = 0; Ot < gt.length; Ot++) {
+        const sn = gt[Ot] * (Number.isFinite(Ft) && Ft > 0 ? Ft : 1);
         sn < lt && (lt = sn), sn > Ke && (Ke = sn);
       }
     }
-    const Ue = Be.fcs.keywords.$CYT ?? "", qe = (mt, Ot, sn) => {
-      const On = mt.columnIndex + 1, an = Object.fromEntries(Object.entries(Be.fcs.keywords).filter(([Vt]) => new RegExp(`^\\$?P${On}[A-Z]+$`).test(Vt)));
+    const Ue = Be.fcs.keywords.$CYT ?? "", qe = (gt, Ot, sn) => {
+      const On = gt.columnIndex + 1, an = Object.fromEntries(Object.entries(Be.fcs.keywords).filter(([Vt]) => new RegExp(`^\\$?P${On}[A-Z]+$`).test(Vt)));
       return {
         name: sn,
-        descriptiveName: mt.marker ?? "",
+        descriptiveName: gt.marker ?? "",
         analyteName: "",
         type: Ot,
         orientation: "parameter",
-        index: mt.columnIndex,
+        index: gt.columnIndex,
         parameterSource: Ue,
         originalName: sn,
-        originalDescriptiveName: mt.marker ?? "",
+        originalDescriptiveName: gt.marker ?? "",
         originalAnalyteName: "",
-        representableRange: mt.range,
+        representableRange: gt.range,
         pulseType: Ot === "metadata" ? "other" : oJ(sn),
         keywords: an
       };
     }, ft = { rawData: [], metadata: [], scatter: [], unmixed: [], imageDerived: [], derived: [], debug: [] };
-    for (const mt of Be.channels) {
-      const Ot = ze.pnn.get(mt.key);
-      dg(mt.pnn) ? ft.metadata.push({ ...qe(mt, "metadata", Ot), defaultTransform: { transformType: "Linear", minRange: lt, maxRange: Ke } }) : Mr(mt.key) || Mr(mt.pnn) ? ft.scatter.push(qe(mt, "scatter", Ot)) : (ft.rawData.push(qe(mt, "rawData", Ot)), ze.compensated.has(mt.key) && ft.unmixed.push({ ...qe(mt, "unmixed", ze.name.get(mt.key)), originalName: ze.name.get(mt.key) }));
+    for (const gt of Be.channels) {
+      const Ot = ze.pnn.get(gt.key);
+      dg(gt.pnn) ? ft.metadata.push({ ...qe(gt, "metadata", Ot), defaultTransform: { transformType: "Linear", minRange: lt, maxRange: Ke } }) : Mr(gt.key) || Mr(gt.pnn) ? ft.scatter.push(qe(gt, "scatter", Ot)) : (ft.rawData.push(qe(gt, "rawData", Ot)), ze.compensated.has(gt.key) && ft.unmixed.push({ ...qe(gt, "unmixed", ze.name.get(gt.key)), originalName: ze.name.get(gt.key) }));
     }
     ft.metadata.push({
       name: "Event #",
@@ -42309,18 +42312,18 @@ function fT(e) {
       pulseType: "other",
       defaultTransform: { transformType: "Linear", minRange: 0, maxRange: pt + 1 }
     });
-    const ut = (mt) => {
-      if (mt.name === "Event #") return { transformType: "Linear", minRange: 0, maxRange: pt };
-      if (mt.type === "metadata") return { transformType: "Linear", minRange: lt, maxRange: Ke };
-      const Ot = Be.channels.find((sn) => sn.columnIndex === mt.index);
+    const ut = (gt) => {
+      if (gt.name === "Event #") return { transformType: "Linear", minRange: 0, maxRange: pt };
+      if (gt.type === "metadata") return { transformType: "Linear", minRange: lt, maxRange: Ke };
+      const Ot = Be.channels.find((sn) => sn.columnIndex === gt.index);
       return ze.defaultAxis(Ot.key, []).json;
     };
-    ce.push(Object.fromEntries(Object.entries(ft).map(([mt, Ot]) => [mt, Ot.map((sn) => {
+    ce.push(Object.fromEntries(Object.entries(ft).map(([gt, Ot]) => [gt, Ot.map((sn) => {
       const { keywords: On, defaultTransform: an, ...Vt } = sn;
       return [`${sn.name} :: ${sn.descriptiveName}`, { ...Vt, transform: ut(sn), ...an ? { defaultTransform: an } : {} }];
     })])));
     const Yt = {
-      ...Object.fromEntries(Object.entries(Be.fcs.keywords).map(([mt, Ot]) => [mt, String(Ot)])),
+      ...Object.fromEntries(Object.entries(Be.fcs.keywords).map(([gt, Ot]) => [gt, String(Ot)])),
       FJ_FCS_VERSION: Be.fcs.version.replace(/^FCS(\d\.\d)$/, "$1").replace(/^(\d)\.0$/, "$1")
     }, qt = g("dataSources", {
       uri: st,
@@ -42346,27 +42349,27 @@ function fT(e) {
     y(m, qt), y(Y(Me), qt), nt && y(nt, qt), y(qt, x);
     const Ut = /comp|unstained|stained control/i.test(pe.fileName) && !/FMO|isotype/i.test(pe.fileName);
     Ut ? s(`${pe.fileName}: when the workbench is opened, a file whose name contains "comp", "unstained" or "stained control" is put in its Compensation Data group, not Experiment Data, where the gates are; open the workbench and drag the gates onto it, or rename the file.`) : y(qt, S), x.results.dataSources.push(qt.uuid), Ut || S.results.dataSources.push(qt.uuid);
-    const { out: rn, masks: En, data: Ne } = T[Me], ht = D[Me], Tt = /* @__PURE__ */ new Map(), Ct = /* @__PURE__ */ new Map(), Rt = (mt, Ot) => ({
-      status: mt > 0 ? "valid" : "empty",
-      validPopulations: mt > 0 ? 1 : 0,
+    const { out: rn, masks: En, data: Ne } = T[Me], ht = D[Me], Tt = /* @__PURE__ */ new Map(), Ct = /* @__PURE__ */ new Map(), Rt = (gt, Ot) => ({
+      status: gt > 0 ? "valid" : "empty",
+      validPopulations: gt > 0 ? 1 : 0,
       invalidPopulations: 0,
-      count: mt,
-      statistics: { CNT: uT(mt), FOP: dT(mt, Ot) }
+      count: gt,
+      statistics: { CNT: uT(gt), FOP: dT(gt, Ot) }
     }), Lt = g("populations", { populationNumber: 0 }, { results: Rt(pt, pt), stableSince: 1, recalcVersion: 1 });
     y(P, Lt), y(qt, Lt), Lt.parents._dataSource = [qt.uuid], Tt.set(`${Oc}#0`, Lt), Ct.set(`${Oc}#0`, pt);
-    const hn = (mt, Ot, sn) => {
+    const hn = (gt, Ot, sn) => {
       var In;
-      const On = (In = mt.pops[Ot]) == null ? void 0 : In.populationId;
+      const On = (In = gt.pops[Ot]) == null ? void 0 : In.populationId;
       if (On) {
         const Sn = G.get(On), Nn = Sn !== void 0 ? ht.get(Sn) : void 0;
         if (Nn !== void 0 && rn[Nn] !== void 0) return rn[Nn];
       }
-      const an = mt.gateId ? q(Me, mt) : null, Vt = sn && En[sn] ? En[sn] : null;
+      const an = gt.gateId ? q(Me, gt) : null, Vt = sn && En[sn] ? En[sn] : null;
       if (!an || !Vt) return 0;
-      const ta = `${Me}:${mt.key}:${Ot}`;
+      const ta = `${Me}:${gt.key}:${Ot}`;
       let jn = me.get(ta);
       if (!jn) {
-        const Sn = mt.kind === "quad" ? SA[Ot] : void 0;
+        const Sn = gt.kind === "quad" ? SA[Ot] : void 0;
         jn = i1({ [an.gate_id]: an }, {
           r: { population_id: "r", name: "r", gate_refs: [], gate_logic: "and", parent_id: null, children: ["h"], event_count: null, percent_of_parent: null },
           h: { population_id: "h", name: "h", gate_refs: [{ gate_id: an.gate_id, include: !0, ...Sn ? { quadrant: Sn } : {} }], gate_logic: "and", parent_id: "r", children: [], event_count: null, percent_of_parent: null }
@@ -42375,57 +42378,57 @@ function fT(e) {
       let kn = 0;
       for (let Sn = 0; Sn < jn.length; Sn++) kn += jn[Sn] & Vt[Sn];
       return kn;
-    }, xn = (mt, Ot) => {
+    }, xn = (gt, Ot) => {
       var an;
-      const sn = (an = mt.pops[Ot]) == null ? void 0 : an.populationId;
+      const sn = (an = gt.pops[Ot]) == null ? void 0 : an.populationId;
       if (!sn) return null;
       const On = G.get(sn);
       return On !== void 0 ? ht.get(On) ?? null : null;
     }, Bn = /* @__PURE__ */ new Map([[`${Oc}#0`, ht.get("") ?? pe.root_population_id]]);
-    for (const mt of L) {
-      const Ot = X.get(mt.key);
+    for (const gt of L) {
+      const Ot = X.get(gt.key);
       if (!Ot) continue;
-      const sn = `${mt.parentKey}#${mt.parentNumber}`, On = Tt.get(sn);
+      const sn = `${gt.parentKey}#${gt.parentNumber}`, On = Tt.get(sn);
       if (On)
-        for (const { number: an } of mt.pops) {
+        for (const { number: an } of gt.pops) {
           const Vt = Ct.get(sn) ?? 0;
           let ta;
-          if (mt.kind === "not" || mt.kind === "and") {
-            const In = (yn = mt.pops[an]) == null ? void 0 : yn.populationId, Sn = In ? G.get(In) : void 0, Nn = Sn !== void 0 ? ht.get(Sn) : void 0;
+          if (gt.kind === "not" || gt.kind === "and") {
+            const In = (yn = gt.pops[an]) == null ? void 0 : yn.populationId, Sn = In ? G.get(In) : void 0, Nn = Sn !== void 0 ? ht.get(Sn) : void 0;
             if (ta = Nn !== void 0 && rn[Nn] !== void 0 ? rn[Nn] : 0, !In) {
-              const [Dt, dn] = mt.operands[0];
+              const [Dt, dn] = gt.operands[0];
               ta = Vt - (Ct.get(`${Dt}#${dn}`) ?? 0);
             }
           } else {
-            ta = hn(mt, an, Bn.get(sn) ?? null);
-            const In = (Et = J.get(mt.key)) == null ? void 0 : Et[Me], Sn = mt.kind === "gate" ? q(Me, mt) : null, Nn = Bn.get(sn);
-            if (mt.kind === "quad" && (In == null ? void 0 : In.type) === "quad" && Nn && En[Nn]) {
-              const Dt = q(Me, mt), dn = SA[an], Mn = (Dt == null ? void 0 : Dt.gate_type) === "quadrant" ? tJ(ze, Dt, dn, In, En[Nn], Ne) : 0;
-              Mn && s(`${pe.fileName}: the workbench tests the quadrant "${mt.names[an]}" with each event on its biex table, which puts ${Mn} event${Mn === 1 ? "" : "s"} of "${((Kt = pe.populations[Nn]) == null ? void 0 : Kt.name) ?? "its parent"}" in it otherwise than GateLab (an event below the table's first entry is in no quadrant).`);
+            ta = hn(gt, an, Bn.get(sn) ?? null);
+            const In = (Et = J.get(gt.key)) == null ? void 0 : Et[Me], Sn = gt.kind === "gate" ? q(Me, gt) : null, Nn = Bn.get(sn);
+            if (gt.kind === "quad" && (In == null ? void 0 : In.type) === "quad" && Nn && En[Nn]) {
+              const Dt = q(Me, gt), dn = SA[an], Mn = (Dt == null ? void 0 : Dt.gate_type) === "quadrant" ? tJ(ze, Dt, dn, In, En[Nn], Ne) : 0;
+              Mn && s(`${pe.fileName}: the workbench tests the quadrant "${gt.names[an]}" with each event on its biex table, which puts ${Mn} event${Mn === 1 ? "" : "s"} of "${((Kt = pe.populations[Nn]) == null ? void 0 : Kt.name) ?? "its parent"}" in it otherwise than GateLab (an event below the table's first entry is in no quadrant).`);
             }
             if ((In == null ? void 0 : In.type) === "ellipse" && (Sn == null ? void 0 : Sn.gate_type) === "ellipse" && Nn && En[Nn]) {
               const Dt = aJ(ze, Sn, In, En[Nn], Ne);
-              Dt && s(`${pe.fileName}: the workbench tests the ellipse "${mt.names[0]}" with each event at the middle of its display channel, which puts ${Dt} event${Dt === 1 ? "" : "s"} of "${(($t = pe.populations[Nn]) == null ? void 0 : $t.name) ?? "its parent"}" on the other side of it than GateLab.`);
+              Dt && s(`${pe.fileName}: the workbench tests the ellipse "${gt.names[0]}" with each event at the middle of its display channel, which puts ${Dt} event${Dt === 1 ? "" : "s"} of "${(($t = pe.populations[Nn]) == null ? void 0 : $t.name) ?? "its parent"}" on the other side of it than GateLab.`);
             }
             if (((In == null ? void 0 : In.type) === "range" || (In == null ? void 0 : In.type) === "rectangle") && (Sn == null ? void 0 : Sn.gate_type) === "rectangle" && Nn && En[Nn]) {
               const Dt = nJ(ze, Sn, In, En[Nn], Ne);
-              Dt && s(`${pe.fileName}: the workbench tests the ${In.type} "${mt.names[0]}" with each event on its biex table, which puts ${Dt} event${Dt === 1 ? "" : "s"} of "${((Qt = pe.populations[Nn]) == null ? void 0 : Qt.name) ?? "its parent"}" on the other side of it than GateLab.`);
+              Dt && s(`${pe.fileName}: the workbench tests the ${In.type} "${gt.names[0]}" with each event on its biex table, which puts ${Dt} event${Dt === 1 ? "" : "s"} of "${((Qt = pe.populations[Nn]) == null ? void 0 : Qt.name) ?? "its parent"}" on the other side of it than GateLab.`);
             }
             if ((In == null ? void 0 : In.type) === "polygon" && Sn && Nn && En[Nn]) {
               const Dt = rJ(ze, Sn, In, En[Nn], Ne);
-              Dt && s(`${pe.fileName}: the workbench tests the polygon "${mt.names[0]}" with each event on its display channel, which puts ${Dt} event${Dt === 1 ? "" : "s"} of "${((on = pe.populations[Nn]) == null ? void 0 : on.name) ?? "its parent"}" on the other side of it than GateLab (as GateLab's .flowjo import reads the workbench's rule).`);
+              Dt && s(`${pe.fileName}: the workbench tests the polygon "${gt.names[0]}" with each event on its display channel, which puts ${Dt} event${Dt === 1 ? "" : "s"} of "${((on = pe.populations[Nn]) == null ? void 0 : on.name) ?? "its parent"}" on the other side of it than GateLab (as GateLab's .flowjo import reads the workbench's rule).`);
             }
           }
           const jn = g("populations", { populationNumber: an }, { results: Rt(ta, Vt), stableSince: 1, recalcVersion: 1 });
-          if (jn.parents._dataSource = [qt.uuid], y(Ot, jn), mt.kind === "not" || mt.kind === "and")
-            for (const [In, Sn] of mt.operands) {
+          if (jn.parents._dataSource = [qt.uuid], y(Ot, jn), gt.kind === "not" || gt.kind === "and")
+            for (const [In, Sn] of gt.operands) {
               const Nn = Tt.get(`${In}#${Sn}`);
               Nn && y(Nn, jn);
             }
           else
             y(On, jn);
-          const kn = `${mt.key}#${an}`;
-          Tt.set(kn, jn), Ct.set(kn, ta), Bn.set(kn, xn(mt, an)), Te.set(kn, (Te.get(kn) ?? 0) + ta);
+          const kn = `${gt.key}#${an}`;
+          Tt.set(kn, jn), Ct.set(kn, ta), Bn.set(kn, xn(gt, an)), Te.set(kn, (Te.get(kn) ?? 0) + ta);
         }
     }
     Te.set(`${Oc}#0`, (Te.get(`${Oc}#0`) ?? 0) + pt);
@@ -42522,7 +42525,7 @@ function fT(e) {
     }
   }, { results: { statistics: { table: { rows: [], columns: [], values: [] } } }, stableSince: 1, recalcVersion: 1 });
   y(m, Qe), y(Je, Qe);
-  const Mt = o(), gt = (pe, Me) => ({
+  const Mt = o(), mt = (pe, Me) => ({
     layout: { type: "custom", unitOfMeasurement: "inches", size: { width: 2496, height: 1920 } },
     batchSettings: {
       batchBy: "group",
@@ -42536,7 +42539,7 @@ function fT(e) {
     },
     pages: { [pe]: { id: pe, type: Me, elements: { charts: {}, graphs: {}, tables: {}, text: {}, groups: {}, images: {} }, ...Me === "batched" ? { sourcePageId: Mt } : {} } },
     pageOrder: [pe]
-  }), jt = g("reports", { name: "Report", reportSpec: gt(Mt, "source") }, { results: { reportSpec: gt(`${Mt}:0`, "batched") }, stableSince: 1, recalcVersion: 1 });
+  }), jt = g("reports", { name: "Report", reportSpec: mt(Mt, "source") }, { results: { reportSpec: mt(`${Mt}:0`, "batched") }, stableSince: 1, recalcVersion: 1 });
   y(m, jt);
   const It = o(), Pt = (Pe = /^\/Users\/[^/]+/.exec(e.fcsFolder)) == null ? void 0 : Pe[0], Ce = Pt ? `${Pt}/Library/Preferences/FlowJo 11/analyses` : "/Users/Shared/FlowJo 11/analyses", Re = `${Ce}/analysis-${l}`;
   m.properties = {
@@ -42563,12 +42566,12 @@ function fT(e) {
     platforms: c,
     cytometers: u.cytometers,
     analysisRoot: u.analysisRoot
-  }, we = `analyses/analysis-${l}`;
+  }, ve = `analyses/analysis-${l}`;
   return { bytes: Aw({
     "workbench.json": is(JSON.stringify({ id: It, name: e.name, analyses: [l] })),
     "preferences.json": is(JSON.stringify({ version: "4.0.0" })),
-    [`${we}/analysis-${l}.json`]: is(JSON.stringify(se)),
-    [`${we}/analysis-${l}_manifest.txt`]: is("[]")
+    [`${ve}/analysis-${l}.json`]: is(JSON.stringify(se)),
+    [`${ve}/analysis-${l}_manifest.txt`]: is("[]")
   }), analysis: se, warnings: i, counts: T.map((pe) => pe.out) };
 }
 const i3 = "3.1";
@@ -49730,7 +49733,7 @@ function LY({
       placement: st,
       valid: Ze(le, Me, st)
     };
-  }, gt = (le) => {
+  }, mt = (le) => {
     let Se = 0;
     const Fe = (Pe) => {
       var pe;
@@ -49819,7 +49822,7 @@ function LY({
                   className: "pop-row-disclosure",
                   "aria-label": j.has(le) ? h("Show the populations under {name}", { name: Pe.name }) : h("Hide the populations under {name}", { name: Pe.name }),
                   "aria-expanded": !j.has(le),
-                  title: j.has(le) ? h("{count} hidden", { count: gt(le) }) : h("Option-click folds every branch under it too"),
+                  title: j.has(le) ? h("{count} hidden", { count: mt(le) }) : h("Option-click folds every branch under it too"),
                   onClick: (Ye) => {
                     Ye.stopPropagation(), Ye.altKey ? Qe(le, !j.has(le), !0) : G(le);
                   },
@@ -49908,7 +49911,7 @@ ${h("Tailored for the file in view.")}` : ""}`,
   jt(b, 0, []);
   const It = J ? m[J.popId] : null, Pt = (J == null ? void 0 : J.refIndex) !== null && (J == null ? void 0 : J.refIndex) !== void 0 && It ? It.gate_refs[J.refIndex] : null, Ce = Pt ? I.find((le) => le.key === tg(Pt)) ?? null : null, Re = new Set(
     ((It == null ? void 0 : It.gate_refs) ?? []).filter((le, Se) => Se !== (J == null ? void 0 : J.refIndex)).map(tg)
-  ), se = K.trim().toLocaleLowerCase(), we = I.filter(
+  ), se = K.trim().toLocaleLowerCase(), ve = I.filter(
     (le) => !Re.has(le.key) && (!se || le.label.toLocaleLowerCase().includes(se))
   );
   return /* @__PURE__ */ d.jsxs("div", { className: "population-tree-panel", children: [
@@ -50000,7 +50003,7 @@ ${h("Tailored for the file in view.")}` : ""}`,
             }
           ),
           /* @__PURE__ */ d.jsxs("div", { className: "pop-gate-picker-list", children: [
-            we.map((le) => /* @__PURE__ */ d.jsxs(
+            ve.map((le) => /* @__PURE__ */ d.jsxs(
               "button",
               {
                 type: "button",
@@ -50014,7 +50017,7 @@ ${h("Tailored for the file in view.")}` : ""}`,
               },
               le.key
             )),
-            we.length === 0 && /* @__PURE__ */ d.jsx("div", { className: "pop-gate-picker-empty", children: h("No available gates match.") })
+            ve.length === 0 && /* @__PURE__ */ d.jsx("div", { className: "pop-gate-picker-empty", children: h("No available gates match.") })
           ] })
         ]
       }
@@ -52697,10 +52700,10 @@ function OZ({
       const { api: Ze } = TI(), Xe = e.displayColumn(x), yt = n.activeMask, kt = [];
       for (let Pt = 0; Pt < Xe.length; Pt++) (!yt || yt[Pt]) && kt.push(Pt);
       const Qe = _F(kt, j).map((Pt) => Xe[Pt]), Mt = S ? e.index(S) : void 0;
-      let gt, jt, It;
+      let mt, jt, It;
       if (Mt !== void 0) {
         const Pt = _F(kt, Math.min(j, 3e4)), Ce = e.displayColumn(Mt);
-        gt = Pt.map((Re) => Xe[Re]), jt = Pt.map((Re) => Ce[Re]), It = UC(jt);
+        mt = Pt.map((Re) => Xe[Re]), jt = Pt.map((Re) => Ce[Re]), It = UC(jt);
       }
       Ze.render(iq({
         dyeValues: Qe,
@@ -52710,7 +52713,7 @@ function OZ({
         // clamp at use; the input holds raw typed value
         boundaries: re,
         seq: ++me.current,
-        biplotDye: gt,
+        biplotDye: mt,
         markerValues: jt,
         yLabel: Mt !== void 0 ? e.channelLabel(Mt) : void 0,
         yRange: It,
@@ -53244,7 +53247,7 @@ async function Dw(e, t) {
 async function u8(e, t, n = 300, a = []) {
   const r = yk(e, n);
   if (!r) return;
-  const o = r.width * 72 / 96, i = r.height * 72 / 96, { jsPDF: s } = await import("./jspdf.es.min-D3ev1dxE.js").then((u) => u.j), l = new s({ orientation: o >= i ? "landscape" : "portrait", unit: "pt", format: [o, i], compress: !0 });
+  const o = r.width * 72 / 96, i = r.height * 72 / 96, { jsPDF: s } = await import("./jspdf.es.min-hP_fZJxl.js").then((u) => u.j), l = new s({ orientation: o >= i ? "landscape" : "portrait", unit: "pt", format: [o, i], compress: !0 });
   if (!await JC(l, r.root, { width: o, height: i })) {
     const u = await Dw(r, n);
     l.addImage(u, "PNG", 0, 0, o, i, void 0, "FAST");
@@ -54256,18 +54259,18 @@ function Eee({
   onRequestTaken: _
 }) {
   var Ia, Zs, eo, ss, Ko;
-  const I = z.useRef([]), { t: M } = oa(), P = a.root_population_id ?? "", j = i.current, [L, G] = z.useState("data"), [D, q] = z.useState((j == null ? void 0 : j.mode) ?? "single"), [H, F] = z.useState((j == null ? void 0 : j.exportDpi) ?? 300), [U, J] = z.useState((j == null ? void 0 : j.multiPops) ?? []), [X, K] = z.useState((j == null ? void 0 : j.popId) ?? a.active_population_id ?? P), [re, V] = z.useState((j == null ? void 0 : j.fullPath) ?? !1), [T, me] = z.useState((j == null ? void 0 : j.gateView) ?? ["forward"]), [be, Y] = z.useState((j == null ? void 0 : j.displayMode) ?? "pseudocolor"), [de, xe] = z.useState((j == null ? void 0 : j.maxEvents) ?? 1e4), [ce, Te] = z.useState((j == null ? void 0 : j.allEvents) ?? !1), [He, Ve] = z.useState((j == null ? void 0 : j.plotSize) ?? 200), [rt, _t] = z.useState((j == null ? void 0 : j.nColumns) ?? 4), [Le, Ze] = z.useState((j == null ? void 0 : j.fitToColumns) ?? !0), [Xe, yt] = z.useState((j == null ? void 0 : j.pointSize) ?? 1.2), [kt, Je] = z.useState((j == null ? void 0 : j.pointAlpha) ?? 0.35), [Qe, Mt] = z.useState((j == null ? void 0 : j.contourThreshold) ?? 5), [gt, jt] = z.useState((j == null ? void 0 : j.contourLevels) ?? 10), [It, Pt] = z.useState((j == null ? void 0 : j.showArrows) ?? !0), [Ce, Re] = z.useState((j == null ? void 0 : j.arrowWidth) ?? 1.5), [se, we] = z.useState((j == null ? void 0 : j.arrowAnchor) ?? "label"), [le, Se] = z.useState((j == null ? void 0 : j.kdeBandwidth) ?? 0), Fe = z.useRef(j != null && j.kdeBandwidth && j.kdeBandwidth > 0 ? j.kdeBandwidth : 4), Pe = Ug(), pe = !Pe.coloured, Me = (it) => Pe.setColoured(!it), [Be, ze] = z.useState((j == null ? void 0 : j.gateLabelBold) ?? !1), st = Pe.labelBackground, nt = Pe.setLabelBackground, [pt, Ft] = z.useState((j == null ? void 0 : j.layout) ?? "tree"), Ye = Pe.lineWidth, lt = Pe.setLineWidth, [Ke, Ue] = z.useState((j == null ? void 0 : j.gateEdgeMode) ?? "straight-bow"), [qe, ft] = z.useState((j == null ? void 0 : j.fontTick) ?? 12), [ut, Yt] = z.useState((j == null ? void 0 : j.fontAxis) ?? 12), [qt, Ut] = z.useState((j == null ? void 0 : j.fontTitle) ?? 12), [rn, En] = z.useState((j == null ? void 0 : j.fontGate) ?? 12), [Ne, ht] = z.useState((j == null ? void 0 : j.exportTree) ?? !1), [Tt, Ct] = Ra("strategy.pooled", () => h !== null), [Rt, Lt] = Ra("strategy.poolTicks", () => [...h ?? g]), [hn, xn] = z.useState(""), Bn = Tt ? c.filter((it) => Rt.includes(it.id)).map((it) => it.id).join("|") : "", gn = z.useMemo(() => Bn ? Bn.split("|") : [], [Bn]), yn = m8(c, gn, a, s), Et = z.useMemo(() => Ku(a), [a]), Kt = !Tt || yn.current && yn.pending === 0, $t = z.useMemo(() => !Kt || !Tt ? null : gn.flatMap((it) => {
+  const I = z.useRef([]), { t: M } = oa(), P = a.root_population_id ?? "", j = i.current, [L, G] = z.useState("data"), [D, q] = z.useState((j == null ? void 0 : j.mode) ?? "single"), [H, F] = z.useState((j == null ? void 0 : j.exportDpi) ?? 300), [U, J] = z.useState((j == null ? void 0 : j.multiPops) ?? []), [X, K] = z.useState((j == null ? void 0 : j.popId) ?? a.active_population_id ?? P), [re, V] = z.useState((j == null ? void 0 : j.fullPath) ?? !1), [T, me] = z.useState((j == null ? void 0 : j.gateView) ?? ["forward"]), [be, Y] = z.useState((j == null ? void 0 : j.displayMode) ?? "pseudocolor"), [de, xe] = z.useState((j == null ? void 0 : j.maxEvents) ?? 1e4), [ce, Te] = z.useState((j == null ? void 0 : j.allEvents) ?? !1), [He, Ve] = z.useState((j == null ? void 0 : j.plotSize) ?? 200), [rt, _t] = z.useState((j == null ? void 0 : j.nColumns) ?? 4), [Le, Ze] = z.useState((j == null ? void 0 : j.fitToColumns) ?? !0), [Xe, yt] = z.useState((j == null ? void 0 : j.pointSize) ?? 1.2), [kt, Je] = z.useState((j == null ? void 0 : j.pointAlpha) ?? 0.35), [Qe, Mt] = z.useState((j == null ? void 0 : j.contourThreshold) ?? 5), [mt, jt] = z.useState((j == null ? void 0 : j.contourLevels) ?? 10), [It, Pt] = z.useState((j == null ? void 0 : j.showArrows) ?? !0), [Ce, Re] = z.useState((j == null ? void 0 : j.arrowWidth) ?? 1.5), [se, ve] = z.useState((j == null ? void 0 : j.arrowAnchor) ?? "label"), [le, Se] = z.useState((j == null ? void 0 : j.kdeBandwidth) ?? 0), Fe = z.useRef(j != null && j.kdeBandwidth && j.kdeBandwidth > 0 ? j.kdeBandwidth : 4), Pe = Ug(), pe = !Pe.coloured, Me = (it) => Pe.setColoured(!it), [Be, ze] = z.useState((j == null ? void 0 : j.gateLabelBold) ?? !1), st = Pe.labelBackground, nt = Pe.setLabelBackground, [pt, Ft] = z.useState((j == null ? void 0 : j.layout) ?? "tree"), Ye = Pe.lineWidth, lt = Pe.setLineWidth, [Ke, Ue] = z.useState((j == null ? void 0 : j.gateEdgeMode) ?? "straight-bow"), [qe, ft] = z.useState((j == null ? void 0 : j.fontTick) ?? 12), [ut, Yt] = z.useState((j == null ? void 0 : j.fontAxis) ?? 12), [qt, Ut] = z.useState((j == null ? void 0 : j.fontTitle) ?? 12), [rn, En] = z.useState((j == null ? void 0 : j.fontGate) ?? 12), [Ne, ht] = z.useState((j == null ? void 0 : j.exportTree) ?? !1), [Tt, Ct] = Ra("strategy.pooled", () => h !== null), [Rt, Lt] = Ra("strategy.poolTicks", () => [...h ?? g]), [hn, xn] = z.useState(""), Bn = Tt ? c.filter((it) => Rt.includes(it.id)).map((it) => it.id).join("|") : "", gn = z.useMemo(() => Bn ? Bn.split("|") : [], [Bn]), yn = m8(c, gn, a, s), Et = z.useMemo(() => Ku(a), [a]), Kt = !Tt || yn.current && yn.pending === 0, $t = z.useMemo(() => !Kt || !Tt ? null : gn.flatMap((it) => {
     const Gn = yn.sources.find((dt) => dt.id === it);
     if (!Gn) return [];
     const ra = oD(X, Gn.tree, Et, a.active_hierarchy_id);
     return [{ id: Gn.id, name: Gn.name, sample: Gn.sample, tree: Gn.tree, gating: Gn.gating, populationId: ra.missing ? "" : ra.id }];
-  }), [Kt, Tt, gn, yn.sources, X, Et, a.active_hierarchy_id]), [Qt, on] = z.useState(null), mt = z.useRef(null), Ot = z.useRef(/* @__PURE__ */ new Map()), sn = z.useRef(null), [On, an] = z.useState(null), Vt = z.useRef(S);
+  }), [Kt, Tt, gn, yn.sources, X, Et, a.active_hierarchy_id]), [Qt, on] = z.useState(null), gt = z.useRef(null), Ot = z.useRef(/* @__PURE__ */ new Map()), sn = z.useRef(null), [On, an] = z.useState(null), Vt = z.useRef(S);
   Vt.current = S;
   const ta = z.useRef(C);
   ta.current = C;
   const jn = !!C;
   z.useEffect(() => {
-    const it = mt.current;
+    const it = gt.current;
     if (it)
       return SD(
         it,
@@ -54280,9 +54283,9 @@ function Eee({
   }, []);
   const [kn, In] = z.useState(!0), [Sn, Nn] = z.useState(""), [Dt, dn] = z.useState(0), [Mn, $n] = z.useState(null), [ea, ca] = z.useState(0);
   z.useEffect(() => {
-    if (!mt.current || typeof ResizeObserver > "u") return;
+    if (!gt.current || typeof ResizeObserver > "u") return;
     const it = new ResizeObserver((Gn) => ca(Math.round(Gn[0].contentRect.width)));
-    return it.observe(mt.current), () => it.disconnect();
+    return it.observe(gt.current), () => it.disconnect();
   }, []), z.useEffect(() => {
     J((it) => it.filter((Gn) => !!a.populations[Gn]));
   }, [a.active_hierarchy_id]);
@@ -54311,7 +54314,7 @@ function Eee({
     pointSize: Xe,
     pointAlpha: kt,
     contourThreshold: Qe,
-    contourLevels: gt,
+    contourLevels: mt,
     kdeBandwidth: le,
     pubStyle: pe,
     gateLineWidth: Ye,
@@ -54337,17 +54340,17 @@ function Eee({
   }, [Ee, be]);
   const Ie = Rr(a.populations, P), ot = Ie.filter(({ popId: it }) => it !== P);
   z.useEffect(() => {
-    if (!mt.current) return;
+    if (!gt.current) return;
     In(!0), Nn("");
     const it = setTimeout(() => {
       var Gn, ra, dt, La, br, Pa;
       try {
         if (D === "single" && !a.populations[X]) {
-          (Gn = mt.current) == null || Gn.replaceChildren(), dn(0), on(null);
+          (Gn = gt.current) == null || Gn.replaceChildren(), dn(0), on(null);
           return;
         }
         if (Tt && !$t) {
-          (ra = mt.current) == null || ra.replaceChildren(), dn(0), on(null);
+          (ra = gt.current) == null || ra.replaceChildren(), dn(0), on(null);
           return;
         }
         const sr = { tick: qe, axis_label: ut, gate_label: rn, title: qt }, Jr = ce ? 1 / 0 : de, Ci = jn ? (sa, Do, to) => {
@@ -54364,7 +54367,7 @@ function Eee({
             displayMode: be,
             plotSize: el,
             contourThreshold: Qe,
-            contourLevels: gt,
+            contourLevels: mt,
             onLabelMove: Ci,
             gateLabelBold: Be,
             labelBackground: st,
@@ -54387,7 +54390,7 @@ function Eee({
             yKey: t.keyForLabel(xo.y_channel),
             xr: xo.x_range,
             yr: xo.y_range
-          }])), mt.current && bee(mt.current, ai, { color: pe ? "#444444" : null, width: Ce, anchor: se }), I.current = sa ? sa.channels : to.flatMap((xo) => xo.gates.flatMap((Mi) => {
+          }])), gt.current && bee(gt.current, ai, { color: pe ? "#444444" : null, width: Ce, anchor: se }), I.current = sa ? sa.channels : to.flatMap((xo) => xo.gates.flatMap((Mi) => {
             const jl = a.gates[Mi.gate_id];
             return jl ? [jl.x_channel, jl.y_channel] : [];
           })), dn(to.length), on(sa ? { drawn: sa.drawn.length, omittedGates: sa.omittedGates, leftOut: sa.leftOut } : null);
@@ -54407,7 +54410,7 @@ function Eee({
           plotSize: Mo,
           fitToColumns: !1,
           contourThreshold: Qe,
-          contourLevels: gt,
+          contourLevels: mt,
           onLabelMove: Ci,
           gateLabelBold: Be,
           labelBackground: st,
@@ -54423,7 +54426,7 @@ function Eee({
           contextTitle: Za ? `${((dt = a.populations[X]) == null ? void 0 : dt.name) ?? ""} · ${Za.drawn.length} ${y ? "samples" : "files"} pooled` : [(La = a.populations[X]) == null ? void 0 : La.name, n].filter((sa) => !!sa).join(" · ")
         };
         if (Za && !Wi.length) {
-          (br = mt.current) == null || br.replaceChildren(), dn(0), on({ drawn: 0, omittedGates: [], leftOut: Za.leftOut });
+          (br = gt.current) == null || br.replaceChildren(), dn(0), on({ drawn: 0, omittedGates: [], leftOut: Za.leftOut });
           return;
         }
         const Ta = Za ? nH(Wi, $a, o, Ai) : tH(t, $a, lo, o, Ai);
@@ -54434,7 +54437,7 @@ function Eee({
           ])
         ), dn($a.length), on(Za ? { drawn: Za.drawn.length, omittedGates: Za.omittedGates, leftOut: Za.leftOut } : null);
       } catch (sr) {
-        Nn(sr instanceof Error ? sr.message : String(sr)), dn(0), (Pa = mt.current) == null || Pa.replaceChildren();
+        Nn(sr instanceof Error ? sr.message : String(sr)), dn(0), (Pa = gt.current) == null || Pa.replaceChildren();
       } finally {
         In(!1);
       }
@@ -54457,7 +54460,7 @@ function Eee({
     kt,
     l,
     Qe,
-    gt,
+    mt,
     le,
     pe,
     Ye,
@@ -54543,7 +54546,7 @@ function Eee({
           pointAlpha: kt,
           maxEvents: ce ? 0 : de,
           contourThreshold: Qe,
-          contourLevels: gt,
+          contourLevels: mt,
           kdeBandwidth: le,
           gateLineWidth: Ye,
           pubStyle: pe,
@@ -54564,7 +54567,7 @@ function Eee({
       w(it);
       return;
     }
-    const ra = Gn.gap, dt = It ? ra : 4, La = Gn.rowGap, br = It ? La : 4, Pa = (Za = mt.current) == null ? void 0 : Za.querySelector(".multi-strategy-grid"), sr = ($a = mt.current) == null ? void 0 : $a.querySelector(".strategy-context-title"), Jr = Pa && Pa.offsetWidth > 0 ? Pa.offsetWidth : Gn.cols * Gn.plotSize + (Gn.cols - 1) * ra + 4 + dt, Ci = (Pa && Pa.offsetHeight > 0 ? Pa.offsetHeight : Gn.rows * Gn.plotSize + (Gn.rows - 1) * La + 4 + br) + (sr && sr.offsetHeight > 0 ? sr.offsetHeight + 6 : 26);
+    const ra = Gn.gap, dt = It ? ra : 4, La = Gn.rowGap, br = It ? La : 4, Pa = (Za = gt.current) == null ? void 0 : Za.querySelector(".multi-strategy-grid"), sr = ($a = gt.current) == null ? void 0 : $a.querySelector(".strategy-context-title"), Jr = Pa && Pa.offsetWidth > 0 ? Pa.offsetWidth : Gn.cols * Gn.plotSize + (Gn.cols - 1) * ra + 4 + dt, Ci = (Pa && Pa.offsetHeight > 0 ? Pa.offsetHeight : Gn.rows * Gn.plotSize + (Gn.rows - 1) * La + 4 + br) + (sr && sr.offsetHeight > 0 ? sr.offsetHeight + 6 : 26);
     w(it, { width: Jr + 12, height: Ci + 12 });
   }, Rn = D === "multi" ? U.length ? M("The strategy to these {count} populations on this file, as a block the Layout tab keeps drawing from the live gates, arrows included", { count: U.length }) : M("Choose populations first") : M("The path to {population} on this file, as a strip of plots the Layout tab keeps drawing from the live gates", { population: ((Zs = a.populations[X]) == null ? void 0 : Zs.name) ?? "" }), Ka = (it) => {
     var Pa, sr;
@@ -54771,7 +54774,7 @@ function Eee({
         be === "pseudocolor" && /* @__PURE__ */ d.jsx(y8, { value: l, onChange: u }),
         Ya && /* @__PURE__ */ d.jsxs("label", { className: "gl-field-inline", title: M("How many contour lines each panel draws"), children: [
           M("Contours"),
-          /* @__PURE__ */ d.jsx("select", { value: gt, onChange: (it) => jt(+it.target.value), children: [4, 6, 8, 10, 12, 18, 24, 30].map((it) => /* @__PURE__ */ d.jsx("option", { value: it, children: it }, it)) })
+          /* @__PURE__ */ d.jsx("select", { value: mt, onChange: (it) => jt(+it.target.value), children: [4, 6, 8, 10, 12, 18, 24, 30].map((it) => /* @__PURE__ */ d.jsx("option", { value: it, children: it }, it)) })
         ] }),
         Ya && /* @__PURE__ */ d.jsxs("label", { className: "gl-field-inline", title: M("The outer contour, as a percentage of the peak density"), children: [
           M("Contour %"),
@@ -54836,7 +54839,7 @@ function Eee({
         ] }),
         D === "multi" && It && /* @__PURE__ */ d.jsxs("label", { className: "gl-field-inline", title: M("Where an arrow leaves its panel: level with the gate's label, or with the centre of the gate itself"), children: [
           M("Arrows from"),
-          /* @__PURE__ */ d.jsxs("select", { value: se, onChange: (it) => we(it.target.value === "gate" ? "gate" : "label"), children: [
+          /* @__PURE__ */ d.jsxs("select", { value: se, onChange: (it) => ve(it.target.value === "gate" ? "gate" : "label"), children: [
             /* @__PURE__ */ d.jsx("option", { value: "label", children: M("Gate label") }),
             /* @__PURE__ */ d.jsx("option", { value: "gate", children: M("Gate centre") })
           ] })
@@ -54896,7 +54899,7 @@ function Eee({
         "div",
         {
           id: "strategy-grid-container",
-          ref: mt,
+          ref: gt,
           "aria-busy": kn,
           style: { opacity: kn ? 0.5 : 1 },
           className: "gl-mini-grid-container",
@@ -55517,7 +55520,7 @@ function jee() {
     for (ue in Z) B[ue] = fe[ue];
     return B;
   }
-  var gt = null;
+  var mt = null;
   function jt(Z, fe) {
     if (Z !== fe) {
       Z.context._currentValue2 = Z.parentValue, Z = Z.parent;
@@ -55548,10 +55551,10 @@ function jee() {
     Z.depth === B.depth ? jt(Z, B) : Re(Z, B), fe.context._currentValue2 = fe.value;
   }
   function se(Z) {
-    var fe = gt;
-    fe !== Z && (fe === null ? Pt(Z) : Z === null ? It(fe) : fe.depth === Z.depth ? jt(fe, Z) : fe.depth > Z.depth ? Ce(fe, Z) : Re(fe, Z), gt = Z);
+    var fe = mt;
+    fe !== Z && (fe === null ? Pt(Z) : Z === null ? It(fe) : fe.depth === Z.depth ? jt(fe, Z) : fe.depth > Z.depth ? Ce(fe, Z) : Re(fe, Z), mt = Z);
   }
-  var we = { isMounted: function() {
+  var ve = { isMounted: function() {
     return !1;
   }, enqueueSetState: function(Z, fe) {
     Z = Z._reactInternals, Z.queue !== null && Z.queue.push(fe);
@@ -55561,11 +55564,11 @@ function jee() {
   } };
   function le(Z, fe, B, ue) {
     var Ee = Z.state !== void 0 ? Z.state : null;
-    Z.updater = we, Z.props = B, Z.state = Ee;
+    Z.updater = ve, Z.props = B, Z.state = Ee;
     var Ie = { queue: [], replace: !1 };
     Z._reactInternals = Ie;
     var ot = fe.contextType;
-    if (Z.context = typeof ot == "object" && ot !== null ? ot._currentValue2 : ue, ot = fe.getDerivedStateFromProps, typeof ot == "function" && (ot = ot(B, Ee), Ee = ot == null ? Ee : V({}, Ee, ot), Z.state = Ee), typeof fe.getDerivedStateFromProps != "function" && typeof Z.getSnapshotBeforeUpdate != "function" && (typeof Z.UNSAFE_componentWillMount == "function" || typeof Z.componentWillMount == "function")) if (fe = Z.state, typeof Z.componentWillMount == "function" && Z.componentWillMount(), typeof Z.UNSAFE_componentWillMount == "function" && Z.UNSAFE_componentWillMount(), fe !== Z.state && we.enqueueReplaceState(Z, Z.state, null), Ie.queue !== null && 0 < Ie.queue.length) if (fe = Ie.queue, ot = Ie.replace, Ie.queue = null, Ie.replace = !1, ot && fe.length === 1) Z.state = fe[0];
+    if (Z.context = typeof ot == "object" && ot !== null ? ot._currentValue2 : ue, ot = fe.getDerivedStateFromProps, typeof ot == "function" && (ot = ot(B, Ee), Ee = ot == null ? Ee : V({}, Ee, ot), Z.state = Ee), typeof fe.getDerivedStateFromProps != "function" && typeof Z.getSnapshotBeforeUpdate != "function" && (typeof Z.UNSAFE_componentWillMount == "function" || typeof Z.componentWillMount == "function")) if (fe = Z.state, typeof Z.componentWillMount == "function" && Z.componentWillMount(), typeof Z.UNSAFE_componentWillMount == "function" && Z.UNSAFE_componentWillMount(), fe !== Z.state && ve.enqueueReplaceState(Z, Z.state, null), Ie.queue !== null && 0 < Ie.queue.length) if (fe = Ie.queue, ot = Ie.replace, Ie.queue = null, Ie.replace = !1, ot && fe.length === 1) Z.state = fe[0];
     else {
       for (Ie = ot ? fe[0] : Z.state, Ee = !0, ot = ot ? 1 : 0; ot < fe.length; ot++) {
         var wt = fe[ot];
@@ -55737,7 +55740,7 @@ function jee() {
       fe.legacyContext = ue, sn(Z, fe, Ee), fe.legacyContext = ot;
     } else sn(Z, fe, Ee);
   }
-  function mt(Z, fe) {
+  function gt(Z, fe) {
     if (Z && Z.defaultProps) {
       fe = V({}, fe), Z = Z.defaultProps;
       for (var B in Z) fe[B] === void 0 && (fe[B] = Z[B]);
@@ -55833,17 +55836,17 @@ function jee() {
           } else sn(Z, fe, ue);
           return;
         case rt:
-          B = B.type, ue = mt(B, ue), Ot(Z, fe, B, ue, Ee);
+          B = B.type, ue = gt(B, ue), Ot(Z, fe, B, ue, Ee);
           return;
         case xe:
-          if (Ee = ue.children, B = B._context, ue = ue.value, Ie = B._currentValue2, B._currentValue2 = ue, ot = gt, gt = ue = { parent: ot, depth: ot === null ? 0 : ot.depth + 1, context: B, parentValue: Ie, value: ue }, fe.context = ue, sn(Z, fe, Ee), Z = gt, Z === null) throw Error(t(403));
-          ue = Z.parentValue, Z.context._currentValue2 = ue === yt ? Z.context._defaultValue : ue, Z = gt = Z.parent, fe.context = Z;
+          if (Ee = ue.children, B = B._context, ue = ue.value, Ie = B._currentValue2, B._currentValue2 = ue, ot = mt, mt = ue = { parent: ot, depth: ot === null ? 0 : ot.depth + 1, context: B, parentValue: Ie, value: ue }, fe.context = ue, sn(Z, fe, Ee), Z = mt, Z === null) throw Error(t(403));
+          ue = Z.parentValue, Z.context._currentValue2 = ue === yt ? Z.context._defaultValue : ue, Z = mt = Z.parent, fe.context = Z;
           return;
         case ce:
           ue = ue.children, ue = ue(B._currentValue2), sn(Z, fe, ue);
           return;
         case _t:
-          Ee = B._init, B = Ee(B._payload), ue = mt(B, ue), Ot(
+          Ee = B._init, B = Ee(B._payload), ue = gt(B, ue), Ot(
             Z,
             fe,
             B,
@@ -55937,7 +55940,7 @@ function jee() {
   }
   function In(Z) {
     if (Z.status !== 2) {
-      var fe = gt, B = hn.current;
+      var fe = mt, B = hn.current;
       hn.current = Rt;
       var ue = Lt;
       Lt = Z.responseState;
@@ -56461,12 +56464,12 @@ function Iee() {
     return ne.push(Le), Xe(ne, xt, _e), typeof _e == "string" ? (ne.push(l(M(_e))), null) : _e;
   }
   var Qe = u(`
-`), Mt = /^[a-zA-Z][a-zA-Z:_\.\-\d]*$/, gt = /* @__PURE__ */ new Map();
+`), Mt = /^[a-zA-Z][a-zA-Z:_\.\-\d]*$/, mt = /* @__PURE__ */ new Map();
   function jt(ne) {
-    var he = gt.get(ne);
+    var he = mt.get(ne);
     if (he === void 0) {
       if (!Mt.test(ne)) throw Error(t(65, ne));
-      he = u("<" + ne), gt.set(ne, he);
+      he = u("<" + ne), mt.set(ne, he);
     }
     return he;
   }
@@ -56673,7 +56676,7 @@ function Iee() {
         return ne.push(Le), Xe(ne, Ht, ct), ct;
     }
   }
-  var Ce = u("</"), Re = u(">"), se = u('<template id="'), we = u('"></template>'), le = u("<!--$-->"), Se = u('<!--$?--><template id="'), Fe = u('"></template>'), Pe = u("<!--$!-->"), pe = u("<!--/$-->"), Me = u("<template"), Be = u('"'), ze = u(' data-dgst="');
+  var Ce = u("</"), Re = u(">"), se = u('<template id="'), ve = u('"></template>'), le = u("<!--$-->"), Se = u('<!--$?--><template id="'), Fe = u('"></template>'), Pe = u("<!--$!-->"), pe = u("<!--/$-->"), Me = u("<template"), Be = u('"'), ze = u(' data-dgst="');
   u(' data-msg="'), u(' data-stck="');
   var st = u("></template>");
   function nt(ne, he, _e) {
@@ -56726,7 +56729,7 @@ function Iee() {
         throw Error(t(397));
     }
   }
-  var gn = u('function $RS(a,b){a=document.getElementById(a);b=document.getElementById(b);for(a.parentNode.removeChild(a);a.firstChild;)b.parentNode.insertBefore(a.firstChild,b);b.parentNode.removeChild(b)};$RS("'), yn = u('$RS("'), Et = u('","'), Kt = u('")<\/script>'), $t = u('function $RC(a,b){a=document.getElementById(a);b=document.getElementById(b);b.parentNode.removeChild(b);if(a){a=a.previousSibling;var f=a.parentNode,c=a.nextSibling,e=0;do{if(c&&8===c.nodeType){var d=c.data;if("/$"===d)if(0===e)break;else e--;else"$"!==d&&"$?"!==d&&"$!"!==d||e++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;b.firstChild;)f.insertBefore(b.firstChild,c);a.data="$";a._reactRetry&&a._reactRetry()}};$RC("'), Qt = u('$RC("'), on = u('","'), mt = u('")<\/script>'), Ot = u('function $RX(b,c,d,e){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data="$!",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),b._reactRetry&&b._reactRetry())};$RX("'), sn = u('$RX("'), On = u('"'), an = u(")<\/script>"), Vt = u(","), ta = /[<\u2028\u2029]/g;
+  var gn = u('function $RS(a,b){a=document.getElementById(a);b=document.getElementById(b);for(a.parentNode.removeChild(a);a.firstChild;)b.parentNode.insertBefore(a.firstChild,b);b.parentNode.removeChild(b)};$RS("'), yn = u('$RS("'), Et = u('","'), Kt = u('")<\/script>'), $t = u('function $RC(a,b){a=document.getElementById(a);b=document.getElementById(b);b.parentNode.removeChild(b);if(a){a=a.previousSibling;var f=a.parentNode,c=a.nextSibling,e=0;do{if(c&&8===c.nodeType){var d=c.data;if("/$"===d)if(0===e)break;else e--;else"$"!==d&&"$?"!==d&&"$!"!==d||e++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;b.firstChild;)f.insertBefore(b.firstChild,c);a.data="$";a._reactRetry&&a._reactRetry()}};$RC("'), Qt = u('$RC("'), on = u('","'), gt = u('")<\/script>'), Ot = u('function $RX(b,c,d,e){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data="$!",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),b._reactRetry&&b._reactRetry())};$RX("'), sn = u('$RX("'), On = u('"'), an = u(")<\/script>"), Vt = u(","), ta = /[<\u2028\u2029]/g;
   function jn(ne) {
     return JSON.stringify(ne).replace(ta, function(he) {
       switch (he) {
@@ -57241,7 +57244,7 @@ function Iee() {
     switch (_e.parentFlushed = !0, _e.status) {
       case 0:
         var Oe = _e.id = ne.nextSegmentId++;
-        return _e.lastPushedText = !1, _e.textEmbedded = !1, ne = ne.responseState, r(he, se), r(he, ne.placeholderPrefix), ne = l(Oe.toString(16)), r(he, ne), o(he, we);
+        return _e.lastPushedText = !1, _e.textEmbedded = !1, ne = ne.responseState, r(he, se), r(he, ne.placeholderPrefix), ne = l(Oe.toString(16)), r(he, ne), o(he, ve);
       case 1:
         _e.status = 2;
         var xt = !0;
@@ -57279,7 +57282,7 @@ function Iee() {
   function dh(ne, he, _e) {
     for (var Oe = _e.completedSegments, xt = 0; xt < Oe.length; xt++) Xu(ne, he, _e, Oe[xt]);
     if (Oe.length = 0, ne = ne.responseState, Oe = _e.id, _e = _e.rootSegmentID, r(he, ne.startInlineScript), ne.sentCompleteBoundaryFunction ? r(he, Qt) : (ne.sentCompleteBoundaryFunction = !0, r(he, $t)), Oe === null) throw Error(t(395));
-    return _e = l(_e.toString(16)), r(he, Oe), r(he, on), r(he, ne.segmentPrefix), r(he, _e), o(he, mt);
+    return _e = l(_e.toString(16)), r(he, Oe), r(he, on), r(he, ne.segmentPrefix), r(he, _e), o(he, gt);
   }
   function Xu(ne, he, _e, Oe) {
     if (Oe.status === 2) return !0;
@@ -57617,7 +57620,7 @@ function Wee({
   }), q = Ug(), H = z.useMemo(
     () => ({ ...G, pubStyle: !q.coloured, gateLineWidth: q.lineWidth, labelBackground: q.labelBackground }),
     [G, q.coloured, q.lineWidth, q.labelBackground]
-  ), F = H.figure, [U, J] = z.useState("data"), [X, K] = z.useState(""), [re, V] = z.useState(""), [T, me] = z.useState(null), [be, Y] = z.useState(() => /* @__PURE__ */ new Set()), de = z.useRef(null), [xe, ce] = z.useState(0), [Te, He] = z.useState("fit"), [Ve, rt] = z.useState(800), [_t, Le] = z.useState(0), Ze = z.useRef(null), [Xe, yt] = z.useState("svg"), [kt, Je] = z.useState(300), [Qe, Mt] = z.useState(!0), [gt, jt] = z.useState(!1), [It, Pt] = z.useState(""), [Ce, Re] = z.useState(""), [se, we] = z.useState(""), [le, Se] = z.useState([]), [Fe, Pe] = z.useState([]), pe = z.useRef(null), Me = z.useRef(!0);
+  ), F = H.figure, [U, J] = z.useState("data"), [X, K] = z.useState(""), [re, V] = z.useState(""), [T, me] = z.useState(null), [be, Y] = z.useState(() => /* @__PURE__ */ new Set()), de = z.useRef(null), [xe, ce] = z.useState(0), [Te, He] = z.useState("fit"), [Ve, rt] = z.useState(800), [_t, Le] = z.useState(0), Ze = z.useRef(null), [Xe, yt] = z.useState("svg"), [kt, Je] = z.useState(300), [Qe, Mt] = z.useState(!0), [mt, jt] = z.useState(!1), [It, Pt] = z.useState(""), [Ce, Re] = z.useState(""), [se, ve] = z.useState(""), [le, Se] = z.useState([]), [Fe, Pe] = z.useState([]), pe = z.useRef(null), Me = z.useRef(!0);
   z.useEffect(() => (Me.current = !0, () => {
     Me.current = !1;
   }), []);
@@ -57920,7 +57923,7 @@ function Wee({
         B.has(ot) || B.set(ot, Ie);
       }
     return B;
-  }, [I]), mt = z.useMemo(() => {
+  }, [I]), gt = z.useMemo(() => {
     const B = Object.fromEntries(e.filter((Ee) => Ee.metadata).map((Ee) => [Ee.id, Ee.metadata])), ue = [...new Set(Object.values(B).flatMap((Ee) => Object.keys(Ee)))].map((Ee) => ({ name: Ee }));
     return v8(B, ue);
   }, [e]), Ot = z.useMemo(() => new Set(e.filter((B) => !F.sampleIds.includes(B.id)).map((B) => B.id)), [e, F.sampleIds]), sn = z.useMemo(() => [...new Set(F.plots.flatMap((B) => B.type === "histogram" ? [B.x] : [B.x, B.y]).filter(Boolean))], [F.plots]), On = F.sampleIds.map((B) => e.find((ue) => ue.id === B)).filter((B) => !!B), an = z.useMemo(
@@ -57986,7 +57989,7 @@ function Wee({
     Ee[ue].push(B), ze(Ee);
   }
   async function Z() {
-    if (!ut || Ut || Kt.length || gt) return;
+    if (!ut || Ut || Kt.length || mt) return;
     jt(!0), Pt("");
     const B = structuredClone(H), ue = B.figure, Ee = document.createElement("div");
     Ee.style.cssText = "position:fixed;left:-100000px;top:0;background:white;width:max-content;pointer-events:none;", Ee.className = "gl-figure-export", document.body.appendChild(Ee);
@@ -58049,7 +58052,7 @@ function Wee({
         {
           "aria-label": "Figure name",
           value: F.name,
-          disabled: gt,
+          disabled: mt,
           onChange: (B) => ze({ name: B.target.value })
         }
       ),
@@ -58057,7 +58060,7 @@ function Wee({
       /* @__PURE__ */ d.jsx(
         "button",
         {
-          disabled: !le.length || gt,
+          disabled: !le.length || mt,
           onClick: () => {
             Pe((B) => [H, ...B]), D(le.at(-1)), Se((B) => B.slice(0, -1));
           },
@@ -58067,7 +58070,7 @@ function Wee({
       /* @__PURE__ */ d.jsx(
         "button",
         {
-          disabled: !Fe.length || gt,
+          disabled: !Fe.length || mt,
           onClick: () => {
             Se((B) => [...B, H]), D(Fe[0]), Pe((B) => B.slice(1));
           },
@@ -58108,7 +58111,7 @@ function Wee({
           },
           B
         )) }),
-        /* @__PURE__ */ d.jsxs("fieldset", { disabled: gt, className: "gl-figure-fields", children: [
+        /* @__PURE__ */ d.jsxs("fieldset", { disabled: mt, className: "gl-figure-fields", children: [
           /* @__PURE__ */ d.jsxs(
             "section",
             {
@@ -58170,9 +58173,9 @@ function Wee({
                     B.fileName && B.fileName !== B.name && /* @__PURE__ */ d.jsx("small", { children: B.fileName })
                   ] })
                 ] }, B.id)) }),
-                mt.length > 0 && /* @__PURE__ */ d.jsxs("details", { className: "gl-figure-facets-fold", open: !0, children: [
+                gt.length > 0 && /* @__PURE__ */ d.jsxs("details", { className: "gl-figure-facets-fold", open: !0, children: [
                   /* @__PURE__ */ d.jsx("summary", { children: "Select by metadata" }),
-                  /* @__PURE__ */ d.jsx("div", { className: "gl-sample-facets gl-figure-facets", "aria-label": _("Select figure files by metadata"), children: mt.map((B) => /* @__PURE__ */ d.jsxs("div", { className: "gl-sample-facet-row", children: [
+                  /* @__PURE__ */ d.jsx("div", { className: "gl-sample-facets gl-figure-facets", "aria-label": _("Select figure files by metadata"), children: gt.map((B) => /* @__PURE__ */ d.jsxs("div", { className: "gl-sample-facet-row", children: [
                     /* @__PURE__ */ d.jsx("span", { className: "gl-sample-facet-lock", "aria-hidden": "true" }),
                     /* @__PURE__ */ d.jsx("span", { className: "gl-sample-facet-name", title: B.name, children: B.name }),
                     /* @__PURE__ */ d.jsx("div", { className: "gl-sample-facet-values", children: B.values.map((ue) => {
@@ -58401,7 +58404,7 @@ function Wee({
                       "select",
                       {
                         value: se,
-                        onChange: (B) => we(B.target.value),
+                        onChange: (B) => ve(B.target.value),
                         children: [
                           /* @__PURE__ */ d.jsx("option", { value: "", children: "Choose…" }),
                           l.map((B) => /* @__PURE__ */ d.jsx("option", { children: B.name }, B.name))
@@ -58436,7 +58439,7 @@ function Wee({
                       {
                         disabled: !se,
                         onClick: () => {
-                          c(se), we("");
+                          c(se), ve("");
                         },
                         children: "Delete preset"
                       }
@@ -59366,7 +59369,7 @@ function Wee({
                   {
                     disabled: Ut || !$t || !!Kt.length,
                     onClick: () => void Z(),
-                    children: gt ? "Exporting…" : "Export current page"
+                    children: mt ? "Exporting…" : "Export current page"
                   }
                 ),
                 Kt.length > 0 && /* @__PURE__ */ d.jsx("p", { role: "alert", children: "Resolve unavailable panels before exporting." })
@@ -59408,7 +59411,7 @@ function Wee({
             "button",
             {
               "aria-label": "Swap rows and columns",
-              disabled: gt,
+              disabled: mt,
               onClick: () => ze({ rows: F.columns, columns: F.rows }),
               children: "Swap"
             }
@@ -59422,7 +59425,7 @@ function Wee({
             /* @__PURE__ */ d.jsxs(
               "select",
               {
-                disabled: gt,
+                disabled: mt,
                 value: F.composition,
                 onChange: (B) => ze({
                   composition: B.target.value
@@ -59440,7 +59443,7 @@ function Wee({
           /* @__PURE__ */ d.jsx(
             "button",
             {
-              disabled: gt,
+              disabled: mt,
               title: _("Build every panel again from the current gates, files and the Gating tab's axes"),
               onClick: () => Ye((B) => B + 1),
               children: "Refresh"
@@ -59449,7 +59452,7 @@ function Wee({
           /* @__PURE__ */ d.jsx(
             "button",
             {
-              disabled: gt,
+              disabled: mt,
               onClick: () => ze({
                 rows: ["samples"],
                 columns: ["populations", "plots"],
@@ -59462,7 +59465,7 @@ function Wee({
           /* @__PURE__ */ d.jsx(
             "button",
             {
-              disabled: gt,
+              disabled: mt,
               onClick: () => ze({
                 rows: ["populations", "plots"],
                 columns: ["samples"],
@@ -59476,7 +59479,7 @@ function Wee({
             /* @__PURE__ */ d.jsx(
               "button",
               {
-                disabled: gt,
+                disabled: mt,
                 "aria-pressed": H.heatmapClusterRows === !0,
                 title: "Order the heatmap's rows by average-linkage clustering, with a dendrogram; off, they follow the population order under Arrange",
                 onClick: () => st({ heatmapClusterRows: H.heatmapClusterRows !== !0 }),
@@ -59486,7 +59489,7 @@ function Wee({
             /* @__PURE__ */ d.jsx(
               "button",
               {
-                disabled: gt,
+                disabled: mt,
                 "aria-pressed": H.heatmapClusterColumns === !0,
                 title: "Order the heatmap's channels by clustering, with a dendrogram; off, they follow the plot order under Plots",
                 onClick: () => st({ heatmapClusterColumns: H.heatmapClusterColumns !== !0 }),
@@ -59519,7 +59522,7 @@ function Wee({
             /* @__PURE__ */ d.jsx(
               Yo,
               {
-                disabled: gt,
+                disabled: mt,
                 "aria-label": "Figure panel size",
                 min: 200,
                 max: 600,
@@ -59625,7 +59628,7 @@ function Wee({
           /* @__PURE__ */ d.jsx(
             "button",
             {
-              disabled: !ft || Ut || gt,
+              disabled: !ft || Ut || mt,
               onClick: () => ce(ft - 1),
               children: "Previous"
             }
@@ -59639,7 +59642,7 @@ function Wee({
           /* @__PURE__ */ d.jsx(
             "button",
             {
-              disabled: ft >= qe.length - 1 || Ut || gt,
+              disabled: ft >= qe.length - 1 || Ut || mt,
               onClick: () => ce(ft + 1),
               children: "Next"
             }
@@ -59741,10 +59744,10 @@ function Jee({
       };
     }), Tt = e.filter((Ct) => !Ct.group);
     return ht.push({ key: "", name: "", id: null, colour: null, items: Tt }), ht;
-  }, [e, H]), [Xe, yt] = z.useState(null), [kt, Je] = z.useState(null), [Qe, Mt] = z.useState(null), [gt, jt] = z.useState(null), It = z.useRef(null), [Pt, Ce] = z.useState(!1), Re = (Ne) => !re && _t.has(Ne), se = z.useMemo(() => (Ze ? Ze.flatMap((Ne) => !re && _t.has(Ne.key) ? [] : Ne.items) : e).filter((Ne) => x8(Ne, re)), [e, Ze, _t, re]), we = z.useRef(null), [le, Se] = z.useState(null), Fe = se.some((Ne) => Ne.id === le) ? le : se.some((Ne) => Ne.id === t) ? t : (En = se[0]) == null ? void 0 : En.id;
+  }, [e, H]), [Xe, yt] = z.useState(null), [kt, Je] = z.useState(null), [Qe, Mt] = z.useState(null), [mt, jt] = z.useState(null), It = z.useRef(null), [Pt, Ce] = z.useState(!1), Re = (Ne) => !re && _t.has(Ne), se = z.useMemo(() => (Ze ? Ze.flatMap((Ne) => !re && _t.has(Ne.key) ? [] : Ne.items) : e).filter((Ne) => x8(Ne, re)), [e, Ze, _t, re]), ve = z.useRef(null), [le, Se] = z.useState(null), Fe = se.some((Ne) => Ne.id === le) ? le : se.some((Ne) => Ne.id === t) ? t : (En = se[0]) == null ? void 0 : En.id;
   function Pe(Ne, ht = !1) {
-    const Tt = se.findIndex((hn) => hn.id === Ne), Ct = se.findIndex((hn) => hn.id === we.current), Rt = Ct < 0 ? Tt : Ct;
-    Ct < 0 && (we.current = Ne);
+    const Tt = se.findIndex((hn) => hn.id === Ne), Ct = se.findIndex((hn) => hn.id === ve.current), Rt = Ct < 0 ? Tt : Ct;
+    Ct < 0 && (ve.current = Ne);
     const Lt = new Set(ht ? e.filter((hn) => !n.has(hn.id)).map((hn) => hn.id) : []);
     for (const hn of se.slice(Math.min(Rt, Tt), Math.max(Rt, Tt) + 1)) Lt.add(hn.id);
     m == null || m([...Lt]);
@@ -59826,7 +59829,7 @@ function Jee({
   }
   function Ye(Ne, ht) {
     const Tt = It.current;
-    !Tt || !F || Tt.kind === "group" && !ht.id || (Ne.preventDefault(), Ne.dataTransfer && (Ne.dataTransfer.dropEffect = "move"), gt !== ht.key && jt(ht.key));
+    !Tt || !F || Tt.kind === "group" && !ht.id || (Ne.preventDefault(), Ne.dataTransfer && (Ne.dataTransfer.dropEffect = "move"), mt !== ht.key && jt(ht.key));
   }
   function lt(Ne, ht) {
     const Tt = It.current;
@@ -59887,7 +59890,7 @@ ${Ct}${Ne.group ? `
 ${K("In the group {name}", { name: Ne.group })}` : ""}`,
         onFocus: () => Se(Ne.id),
         onClick: (Lt) => {
-          Lt.currentTarget.focus(), Lt.shiftKey ? Pe(Ne.id, Lt.metaKey || Lt.ctrlKey) : Lt.metaKey || Lt.ctrlKey ? (we.current = Ne.id, b(Ne.id, !ht)) : (we.current = Ne.id, g(Ne.id));
+          Lt.currentTarget.focus(), Lt.shiftKey ? Pe(Ne.id, Lt.metaKey || Lt.ctrlKey) : Lt.metaKey || Lt.ctrlKey ? (ve.current = Ne.id, b(Ne.id, !ht)) : (ve.current = Ne.id, g(Ne.id));
         },
         onKeyDown: (Lt) => {
           var hn, xn;
@@ -59897,8 +59900,8 @@ ${K("In the group {name}", { name: Ne.group })}` : ""}`,
             else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(Lt.key)) {
               Lt.preventDefault();
               const Bn = se.findIndex((Et) => Et.id === Ne.id), gn = Lt.key === "Home" ? 0 : Lt.key === "End" ? se.length - 1 : Math.max(0, Math.min(se.length - 1, Bn + (Lt.key === "ArrowDown" ? 1 : -1))), yn = se[gn].id;
-              Lt.shiftKey ? (we.current || (we.current = Ne.id), Pe(yn, Lt.metaKey || Lt.ctrlKey)) : !(Lt.metaKey || Lt.ctrlKey) && yn !== Ne.id && (y ?? g)(yn), (xn = (hn = Lt.currentTarget.closest(".gl-sample-list")) == null ? void 0 : hn.querySelectorAll('[role="option"]')[gn]) == null || xn.focus();
-            } else Lt.key === "Enter" ? (Lt.preventDefault(), (y ?? g)(Ne.id)) : Lt.key === " " && (Lt.preventDefault(), Lt.shiftKey ? Pe(Ne.id) : (we.current = Ne.id, b(Ne.id, !ht)));
+              Lt.shiftKey ? (ve.current || (ve.current = Ne.id), Pe(yn, Lt.metaKey || Lt.ctrlKey)) : !(Lt.metaKey || Lt.ctrlKey) && yn !== Ne.id && (y ?? g)(yn), (xn = (hn = Lt.currentTarget.closest(".gl-sample-list")) == null ? void 0 : hn.querySelectorAll('[role="option"]')[gn]) == null || xn.focus();
+            } else Lt.key === "Enter" ? (Lt.preventDefault(), (y ?? g)(Ne.id)) : Lt.key === " " && (Lt.preventDefault(), Lt.shiftKey ? Pe(Ne.id) : (ve.current = Ne.id, b(Ne.id, !ht)));
         },
         children: [
           /* @__PURE__ */ d.jsxs("span", { className: "gl-sample-name", children: [
@@ -60250,11 +60253,11 @@ ${K("In the group {name}", { name: Ne.group })}` : ""}`,
             {
               role: "group",
               "aria-label": Ct,
-              className: "gl-sample-group-section" + (Ne.name ? "" : " is-ungrouped") + (gt === Ne.key ? " is-drop-target" : ""),
+              className: "gl-sample-group-section" + (Ne.name ? "" : " is-ungrouped") + (mt === Ne.key ? " is-drop-target" : ""),
               style: Ne.colour ? { "--gl-group-colour": Ne.colour } : void 0,
               onDragOver: (Rt) => Ye(Rt, Ne),
               onDragLeave: (Rt) => {
-                !Rt.currentTarget.contains(Rt.relatedTarget) && gt === Ne.key && jt(null);
+                !Rt.currentTarget.contains(Rt.relatedTarget) && mt === Ne.key && jt(null);
               },
               onDrop: (Rt) => lt(Rt, Ne),
               children: [
@@ -63365,16 +63368,16 @@ function Nne(e, t = {}) {
     }, He = Te(ce.x, "x"), Ve = Te(ce.y, "y"), _t = (be ? [{ series: "pooled", parts: me }] : me.map((Le) => ({ series: Le.view.id, parts: [Le] }))).map((Le) => {
       const Ze = [], Xe = [];
       let yt = 0, kt = null, Je = null;
-      for (const gt of Le.parts) {
-        const jt = gt.view.sample, It = jt.index(de), Pt = xe === void 0 ? void 0 : jt.index(xe);
+      for (const mt of Le.parts) {
+        const jt = mt.view.sample, It = jt.index(de), Pt = xe === void 0 ? void 0 : jt.index(xe);
         if (It === void 0) throw new pa(`Unknown channel “${de}”.`);
         if (xe !== void 0 && Pt === void 0) throw new pa(`Unknown channel “${xe}”.`);
         if (xe !== void 0 && Pt === It) throw new pa("x and y must be two different channels.");
         kt ?? (kt = jt.transformSpec(de)), xe !== void 0 && (Je ?? (Je = jt.transformSpec(xe)));
-        const Ce = gt.gating.masks[T], Re = jt.displayColumn(It), se = Pt === void 0 ? null : jt.displayColumn(Pt);
-        for (let we = 0; we < Re.length; we++) {
-          if (Ce && !Ce[we]) continue;
-          const le = Re[we], Se = se ? se[we] : 0;
+        const Ce = mt.gating.masks[T], Re = jt.displayColumn(It), se = Pt === void 0 ? null : jt.displayColumn(Pt);
+        for (let ve = 0; ve < Re.length; ve++) {
+          if (Ce && !Ce[ve]) continue;
+          const le = Re[ve], Se = se ? se[ve] : 0;
           if (!Number.isFinite(le) || !Number.isFinite(Se)) {
             yt++;
             continue;
@@ -63390,12 +63393,12 @@ function Nne(e, t = {}) {
         ...c(Le.parts, T)
       };
       if (xe !== void 0) {
-        const gt = Float64Array.from(Xe);
-        Mt.y = nR(xe, Je, gt, Y, Ve);
-        const jt = new Array(Y * Y).fill(0), [It, Pt] = [Mt.x.edges[0], Mt.x.edges[Y]], [Ce, Re] = [Mt.y.edges[0], Mt.y.edges[Y]], se = Y / (Pt - It), we = Y / (Re - Ce);
+        const mt = Float64Array.from(Xe);
+        Mt.y = nR(xe, Je, mt, Y, Ve);
+        const jt = new Array(Y * Y).fill(0), [It, Pt] = [Mt.x.edges[0], Mt.x.edges[Y]], [Ce, Re] = [Mt.y.edges[0], Mt.y.edges[Y]], se = Y / (Pt - It), ve = Y / (Re - Ce);
         for (let le = 0; le < Qe.length; le++) {
-          const Se = Qe[le], Fe = gt[le];
-          Se < It || Se > Pt || Fe < Ce || Fe > Re || jt[Math.min(Y - 1, Math.floor((Fe - Ce) * we)) * Y + Math.min(Y - 1, Math.floor((Se - It) * se))]++;
+          const Se = Qe[le], Fe = mt[le];
+          Se < It || Se > Pt || Fe < Ce || Fe > Re || jt[Math.min(Y - 1, Math.floor((Fe - Ce) * ve)) * Y + Math.min(Y - 1, Math.floor((Se - It) * se))]++;
         }
         Mt.grid = jt;
       }
@@ -63423,19 +63426,19 @@ function Nne(e, t = {}) {
         const Le = Math.max(1, Math.ceil(_t / xne)), Ze = {}, Xe = {};
         for (const yt of ce) {
           const kt = [], Je = be[yt];
-          let Qe = 0, Mt = 0, gt = 0;
+          let Qe = 0, Mt = 0, mt = 0;
           for (const It of rt.parts) {
             const Pt = It.view.sample, Ce = Pt.index(yt);
             if (Ce === void 0) continue;
             const Re = Pt.displayColumn(Ce), se = It.gating.masks[Ve];
-            for (let we = 0; we < Re.length; we++) {
-              if (se && !se[we]) continue;
-              const le = Re[we];
-              Je !== void 0 && Number.isFinite(le) && (gt++, le >= Je && Mt++), !(Qe++ % Le) && Number.isFinite(le) && kt.push(le);
+            for (let ve = 0; ve < Re.length; ve++) {
+              if (se && !se[ve]) continue;
+              const le = Re[ve];
+              Je !== void 0 && Number.isFinite(le) && (mt++, le >= Je && Mt++), !(Qe++ % Le) && Number.isFinite(le) && kt.push(le);
             }
           }
           const jt = Float64Array.from(kt).sort();
-          Ze[yt] = jt.length ? jt.length % 2 ? jt[(jt.length - 1) / 2] : (jt[jt.length / 2 - 1] + jt[jt.length / 2]) / 2 : null, Je !== void 0 && (Xe[yt] = gt ? Mt / gt : null);
+          Ze[yt] = jt.length ? jt.length % 2 ? jt[(jt.length - 1) / 2] : (jt[jt.length / 2 - 1] + jt[jt.length / 2]) / 2 : null, Je !== void 0 && (Xe[yt] = mt ? Mt / mt : null);
         }
         He.push({ populationId: Ve, series: rt.series, n: _t, sampled: Le > 1, medians: Ze, ...Object.keys(Xe).length ? { positive: Xe } : {}, ...c(rt.parts, Ve) });
       }
@@ -64523,7 +64526,7 @@ function lae(e) {
 function cae(e) {
   return `calc(100vw - ${e + $8}px)`;
 }
-const Y_ = (e, t) => e.tab === t.tab && e.sampleId === t.sampleId && e.popId === t.popId && e.gateId === t.gateId && e.x === t.x && e.y === t.y, Z_ = 200, SR = 80, uae = z.lazy(Op("CompensationTab", async () => ({ default: (await import("./CompensationTab-9jI3Rgpq.js")).CompensationTab }))), dae = z.lazy(Op("LayoutTab", async () => ({ default: (await import("./LayoutTab-CVNtf4ky.js")).LayoutTab }))), fae = z.lazy(Op("CellHoverProbe", async () => ({ default: (await import("./CellHoverProbe-1tp4vPmL.js")).CellHoverProbe }))), _R = z.lazy(Op("CellInspector", async () => ({ default: (await import("./CellInspector-ECTxEfDM.js").then((t) => t.C)).CellInspector }))), hae = z.lazy(Op("CellMarker", async () => ({ default: (await import("./CellMarker-CkXpRPbc.js")).CellMarker }))), pae = z.lazy(Op("ImagesTab", async () => ({ default: (await import("./ImagesTab-EzUQqY8v.js")).ImagesTab }))), mae = z.lazy(Op("PlotThumbnails", async () => ({ default: (await import("./PlotThumbnails-DSPoPwFz.js")).PlotThumbnails }))), CR = ["no object", "one object", "two objects", "three or more"], AR = { "application/octet-stream": [".fcs"] }, MR = { "application/octet-stream": [".fcs", ".cvw"] }, gae = { "application/octet-stream": [".cvw"] }, yae = { "application/xml": [".xml", ".wsp"], "application/zip": [".cef", ".flowjo"] }, NR = { "text/csv": [".csv", ".tsv", ".txt"] }, vae = 0, wae = 5, xae = (e) => {
+const Y_ = (e, t) => e.tab === t.tab && e.sampleId === t.sampleId && e.popId === t.popId && e.gateId === t.gateId && e.x === t.x && e.y === t.y, Z_ = 200, SR = 80, uae = z.lazy(Op("CompensationTab", async () => ({ default: (await import("./CompensationTab-DtOJVXCL.js")).CompensationTab }))), dae = z.lazy(Op("LayoutTab", async () => ({ default: (await import("./LayoutTab-JhTvTn6A.js")).LayoutTab }))), fae = z.lazy(Op("CellHoverProbe", async () => ({ default: (await import("./CellHoverProbe-iyoao8uN.js")).CellHoverProbe }))), _R = z.lazy(Op("CellInspector", async () => ({ default: (await import("./CellInspector-DUMvnBEZ.js").then((t) => t.C)).CellInspector }))), hae = z.lazy(Op("CellMarker", async () => ({ default: (await import("./CellMarker-_Ks9rEgo.js")).CellMarker }))), pae = z.lazy(Op("ImagesTab", async () => ({ default: (await import("./ImagesTab-CDX6JVka.js")).ImagesTab }))), mae = z.lazy(Op("PlotThumbnails", async () => ({ default: (await import("./PlotThumbnails-DHIl4WBV.js")).PlotThumbnails }))), CR = ["no object", "one object", "two objects", "three or more"], AR = { "application/octet-stream": [".fcs"] }, MR = { "application/octet-stream": [".fcs", ".cvw"] }, gae = { "application/octet-stream": [".cvw"] }, yae = { "application/xml": [".xml", ".wsp"], "application/zip": [".cef", ".flowjo"] }, NR = { "text/csv": [".csv", ".tsv", ".txt"] }, vae = 0, wae = 5, xae = (e) => {
   const t = Math.pow(10, e), n = Math.pow(10, Math.floor(Math.log10(t)) - 2);
   return Math.max(1, Math.round(t / n) * n);
 }, bae = (e) => e >= 1e4 ? `${(e / 1e3).toFixed(0)}K` : e >= 1e3 ? `${(e / 1e3).toFixed(1)}K` : `${Math.round(e)}`, ER = 330, jR = 460, kae = 600, Sae = 12;
@@ -64798,7 +64801,7 @@ function Rae({ hostProposals: e = null } = {}) {
   }, [w, h]), V = h.find((p) => p.id === m) ?? null, T = (V == null ? void 0 : V.sample) ?? null, me = (T == null ? void 0 : T.dataRevision) ?? 0, be = (T == null ? void 0 : T.compensationEnabled) ?? !1, Y = (V == null ? void 0 : V.name) ?? "", [de, xe] = z.useState(null), [ce, Te] = z.useState(null), He = z.useRef(null), Ve = z.useRef(-1), [rt, _t] = z.useState(null), [Le, Ze] = z.useState(0), Xe = z.useCallback((p) => {
     const k = He.current;
     He.current = p, Te(p), ((p == null ? void 0 : p.fileId) !== (k == null ? void 0 : k.fileId) || (p == null ? void 0 : p.folderId) !== (k == null ? void 0 : k.folderId)) && (_t(null), Ve.current = -1);
-  }, []), yt = z.useRef(!1), kt = () => He.current !== null || yt.current, Je = z.useRef(null), [Qe, Mt] = z.useState(null), gt = z.useRef(Promise.resolve()), [jt, It] = z.useState(null), [Pt, Ce] = z.useState(null), [Re, se] = z.useState(null), [we, le] = z.useState(null), [Se, Fe] = z.useState(null), [Pe, pe] = z.useState(null);
+  }, []), yt = z.useRef(!1), kt = () => He.current !== null || yt.current, Je = z.useRef(null), [Qe, Mt] = z.useState(null), mt = z.useRef(Promise.resolve()), [jt, It] = z.useState(null), [Pt, Ce] = z.useState(null), [Re, se] = z.useState(null), [ve, le] = z.useState(null), [Se, Fe] = z.useState(null), [Pe, pe] = z.useState(null);
   z.useEffect(() => {
   }, [r]);
   const [Me, Be] = z.useState([]), ze = z.useCallback(() => {
@@ -64833,7 +64836,7 @@ function Rae({ hostProposals: e = null } = {}) {
       E.cancelPreview(p), E.dispose();
   }, []), hn = z.useCallback(() => {
     Lt("The Compensation tab was hidden."), Ct("The Compensation tab was hidden.");
-  }, [Ct, Lt]), xn = z.useRef(!1), Bn = z.useRef(null), gn = z.useRef(!1), [yn, Et] = z.useState(null), [Kt, $t] = z.useState(0), [Qt, on] = z.useState(!1), [mt, Ot] = z.useState(!1), [sn, On] = z.useState(0), an = z.useRef(0), Vt = z.useCallback(() => {
+  }, [Ct, Lt]), xn = z.useRef(!1), Bn = z.useRef(null), gn = z.useRef(!1), [yn, Et] = z.useState(null), [Kt, $t] = z.useState(0), [Qt, on] = z.useState(!1), [gt, Ot] = z.useState(!1), [sn, On] = z.useState(0), an = z.useRef(0), Vt = z.useCallback(() => {
     Ot(!0), On((p) => {
       const k = p + 1;
       return an.current = k, k;
@@ -65012,8 +65015,8 @@ function Rae({ hostProposals: e = null } = {}) {
           O || k(null, null);
           return;
         }
-        const ie = ((W = E.target) == null ? void 0 : W.fileKey) ?? null, ve = ie != null && ie.startsWith("loaded:") ? h.find((Ge) => `loaded:${Ge.id}` === ie) : void 0;
-        let ye = (ve == null ? void 0 : ve.sample) ?? null;
+        const ie = ((W = E.target) == null ? void 0 : W.fileKey) ?? null, we = ie != null && ie.startsWith("loaded:") ? h.find((Ge) => `loaded:${Ge.id}` === ie) : void 0;
+        let ye = (we == null ? void 0 : we.sample) ?? null;
         if (!ye && (ie != null && ie.startsWith("pending:"))) {
           const Ge = p.pending[Number(ie.slice(8))];
           Ge && (ye = new Gd(wS(await Ge.file.arrayBuffer())));
@@ -65243,7 +65246,7 @@ function Rae({ hostProposals: e = null } = {}) {
       ee = 0, W && ct(W), Q && nn(Q), W = Q = null;
     }, ie = (ge, Ae) => {
       !O(ge) || !O(Ae) || (W = ge, Q = Ae, Xi.current.mode === "contour" && ti("dots"), ee || (ee = requestAnimationFrame(oe)));
-    }, ve = () => {
+    }, we = () => {
       const ge = W ?? Xi.current.xRange, Ae = Q ?? Xi.current.yRange;
       oe(), ti(null);
       const je = Xi.current;
@@ -65279,7 +65282,7 @@ function Rae({ hostProposals: e = null } = {}) {
             return { xr: W ?? (Bt == null ? void 0 : Bt.xr) ?? De, yr: Q ?? (Bt == null ? void 0 : Bt.yr) ?? Ge };
           },
           onRanges: ie,
-          onEnd: ve
+          onEnd: we
         },
         window
       );
@@ -65336,8 +65339,8 @@ function Rae({ hostProposals: e = null } = {}) {
     p.preventDefault();
     const k = p.currentTarget.closest(".gl-side"), E = k == null ? void 0 : k.querySelector(".gate-list-panel"), O = k == null ? void 0 : k.querySelector(".population-tree-panel");
     if (!E) return;
-    const W = p.clientY, Q = E.getBoundingClientRect().height, ee = Q + (O ? O.getBoundingClientRect().height - 200 : 0), oe = (ve) => {
-      iy(Math.round(Math.max(SR, Math.min(ee, Q + ve.clientY - W))));
+    const W = p.clientY, Q = E.getBoundingClientRect().height, ee = Q + (O ? O.getBoundingClientRect().height - 200 : 0), oe = (we) => {
+      iy(Math.round(Math.max(SR, Math.min(ee, Q + we.clientY - W))));
     };
     document.body.classList.add("gl-row-resizing");
     const ie = () => {
@@ -65362,12 +65365,12 @@ function Rae({ hostProposals: e = null } = {}) {
       const O = document.createElement("canvas").getContext("2d");
       if (!O) return;
       O.font = "12px Arial";
-      const W = Rr(te.populations, te.root_population_id ?? ""), Q = Math.max(jR, ...W.map(({ popId: ie, depth: ve }) => {
+      const W = Rr(te.populations, te.root_population_id ?? ""), Q = Math.max(jR, ...W.map(({ popId: ie, depth: we }) => {
         const ye = te.populations[ie], ge = Math.max(0, ...ye.gate_refs.map((Ae) => {
           var je;
           return O.measureText(((je = te.gates[Ae.gate_id]) == null ? void 0 : je.name) ?? "").width + 28;
         }));
-        return Math.ceil(O.measureText(ye.name).width + ge + ve * 16 + 205);
+        return Math.ceil(O.measureText(ye.name).width + ge + we * 16 + 205);
       })), ee = Math.max(320, Math.min(Q, 900, window.innerWidth - ls - kae)), oe = Math.min(900, Math.ceil(ee / 40) * 40);
       Qu((ie) => E || oe > ie ? oe : ie);
     };
@@ -65502,11 +65505,11 @@ function Rae({ hostProposals: e = null } = {}) {
   }, [h]), yy = z.useCallback((p, k) => {
     my((E) => ({ ...E, [p]: k }));
   }, []), xk = z.useCallback((p) => {
-    var ie, ve;
+    var ie, we;
     if (!T) return null;
     const k = Os.current.find((ye) => ye.id === p.sampleId);
     if (!k) return null;
-    const E = (ie = T.channels[Fn]) == null ? void 0 : ie.key, O = (ve = T.channels[Rn]) == null ? void 0 : ve.key;
+    const E = (ie = T.channels[Fn]) == null ? void 0 : ie.key, O = (we = T.channels[Rn]) == null ? void 0 : we.key;
     if (!E || !O) return null;
     const W = k.sample.channels.findIndex((ye) => ye.key === E), Q = k.sample.channels.findIndex((ye) => ye.key === O);
     if (W < 0 || Q < 0) return null;
@@ -65584,9 +65587,9 @@ function Rae({ hostProposals: e = null } = {}) {
       const ee = (k = O.images.mask) == null ? void 0 : k.slot, oe = ee !== void 0 ? O.images.channelNames.get(ee) : void 0, ie = dR(O.sample.fcs, W.objectCount, ll.get(O.id) ?? null, {
         strictness: vc,
         ...oe ? { maskChannel: oe } : {}
-      }), ve = O.sample.fcs.nEvents, ye = new Uint8Array(ve);
+      }), we = O.sample.fcs.nEvents, ye = new Uint8Array(we);
       let ge = 0;
-      for (let Ae = 0; Ae < ve; Ae++) {
+      for (let Ae = 0; Ae < we; Ae++) {
         const je = W.objectCount[Ae];
         ye[Ae] = je === void 0 || je === 255 ? 0 : je, W.objectArea[Ae] > ge && (ge = W.objectArea[Ae]);
       }
@@ -65594,9 +65597,9 @@ function Rae({ hostProposals: e = null } = {}) {
         O.sample.addDerivedChannel({ name: m3, feature: "ObjectCount", range: 8, values: ye }), O.sample.addDerivedChannel({ name: g3, feature: "ObjectArea", range: Math.max(1, ge + 1), values: W.objectArea }), O.sample.addDerivedChannel({ name: NJ, feature: "CellClass", range: qv.length, values: ie.classes });
         for (const [Ae, je, $e] of y3) {
           const De = (E = W.features) == null ? void 0 : E[Ae];
-          if (!De || De.length !== ve) continue;
+          if (!De || De.length !== we) continue;
           let Ge = 0;
-          for (let et = 0; et < ve; et++) De[et] > Ge && (Ge = De[et]);
+          for (let et = 0; et < we; et++) De[et] > Ge && (Ge = De[et]);
           O.sample.addDerivedChannel({ name: je, feature: $e, range: Math.max(1, Math.ceil(Ge) + 1), values: De });
         }
       } catch (Ae) {
@@ -65638,8 +65641,8 @@ function Rae({ hostProposals: e = null } = {}) {
     const p = (oe = io(te.active_hierarchy_id, te.hierarchies)) == null ? void 0 : oe.id, k = em.find((ie) => ie.template.id === p);
     if (!k || !k.members.length) return "";
     const E = k.members.length, O = k.members.filter((ie) => ie.tailored).length, W = new Set(te.groups.filter((ie) => {
-      const ve = te.hierarchies.find((ge) => ge.owner_group_id === ie.id), ye = ve ? Gs(ve.id) : null;
-      return !!ye && !!(ve != null && ve.source_hierarchy_id) && Dv(ye, Gs(ve.source_hierarchy_id)).size > 0;
+      const we = te.hierarchies.find((ge) => ge.owner_group_id === ie.id), ye = we ? Gs(we.id) : null;
+      return !!ye && !!(we != null && we.source_hierarchy_id) && Dv(ye, Gs(we.source_hierarchy_id)).size > 0;
     }).map((ie) => ie.id)), Q = k.members.filter((ie) => !ie.tailored && W.has(te.file_groups[ie.fileId])).length;
     if (E === 1) return c(O || Q ? "1 file · tailored" : "1 file · following");
     if (!O && !Q) return c("{count} files · all following", { count: E });
@@ -65773,7 +65776,7 @@ function Rae({ hostProposals: e = null } = {}) {
   }, []), z.useEffect(() => {
     _y && Zi(_y.reason).catch(Cy);
   }, [_y]), z.useEffect(() => {
-    if (!mt || !de || Ft === "bundle" || sF()) return;
+    if (!gt || !de || Ft === "bundle" || sF()) return;
     const p = setTimeout(async () => {
       const k = Hh.current();
       if (k)
@@ -65783,7 +65786,7 @@ function Rae({ hostProposals: e = null } = {}) {
         }
     }, 15e3);
     return () => clearTimeout(p);
-  }, [mt, de, nt, Ft]);
+  }, [gt, de, nt, Ft]);
   const Wh = z.useRef(null), im = z.useRef(null), Ay = z.useRef(null), My = z.useRef(null), Ny = z.useRef(null), sm = z.useRef(null), fr = te.hierarchies.find((p) => p.id === te.active_hierarchy_id) ?? te.hierarchies[0], li = Math.max(0, te.hierarchies.findIndex((p) => p.id === te.active_hierarchy_id)) + 1, ms = (fr == null ? void 0 : fr.structure_locked) === !0, Ds = ms && !!(fr != null && fr.source_hierarchy_id), Sf = ms && !Ds, lm = (p) => {
     var E, O;
     const k = fr != null && fr.owner_group_id ? ((E = te.groups.find((W) => W.id === fr.owner_group_id)) == null ? void 0 : E.name) ?? "the group" : ((O = h.find((W) => W.id === (fr == null ? void 0 : fr.owner_sample_id))) == null ? void 0 : O.name) ?? "this file";
@@ -65914,8 +65917,8 @@ function Rae({ hostProposals: e = null } = {}) {
     const W = E ? te.groups.find((ye) => ye.id === E) : null, Q = O.map((ye) => {
       var ge;
       return ((ge = h.find((Ae) => Ae.id === ye)) == null ? void 0 : ge.name) ?? ye;
-    }), ee = Q.length <= 3 ? Q.join(", ") : `${Q.length} files`, oe = O.length === 1, ie = O.filter((ye) => sl.has(ye)).length, ve = ie ? ie === O.length ? oe ? "; its own tailoring is kept" : "; their own tailoring is kept" : `; ${ie} keep their own tailoring` : "";
-    er(W ? `${ee} now in "${W.name}"; ${oe ? "it follows" : "they follow"} the group's gates${ve}. Undo is available.` : `${ee} out of ${oe ? "its" : "their"} group; ${oe ? "it follows" : "they follow"} the tree${ve}. Undo is available.`);
+    }), ee = Q.length <= 3 ? Q.join(", ") : `${Q.length} files`, oe = O.length === 1, ie = O.filter((ye) => sl.has(ye)).length, we = ie ? ie === O.length ? oe ? "; its own tailoring is kept" : "; their own tailoring is kept" : `; ${ie} keep their own tailoring` : "";
+    er(W ? `${ee} now in "${W.name}"; ${oe ? "it follows" : "they follow"} the group's gates${we}. Undo is available.` : `${ee} out of ${oe ? "its" : "their"} group; ${oe ? "it follows" : "they follow"} the tree${we}. Undo is available.`);
   }
   function ci(p) {
     if (!p.length) return [];
@@ -65945,7 +65948,7 @@ function Rae({ hostProposals: e = null } = {}) {
           className: "gl-file-menu-revert",
           title: c("Drop the tailoring of {names}: every gate takes the coordinates it follows again.", { names: O.map((oe) => {
             var ie;
-            return ((ie = h.find((ve) => ve.id === oe)) == null ? void 0 : ie.name) ?? oe;
+            return ((ie = h.find((we) => we.id === oe)) == null ? void 0 : ie.name) ?? oe;
           }).join(", ") }),
           onClick: () => gs(O)
         }
@@ -65988,8 +65991,8 @@ function Rae({ hostProposals: e = null } = {}) {
     let E = 0;
     for (const { value: W } of k.groups) {
       const Q = h.filter((oe) => {
-        var ie, ve;
-        return ((ve = (ie = or[oe.id]) == null ? void 0 : ie[p]) == null ? void 0 : ve.trim()) === W;
+        var ie, we;
+        return ((we = (ie = or[oe.id]) == null ? void 0 : ie[p]) == null ? void 0 : we.trim()) === W;
       }).map((oe) => oe.id), ee = te.groups.find((oe) => oe.name === W);
       ee ? wn({ type: "setFileGroup", fileIds: Q, groupId: ee.id }) : (wn({ type: "addGroup", id: yw(), name: W, fileIds: Q }), E += 1);
     }
@@ -66069,8 +66072,8 @@ function Rae({ hostProposals: e = null } = {}) {
     const ee = Tae(O, Q, [W], te.hierarchies);
     return ee.copies.length ? (wn({ type: "addHierarchyCopies", copies: ee.copies, activeHierarchyId: te.active_hierarchy_id, keepBrowsingPosition: !0, assignments: ee.assignments, silent: !0 }), Ls((oe) => {
       const ie = { ...oe };
-      for (const ve of ee.populationIdMaps)
-        for (const [ye, ge] of Object.entries(ve)) oe[ye] && (ie[ge] = { ...oe[ye] });
+      for (const we of ee.populationIdMaps)
+        for (const [ye, ge] of Object.entries(we)) oe[ye] && (ie[ge] = { ...oe[ye] });
       return ie;
     }), Vt(), ee.assignments[p]) : null;
   }
@@ -66240,9 +66243,9 @@ function Rae({ hostProposals: e = null } = {}) {
     try {
       const O = {};
       if (p.qc)
-        for (const ie of p.template.qc.flatMap((ve) => ve.gates)) {
+        for (const ie of p.template.qc.flatMap((we) => we.gates)) {
           if (!ie.xFull) continue;
-          const ve = Rp(ie.x, T.channels), ye = ve ? T.channels.find(($e) => $e.key === ve) : void 0;
+          const we = Rp(ie.x, T.channels), ye = we ? T.channels.find(($e) => $e.key === we) : void 0;
           if (!ye || O[ye.key]) continue;
           const ge = T.fcs.columns[ye.columnIndex];
           let Ae = 1 / 0, je = -1 / 0;
@@ -66273,7 +66276,7 @@ function Rae({ hostProposals: e = null } = {}) {
         attachTo: ee
       }), Ls((ie) => ({ ...ie, ...W.populationMetadata })), hs((ie) => [
         ...ie,
-        ...W.metadataColumns.filter((ve) => !ie.some((ye) => ye.name === ve)).map((ve) => ({ name: ve }))
+        ...W.metadataColumns.filter((we) => !ie.some((ye) => ye.name === we)).map((we) => ({ name: we }))
       ]), As(null), dt(W.unusedDeclarations.length ? `${W.unusedDeclarations.length} gate line(s) in the file were not used, so those gates took the template's generic shape instead: ${W.unusedDeclarations.join(", ")}. A barcode gate takes a declared shape only when the "# gate:" name matches the name the plane generates (for a 115In x 113In plane: 113+115-, 113+115+, 113-115-, 113-115+). Rename those lines and import again.` : null), vn(
         (k.hierarchyOnly ? "Hierarchy: " : "Barcode scheme: ") + `${W.nGates} new gate${W.nGates === 1 ? "" : "s"}` + (W.reusedGateIds.length ? ` and ${W.reusedGateIds.length} reused` : "") + (k.hierarchyOnly ? `, ${W.qc.populations.length} population(s)` : ` on ${k.planes.length} plane(s), ${W.nPopulations} sample population(s)`) + (W.qc.populations.length ? ` under ${W.qc.populations.some((ie) => ie.parent) ? W.qc.populations.map((ie) => `${ie.name}${ie.parent ? ` (under ${ie.parent})` : ""}`).join(", ") : W.qc.populations.map((ie) => ie.name).join(" → ")}` : "") + (Q ? ` in ${((E = te.populations[p.parentId]) == null ? void 0 : E.name) ?? "the current root"}` : "") + ". Tweak the gates; the populations follow." + (W.qc.skipped.length ? ` Left out: ${W.qc.skipped.join(" ")}` : "")
       );
@@ -66326,7 +66329,7 @@ function Rae({ hostProposals: e = null } = {}) {
           Q.push({ name: ge.name, gatingMl: "", fileName: ge.name, entryId: ge.id, sampleLabel: "its recording", unreadable: je instanceof Error ? je.message : String(je) });
         }
       }
-      const ie = Q.length > 0, ve = ie && W.warnings.length ? [`${no(Y, m)}: ${W.warnings.join(" ")}`] : W.warnings, ye = W.warnings.length + Q.reduce((ge, Ae) => {
+      const ie = Q.length > 0, we = ie && W.warnings.length ? [`${no(Y, m)}: ${W.warnings.join(" ")}`] : W.warnings, ye = W.warnings.length + Q.reduce((ge, Ae) => {
         var je;
         return ge + (((je = Ae.warnings) == null ? void 0 : je.length) ?? 0) + (Ae.unreadable !== void 0 ? 1 : 0);
       }, 0);
@@ -66339,7 +66342,7 @@ function Rae({ hostProposals: e = null } = {}) {
         null,
         [],
         null,
-        ve,
+        we,
         ie ? m : null,
         ee
       );
@@ -66402,13 +66405,13 @@ function Rae({ hostProposals: e = null } = {}) {
       }), oe = ((E = (k = Eo == null ? void 0 : Eo.experiment) == null ? void 0 : k.panels[0]) == null ? void 0 : E.gates) ?? null, ie = Eo != null && Eo.experiment ? D0(Eo.experiment).map((Ge) => {
         var et;
         return { label: Ge.kind === "sort" ? Ge.label.replace(/ · .*$/, "") : Ge.label, sig: Ge.kind === "current" ? nh(Eo.experiment.panels[0].gates) : nh(((et = Eo.experiment.sorts.find((Wt) => Wt.startedAt === Ge.sortedAt && Ge.label.startsWith(Wt.name))) == null ? void 0 : et.gates) ?? []) };
-      }) : [], ve = [], ye = [];
+      }) : [], we = [], ye = [];
       let ge = null;
       for (const Ge of Q) {
         const et = h.find((Cn) => Cn.id === Ge.fileId);
         if (!et) continue;
         const Wt = AP(Ge.recording, { currentGates: oe, keywords: et.sample.fcs.keywords });
-        for (const Cn of Wt.warnings) ve.includes(Cn) || ve.push(Cn);
+        for (const Cn of Wt.warnings) we.includes(Cn) || we.push(Cn);
         const Zt = {};
         for (const Cn of et.sample.channels) Zt[Cn.pnn] = Cn.key;
         const Bt = E0(
@@ -66418,7 +66421,7 @@ function Rae({ hostProposals: e = null } = {}) {
           et.sample.instrument,
           kC(et.sample)
         );
-        for (const Cn of Bt.warnings) ve.includes(Cn) || ve.push(Cn);
+        for (const Cn of Bt.warnings) we.includes(Cn) || we.push(Cn);
         const zt = _C(
           Bt.compensation,
           Bt.compensation_refs,
@@ -66448,7 +66451,7 @@ function Rae({ hostProposals: e = null } = {}) {
       const De = ye.length;
       vn(
         `Imported one tree, "${$e}", from ${je.lead.fileName} for ${De} file${De === 1 ? "" : "s"}: ${je.following} ${je.following === 1 ? "follows" : "follow"} it as recorded, ${je.copies.length} tailored.` + (je.differing.length ? ` ${je.differing.length} file${je.differing.length === 1 ? "" : "s"} recorded a different tree: ${YT(je.differing)}.` : "") + (ee ? " The previous gating is replaced; Undo brings it back." : "")
-      ), qp(ge), dt(ve.length ? ve.join(`
+      ), qp(ge), dt(we.length ? we.join(`
 `) : null);
     } catch (Q) {
       dt(Q instanceof Error ? Q.message : String(Q));
@@ -66488,14 +66491,14 @@ function Rae({ hostProposals: e = null } = {}) {
     for (const E of h) {
       const O = Vh(E.id);
       if (!O) continue;
-      const { treeState: W, live: Q } = O, ee = Q && E.id === m ? Ba : ew(E.sample, W), oe = W.root_population_id, ie = oe ? Rr(ee.populations, oe).filter(({ popId: ve }) => ve !== oe).map(({ popId: ve, depth: ye }) => {
-        const ge = ee.populations[ve], Ae = ge.parent_id && ge.parent_id !== oe ? ee.populations[ge.parent_id] : null;
+      const { treeState: W, live: Q } = O, ee = Q && E.id === m ? Ba : ew(E.sample, W), oe = W.root_population_id, ie = oe ? Rr(ee.populations, oe).filter(({ popId: we }) => we !== oe).map(({ popId: we, depth: ye }) => {
+        const ge = ee.populations[we], Ae = ge.parent_id && ge.parent_id !== oe ? ee.populations[ge.parent_id] : null;
         return { name: ge.name, depth: ye, parentName: (Ae == null ? void 0 : Ae.name) ?? null, events: ge.event_count ?? 0, percentParent: ge.percent_of_parent };
       }) : [];
       p.push({
         entryId: E.id,
         fileName: E.name,
-        hierarchyName: ((k = te.hierarchies.find((ve) => ve.id === Ma(E.id))) == null ? void 0 : k.name) ?? "",
+        hierarchyName: ((k = te.hierarchies.find((we) => we.id === Ma(E.id))) == null ? void 0 : k.name) ?? "",
         events: E.sample.fcs.nEvents,
         populations: ie
       });
@@ -66539,26 +66542,26 @@ function Rae({ hostProposals: e = null } = {}) {
           }
         }
       }
-      const ve = ee.length > 0, ye = [...O, ...Q.warnings], ge = ve && ye.length ? [`${no(Y, m)}: ${ye.join(" ")}`] : ye, Ae = ye.length + ee.reduce((je, $e) => {
+      const we = ee.length > 0, ye = [...O, ...Q.warnings], ge = we && ye.length ? [`${no(Y, m)}: ${ye.join(" ")}`] : ye, Ae = ye.length + ee.reduce((je, $e) => {
         var De;
         return je + (((De = $e.warnings) == null ? void 0 : De.length) ?? 0) + ($e.unreadable !== void 0 ? 1 : 0);
       }, 0);
       await Cf(
         Q.gatingMl,
-        ` from FACSDiva experiment · ${Q.label}` + (ve ? " · one tree per file, each its own tube's" : "") + (W ? ` · ${k.kind === "tube" ? "tube" : "worksheet"} "${k.label}" applied to ${W} by choice` : "") + // Files with no tube tree of their own follow the tree; they are named, with why.
+        ` from FACSDiva experiment · ${Q.label}` + (we ? " · one tree per file, each its own tube's" : "") + (W ? ` · ${k.kind === "tube" ? "tube" : "worksheet"} "${k.label}" applied to ${W} by choice` : "") + // Files with no tube tree of their own follow the tree; they are named, with why.
         (oe.length ? ` · following the tree without a tree of their own: ${oe.map((je) => `${je.name} (${je.why})`).join("; ")}` : "") + // Every note shown is counted: the pairing note too, not only the converter's.
         (Ae ? ` · ${Ae} note(s)` : ""),
         Q.spillover,
         ee,
-        ve ? Y : null,
+        we ? Y : null,
         null,
         [],
         null,
         ge,
-        ve ? m : null,
+        we ? m : null,
         oe,
         [],
-        ve && E !== null ? { primarySampleLabel: `tube "${k.label}"` } : {}
+        we && E !== null ? { primarySampleLabel: `tube "${k.label}"` } : {}
       );
     } catch (Q) {
       dt(Q instanceof Error ? Q.message : String(Q));
@@ -66624,7 +66627,7 @@ function Rae({ hostProposals: e = null } = {}) {
       }
       const O = Uj(E, c), W = O.filter((Ge) => Ge.gateCount > 0);
       if (!W.length) throw new Error("This workspace contains no gates GateLab can read.");
-      const Q = T.fcs.keywords.$FIL ?? null, { matchedOn: ee, pairing: oe, tiedWith: ie, tiedOn: ve, tiedUngated: ye, tiedUnopened: ge } = q9(O, {
+      const Q = T.fcs.keywords.$FIL ?? null, { matchedOn: ee, pairing: oe, tiedWith: ie, tiedOn: we, tiedUngated: ye, tiedUnopened: ge } = q9(O, {
         fileName: Y,
         fil: Q,
         keywords: T.fcs.keywords,
@@ -66648,7 +66651,7 @@ function Rae({ hostProposals: e = null } = {}) {
         const Ge = oe.candidates.map((Bt) => Bt.sample).filter((Bt) => Bt.gateCount > 0);
         Ge.length && (je = Ge), De = oe.candidates.map((Bt) => Bt.sample.index);
         const et = _i(Y), Wt = (Bt) => Bt === 1 ? "a sample" : `${Bt} samples`, Zt = oe.candidates.length;
-        $e = et && ve ? `${Zt === 1 ? "1 sample" : `${Zt} samples`} in this workspace could be ${Y}: ` + (ve === "count" ? `recorded under ${et.fileName} with its ${T.fcs.nEvents.toLocaleString("en-US")} events` + (ie != null && ie.length ? `, as ${ie.join(" and ")} ${ie.length === 1 ? "has" : "have"}` : "") : `recorded under its $FIL "${Q}"` + (ie != null && ie.length ? `, which ${ie.join(" and ")} ${ie.length === 1 ? "carries" : "carry"} too` : "")) + (ye ? `; ${Wt(ye)} without gates could be it too` : "") + (ge ? `; ${ge === 1 ? "another data set" : `${ge} other data sets`} of ${et.fileName}, not open, could be it too` : "") + ", and no $WELLID or $SMNO says which. Choose which one to import." : `${Zt} samples in this workspace could be "${Y}", and the keywords they record cannot tell which it is. Choose the one it is.`;
+        $e = et && we ? `${Zt === 1 ? "1 sample" : `${Zt} samples`} in this workspace could be ${Y}: ` + (we === "count" ? `recorded under ${et.fileName} with its ${T.fcs.nEvents.toLocaleString("en-US")} events` + (ie != null && ie.length ? `, as ${ie.join(" and ")} ${ie.length === 1 ? "has" : "have"}` : "") : `recorded under its $FIL "${Q}"` + (ie != null && ie.length ? `, which ${ie.join(" and ")} ${ie.length === 1 ? "carries" : "carry"} too` : "")) + (ye ? `; ${Wt(ye)} without gates could be it too` : "") + (ge ? `; ${ge === 1 ? "another data set" : `${ge} other data sets`} of ${et.fileName}, not open, could be it too` : "") + ", and no $WELLID or $SMNO says which. Choose which one to import." : `${Zt} samples in this workspace could be "${Y}", and the keywords they record cannot tell which it is. Choose the one it is.`;
       } else
         $e = `No sample in this workspace matches the loaded file "${Y}"${Q ? ` or its $FIL keyword "${Q}"` : ""}. Choose a sample only if its tree should be applied to this file.`;
       Sh({ text: E, samples: je, reason: $e, fileName: Y, keywords: T.fcs.keywords, wsSamples: O, couldBe: De });
@@ -66781,7 +66784,7 @@ function Rae({ hostProposals: e = null } = {}) {
     uo(null);
     const W = new Set(p.samples.map((un) => un.index)), Q = [...p.samples, ...p.dataSamples].sort((un, Gt) => un.index - Gt.index), ee = new Map(h.map((un) => [`loaded:${un.id}`, un.id])), oe = bS([], h.map((un) => ({ name: un.name, keywords: un.sample.fcs.keywords })), p.pending);
     let ie = [];
-    const ve = (p.notHeld ?? []).map((un) => `${un.path ?? un.name} was not loaded: it has the name of ${un.sameAs}, ${un.open ? "already open" : "also chosen"}, and ` + (un.confirmed ? "its keywords say it is the same acquisition" : "nothing says it is another acquisition"));
+    const we = (p.notHeld ?? []).map((un) => `${un.path ?? un.name} was not loaded: it has the name of ${un.sameAs}, ${un.open ? "already open" : "also chosen"}, and ` + (un.confirmed ? "its keywords say it is the same acquisition" : "nothing says it is another acquisition"));
     let ye = [];
     if (oe.length) {
       const un = oe.map((An) => ({ id: crypto.randomUUID(), name: An.name, file: An.file, handle: null, ...An.path ? { sourcePath: An.path } : {} })), Gt = /* @__PURE__ */ new Map(), Tn = /* @__PURE__ */ new Map();
@@ -66791,7 +66794,7 @@ function Rae({ hostProposals: e = null } = {}) {
         const Wa = Gt.get(un[Ln].id);
         Wa && ee.set(`pending:${p.pending.indexOf(An)}`, Wa.id);
         const Ca = Tn.get(un[Ln].id);
-        Ca !== void 0 && ve.push(`${An.name} could not be loaded, so no tree was imported onto it: ${Ca}`);
+        Ca !== void 0 && we.push(`${An.name} could not be loaded, so no tree was imported onto it: ${Ca}`);
       });
     }
     const ge = (un) => ee.get(un) ?? null, Ae = [...h, ...ye], je = new Map(Ae.map((un) => [un.name, un.sample.fcs.nEvents])), $e = ye.some((un) => _i(un.name) !== null);
@@ -66845,7 +66848,7 @@ function Rae({ hostProposals: e = null } = {}) {
         choice: zt,
         treeIndex: b0(zt, p.strategyTree, !1),
         target: { entryId: An ? ge(An.key) : null, names: [un] },
-        ...ve.length ? { loadNotes: ve } : {},
+        ...we.length ? { loadNotes: we } : {},
         ...zl ? { matrixChoice: p.matrixChoice } : {},
         openedSampleIds: ie,
         flowJoGrid: p.flowJoGrid,
@@ -66888,7 +66891,7 @@ function Rae({ hostProposals: e = null } = {}) {
       crossTo: St.cross ? St.fileName : null,
       unpaired: Da,
       ...po.length ? { byChoice: po } : {},
-      ...ve.length ? { loadNotes: ve } : {},
+      ...we.length ? { loadNotes: we } : {},
       // The dialog's answer stands only where it compared the matrices; otherwise the import asks.
       ...zl ? { matrixChoice: p.matrixChoice } : {},
       openedSampleIds: ie,
@@ -66896,13 +66899,13 @@ function Rae({ hostProposals: e = null } = {}) {
     });
   }
   async function xm(p, k, E, O, W, Q, ee = null) {
-    const oe = h.filter((et) => et.id !== m), ie = h.find((et) => et.id === m), ve = [...k].sort((et, Wt) => et.index - Wt.index), ye = (et) => {
-      const Wt = ve.find((Zt) => Zt.index === et);
+    const oe = h.filter((et) => et.id !== m), ie = h.find((et) => et.id === m), we = [...k].sort((et, Wt) => et.index - Wt.index), ye = (et) => {
+      const Wt = we.find((Zt) => Zt.index === et);
       return Wt ? `sample ${et + 1} "${Wt.name}"` : `sample ${et + 1}`;
     }, ge = [], Ae = [], je = [];
     if (oe.length) {
       const et = !W && ie ? [{ key: ie.id, name: ie.name, keywords: ie.sample.fcs.keywords }] : [], Wt = Tv(
-        ve,
+        we,
         [
           ...et,
           ...oe.map((cn) => ({ key: cn.id, name: cn.name, keywords: cn.sample.fcs.keywords }))
@@ -66937,7 +66940,7 @@ function Rae({ hostProposals: e = null } = {}) {
             Cn.fileKey !== m && Ae.push({ sample: E, fileName: Cn.fileName, entryId: Cn.fileKey });
           continue;
         }
-        const Vn = ve.find((Cn) => Cn.index === cn.sampleIndex);
+        const Vn = we.find((Cn) => Cn.index === cn.sampleIndex);
         for (const Cn of [{ fileKey: cn.fileKey, fileName: cn.fileName }, ...cn.copies ?? []])
           Vn.gateCount > 0 ? ge.push({ sample: Vn, fileName: Cn.fileName, entryId: Cn.fileKey }) : je.push({ name: Cn.fileName, entryId: Cn.fileKey, why: `it is ${ye(Vn.index)}, which carries no gates` });
       }
@@ -66968,7 +66971,7 @@ function Rae({ hostProposals: e = null } = {}) {
   }
   async function Au(p, k, E = null, O = null, W = [], Q = null, ee = [], oe = [], ie = {}) {
     try {
-      const ve = W.length > 1, ye = ie.flowJoGrid ?? !0, ge = ve ? null : O, Ae = ge === null ? void 0 : k.trees.find((vt) => vt.index === ge), je = (vt) => {
+      const we = W.length > 1, ye = ie.flowJoGrid ?? !0, ge = we ? null : O, Ae = ge === null ? void 0 : k.trees.find((vt) => vt.index === ge), je = (vt) => {
         var Gt;
         if (!Ae || k.trees.length < 2) return !1;
         const Wn = [...oe.filter((Tn) => Tn.index !== Ae.index), { index: Ae.index, why: vt }], nr = k.trees.filter((Tn) => Tn.gateCount > 0 && !Wn.some((An) => An.index === Tn.index)), un = (((Gt = ie.perFileOption) == null ? void 0 : Gt.length) ?? 0) > 1;
@@ -66999,9 +67002,9 @@ function Rae({ hostProposals: e = null } = {}) {
           flowJoGridInDialog: ie.flowJoGridInDialog,
           ...ie.perFileOption ? { perFileOption: ie.perFileOption } : {}
         }), dt(`The tree "${Ae.name}" could not be imported: ${vt} ` + (nr.length ? `Choose another of the sample's ${k.trees.length} trees.` : `None of the sample's ${k.trees.length} trees can be imported alone; every tree, each file its own sample's, still can.`)), !0;
-      }, $e = ve ? ie.mergedTreesAdvice ?? 'To import one of them alone, open the workspace again with "One hierarchy per file" cleared and choose that tree.' : void 0, De = (vt) => {
+      }, $e = we ? ie.mergedTreesAdvice ?? 'To import one of them alone, open the workspace again with "One hierarchy per file" cleared and choose that tree.' : void 0, De = (vt) => {
         var Gt, Tn, An;
-        if (!ve) return !1;
+        if (!we) return !1;
         const Wn = [...ie.triedPrimaries ?? [], k.index], nr = W.find((Ln) => !Wn.includes(Ln.sample.index) && Ln.entryId), un = ((Gt = W.find((Ln) => Ln.sample.index === k.index)) == null ? void 0 : Gt.fileName) ?? k.name;
         if (!nr) {
           const Ln = `No file's strategy could be read; the last, ${un}'s: ${vt}`;
@@ -67045,7 +67048,7 @@ function Rae({ hostProposals: e = null } = {}) {
       }
       const et = W.length ? W.find((vt) => vt.sample.index === k.index) : void 0, Wt = (et == null ? void 0 : et.fileName) ?? null, Zt = ie.loadNotes ?? [], Bt = [
         ...Zt,
-        ...ve && Wt && Ge.warnings.length ? [`${no(Wt, et == null ? void 0 : et.entryId)}: ${Ge.warnings.join(" ")}`] : Ge.warnings
+        ...we && Wt && Ge.warnings.length ? [`${no(Wt, et == null ? void 0 : et.entryId)}: ${Ge.warnings.join(" ")}`] : Ge.warnings
       ];
       let zt = Zt.length + Ge.warnings.length, cn = 0, Vn = 0;
       const Cn = [], tr = [];
@@ -67084,7 +67087,7 @@ function Rae({ hostProposals: e = null } = {}) {
         Ge.gatingMl,
         ` from FlowJo workspace · ${Ge.sampleName}` + // The files are counted in the result; counted here as well, the two counts disagreed
         // whenever a file followed the tree with none of its own ("for 4 files" and "3 files").
-        (ve ? " · one hierarchy per file" : Ae && Ha.length ? ` · tree "${Ae.name}", ${k.trees.indexOf(Ae) + 1} of ${k.trees.length}; ` + // A sample can hold dozens of trees; the line names a few and counts the rest. A tree
+        (we ? " · one hierarchy per file" : Ae && Ha.length ? ` · tree "${Ae.name}", ${k.trees.indexOf(Ae) + 1} of ${k.trees.length}; ` + // A sample can hold dozens of trees; the line names a few and counts the rest. A tree
         // tried and failed is said to have failed, not listed as one left out by the rule.
         [
           oo.length ? `not imported, one tree per workspace: ${SS(oo.map((vt) => vt.name))}` : "",
@@ -67131,8 +67134,8 @@ function Rae({ hostProposals: e = null } = {}) {
         }
       );
       fn && !je(fn) && De(fn);
-    } catch (ve) {
-      dt(ve instanceof Error ? ve.message : String(ve));
+    } catch (we) {
+      dt(we instanceof Error ? we.message : String(we));
     }
   }
   async function wd(p) {
@@ -67141,7 +67144,7 @@ function Rae({ hostProposals: e = null } = {}) {
     const E = (O) => Ol((W) => W && W.missingMatrix ? { ...W, missingMatrix: { ...W.missingMatrix, error: `${p.name}: ${O}` } } : W);
     try {
       const { input: O } = v4(await p.text()), W = [...O.sourceChannels];
-      if (W.length !== O.receiverChannels.length || W.some((ie, ve) => ie !== O.receiverChannels[ve])) {
+      if (W.length !== O.receiverChannels.length || W.some((ie, we) => ie !== O.receiverChannels[we])) {
         E("its rows and columns name different channels; a spillover matrix is square over one set.");
         return;
       }
@@ -67169,7 +67172,7 @@ function Rae({ hostProposals: e = null } = {}) {
       E(O instanceof Error ? O.message : String(O));
     }
   }
-  async function Cf(p, k, E = null, O = [], W = null, Q = null, ee = [], oe = null, ie = [], ve = null, ye = [], ge = [], Ae = {}) {
+  async function Cf(p, k, E = null, O = [], W = null, Q = null, ee = [], oe = null, ie = [], we = null, ye = [], ge = [], Ae = {}) {
     if (!T || !m) return null;
     const je = k.startsWith(" from FlowJo workspace") ? "flowjo" : k.startsWith(" from FACSChorus") ? "chorus" : k.startsWith(" from FACSDiva") ? "diva" : "gatingml";
     try {
@@ -67306,7 +67309,7 @@ function Rae({ hostProposals: e = null } = {}) {
         sampleId: m,
         siblingTrees: St,
         ...W ? { primaryFileName: W } : {},
-        ...ve ? { primaryEntryId: ve } : {},
+        ...we ? { primaryEntryId: we } : {},
         ...oe ? { primaryOrigin: oe } : {},
         mergeBlockedReason: Gt,
         compensationNote: Ln,
@@ -67337,7 +67340,7 @@ function Rae({ hostProposals: e = null } = {}) {
     cr && (PR(cr, te, h.length) || xd("replace", "all"));
   }, [cr]);
   async function xd(p, k = "all") {
-    var oe, ie, ve;
+    var oe, ie, we;
     const E = cr;
     if (!T || !E || E.sampleId !== m) {
       Ol(null), dt("The active sample changed before Gating-ML import could be applied. Please import the file again.");
@@ -67520,7 +67523,7 @@ function Rae({ hostProposals: e = null } = {}) {
 `) : null);
       const nr = oo || po !== null || h.length < 2 || ge.target === null ? [] : h.filter((Gt) => Gt.sample.instrument === "flow" && Gt.sample.compensationEnabled !== ge.target).map((Gt) => no(Gt.name, Gt.id)), un = nr.length ? ge.target === !0 ? ` on ${h.length - nr.length} of ${h.length} files; ${nr.join(", ")} ${nr.length === 1 ? "is" : "are"} not compensated` : `; ${nr.join(", ")} ${nr.length === 1 ? "is" : "are"} still compensated` : "";
       vn(
-        oo ? oo + (ge.target === !0 ? " FCS compensation enabled." : "") + (ge.target === !1 ? " Compensation disabled." : "") + E.sourceNote : `${p === "merge" ? "Merged" : "Imported"} ${ye.n_gates_imported} gates, ${ye.n_pops_imported} populations` + (po !== null ? k === "viewed" ? ` · as ${Y}'s tailoring${po ? "" : " (same coordinates as the tree, so nothing is tailored)"}` : ` · as tailoring for the ${Xa.length} selected file${Xa.length === 1 ? "" : "s"} (${po} tailored)` : h.length > 1 ? p === "merge" ? ` · merged into the tree all ${h.length} files follow` + (St ? `; ${St === 1 ? "the file" : `the ${St} files`} tailored to it keep${St === 1 ? "s its" : " their"} tailoring` : "") : ` · applied to all ${h.length} files` : "") + (po !== null ? "" : p === "merge" ? " · existing strategy retained" : " · current strategy replaced") + (ge.target === !0 ? (((ie = E.externalSpillover) == null ? void 0 : ie.source) === "supplied" ? ` · compensation enabled with the matrix from ${E.externalSpillover.label}` : (ve = E.missingMatrix) != null && ve.useFcs ? " · compensation enabled with this FCS file's own matrix, chosen in place of the one the gates were drawn under" : " · FCS compensation enabled") + un : "") + (ge.target === !1 ? ` · compensation disabled${un}` : "") + (zt.filter((Gt) => {
+        oo ? oo + (ge.target === !0 ? " FCS compensation enabled." : "") + (ge.target === !1 ? " Compensation disabled." : "") + E.sourceNote : `${p === "merge" ? "Merged" : "Imported"} ${ye.n_gates_imported} gates, ${ye.n_pops_imported} populations` + (po !== null ? k === "viewed" ? ` · as ${Y}'s tailoring${po ? "" : " (same coordinates as the tree, so nothing is tailored)"}` : ` · as tailoring for the ${Xa.length} selected file${Xa.length === 1 ? "" : "s"} (${po} tailored)` : h.length > 1 ? p === "merge" ? ` · merged into the tree all ${h.length} files follow` + (St ? `; ${St === 1 ? "the file" : `the ${St} files`} tailored to it keep${St === 1 ? "s its" : " their"} tailoring` : "") : ` · applied to all ${h.length} files` : "") + (po !== null ? "" : p === "merge" ? " · existing strategy retained" : " · current strategy replaced") + (ge.target === !0 ? (((ie = E.externalSpillover) == null ? void 0 : ie.source) === "supplied" ? ` · compensation enabled with the matrix from ${E.externalSpillover.label}` : (we = E.missingMatrix) != null && we.useFcs ? " · compensation enabled with this FCS file's own matrix, chosen in place of the one the gates were drawn under" : " · FCS compensation enabled") + un : "") + (ge.target === !1 ? ` · compensation disabled${un}` : "") + (zt.filter((Gt) => {
           var Tn;
           return Gt.sampleId && ((Tn = Gt.compensation) == null ? void 0 : Tn.target) === !0;
         }).length ? ` · compensation applied to ${zt.filter((Gt) => {
@@ -67649,7 +67652,7 @@ function Rae({ hostProposals: e = null } = {}) {
           samples: k.map((je, $e) => ({ ...je, folderPath: W.files[$e].path })),
           producer: "GateLab",
           groups: E
-        }), ie = W.files.filter((je) => !je.bytes).map((je) => je.name), ve = W.files.length - ie.length, ye = W.files.filter((je) => je.bytes && je.renamed.length).length, ge = (ye ? ` · ${ye} written under another name, as the dialog listed` : "") + (ie.length ? ` · not in it, GateLab holding no bytes for ${ie.length === 1 ? "it" : "them"}: ${ie.join(", ")}` : "");
+        }), ie = W.files.filter((je) => !je.bytes).map((je) => je.name), we = W.files.length - ie.length, ye = W.files.filter((je) => je.bytes && je.renamed.length).length, ge = (ye ? ` · ${ye} written under another name, as the dialog listed` : "") + (ie.length ? ` · not in it, GateLab holding no bytes for ${ie.length === 1 ? "it" : "them"}: ${ie.join(", ")}` : "");
         let Ae = !1;
         if (ee)
           try {
@@ -67657,7 +67660,7 @@ function Rae({ hostProposals: e = null } = {}) {
               onProgress: ($e, De, Ge) => vn(`Writing ${O} · FCS file ${$e} of ${De} · ${Ge}`)
             });
             Vg(je), vn(
-              `Wrote ${je.name} in ${ee.name}: ${W.workspaceName} and ${ve} FCS file${ve === 1 ? "" : "s"}, ${Mp(W.fcsBytes)}${ge}`
+              `Wrote ${je.name} in ${ee.name}: ${W.workspaceName} and ${we} FCS file${we === 1 ? "" : "s"}, ${Mp(W.fcsBytes)}${ge}`
             );
           } catch (je) {
             dt(je instanceof Error ? je.message : String(je)), Ae = !0;
@@ -67670,7 +67673,7 @@ function Rae({ hostProposals: e = null } = {}) {
           }, ({ writtenPayloadBytes: De, totalPayloadBytes: Ge }) => {
             Or(`Writing ${O}.zip · ${Ge === 0 ? 100 : Math.round(De / Ge * 100)}%`);
           }), bi(`${O}.zip`, new Blob(je, { type: "application/zip" })), vn(
-            (Ae ? `GateLab could not write the folder in ${ee.name}, so the export was downloaded instead. ` : "") + `Saved ${O}.zip, stored uncompressed: ${W.workspaceName} and ${ve} FCS file${ve === 1 ? "" : "s"}, ${Mp($e)}${ge}`
+            (Ae ? `GateLab could not write the folder in ${ee.name}, so the export was downloaded instead. ` : "") + `Saved ${O}.zip, stored uncompressed: ${W.workspaceName} and ${we} FCS file${we === 1 ? "" : "s"}, ${Mp($e)}${ge}`
           );
         }
       } catch (oe) {
@@ -67709,12 +67712,12 @@ function Rae({ hostProposals: e = null } = {}) {
           throw new Error(je ? `Cannot export ${et}: no population mask is available for ${ge.name}.` : `Cannot export ${et}: the tree ${ge.name} follows has no such population.`);
         }
         return $e;
-      }, ve = (ge) => {
+      }, we = (ge) => {
         var Ae;
         return Du(((Ae = te.populations[ge]) == null ? void 0 : Ae.name) ?? "population");
       }, ye = (ge) => {
         var Ge, et;
-        const Ae = ve(ge), je = {}, $e = (et = (Ge = pu[ge]) == null ? void 0 : Ge.file_name) == null ? void 0 : et.trim(), De = $e ? Du($e.replace(/\.fcs$/i, "")) : null;
+        const Ae = we(ge), je = {}, $e = (et = (Ge = pu[ge]) == null ? void 0 : Ge.file_name) == null ? void 0 : et.trim(), De = $e ? Du($e.replace(/\.fcs$/i, "")) : null;
         if (k === "combined") {
           const Wt = W.map((Zt) => ({
             sample: Zt.sample,
@@ -67739,7 +67742,7 @@ function Rae({ hostProposals: e = null } = {}) {
           return dt(
             `No population × FCS combination contained more than ${Q.toLocaleString()} events.`
           ), !1;
-        Ae.length === 1 ? bi(Ae[0], new Blob([ge[Ae[0]]], { type: "application/octet-stream" })) : bi(`${ve(E[0])}_by_sample.zip`, new Blob([Aw(ge)], { type: "application/zip" }));
+        Ae.length === 1 ? bi(Ae[0], new Blob([ge[Ae[0]]], { type: "application/octet-stream" })) : bi(`${we(E[0])}_by_sample.zip`, new Blob([Aw(ge)], { type: "application/zip" }));
       } else {
         const ge = {};
         for (const Ae of E) gT(ge, ye(Ae));
@@ -67775,12 +67778,12 @@ function Rae({ hostProposals: e = null } = {}) {
     Ia(!0), Or(c("Drawing {assay}…", { assay: k.id }));
     try {
       await Zi("before-hosted-assay-change");
-      const O = await X_(a.datasets, Ie, void 0, k.id), W = new Map(O.map((ve) => [`${ve.datasetId}:${ve.sampleId}`, ve]));
+      const O = await X_(a.datasets, Ie, void 0, k.id), W = new Map(O.map((we) => [`${we.datasetId}:${we.sampleId}`, we]));
       Lt(c("The drawn assay changed.")), Ct(c("The drawn assay changed."));
-      const Q = Ne.current, ee = tn.current, oe = h.map((ve) => {
-        const ye = W.get(ve.id);
-        if (!ye || !ve.hostSource) return ve;
-        const ge = ve.sample, Ae = ye.sample;
+      const Q = Ne.current, ee = tn.current, oe = h.map((we) => {
+        const ye = W.get(we.id);
+        if (!ye || !we.hostSource) return we;
+        const ge = we.sample, Ae = ye.sample;
         Ae.setInstrumentMode(ge.instrumentMode), Ae.applyLabelOverrides(ge.labelOverrides()), Ae.applyScatterLinearKeys(ge.scatterLinearKeys());
         for (const [$e, De] of Object.entries(ge.scatterCofactorOverrides())) {
           const Ge = Ae.index($e);
@@ -67790,19 +67793,19 @@ function Rae({ hostProposals: e = null } = {}) {
         const je = ge.compensatedLayerStatus();
         if (je.state !== "missing" && je.metadata.runtimeIdentity === "profile") {
           const { runtimeIdentity: $e, ...De } = je.metadata;
-          ee.set(ve.id, { schema: hg, activeLayer: ge.activeLayer, compensatedLayer: De });
+          ee.set(we.id, { schema: hg, activeLayer: ge.activeLayer, compensatedLayer: De });
         }
         return Q.invalidateSample(ge), {
-          ...ve,
+          ...we,
           sample: Ae,
-          hostSource: { ...ve.hostSource, assayId: ye.assayId, assayRevision: ye.assayRevision }
+          hostSource: { ...we.hostSource, assayId: ye.assayId, assayRevision: ye.assayRevision }
         };
       });
       g(oe), en(k.id);
-      const ie = (E = oe.find((ve) => ve.id === m)) == null ? void 0 : E.sample;
+      const ie = (E = oe.find((we) => we.id === m)) == null ? void 0 : E.sample;
       ie && js(ie.instrumentMode), ct(null), nn(null), Vt(), vn(k.coordinateSpace === "display" ? c("Drawing {assay} as stored", { assay: k.id }) : c("Drawing {assay}", { assay: k.id })), k.coordinateSpace !== "display" && ee.size > 0 && (await m2(
         Ue.lineages,
-        oe.map((ve) => ee.get(ve.id) ?? null),
+        oe.map((we) => ee.get(we.id) ?? null),
         oe
       ), tn.current = /* @__PURE__ */ new Map());
     } catch (O) {
@@ -67845,12 +67848,12 @@ function Rae({ hostProposals: e = null } = {}) {
     p.invalidateProfile(E);
     const W = (O == null ? void 0 : O.baselineProfileId) ?? E;
     qe((Q) => {
-      const ee = Q.lineages.filter(({ baselineProfileId: ye, records: ge }) => ye !== W && !ge.some((Ae) => Ae.profileId === E)), { activeProfileId: oe, ...ie } = Q, ve = oe !== void 0 && ee.some(({ records: ye }) => ye.some((ge) => ge.profileId === oe));
-      return { ...ie, lineages: ee, ...ve ? { activeProfileId: oe } : {} };
+      const ee = Q.lineages.filter(({ baselineProfileId: ye, records: ge }) => ye !== W && !ge.some((Ae) => Ae.profileId === E)), { activeProfileId: oe, ...ie } = Q, we = oe !== void 0 && ee.some(({ records: ye }) => ye.some((ge) => ge.profileId === oe));
+      return { ...ie, lineages: ee, ...we ? { activeProfileId: oe } : {} };
     }), ct(null), nn(null), dt(null), vn(c("Compensation matrix removed · original assay active")), Vt();
   }
   async function Ac(p, k, E, O = "viewed") {
-    var oe, ie, ve;
+    var oe, ie, we;
     if (!T) throw new Error(c("No active sample is available for compensation."));
     if (r && T.hostedAssaySpace === "display")
       throw new Error(c("{assay} is drawn as stored, already transformed. Compensation applies to {linear}: choose it in the header first.", {
@@ -68053,7 +68056,7 @@ function Rae({ hostProposals: e = null } = {}) {
           sampleIndex: Math.max(0, Q.length - 1),
           sampleCount: Q.length,
           sampleProcessedEvents: ((ie = Q.at(-1)) == null ? void 0 : ie.sample.fcs.nEvents) ?? 0,
-          sampleTotalEvents: ((ve = Q.at(-1)) == null ? void 0 : ve.sample.fcs.nEvents) ?? 0,
+          sampleTotalEvents: ((we = Q.at(-1)) == null ? void 0 : we.sample.fcs.nEvents) ?? 0,
           processedEvents: ee,
           totalEvents: ee,
           fraction: 1
@@ -68201,12 +68204,12 @@ function Rae({ hostProposals: e = null } = {}) {
         })
       }), Tt.current = ie);
       try {
-        const ve = await ie.promise;
+        const we = await ie.promise;
         if (Tt.current !== ie)
           throw new di("A newer flow compensation preview was requested.");
-        oe = Object.freeze({ key: ee, sessionId: ve.sessionId }), ht.current = oe, Tt.current = null;
-      } catch (ve) {
-        throw Tt.current === ie && (Tt.current = null), ve;
+        oe = Object.freeze({ key: ee, sessionId: we.sessionId }), ht.current = oe, Tt.current = null;
+      } catch (we) {
+        throw Tt.current === ie && (Tt.current = null), we;
       }
     }
     if (!oe || oe.key !== ee)
@@ -68223,7 +68226,7 @@ function Rae({ hostProposals: e = null } = {}) {
       workspaceKey: `${wu.current}:sweep:${oe}:${$e}`
     }));
     Rt.current = ie;
-    const ve = new Array(E.length);
+    const we = new Array(E.length);
     let ye = 0;
     try {
       O == null || O(0, E.length);
@@ -68234,8 +68237,8 @@ function Rae({ hostProposals: e = null } = {}) {
       })));
       return await Promise.all(ie.map(async ($e, De) => {
         for (let Ge = De; Ge < E.length; Ge += ee)
-          ve[Ge] = await $e.solvePreview(je[De].sessionId, E[Ge]), ye++, O == null || O(ye, E.length);
-      })), Object.freeze(ve);
+          we[Ge] = await $e.solvePreview(je[De].sessionId, E[Ge]), ye++, O == null || O(ye, E.length);
+      })), Object.freeze(we);
     } finally {
       Rt.current === ie && (Rt.current = []);
       for (const je of ie) je.dispose();
@@ -68509,17 +68512,17 @@ function Rae({ hostProposals: e = null } = {}) {
     if (O && !window.confirm(
       Oi("SCE colData already contains '{column}'. Replace that column with the current division calls?").replace("{column}", E)
     )) return;
-    const W = { ...Er, [m]: bt(p) }, Q = h.map((ve) => {
-      const ye = W[ve.id];
+    const W = { ...Er, [m]: bt(p) }, Q = h.map((we) => {
+      const ye = W[we.id];
       if (!ye || ye.colName !== E) return null;
       try {
-        return ye.coordinateBindingKey === ve.sample.displayCoordinateBindingKey(ye.channelKey) ? ye : null;
+        return ye.coordinateBindingKey === we.sample.displayCoordinateBindingKey(ye.channelKey) ? ye : null;
       } catch {
         return null;
       }
     }), ee = Math.max(
       p.n,
-      ...Q.flatMap((ve) => ve ? [ve.n] : [])
+      ...Q.flatMap((we) => we ? [we.n] : [])
     );
     if (ee >= 255) {
       dt("Division annotations cannot contain more than 254 levels.");
@@ -68528,7 +68531,7 @@ function Rae({ hostProposals: e = null } = {}) {
     Mn(!0), dt(null);
     try {
       at(p);
-      const ve = Array.from(
+      const we = Array.from(
         { length: ee + 1 },
         (je, $e) => `Div${$e}`
       ), ye = h.map((je, $e) => {
@@ -68557,15 +68560,15 @@ function Rae({ hostProposals: e = null } = {}) {
         contractVersion: Sp,
         datasetId: k,
         overwrite: O,
-        columns: [{ columnName: E, levels: ve, sampleValues: ye }]
+        columns: [{ columnName: E, levels: we, sampleValues: ye }]
       });
-      ea((je) => [.../* @__PURE__ */ new Set([...je, E])]), Vk(E, ve.length);
+      ea((je) => [.../* @__PURE__ */ new Set([...je, E])]), Vk(E, we.length);
       const Ae = ge.columns[0];
       vn(
         Oi("Wrote division calls to SCE colData '{column}'").replace("{column}", E) + (Ae != null && Ae.missingCount ? ` · ${Ae.missingCount.toLocaleString()} events are NA (outside the population the division was fitted in, or no compatible profile)` : "")
       );
-    } catch (ve) {
-      dt(ve instanceof Error ? ve.message : String(ve));
+    } catch (we) {
+      dt(we instanceof Error ? we.message : String(we));
     } finally {
       Mn(!1);
     }
@@ -68585,10 +68588,10 @@ function Rae({ hostProposals: e = null } = {}) {
       Mn(!0), dt(null);
       try {
         const ee = Io.map(({ name: ie }) => {
-          const ve = h.map((ge) => {
+          const we = h.map((ge) => {
             var Ae;
             return ((Ae = or[ge.id]) == null ? void 0 : Ae[ie]) ?? "";
-          }), ye = [...new Set(ve.filter((ge) => ge.length > 0))];
+          }), ye = [...new Set(we.filter((ge) => ge.length > 0))];
           if (ye.length >= 255)
             throw new Error(`Metadata column '${ie}' has more than 254 levels.`);
           return {
@@ -68598,7 +68601,7 @@ function Rae({ hostProposals: e = null } = {}) {
               const je = ge.hostSource;
               if (!je || je.datasetId !== p)
                 throw new Error(`Sample '${ge.name}' is not mapped to this SCE.`);
-              const $e = ve[Ae];
+              const $e = we[Ae];
               return {
                 sampleId: je.sampleId,
                 eventCount: je.eventIndex.length,
@@ -68613,12 +68616,12 @@ function Rae({ hostProposals: e = null } = {}) {
           columns: ee
         });
         ea((ie) => [
-          .../* @__PURE__ */ new Set([...ie, ...oe.columns.map(({ columnName: ve }) => ve)])
+          .../* @__PURE__ */ new Set([...ie, ...oe.columns.map(({ columnName: we }) => we)])
         ]);
         for (const { columnName: ie } of oe.columns)
           Vk(
             ie,
-            ((Q = ee.find((ve) => ve.columnName === ie)) == null ? void 0 : Q.levels.length) ?? 0
+            ((Q = ee.find((we) => we.columnName === ie)) == null ? void 0 : Q.levels.length) ?? 0
           );
         vn(
           `Wrote ${oe.columns.length} sample metadata column${oe.columns.length === 1 ? "" : "s"} ${Oi("to SCE colData.")}`
@@ -68655,7 +68658,7 @@ function Rae({ hostProposals: e = null } = {}) {
     for (const ie of p)
       ie.handle && Od("fcs:" + ie.name, ie.handle), ((ee = ie.images) == null ? void 0 : ee.kind) === "cvw" && ie.images.handle && Od(lp("cvw", ie.name), ie.images.handle), ((oe = ie.images) == null ? void 0 : oe.kind) === "tiff-folder" && ie.images.handle && GP(lp("tiff", ie.name), ie.images.handle);
     const W = p.flatMap((ie) => {
-      const ve = new Set(ie.sample.channelNames()), ye = Object.values(te.gates).filter((ge) => !ve.has(ge.x_channel) || !ve.has(ge.y_channel)).map((ge) => ge.name);
+      const we = new Set(ie.sample.channelNames()), ye = Object.values(te.gates).filter((ge) => !we.has(ge.x_channel) || !we.has(ge.y_channel)).map((ge) => ge.name);
       return ye.length > 0 ? [`${ie.name}: ${ye.join(", ")}`] : [];
     });
     W.length > 0 && dt(
@@ -68675,8 +68678,8 @@ function Rae({ hostProposals: e = null } = {}) {
           throw new Error(Oi("GateLabR did not provide a SingleCellExperiment dataset."));
         const ee = Q[0];
         ot(ee);
-        const oe = await ((k = a.workspaces) == null ? void 0 : k.readWorkspace(ee.id)) ?? null, ie = oe ? yne(oe.workspaceJson) : void 0, ve = ie ? ee.assays.find(({ id: Bt }) => Bt === ie) : void 0, ye = JF(ee) ? J_(ee) : null, ge = oe !== null && oe.sourceFormat !== "gatelabr-legacy" && ye !== null;
-        let Ae = (ve && ng(ve) ? ve : void 0) ?? (ge ? ye : F8(ee)), je = ie && Ae.id !== ie ? ` · ${c("the saved workspace was drawn from {assay}, which the SCE no longer has or cannot be drawn; drawing {drawn}", { assay: ie, drawn: Ae.id })}` : "", $e;
+        const oe = await ((k = a.workspaces) == null ? void 0 : k.readWorkspace(ee.id)) ?? null, ie = oe ? yne(oe.workspaceJson) : void 0, we = ie ? ee.assays.find(({ id: Bt }) => Bt === ie) : void 0, ye = JF(ee) ? J_(ee) : null, ge = oe !== null && oe.sourceFormat !== "gatelabr-legacy" && ye !== null;
+        let Ae = (we && ng(we) ? we : void 0) ?? (ge ? ye : F8(ee)), je = ie && Ae.id !== ie ? ` · ${c("the saved workspace was drawn from {assay}, which the SCE no longer has or cannot be drawn; drawing {drawn}", { assay: ie, drawn: Ae.id })}` : "", $e;
         try {
           $e = await X_(a.datasets, ee, p.signal, Ae.id);
         } catch (Bt) {
@@ -68885,12 +68888,12 @@ function Rae({ hostProposals: e = null } = {}) {
     if (!!W && co.sheets.some((oe) => oe.items.some((ie) => ie.id === W && ie.recipe.kind === "cellpanel"))) {
       Ui((oe) => {
         const ie = ap(oe);
-        for (const ve of ie.sheets) {
-          const ye = ve.items.find((ge) => ge.id === W);
+        for (const we of ie.sheets) {
+          const ye = we.items.find((ge) => ge.id === W);
           if (!(!ye || ye.recipe.kind !== "cellpanel")) {
             if (!ye.recipe.cells.some((ge) => ge.event === p.eventIndex)) {
               const ge = { ...ye.recipe, cells: [...ye.recipe.cells, { event: p.eventIndex, label: O }] }, Ae = KS(ge), je = Math.min(4, Math.max(ye.width / Math.max(1, KS(ye.recipe).width), 0.25));
-              ye.recipe = ge, ye.width = Math.round(Ae.width * je), ye.height = Math.round(Ae.height * je), ve.height = Math.max(ve.height, ye.y + ye.height + 48);
+              ye.recipe = ge, ye.width = Math.round(Ae.width * je), ye.height = Math.round(Ae.height * je), we.height = Math.max(we.height, ye.y + ye.height + 48);
             }
             return ie;
           }
@@ -68934,10 +68937,10 @@ function Rae({ hostProposals: e = null } = {}) {
       const ee = k && k.length === p.length ? xW(Q, k) : null, oe = ee && (E != null && E.columns.length) ? 34 : 0, ie = ee && (E != null && E.rows.length) ? 150 : 0;
       if (ee) for (const ye of ee)
         ye.y += oe, ye.x += ie;
-      const ve = [];
+      const we = [];
       if (YI(Q, p).forEach((ye, ge) => {
         const Ae = ee ? ee[ge] : Hm(Q), je = crypto.randomUUID();
-        ve.push(je), Q.items.push({ id: je, ...Ae, recipe: ye }), Q.width = Math.max(Q.width, Ae.x + Ae.width + 48), Q.height = Math.max(Q.height, Ae.y + Ae.height + 48);
+        we.push(je), Q.items.push({ id: je, ...Ae, recipe: ye }), Q.width = Math.max(Q.width, Ae.x + Ae.width + 48), Q.height = Math.max(Q.height, Ae.y + Ae.height + 48);
       }), ee && k && E) {
         let ye = Math.max(0, ...Q.items.map((je) => je.z));
         const ge = (je, $e) => {
@@ -68950,7 +68953,7 @@ function Rae({ hostProposals: e = null } = {}) {
             id: crypto.randomUUID(),
             ...De,
             z: ++ye,
-            recipe: { kind: "text", text: je.template ?? je.text, fontSize: 14, ...je.template ? { readsFrom: ve[$e] } : {} }
+            recipe: { kind: "text", text: je.template ?? je.text, fontSize: 14, ...je.template ? { readsFrom: we[$e] } : {} }
           });
         };
         E.columns.forEach((je, $e) => {
@@ -69023,15 +69026,15 @@ function Rae({ hostProposals: e = null } = {}) {
       return;
     }
     const O = new Set(p);
-    for (const ve of h)
-      O.has(ve.id) && k.invalidateSample(ve.sample);
-    const W = h.filter((ve) => !O.has(ve.id)), Q = (oe = T == null ? void 0 : T.channels[Fn]) == null ? void 0 : oe.key, ee = (ie = T == null ? void 0 : T.channels[Rn]) == null ? void 0 : ie.key;
-    if (g(W), J((ve) => new Set([...ve].filter((ye) => !O.has(ye)))), Kl((ve) => Object.fromEntries(Object.entries(ve).filter(([ye]) => !O.has(ye)))), fo((ve) => Object.fromEntries(Object.entries(ve).filter(([ye]) => !O.has(ye)))), wn({ type: "assignFileHierarchies", assignments: Object.fromEntries([...O].map((ve) => [ve, null])), silent: !0 }), W.length === 0 && K(!1), m !== null && O.has(m)) {
+    for (const we of h)
+      O.has(we.id) && k.invalidateSample(we.sample);
+    const W = h.filter((we) => !O.has(we.id)), Q = (oe = T == null ? void 0 : T.channels[Fn]) == null ? void 0 : oe.key, ee = (ie = T == null ? void 0 : T.channels[Rn]) == null ? void 0 : ie.key;
+    if (g(W), J((we) => new Set([...we].filter((ye) => !O.has(ye)))), Kl((we) => Object.fromEntries(Object.entries(we).filter(([ye]) => !O.has(ye)))), fo((we) => Object.fromEntries(Object.entries(we).filter(([ye]) => !O.has(ye)))), wn({ type: "assignFileHierarchies", assignments: Object.fromEntries([...O].map((we) => [we, null])), silent: !0 }), W.length === 0 && K(!1), m !== null && O.has(m)) {
       ol.current = !0;
-      const ve = (ua ? W.find((ye) => ua.ids.includes(ye.id)) : void 0) ?? W[0] ?? null;
-      if (b((ve == null ? void 0 : ve.id) ?? null), js((ve == null ? void 0 : ve.sample.instrumentMode) ?? "auto"), ve) {
-        const [ye, ge] = ve.sample.defaultChannelIndices();
-        ja((Q !== void 0 ? ve.sample.index(Q) : void 0) ?? ye), Ka((ee !== void 0 ? ve.sample.index(ee) : void 0) ?? ge), ct(null), nn(null);
+      const we = (ua ? W.find((ye) => ua.ids.includes(ye.id)) : void 0) ?? W[0] ?? null;
+      if (b((we == null ? void 0 : we.id) ?? null), js((we == null ? void 0 : we.sample.instrumentMode) ?? "auto"), we) {
+        const [ye, ge] = we.sample.defaultChannelIndices();
+        ja((Q !== void 0 ? we.sample.index(Q) : void 0) ?? ye), Ka((ee !== void 0 ? we.sample.index(ee) : void 0) ?? ge), ct(null), nn(null);
       }
     }
     vn(`Removed ${p.length} sample${p.length === 1 ? "" : "s"} from the workspace.`);
@@ -69041,11 +69044,11 @@ function Rae({ hostProposals: e = null } = {}) {
     Ia(!0), dt(null);
     const O = [], W = [], Q = [], ee = [];
     let oe = 0;
-    const ie = Os.current.some((ve) => ve.images);
+    const ie = Os.current.some((we) => we.images);
     try {
-      for (let ve = 0; ve < p.length; ve++) {
-        const ye = p[ve];
-        Gn({ current: ve + 1, total: p.length, name: ye.name });
+      for (let we = 0; we < p.length; we++) {
+        const ye = p[we];
+        Gn({ current: we + 1, total: p.length, name: ye.name });
         try {
           const ge = new Uint8Array((await ye.file.arrayBuffer()).slice(0));
           try {
@@ -69082,7 +69085,7 @@ function Rae({ hostProposals: e = null } = {}) {
         } catch (ge) {
           W.push(`${ye.name}: ${ge instanceof Error ? ge.message : String(ge)}`), E == null || E.set(ye.id, ge instanceof Error ? ge.message : String(ge));
         }
-        ve < p.length - 1 && await new Promise((ge) => window.setTimeout(ge, 0));
+        we < p.length - 1 && await new Promise((ge) => window.setTimeout(ge, 0));
       }
       fa(O), O.length > 0 && (vn(
         `Added ${O.length} FCS ${Q.length ? "sample" : "file"}${O.length === 1 ? "" : "s"} to the workspace.` + (Q.length ? ` ${Q.join("; ")}.` : "") + (oe ? ` Cell images attached to ${oe}.` : "")
@@ -69227,13 +69230,13 @@ function Rae({ hostProposals: e = null } = {}) {
   function Nf() {
     if (h.length === 0 || !T) return null;
     const p = Object.fromEntries(h.map((ie) => {
-      const ve = yp(
+      const we = yp(
         ie.id,
         ie.sample.workspaceScaleContextKey,
         ie.sample.lockedScaleContextKey,
         !1
       );
-      return [ie.id, ve ? Ph(ve) : {}];
+      return [ie.id, we ? Ph(we) : {}];
     })), k = {
       format: "gatelab-workspace",
       version: 2,
@@ -69245,10 +69248,10 @@ function Rae({ hostProposals: e = null } = {}) {
         // The axes as drawn, for R to keep on the object (rowData(sce)$gatelab_transform).
         hostedChannelTransforms: Object.fromEntries(T.channels.map((ie) => [ie.key, T.transformSpec(ie.key)]))
       } : {},
-      samples: h.map((ie, ve) => ({
+      samples: h.map((ie, we) => ({
         sampleId: ie.id,
         fileName: ie.name,
-        dataPath: o6(ie.name, ve),
+        dataPath: o6(ie.name, we),
         logicleW: ie.sample.logicleWOverrides(),
         scatterCofactor: ie.sample.scatterCofactorOverrides(),
         scatterLinear: ie.sample.scatterLinearKeys(),
@@ -69344,16 +69347,16 @@ function Rae({ hostProposals: e = null } = {}) {
       populationMetaColumns: Fh
     };
     if (!(Ue.lineages.length > 0 || tn.current.size > 0 || h.some(({ sample: ie }) => {
-      const ve = ie.compensatedLayerStatus();
-      return ve.state !== "missing" && ve.metadata.runtimeIdentity === "profile";
+      const we = ie.compensatedLayerStatus();
+      return we.state !== "missing" && we.metadata.runtimeIdentity === "profile";
     }))) return k;
     const O = new Set(
-      Ue.lineages.flatMap(({ records: ie }) => ie.map(({ profileId: ve }) => ve))
-    ), W = k.samples.map((ie, ve) => {
-      const ye = h[ve].sample, ge = ye.compensatedLayerStatus();
+      Ue.lineages.flatMap(({ records: ie }) => ie.map(({ profileId: we }) => we))
+    ), W = k.samples.map((ie, we) => {
+      const ye = h[we].sample, ge = ye.compensatedLayerStatus();
       let Ae;
       if (ge.state === "missing")
-        Ae = tn.current.get(h[ve].id) ?? {
+        Ae = tn.current.get(h[we].id) ?? {
           schema: hg,
           activeLayer: "original",
           compensatedLayer: null
@@ -69411,12 +69414,12 @@ function Rae({ hostProposals: e = null } = {}) {
   function Lk(p, k = an.current) {
     const E = Dn.current.catch(() => {
     }).then(async () => {
-      var ve, ye;
+      var we, ye;
       if (!r || !a.workspaces)
         throw new Error("This GateLab host cannot save changes into an SCE.");
       if (p === "autosave" && ya.current >= k && Nr.current)
         return Nr.current;
-      const O = Hh.current(), W = (ye = (ve = h[0]) == null ? void 0 : ve.hostSource) == null ? void 0 : ye.datasetId;
+      const O = Hh.current(), W = (ye = (we = h[0]) == null ? void 0 : we.hostSource) == null ? void 0 : ye.datasetId;
       if (!O || !W)
         throw new Error("The hosted SCE workspace is not ready to save.");
       Sn("saving");
@@ -69447,7 +69450,7 @@ function Rae({ hostProposals: e = null } = {}) {
     }), E;
   }
   z.useEffect(() => {
-    if (!r || !mt || !T || !a.workspaces) return;
+    if (!r || !gt || !T || !a.workspaces) return;
     Sn("unsaved");
     const p = sn, k = window.setTimeout(() => {
       Lk("autosave", p).catch((E) => {
@@ -69457,7 +69460,7 @@ function Rae({ hostProposals: e = null } = {}) {
       });
     }, 1200);
     return () => window.clearTimeout(k);
-  }, [mt, a.workspaces, r, T, sn]);
+  }, [gt, a.workspaces, r, T, sn]);
   const i2 = async () => {
     await Promise.all(h.flatMap((p) => p.handle ? [Od("fcs:" + p.name, p.handle)] : []));
   };
@@ -69524,7 +69527,7 @@ function Rae({ hostProposals: e = null } = {}) {
   }
   function Dx(p = { kind: "save" }) {
     if (p.kind === "experiment") return l6(p);
-    const k = p.kind, E = gt.current.then(async () => {
+    const k = p.kind, E = mt.current.then(async () => {
       var ee;
       const O = He.current;
       if (!Pe || !O) return;
@@ -69537,16 +69540,16 @@ function Rae({ hostProposals: e = null } = {}) {
       const Q = an.current;
       Ia(!0), dt(null), Or(`Saving to the lab Drive · ${O.name}`);
       try {
-        const oe = Vy(W), ie = h.map((ye) => ({ name: ye.name, sourcePath: ye.sourcePath ?? null })), ve = p.kind === "copy" ? await Pe.session.saveCopy(O, oe, ie, p.name) : await Pe.session.save(O, oe, ie);
-        if (ve.kind === "conflict") {
-          It(ve.by), vn(`Not saved · ${O.name} changed in the lab Drive since it was opened here`);
+        const oe = Vy(W), ie = h.map((ye) => ({ name: ye.name, sourcePath: ye.sourcePath ?? null })), we = p.kind === "copy" ? await Pe.session.saveCopy(O, oe, ie, p.name) : await Pe.session.save(O, oe, ie);
+        if (we.kind === "conflict") {
+          It(we.by), vn(`Not saved · ${O.name} changed in the lab Drive since it was opened here`);
           return;
         }
         if (((ee = He.current) == null ? void 0 : ee.folderId) !== O.folderId || He.current.fileId !== O.fileId) return;
-        Xe(ve.target), pt(ve.target.name), Ve.current = Q, an.current === Q && Ot(!1), vn(
-          `${k === "copy" ? "Saved a copy to the lab Drive" : "Saved to the lab Drive"} · ${ve.target.experiment}/${ve.target.name}` + (ve.keepNote ? ` · ${ve.keepNote}` : "")
-        ), _t(ve.overtakenBy ? { reason: "conflict", message: `Autosave to the lab Drive stopped · ${jv(ve.overtakenBy)} saved ${ve.target.name} after this tab` } : null), ve.overtakenBy && dt(
-          `Saved, but ${jv(ve.overtakenBy)} saved ${ve.target.name} in the lab Drive right after, and theirs is the version Drive now holds. Open the experiment again to see it; a Save here is refused until then, and Save offers a copy instead.`
+        Xe(we.target), pt(we.target.name), Ve.current = Q, an.current === Q && Ot(!1), vn(
+          `${k === "copy" ? "Saved a copy to the lab Drive" : "Saved to the lab Drive"} · ${we.target.experiment}/${we.target.name}` + (we.keepNote ? ` · ${we.keepNote}` : "")
+        ), _t(we.overtakenBy ? { reason: "conflict", message: `Autosave to the lab Drive stopped · ${jv(we.overtakenBy)} saved ${we.target.name} after this tab` } : null), we.overtakenBy && dt(
+          `Saved, but ${jv(we.overtakenBy)} saved ${we.target.name} in the lab Drive right after, and theirs is the version Drive now holds. Open the experiment again to see it; a Save here is refused until then, and Save offers a copy instead.`
         ), Vr.current.workspaceSaves++;
       } catch (oe) {
         if (oe instanceof Pe.module.DriveFolderAccessError) {
@@ -69562,7 +69565,7 @@ function Rae({ hostProposals: e = null } = {}) {
         Ia(!1);
       }
     });
-    return gt.current = E.catch(() => {
+    return mt.current = E.catch(() => {
     }), E;
   }
   const Nm = (p, k) => le({ action: p, resume: k });
@@ -69580,7 +69583,7 @@ function Rae({ hostProposals: e = null } = {}) {
   function c2(p) {
     const k = (O, W) => {
       _t({ reason: O, message: W }), vn(W);
-    }, E = gt.current.then(async () => {
+    }, E = mt.current.then(async () => {
       var Q;
       const O = He.current;
       if (!Pe || !O || O.fileId !== p) return;
@@ -69600,7 +69603,7 @@ function Rae({ hostProposals: e = null } = {}) {
       try {
         const ee = Nf();
         if (!ee) return;
-        const oe = Os.current.map((ve) => ({ name: ve.name, sourcePath: ve.sourcePath ?? null })), ie = await Pe.session.save(O, Vy(ee), oe, { keepForever: !1 });
+        const oe = Os.current.map((we) => ({ name: we.name, sourcePath: we.sourcePath ?? null })), ie = await Pe.session.save(O, Vy(ee), oe, { keepForever: !1 });
         if (ie.kind === "conflict") {
           k("conflict", `Autosave to the lab Drive stopped · ${jv(ie.by)} saved ${O.name} there after it was opened here · Save to choose what to do`);
           return;
@@ -69623,20 +69626,20 @@ function Rae({ hostProposals: e = null } = {}) {
         k("error", `Autosave to the lab Drive stopped · ${ee instanceof Error ? ee.message : String(ee)}`);
       }
     });
-    return gt.current = E.catch(() => {
+    return mt.current = E.catch(() => {
     }), E;
   }
   const Qh = z.useRef({ saveToDrive: Dx, autosaveToDrive: c2, grantDriveFolder: zk });
   Qh.current = { saveToDrive: Dx, autosaveToDrive: c2, grantDriveFolder: zk }, z.useEffect(() => {
-  }, [Pe, ce == null ? void 0 : ce.fileId, mt, rt, Vo, we, jt, Re, Se, Pt, Le]), z.useEffect(() => {
+  }, [Pe, ce == null ? void 0 : ce.fileId, gt, rt, Vo, ve, jt, Re, Se, Pt, Le]), z.useEffect(() => {
     if (Pe)
       return Pe.session.auth.subscribe(() => {
         Pe.module.tokenLive(Pe.session.auth) && _t((p) => (p == null ? void 0 : p.reason) === "auth" ? null : p);
       });
   }, [Pe]), z.useEffect(() => {
-  }, [ce, mt, Se]);
+  }, [ce, gt, Se]);
   const s6 = z.useRef(!1);
-  s6.current = ce !== null && mt || Se !== null, z.useEffect(() => {
+  s6.current = ce !== null && gt || Se !== null, z.useEffect(() => {
   }, []), z.useEffect(() => {
   }, [r]);
   const u2 = () => h.map((p) => ({
@@ -69646,8 +69649,8 @@ function Rae({ hostProposals: e = null } = {}) {
     dataSetFile: p.dataSetFile ?? null
   }));
   function l6(p) {
-    const { name: k } = p, E = p.location ?? null, O = gt.current.then(async () => {
-      var ve;
+    const { name: k } = p, E = p.location ?? null, O = mt.current.then(async () => {
+      var we;
       if (!Pe) return;
       if (Pe.session.auth.account() && !Pe.module.tokenLive(Pe.session.auth)) {
         Nm("experiment", () => void Qh.current.saveToDrive(p));
@@ -69666,7 +69669,7 @@ function Rae({ hostProposals: e = null } = {}) {
           }
         );
         if (wu.current !== ee) return;
-        (ve = _d.current) == null || ve.disconnect("The workspace was saved to the lab Drive"), xe(null), Ye("reference"), Xe(ye.target), pt(ye.target.name), g((ge) => ge.map((Ae) => {
+        (we = _d.current) == null || we.disconnect("The workspace was saved to the lab Drive"), xe(null), Ye("reference"), Xe(ye.target), pt(ye.target.name), g((ge) => ge.map((Ae) => {
           const je = ye.sourcePaths.get(Ae.id);
           return je && je !== Ae.sourcePath ? { ...Ae, sourcePath: je } : Ae;
         })), Ve.current = Q, an.current === Q && Ot(!1), vn(
@@ -69691,7 +69694,7 @@ function Rae({ hostProposals: e = null } = {}) {
         Fe(null), Ia(!1);
       }
     });
-    return gt.current = O.catch(() => {
+    return mt.current = O.catch(() => {
     }), O;
   }
   async function Gk() {
@@ -69888,9 +69891,9 @@ function Rae({ hostProposals: e = null } = {}) {
         ...Q.dataSetFile ? { dataSetFile: Q.dataSetFile } : {},
         openId: Q.id
       };
-    const ee = _i(O), oe = (ee == null ? void 0 : ee.fileName) ?? O, ie = await S1("fcs:" + oe), ve = ie ? await IK(ie) : null;
-    if (ve && ve.name.normalize("NFC").toLocaleLowerCase() === oe.normalize("NFC").toLocaleLowerCase()) {
-      const ye = ee ? OE(ve.bytes.slice().buffer, ee.index, ee.count) : ve.bytes;
+    const ee = _i(O), oe = (ee == null ? void 0 : ee.fileName) ?? O, ie = await S1("fcs:" + oe), we = ie ? await IK(ie) : null;
+    if (we && we.name.normalize("NFC").toLocaleLowerCase() === oe.normalize("NFC").toLocaleLowerCase()) {
+      const ye = ee ? OE(we.bytes.slice().buffer, ee.index, ee.count) : we.bytes;
       return W(eL(ye.buffer.slice(ye.byteOffset, ye.byteOffset + ye.byteLength))) ? ee ? { bytes: ye, handle: null } : { bytes: ye, handle: ie } : null;
     }
     return null;
@@ -69930,9 +69933,9 @@ function Rae({ hostProposals: e = null } = {}) {
     }
     const oe = kR(ee);
     ee = oe.fcs;
-    const ie = /* @__PURE__ */ new Map(), ve = ($e) => W.some((De) => De.identity && De.fileName.normalize("NFC").toLocaleLowerCase() === $e.normalize("NFC").toLocaleLowerCase());
+    const ie = /* @__PURE__ */ new Map(), we = ($e) => W.some((De) => De.identity && De.fileName.normalize("NFC").toLocaleLowerCase() === $e.normalize("NFC").toLocaleLowerCase());
     for (const $e of ee) {
-      if (!ve($e.name)) continue;
+      if (!we($e.name)) continue;
       const De = await gb($e.file);
       De && ie.set($e, Zo(De));
     }
@@ -69998,9 +70001,9 @@ function Rae({ hostProposals: e = null } = {}) {
       vn(
         `Relinking from ${Q} · ${E + 1} / ${p.length} · ${O.fileName}`
       );
-      const oe = new Uint8Array(await W.file.arrayBuffer()), ie = _i(O.fileName), ve = ie ? OE(oe.buffer, ie.index, ie.count) : oe;
+      const oe = new Uint8Array(await W.file.arrayBuffer()), ie = _i(O.fileName), we = ie ? OE(oe.buffer, ie.index, ie.count) : oe;
       k.set(O.dataPath, {
-        bytes: ve,
+        bytes: we,
         handle: ie ? null : W.handle,
         sourcePath: Q === "selected files" ? W.relativePath : `${Q}/${W.relativePath}`,
         ...ee ? { images: ee } : {}
@@ -70085,10 +70088,10 @@ function Rae({ hostProposals: e = null } = {}) {
       return [{ entry: E[Ge], assay: De, binding: et, profile: Wt }];
     });
     if (ee.length === 0) return;
-    const oe = ee.reduce((De, Ge) => De + Ge.entry.sample.fcs.nEvents, 0), ie = Array.from(new Set(ee.map(({ profile: De }) => De.name))), ve = ie.length === 1 ? ie[0] : c("{count} saved compensated assays", { count: ee.length }), ye = (De, Ge) => Et({
+    const oe = ee.reduce((De, Ge) => De + Ge.entry.sample.fcs.nEvents, 0), ie = Array.from(new Set(ee.map(({ profile: De }) => De.name))), we = ie.length === 1 ? ie[0] : c("{count} saved compensated assays", { count: ee.length }), ye = (De, Ge) => Et({
       phase: De,
       operation: "restore",
-      profileName: ve,
+      profileName: we,
       fraction: oe === 0 ? 1 : Ge / oe,
       processedEvents: Ge,
       totalEvents: oe
@@ -70287,7 +70290,7 @@ function Rae({ hostProposals: e = null } = {}) {
     }
   }
   async function Wk(p, k, E, O, W) {
-    var ee, oe, ie, ve, ye, ge, Ae, je, $e, De, Ge, et, Wt, Zt, Bt, zt, cn, Vn, Cn, tr, dr, Ha, Da, oo, po;
+    var ee, oe, ie, we, ye, ge, Ae, je, $e, De, Ge, et, Wt, Zt, Bt, zt, cn, Vn, Cn, tr, dr, Ha, Da, oo, po;
     Ia(!0), dt(null);
     let Q = !1;
     yt.current = W !== void 0;
@@ -70383,7 +70386,7 @@ function Rae({ hostProposals: e = null } = {}) {
           else
             mo.push(`cell images for ${Jt.fileName} (${nv.fileName}) were not found; attach them again from Import`);
         }
-        const Md = (ve = Jt.images) == null ? void 0 : ve.find((wr) => wr.kind === "cvw");
+        const Md = (we = Jt.images) == null ? void 0 : we.find((wr) => wr.kind === "cvw");
         if (Md && !$r.images && !W) {
           const wr = ((ye = An.get(Jt.dataPath)) == null ? void 0 : ye.images) ?? null;
           let Pc = (wr == null ? void 0 : wr.file) ?? null, hb = (wr == null ? void 0 : wr.handle) ?? null;
@@ -70910,36 +70913,36 @@ function Rae({ hostProposals: e = null } = {}) {
           if (k = null, p !== Bx.current) return;
           const oe = [], ie = performance.now();
           do {
-            const ve = W[Q++];
+            const we = W[Q++];
             try {
-              const ye = Ma(ve.id), ge = ye !== te.active_hierarchy_id ? te.stored_hierarchies[ye] : void 0, Ae = ge != null && ge.root_population_id ? oP(te, ye) : /* @__PURE__ */ new Map();
+              const ye = Ma(we.id), ge = ye !== te.active_hierarchy_id ? te.stored_hierarchies[ye] : void 0, Ae = ge != null && ge.root_population_id ? oP(te, ye) : /* @__PURE__ */ new Map();
               let je;
               if (ge != null && ge.root_population_id && Ae.size) {
-                const et = lI(ve.sample, ge);
+                const et = lI(we.sample, ge);
                 je = iP(
-                  cI(ve.sample, Yi, et, ge.root_population_id, (Wt) => fl(ve.id, Wt)),
+                  cI(we.sample, Yi, et, ge.root_population_id, (Wt) => fl(we.id, Wt)),
                   et,
                   Ae
                 );
               }
               if (p !== Bx.current) return;
-              let $e = je ? null : Si(ve.sample, Yi);
-              const De = ve.sample, Ge = Yi;
-              jc.current.set(ve.id, {
-                sample: ve.sample,
-                dataRevision: ve.sample.dataRevision,
+              let $e = je ? null : Si(we.sample, Yi);
+              const De = we.sample, Ge = Yi;
+              jc.current.set(we.id, {
+                sample: we.sample,
+                dataRevision: we.sample.dataRevision,
                 gateVersion: te.gate_version,
                 get gating() {
                   return $e ?? ($e = Si(De, Ge));
                 },
                 ...je ? { display: je } : {}
-              }), oe.push(ve.id);
+              }), oe.push(we.id);
             } catch (ye) {
               dt(ye instanceof Error ? ye.message : String(ye));
             }
           } while (Q < W.length && performance.now() - ie < Sae);
-          oe.length > 0 && (b6((ve) => ve + 1), Wx((ve) => {
-            const ye = new Set(ve);
+          oe.length > 0 && (b6((we) => we + 1), Wx((we) => {
+            const ye = new Set(we);
             for (const ge of oe) ye.delete(ge);
             return ye;
           })), ee();
@@ -71042,15 +71045,15 @@ function Rae({ hostProposals: e = null } = {}) {
         an.current
       ), ee = o2(E), oe = mk(te, ee), ie = oe.trees.find((Ae) => Ae.active);
       if (!ie) throw new Error("The live hierarchy is missing.");
-      const ve = p.map((Ae) => ({
+      const we = p.map((Ae) => ({
         ...Ae,
         sampleMasks: ee.map((je, $e) => o8(oe, ee, $e, ie, Ae.populationId))
-      })), ye = vF(ve.flatMap(({ sampleMasks: Ae }) => Ae)), ge = await a.colData.writeColumns({
+      })), ye = vF(we.flatMap(({ sampleMasks: Ae }) => Ae)), ge = await a.colData.writeColumns({
         contractVersion: Sp,
         datasetId: E,
         workspaceRevision: Q.revision,
         overwrite: k,
-        columns: ve
+        columns: we
       });
       ea((Ae) => [
         .../* @__PURE__ */ new Set([...Ae, ...ge.columns.map(({ columnName: je }) => je)])
@@ -71342,21 +71345,21 @@ function Rae({ hostProposals: e = null } = {}) {
       const oe = lR(T.fcs);
       if (!oe) return null;
       const ie = new Uint8Array(p);
-      for (let ve = 0; ve < p; ve++) ie[ve] = oe[ve] ? 0 : 1;
+      for (let we = 0; we < p; we++) ie[we] = oe[we] ? 0 : 1;
       return { colors: ie, palette: [...$s(si, 1), Ou], labels: [c("has an image"), c("no image")] };
     }
     if (ia === "objects") {
       const oe = V ? Ti[V.id] : void 0;
       if (!oe) return null;
-      const ie = new Uint8Array(p), ve = [0, 0, 0, 0, 0];
+      const ie = new Uint8Array(p), we = [0, 0, 0, 0, 0];
       for (let ye = 0; ye < p; ye++) {
         const ge = oe.objectCount[ye];
-        ie[ye] = ge === 255 ? 4 : ge <= 0 ? 0 : ge === 1 ? 1 : ge === 2 ? 2 : 3, ve[ie[ye]]++;
+        ie[ye] = ge === 255 ? 4 : ge <= 0 ? 0 : ge === 1 ? 1 : ge === 2 ? 2 : 3, we[ie[ye]]++;
       }
       return {
         colors: ie,
         palette: [...$s(si, 4), Ou],
-        labels: [...CR.map((ye) => c(ye)), c("no image")].map((ye, ge) => `${ye} (${ve[ge].toLocaleString()})`)
+        labels: [...CR.map((ye) => c(ye)), c("no image")].map((ye, ge) => `${ye} (${we[ge].toLocaleString()})`)
       };
     }
     if (ia === "cellclass")
@@ -71366,15 +71369,15 @@ function Rae({ hostProposals: e = null } = {}) {
         labels: qv.map((oe, ie) => `${c(oe)} (${Qi.counts[ie].toLocaleString()})`)
       } : null;
     if (ia === "population") {
-      const oe = te.root_population_id ?? "", ie = Rr(te.populations, oe).map(($e) => $e.popId), ve = KC(te.populations, oe, ie);
-      if (ve.length === 0) return null;
-      const ye = dq(Ba.masks, ve, p), ge = ve.length, Ae = new Uint8Array(p);
+      const oe = te.root_population_id ?? "", ie = Rr(te.populations, oe).map(($e) => $e.popId), we = KC(te.populations, oe, ie);
+      if (we.length === 0) return null;
+      const ye = dq(Ba.masks, we, p), ge = we.length, Ae = new Uint8Array(p);
       for (let $e = 0; $e < p; $e++) Ae[$e] = ye[$e] < 0 ? ge : ye[$e];
-      const je = [...ve.map(($e) => {
+      const je = [...we.map(($e) => {
         var De;
         return MI(si, (De = te.populations[$e.popId]) == null ? void 0 : De.colorSlot);
       }), Ou];
-      return { colors: Ae, palette: je, labels: [...ve.map(($e) => $e.name), "ungated"] };
+      return { colors: Ae, palette: je, labels: [...we.map(($e) => $e.name), "ungated"] };
     }
     if (ia === "channel") {
       if (!yi) return null;
@@ -71388,10 +71391,10 @@ function Rae({ hostProposals: e = null } = {}) {
     if (ia === "coldata") {
       const oe = (ee = V == null ? void 0 : V.hostSource) == null ? void 0 : ee.sampleId, ie = oe !== void 0 ? gi == null ? void 0 : gi.bySample[oe] : void 0;
       if (!gi || ie === void 0) return null;
-      const ve = gi.levels.length, ye = new Uint8Array(p);
+      const we = gi.levels.length, ye = new Uint8Array(p);
       for (let ge = 0; ge < p; ge++) {
         const Ae = typeof ie == "number" ? ie : ie[ge];
-        ye[ge] = Ae === 255 || Ae === void 0 ? ve : Ae;
+        ye[ge] = Ae === 255 || Ae === void 0 ? we : Ae;
       }
       return {
         colors: ye,
@@ -71670,7 +71673,7 @@ function Rae({ hostProposals: e = null } = {}) {
     if (!k || !m) return null;
     const E = (ie = Br.get(p)) == null ? void 0 : ie.tailored;
     if (E && (E.owner.kind === "file" || k === "group")) return null;
-    const O = k === "file" ? Ma(m) : hr == null ? void 0 : hr.id, W = O ? te.hierarchies.find((ve) => ve.id === O) : void 0;
+    const O = k === "file" ? Ma(m) : hr == null ? void 0 : hr.id, W = O ? te.hierarchies.find((we) => we.id === O) : void 0;
     if (!O || !W || (k === "file" ? W.owner_sample_id !== m : !W.owner_group_id)) return null;
     const Q = _w(te), ee = Q[te.active_hierarchy_id], oe = ee && Q[O] ? Xd(ee, p, Q[O], Q, "gate") : null;
     return oe ? { hierarchyId: O, gateId: oe } : null;
@@ -71702,7 +71705,7 @@ function Rae({ hostProposals: e = null } = {}) {
         owner: ee === "group" ? (xa == null ? void 0 : xa.name) ?? "" : Y || c("this file")
       })), lf((oe) => {
         const ie = { ...oe };
-        for (const ve of k) delete ie[ve];
+        for (const we of k) delete ie[we];
         return ie;
       });
     }
@@ -71827,7 +71830,7 @@ function Rae({ hostProposals: e = null } = {}) {
   ], F2 = (p, k) => {
     const E = te.gates[p];
     if (!E) return [];
-    const O = (ve) => !!ve && (ve.gate_type === "polygon" || ve.gate_type === "rectangle"), W = new Set(Hs.map((ve) => ve.gate_id)), Q = W.has(p) && O(E), ee = [...W].filter((ve) => ve !== p && O(te.gates[ve])).length, oe = te.selected_gate_ids.filter((ve) => W.has(ve) && O(te.gates[ve])), ie = c("Acts on this plot's axes: show {gate}'s channels to use it", { gate: E.name });
+    const O = (we) => !!we && (we.gate_type === "polygon" || we.gate_type === "rectangle"), W = new Set(Hs.map((we) => we.gate_id)), Q = W.has(p) && O(E), ee = [...W].filter((we) => we !== p && O(te.gates[we])).length, oe = te.selected_gate_ids.filter((we) => W.has(we) && O(te.gates[we])), ie = c("Acts on this plot's axes: show {gate}'s channels to use it", { gate: E.name });
     return [
       { label: c("Rename…"), className: "gate-row-rename", disabled: Cd, onClick: () => sa({ kind: "renameGate", id: E.gate_id, initial: E.name }) },
       {
@@ -71844,8 +71847,8 @@ function Rae({ hostProposals: e = null } = {}) {
         disabled: !Q,
         title: Q ? c("Each side of the gate moves outward until it meets another gate's edge, landing on it, or reaches the plot's edge where nothing is in the way, so nothing at the edges is missed") : ie,
         onClick: () => {
-          var ve;
-          (ve = Ei.current) != null && ve.extendSelectedGateToEdges(p) || vn(c("{gate} already touches its neighbours and the plot's edges.", { gate: E.name }));
+          var we;
+          (we = Ei.current) != null && we.extendSelectedGateToEdges(p) || vn(c("{gate} already touches its neighbours and the plot's edges.", { gate: E.name }));
         }
       },
       {
@@ -71854,8 +71857,8 @@ function Rae({ hostProposals: e = null } = {}) {
         disabled: !Q || ee === 0,
         title: Q ? c("Move the facing edges of this gate and its neighbours onto one shared line, so they touch with no gap and no overlap") : ie,
         onClick: () => {
-          var ve;
-          (ve = Ei.current) != null && ve.closeGateGaps(void 0, p) || vn(c("No neighbouring gate edges were close enough to join."));
+          var we;
+          (we = Ei.current) != null && we.closeGateGaps(void 0, p) || vn(c("No neighbouring gate edges were close enough to join."));
         }
       },
       {
@@ -71864,8 +71867,8 @@ function Rae({ hostProposals: e = null } = {}) {
         disabled: oe.length < 2,
         title: c("Move the facing edges of the highlighted gates onto shared lines, so they touch with no gap and no overlap"),
         onClick: () => {
-          var ve;
-          (ve = Ei.current) != null && ve.closeGateGaps(oe) || vn(c("No neighbouring gate edges were close enough to join."));
+          var we;
+          (we = Ei.current) != null && we.closeGateGaps(oe) || vn(c("No neighbouring gate edges were close enough to join."));
         }
       },
       "separator",
@@ -71884,7 +71887,7 @@ function Rae({ hostProposals: e = null } = {}) {
   const Y6 = (p) => {
     var ie;
     if (!m || !te.gates[p]) return null;
-    const k = ((ie = Br.get(p)) == null ? void 0 : ie.tailored) ?? null, E = (k == null ? void 0 : k.owner.kind) === "file", O = (k == null ? void 0 : k.owner.kind) === "group" ? k.owner : null, W = !k && Tm(p) === "group" && !!xa, Q = Y || c("this file"), ee = te.gates[p].name, oe = (q6.get(p) ?? []).filter((ve) => !(ve.owner.kind === "file" && ve.owner.fileId === m));
+    const k = ((ie = Br.get(p)) == null ? void 0 : ie.tailored) ?? null, E = (k == null ? void 0 : k.owner.kind) === "file", O = (k == null ? void 0 : k.owner.kind) === "group" ? k.owner : null, W = !k && Tm(p) === "group" && !!xa, Q = Y || c("this file"), ee = te.gates[p].name, oe = (q6.get(p) ?? []).filter((we) => !(we.owner.kind === "file" && we.owner.fileId === m));
     return {
       // On while the file uses a version of its own or its group's; its colour says whose.
       on: E || !!O,
@@ -71974,10 +71977,10 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
     for (let ge = 0; ge < O; ge += ee) W(ge) && Number.isFinite(E[ge]) && Q.push(E[ge]);
     if (Q.length === 0) return null;
     Q.sort((ge, Ae) => ge - Ae);
-    const oe = Q[Math.floor(0.01 * (Q.length - 1))], ve = Q[Math.ceil(0.99 * (Q.length - 1))] - oe, ye = new Uint8Array(O);
+    const oe = Q[Math.floor(0.01 * (Q.length - 1))], we = Q[Math.ceil(0.99 * (Q.length - 1))] - oe, ye = new Uint8Array(O);
     for (let ge = 0; ge < O; ge++) {
       if (!W(ge) || !Number.isFinite(E[ge])) continue;
-      const Ae = ve > 0 ? Math.max(0, Math.min(1, (E[ge] - oe) / ve)) : 0.5;
+      const Ae = we > 0 ? Math.max(0, Math.min(1, (E[ge] - oe) / we)) : 0.5;
       ye[ge] = Math.round(10 * (0.6 + 3.4 * Ae));
     }
     return ye;
@@ -71991,18 +71994,18 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
     H2(!0), setTimeout(() => {
       try {
         const O = p.fcs.nEvents, W = new Uint8Array(O), Q = new Uint8Array(O);
-        for (let ve = 0; ve < O; ve++) {
-          const ye = xc(null, ve);
-          ye === k ? W[ve] = 1 : ye === E && (Q[ve] = 1);
+        for (let we = 0; we < O; we++) {
+          const ye = xc(null, we);
+          ye === k ? W[we] = 1 : ye === E && (Q[we] = 1);
         }
         const ee = [];
-        p.channels.forEach((ve, ye) => {
-          if ([ve.pnn, ve.key, p.channelLabel(ye)].some((je) => /^(Time|Event_length|Cell_length|WaveformPresent|PhaseOffset)$/i.test(je) || /^Center of Mass/i.test(je))) return;
+        p.channels.forEach((we, ye) => {
+          if ([we.pnn, we.key, p.channelLabel(ye)].some((je) => /^(Time|Event_length|Cell_length|WaveformPresent|PhaseOffset)$/i.test(je) || /^Center of Mass/i.test(je))) return;
           const Ae = p.isImagingFeatureAxis(ye) ? "feature" : p.isFluorChannel(ye) || p.isScatterAxis(ye) ? "detector" : "other";
           ee.push({ label: p.channelLabel(ye), values: p.displayColumn(ye), kind: Ae, index: ye });
         });
         const oe = gR(ee, W, Q, { top: 5 }), ie = gR(ee, W, Q, { top: 5, detectorsOnly: !0 });
-        lb((ve) => ({ ...ve, results: { all: oe, detectors: ie } }));
+        lb((we) => ({ ...we, results: { all: oe, detectors: ie } }));
       } finally {
         H2(!1);
       }
@@ -72046,22 +72049,22 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
       return;
     }
     const ee = E.sample.channels[Q].key, oe = E.sample.channels.findIndex((Ae, je) => je !== Q && !E.sample.isDerivedChannel(je)), ie = oe >= 0 ? E.sample.channels[oe].key : ee;
-    let ve = 1 / 0, ye = -1 / 0;
+    let we = 1 / 0, ye = -1 / 0;
     if (oe >= 0) {
       const Ae = E.sample.rawColumnData(oe);
       for (let je = 0; je < Ae.length; je++) {
         const $e = Ae[je];
-        Number.isFinite($e) && ($e < ve && (ve = $e), $e > ye && (ye = $e));
+        Number.isFinite($e) && ($e < we && (we = $e), $e > ye && (ye = $e));
       }
     }
-    ve <= ye || (ve = 0, ye = 1);
-    const ge = (ye - ve) * 0.02 || 1;
+    we <= ye || (we = 0, ye = 1);
+    const ge = (ye - we) * 0.02 || 1;
     g((Ae) => Ae.map((je) => je.id === E.id ? { ...je } : je)), wn({
       type: "addGate",
       gateType: "rectangle",
       xChannel: ee,
       yChannel: ie,
-      vertices: [[0.5, ve - ge], [1.5, ye + ge]],
+      vertices: [[0.5, we - ge], [1.5, ye + ge]],
       name: k.trim(),
       space: "raw",
       gateId: crypto.randomUUID(),
@@ -72076,12 +72079,12 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
     });
     const Q = O.fcs.nEvents, ee = Ba.displayMask ?? Ba.activeMask, oe = ll.get(E.id) ?? null, ie = [];
     for (let ge = 0; ge < Q; ge++) (!ee || ee[ge]) && (!oe || oe[ge]) && ie.push(ge);
-    const ve = rae(W, p, ie, Q);
+    const we = rae(W, p, ie, Q);
     let ye = 0;
-    for (let ge = 0; ge < Q; ge++) Number.isFinite(ve[ge]) && ve[ge] > ye && (ye = ve[ge]);
-    for (let ge = 0; ge < Q; ge++) Number.isFinite(ve[ge]) || (ve[ge] = ye + 1);
+    for (let ge = 0; ge < Q; ge++) Number.isFinite(we[ge]) && we[ge] > ye && (ye = we[ge]);
+    for (let ge = 0; ge < Q; ge++) Number.isFinite(we[ge]) || (we[ge] = ye + 1);
     try {
-      const ge = O.addDerivedChannel({ name: `Similar to ${k.trim()}`, feature: "Similarity", range: Math.ceil(ye + 2), values: ve });
+      const ge = O.addDerivedChannel({ name: `Similar to ${k.trim()}`, feature: "Similarity", range: Math.ceil(ye + 2), values: we });
       return g((Ae) => Ae.map((je) => je.id === E.id ? { ...je } : je)), O.channels[ge].key;
     } catch (ge) {
       return vn(ge instanceof Error ? ge.message : String(ge)), null;
@@ -72127,7 +72130,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
       return je.sample.workspaceScaleContextKey !== Ii ? [] : il(je.sample) !== Jy ? [] : Ge === void 0 || et === void 0 ? [] : [{ entry: je, gating: $e, selection: De, xIndex: Ge, yIndex: et }];
     });
     let oe, ie;
-    const ve = ee.map(
+    const we = ee.map(
       ({ entry: je, selection: $e, xIndex: De, yIndex: Ge }) => ({
         id: je.id,
         name: je.name,
@@ -72138,7 +72141,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
       })
     );
     if (ia === "sample")
-      oe = $s(si, ee.length), ie = ee.map(({ entry: je }) => je.name), ve.forEach((je, $e) => {
+      oe = $s(si, ee.length), ie = ee.map(({ entry: je }) => je.name), we.forEach((je, $e) => {
         je.colorIndex = $e;
       });
     else if (ia === "population") {
@@ -72151,11 +72154,11 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
         Ou
       ], ie = [...De.map(({ name: et }) => et), "ungated"], ee.forEach(({ gating: et }, Wt) => {
         if (!et) {
-          ve[Wt].colorIndex = Ge;
+          we[Wt].colorIndex = Ge;
           return;
         }
         const Zt = De.map(({ popId: Bt }) => et.masks[Bt] ?? null);
-        ve[Wt].colorAt = (Bt) => {
+        we[Wt].colorAt = (Bt) => {
           var Vn;
           let zt = -1, cn = -1;
           for (let Cn = 0; Cn < De.length; Cn++)
@@ -72167,18 +72170,18 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
       oe = yi.palette, ie = [], ee.forEach(({ entry: je }, $e) => {
         const De = je.sample.index(yi.channelKey);
         if (De === void 0) {
-          ve[$e].colorIndex = w4;
+          we[$e].colorIndex = w4;
           return;
         }
         const Ge = je.sample.displayColumn(De);
-        ve[$e].colorAt = (et) => xK(Ge[et], yi.scale, yi.power);
+        we[$e].colorAt = (et) => xK(Ge[et], yi.scale, yi.power);
       });
     else if (ia === "coldata" && gi) {
       const je = gi, $e = je.levels.length;
       oe = [...BR(je, si), Ou], ie = [...je.levels, "missing"], ee.forEach(({ entry: De }, Ge) => {
         var Zt;
         const et = (Zt = De.hostSource) == null ? void 0 : Zt.sampleId, Wt = et !== void 0 ? je.bySample[et] : void 0;
-        Wt === void 0 ? ve[Ge].colorIndex = $e : typeof Wt == "number" ? ve[Ge].colorIndex = Wt === 255 ? $e : Wt : ve[Ge].colorAt = (Bt) => {
+        Wt === void 0 ? we[Ge].colorIndex = $e : typeof Wt == "number" ? we[Ge].colorIndex = Wt === 255 ? $e : Wt : we[Ge].colorAt = (Bt) => {
           const zt = Wt[Bt];
           return zt === 255 || zt === void 0 ? $e : zt;
         };
@@ -72196,22 +72199,22 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
         "unassigned"
       ], je.forEach((Ge, et) => {
         if (!Ge) {
-          ve[et].colorIndex = De;
+          we[et].colorIndex = De;
           return;
         }
         const Wt = ee[et].entry.sample.displayColumn(Ge.channelIndex);
-        ve[et].colorAt = (Zt) => p1(Wt[Zt], Ge.profile.boundaries);
+        we[et].colorAt = (Zt) => p1(Wt[Zt], Ge.profile.boundaries);
       });
     }
     const ye = XO(
-      ve,
+      we,
       Un <= 0 ? 1 / 0 : Un,
       { origins: !0 }
     ), ge = ye.sampleEventCounts.filter(({ eventCount: je }) => je > 0), Ae = {
       indices: ye.eventIndex ?? null,
       xd: ye.x,
       yd: ye.y,
-      ...ye.sampleOf ? { sampleOf: ye.sampleOf, sampleIds: ve.map((je) => je.id) } : {}
+      ...ye.sampleOf ? { sampleOf: ye.sampleOf, sampleIds: we.map((je) => je.id) } : {}
     };
     return {
       ...W,
@@ -72280,35 +72283,35 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
       if (p.contextKey !== jo || !Fae(yr, p.ranges)) return;
       qi.current = null;
     }
-    const k = (ve) => {
+    const k = (we) => {
       try {
-        return JSON.stringify([ve, T.transformSpec(ve), Qt ? null : T.activeAssayBindingKey]);
+        return JSON.stringify([we, T.transformSpec(we), Qt ? null : T.activeAssayBindingKey]);
       } catch {
         return null;
       }
     }, E = (oe = T.channels[Fn]) == null ? void 0 : oe.key, O = (ie = T.channels[Rn]) == null ? void 0 : ie.key;
     if (!E || !O) return;
     const W = [];
-    for (const ve of [E, O]) {
+    for (const we of [E, O]) {
       const ye = Mo.current.get(
-        Jm(jo, ve)
+        Jm(jo, we)
       );
       if (!ye) continue;
-      const ge = k(ve);
-      ge !== null && ge !== ye && W.push(ve);
+      const ge = k(we);
+      ge !== null && ge !== ye && W.push(we);
     }
     if (W.length) {
-      for (const ve of W)
-        Mo.current.delete(Jm(jo, ve));
-      for (const ve of [...Ar.current])
+      for (const we of W)
+        Mo.current.delete(Jm(jo, we));
+      for (const we of [...Ar.current])
         try {
-          const [ye, ge, Ae] = JSON.parse(ve);
-          ye === jo && W.some((je) => je === ge || je === Ae) && Ar.current.delete(ve);
+          const [ye, ge, Ae] = JSON.parse(we);
+          ye === jo && W.some((je) => je === ge || je === Ae) && Ar.current.delete(we);
         } catch {
-          Ar.current.delete(ve);
+          Ar.current.delete(we);
         }
-      Fs((ve) => {
-        const ye = { ...ve };
+      Fs((we) => {
+        const ye = { ...we };
         for (const ge of W) delete ye[ge];
         return ye;
       });
@@ -72321,17 +72324,17 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
       { key: E, idx: Fn, auto: Na.xRange, axis: "x" },
       { key: O, idx: Rn, auto: Na.yRange, axis: "y" }
     ];
-    for (const { key: ve, idx: ye, auto: ge, axis: Ae } of ee) {
-      const je = Jm(jo, ve);
-      if (yr[ve] && (Qt || !Mo.current.has(je))) continue;
-      const $e = k(ve);
+    for (const { key: we, idx: ye, auto: ge, axis: Ae } of ee) {
+      const je = Jm(jo, we);
+      if (yr[we] && (Qt || !Mo.current.has(je))) continue;
+      const $e = k(we);
       $e && Mo.current.set(je, $e);
       const De = xb(
         ge ?? T.displayRange(ye),
         Hs,
         Ae
       );
-      Fs((Ge) => ({ ...Ge, [ve]: De }));
+      Fs((Ge) => ({ ...Ge, [we]: De }));
     }
   }, [
     T,
@@ -72466,9 +72469,9 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
           for (const ee of ["x", "y"]) {
             if ((ee === "x" ? Q.x_channel : Q.y_channel) !== E) continue;
             const ie = Q.gate_type === "quadrant" ? Q.arms ? [Q.center, Q.arms.down, Q.arms.right, Q.arms.up, Q.arms.left] : [Q.center] : Q.gate_type === "ellipse" ? Ys(Q, 16) : Q.vertices;
-            for (const ve of ie) {
-              if (!ve) continue;
-              const ye = ee === "x" ? ve[0] : ve[1];
+            for (const we of ie) {
+              if (!we) continue;
+              const ye = ee === "x" ? we[0] : we[1];
               ir(T.gateToRaw(Q, E, ye)) || W.push(T.gateToDisplay(Q, E, ye));
             }
           }
@@ -72641,7 +72644,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
               label: "R host",
               items: [
                 {
-                  label: `${Oi("Save to SCE")}${mt ? " ●" : ""}`,
+                  label: `${Oi("Save to SCE")}${gt ? " ●" : ""}`,
                   title: Oi("Save gates, populations, scales, and display settings into the R SingleCellExperiment"),
                   disabled: !T || !a.workspaces || In === "saving",
                   onClick: zs
@@ -72692,7 +72695,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                 })),
                 "separator",
                 {
-                  label: de || ce ? `${c("Save")}${mt ? " ●" : ""}` : c("Save Workspace…"),
+                  label: de || ce ? `${c("Save")}${gt ? " ●" : ""}` : c("Save Workspace…"),
                   title: ce ? c("Save the workspace back to the lab Drive, in place") : de ? Ft === "bundle" ? "Save changes in place while preserving the embedded FCS data" : "Save gates/populations/scales/compensation back to the linked workspace file (in place)" : "Choose a location and save the workspace",
                   disabled: !T,
                   shortcut: "⌘S",
@@ -72968,7 +72971,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
           {
             session: Pe.session,
             target: ce,
-            dirty: mt,
+            dirty: gt,
             disabled: Vo || yn !== null,
             canSaveAs: h.length > 0,
             onSaveAsNewExperiment: () => se("experiment"),
@@ -73205,14 +73208,14 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                 const k = Array.from(p.target.files ?? []);
                 if (k.length > 0) {
                   const E = k[0].webkitRelativePath.split("/")[0] || "Selected folder", O = k.map((oe) => {
-                    const ie = oe.webkitRelativePath.split("/").filter(Boolean), ve = ie.length > 1 ? ie.slice(1).join("/") : oe.name;
-                    return { name: oe.name, file: oe, handle: null, relativePath: ve };
+                    const ie = oe.webkitRelativePath.split("/").filter(Boolean), we = ie.length > 1 ? ie.slice(1).join("/") : oe.name;
+                    return { name: oe.name, file: oe, handle: null, relativePath: we };
                   }), W = Ox(O, (oe) => `${E}/${oe.relativePath}`), Q = /* @__PURE__ */ new Map();
                   for (const oe of k) {
                     const ie = oe.webkitRelativePath.split("/").filter(Boolean);
                     if (ie.length >= 3 && /\.tiff?$/i.test(oe.name) && eM(ie[1])) {
-                      const ve = Q.get(ie[1]) ?? [];
-                      ve.push(oe), Q.set(ie[1], ve);
+                      const we = Q.get(ie[1]) ?? [];
+                      we.push(oe), Q.set(ie[1], we);
                     }
                   }
                   const ee = xR(W.map((oe) => oe.name), [...Q.keys()].map((oe) => ({ name: oe })));
@@ -73329,9 +73332,9 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
               In === "saving" ? " · saving…" : In === "saved" ? " · saved" : In === "error" ? " · save failed" : " · unsaved"
             ] }) : /* @__PURE__ */ d.jsxs("div", { className: "gl-side-status-row", children: [
               nt ? /* @__PURE__ */ d.jsxs("div", { className: "gl-hint", title: nt, children: [
-                mt ? "● " : "",
+                gt ? "● " : "",
                 nt,
-                mt ? ` (${c("unsaved")})` : ""
+                gt ? ` (${c("unsaved")})` : ""
               ] }) : /* @__PURE__ */ d.jsx("div", { className: "gl-hint", children: c("No workspace file yet") }),
               /* @__PURE__ */ d.jsx(
                 "button",
@@ -73341,7 +73344,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                   disabled: !T,
                   title: c(ce ? "Save the workspace back to the lab Drive, in place" : de ? "Save the workspace in place" : "Choose a location and save the workspace"),
                   onClick: Gk,
-                  children: de || ce ? `${c("Save")}${mt ? " ●" : ""}` : c("Save…")
+                  children: de || ce ? `${c("Save")}${gt ? " ●" : ""}` : c("Save…")
                 }
               )
             ] }),
@@ -74310,8 +74313,8 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                             const E = [
                               T.displayToGate(k, k.x_channel, p.mean[0]),
                               T.displayToGate(k, k.y_channel, p.mean[1])
-                            ], O = (oe, ie, ve) => {
-                              const ye = Math.max(Math.abs(ve), 1e-6) * 0.01;
+                            ], O = (oe, ie, we) => {
+                              const ye = Math.max(Math.abs(we), 1e-6) * 0.01;
                               return (T.displayToGate(k, oe, ie + ye) - T.displayToGate(k, oe, ie - ye)) / (2 * ye);
                             }, W = O(k.x_channel, p.mean[0], p.major), Q = O(k.y_channel, p.mean[1], p.major), ee = yG(p.major, p.minor, p.angle, k.distance_square);
                             Nu({
@@ -74481,7 +74484,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                             const k = p.flatMap((E) => {
                               const O = te.gates[E.gate_id];
                               if (!O || O.gate_type !== "rectangle" || O.x_channel !== O.y_channel) return [];
-                              const W = O.x_channel, Q = O.vertices.map((ve) => ve[0]), ee = O.vertices.map((ve) => ve[1]);
+                              const W = O.x_channel, Q = O.vertices.map((we) => we[0]), ee = O.vertices.map((we) => we[1]);
                               let oe = Math.max(Math.min(...Q), Math.min(...ee)), ie = Math.min(Math.max(...Q), Math.max(...ee));
                               return E.lo !== void 0 && (oe = T.displayToGate(O, W, E.lo)), E.hi !== void 0 && (ie = T.displayToGate(O, W, E.hi)), oe > ie && ([oe, ie] = [ie, oe]), [{ gateId: O.gate_id, vertices: [[oe, oe], [ie, oe], [ie, ie], [oe, ie]] }];
                             });
@@ -75195,17 +75198,17 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
           }
         }
       ),
-      we && Pe && /* @__PURE__ */ d.jsx(
+      ve && Pe && /* @__PURE__ */ d.jsx(
         Pe.module.DriveReconnectDialog,
         {
           auth: Pe.session.auth,
-          action: we.action,
-          workspace: ce && mt ? ce.name : null,
+          action: ve.action,
+          workspace: ce && gt ? ce.name : null,
           onCancel: () => {
-            le(null), vn(we.action === "open" ? "Nothing was opened · the current workspace is unchanged" : "Not saved to the lab Drive · the sign-in has run out; nothing open here was changed");
+            le(null), vn(ve.action === "open" ? "Nothing was opened · the current workspace is unchanged" : "Not saved to the lab Drive · the sign-in has run out; nothing open here was changed");
           },
           onReconnected: () => {
-            le(null), we.resume();
+            le(null), ve.resume();
           }
         }
       ),
@@ -75238,7 +75241,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
         Df,
         {
           title: "Start a new workspace?",
-          message: ce ? mt ? `This closes ${ce.name}. Its changes are not saved to the lab Drive, and GateLab keeps no copy of a Drive workspace in this browser, so they are lost. Save first to keep them.` : `Close ${ce.name} and begin with an empty workspace? The file in the lab Drive will not be changed.` : mt || !de ? "This closes the current samples, gates, populations, and settings. Unsaved work will no longer be in the current view; GateLab will keep a local recovery checkpoint. Save first if you want a normal workspace file." : `Close ${nt || "the current workspace"} and begin with an empty workspace? The saved file will not be changed.`,
+          message: ce ? gt ? `This closes ${ce.name}. Its changes are not saved to the lab Drive, and GateLab keeps no copy of a Drive workspace in this browser, so they are lost. Save first to keep them.` : `Close ${ce.name} and begin with an empty workspace? The file in the lab Drive will not be changed.` : gt || !de ? "This closes the current samples, gates, populations, and settings. Unsaved work will no longer be in the current view; GateLab will keep a local recovery checkpoint. Save first if you want a normal workspace file." : `Close ${nt || "the current workspace"} and begin with an empty workspace? The saved file will not be changed.`,
           confirmLabel: "Start New Workspace",
           onCancel: () => sa(null),
           onConfirm: () => void md()
@@ -75342,7 +75345,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                       onClick: () => {
                         const oe = zo;
                         nu(null);
-                        const ie = oe.perFileOption ? oe.perFileOption.slice(1).map((ve) => ({ name: ve.fileName, sample: `sample ${ve.sample.index + 1} "${ve.sample.name}"` })) : oe.byChoice ?? [];
+                        const ie = oe.perFileOption ? oe.perFileOption.slice(1).map((we) => ({ name: we.fileName, sample: `sample ${we.sample.index + 1} "${we.sample.name}"` })) : oe.byChoice ?? [];
                         Au(
                           oe.text,
                           oe.sample,
@@ -75436,7 +75439,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
         ), ee = Q.ambiguous, oe = Q.contested, ie = (St) => {
           const fn = O.find((Wn) => Wn.sampleIndex === St);
           return (Us(fn) && fn.status === "chosen" ? ee.find((Wn) => Wn.fileKey === fn.fileKey) : void 0) ?? k.ambiguous.find((Wn) => Wn.candidates.includes(St)) ?? ee.find((Wn) => Wn.candidates.includes(St));
-        }, ve = O.filter(Us).length, ye = W.length, ge = E.sample, Ae = !!E.target || !!((Cn = (Vn = E.resolution) == null ? void 0 : Vn.tiedWith) != null && Cn.length), je = new Set(qn.samples.map((St) => St.index)), $e = UE(O.filter((St) => je.has(St.sampleIndex)), pc().events, c), De = (St) => {
+        }, we = O.filter(Us).length, ye = W.length, ge = E.sample, Ae = !!E.target || !!((Cn = (Vn = E.resolution) == null ? void 0 : Vn.tiedWith) != null && Cn.length), je = new Set(qn.samples.map((St) => St.index)), $e = UE(O.filter((St) => je.has(St.sampleIndex)), pc().events, c), De = (St) => {
           const fn = W.find((vt) => vt.index === St);
           return fn ? fn.duplicateName ? `${fn.name} (${c("position")} ${St + 1})` : fn.name : `sample ${St + 1}`;
         }, Ge = kS(p, {
@@ -75517,7 +75520,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                   c("A workspace holds gates, not data. Choose the FCS files it refers to; any it cannot find are skipped."),
                   " ",
                   /* @__PURE__ */ d.jsxs("strong", { children: [
-                    ve,
+                    we,
                     "/",
                     ye
                   ] }),
@@ -75868,7 +75871,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                   value: p.answers[ee.sampleIndex] ?? "",
                   onChange: (oe) => {
                     const ie = oe.currentTarget.value;
-                    td((ve) => ve && { ...ve, answers: { ...ve.answers, [ee.sampleIndex]: ie } });
+                    td((we) => we && { ...we, answers: { ...we.answers, [ee.sampleIndex]: ie } });
                   },
                   children: [
                     /* @__PURE__ */ d.jsx("option", { value: "", children: c("None of them: they follow the tree") }),
@@ -75889,7 +75892,7 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
                   value: p.fileAnswers[ee.fileKey] ?? "",
                   onChange: (oe) => {
                     const ie = oe.currentTarget.value;
-                    td((ve) => ve && { ...ve, fileAnswers: { ...ve.fileAnswers, [ee.fileKey]: ie } });
+                    td((we) => we && { ...we, fileAnswers: { ...we.fileAnswers, [ee.fileKey]: ie } });
                   },
                   children: [
                     /* @__PURE__ */ d.jsx("option", { value: "", children: c("None of them: it follows the tree") }),
@@ -75916,8 +75919,8 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
           au(null);
           const O = [...p.pairs], W = [...p.notes];
           for (const ee of p.ambiguous) {
-            const oe = p.answers[ee.fileName], ie = ((Q = h.find((ye) => ye.id === ee.entryIds[0])) == null ? void 0 : Q.name) ?? ee.fileName, ve = `${ee.entryIds.length} loaded files are named "${ie}"` + (ie !== ee.fileName ? ` (Cytobank's "${ee.fileName}")` : "");
-            oe ? (O.push({ fileName: ee.fileName, entryId: oe, gatingMl: Sb(p.text, ee.fileName) }), W.push(`${ve}; Cytobank's ${ee.gates} gate(s) tailored for it were applied to ${k(oe)}, as chosen.`)) : W.push(`${ve}; Cytobank's ${ee.gates} gate(s) tailored for it were applied to none of them, as chosen: they follow the tree.`);
+            const oe = p.answers[ee.fileName], ie = ((Q = h.find((ye) => ye.id === ee.entryIds[0])) == null ? void 0 : Q.name) ?? ee.fileName, we = `${ee.entryIds.length} loaded files are named "${ie}"` + (ie !== ee.fileName ? ` (Cytobank's "${ee.fileName}")` : "");
+            oe ? (O.push({ fileName: ee.fileName, entryId: oe, gatingMl: Sb(p.text, ee.fileName) }), W.push(`${we}; Cytobank's ${ee.gates} gate(s) tailored for it were applied to ${k(oe)}, as chosen.`)) : W.push(`${we}; Cytobank's ${ee.gates} gate(s) tailored for it were applied to none of them, as chosen: they follow the tree.`);
           }
           Cf(Sb(p.text, null), "", null, [], null, null, [], null, W, null, [], O);
         };
@@ -76405,14 +76408,14 @@ ${c("Tailored in {names}.", { names: oe.map(Qk).join(", ") })}` : "")
     }
   }
   function rE() {
-    var Q, ee, oe, ie, ve, ye, ge;
+    var Q, ee, oe, ie, we, ye, ge;
     const p = {};
     for (const [Ae, je] of Object.entries(te.populations))
       p[Ae] = { id: Ae, name: je.name, parentId: je.parent_id, children: [...je.children], gateCount: ((Q = je.gate_refs) == null ? void 0 : Q.length) ?? 0, gateIds: (je.gate_refs ?? []).map(($e) => $e.gate_id) };
     const k = {};
     for (const Ae of te.gate_order.length ? te.gate_order : Object.keys(te.gates)) {
       const je = te.gates[Ae];
-      je && (k[Ae] = { id: Ae, name: je.name, type: je.gate_type, x: je.x_channel, y: je.y_channel, shape: JSON.stringify("vertices" in je ? je.vertices : je), onFlowJoGrid: je.space === "display" && ((oe = (ee = je.transforms) == null ? void 0 : ee[je.x_channel]) == null ? void 0 : oe.kind) === "flowjoChannels" && ((ve = (ie = je.transforms) == null ? void 0 : ie[je.y_channel]) == null ? void 0 : ve.kind) === "flowjoChannels" });
+      je && (k[Ae] = { id: Ae, name: je.name, type: je.gate_type, x: je.x_channel, y: je.y_channel, shape: JSON.stringify("vertices" in je ? je.vertices : je), onFlowJoGrid: je.space === "display" && ((oe = (ee = je.transforms) == null ? void 0 : ee[je.x_channel]) == null ? void 0 : oe.kind) === "flowjoChannels" && ((we = (ie = je.transforms) == null ? void 0 : ie[je.y_channel]) == null ? void 0 : we.kind) === "flowjoChannels" });
     }
     const E = Yu.current, O = ((ye = Ll.current) == null ? void 0 : ye.figure) ?? null, W = co.sheets.find((Ae) => Ae.id === co.activeSheetId) ?? co.sheets[0];
     return {
