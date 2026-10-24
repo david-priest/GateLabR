@@ -13,3 +13,5 @@
 ^pkgdown$
 ^\.github$
 ^tools$
+^CITATION\.cff$
+^LICENSE\.md$

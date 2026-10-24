@@ -4,6 +4,7 @@
 
 skip_if_not_installed("flowWorkspace")
 skip_if_not_installed("flowCore")
+skip_if_not_installed("sp")
 
 gvhd <- function() {
   data_env <- new.env()
@@ -1598,7 +1599,15 @@ test_that("nodes the app never held survive a save with their subtrees and count
   )
   expect_setequal(flowWorkspace::gs_get_pop_paths(gs, path = "full"),
                   c("root", "/cells", "/cells/core", "/big", "/either", "/either/low", "/notboth"))
-  expect_identical(sorted_counts(gs), counts_before)
+  # By explicit columns: data.table's own `[` is not active in a test, so a bare column name in
+  # it is looked up as a variable.
+  by_node <- function(counts) {
+    counts <- as.data.frame(counts)
+    counts <- counts[order(counts$name, counts$Population), , drop = FALSE]
+    rownames(counts) <- NULL
+    counts
+  }
+  expect_identical(by_node(flowWorkspace::gs_pop_get_count_fast(gs)), by_node(counts_before))
   kept <- vapply(saved$report$kept_nodes, `[[`, character(1), "path")
   expect_setequal(kept, c("/either", "/notboth"))
   expect_match(saved$result$notes[[1]], "Kept 2 nodes the app does not hold", fixed = TRUE)
