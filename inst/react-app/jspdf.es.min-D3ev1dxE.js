@@ -1,7 +1,7 @@
 var $h = Object.defineProperty;
-var Xh = (n, e, t) => e in n ? $h(n, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : n[e] = t;
-var xe = (n, e, t) => Xh(n, typeof e != "symbol" ? e + "" : e, t);
-import { aX as ko } from "./embed-BEBIXb3n.js";
+var Kh = (n, e, t) => e in n ? $h(n, e, { enumerable: !0, configurable: !0, writable: !0, value: t }) : n[e] = t;
+var xe = (n, e, t) => Kh(n, typeof e != "symbol" ? e + "" : e, t);
+import { a_ as ko } from "./embed-CYBkeSq5.js";
 function _e(n) {
   "@babel/helpers - typeof";
   return _e = typeof Symbol == "function" && typeof Symbol.iterator == "symbol" ? function(e) {
@@ -10,7 +10,7 @@ function _e(n) {
     return e && typeof Symbol == "function" && e.constructor === Symbol && e !== Symbol.prototype ? "symbol" : typeof e;
   }, _e(n);
 }
-function Kh(n) {
+function Xh(n) {
   if (Array.isArray(n)) return n;
 }
 function Zh(n, e) {
@@ -48,7 +48,7 @@ function tc() {
 In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
 }
 function wl(n, e) {
-  return Kh(n) || Zh(n, e) || Qh(n, e) || tc();
+  return Xh(n) || Zh(n, e) || Qh(n, e) || tc();
 }
 function yl(n, e = "utf8") {
   return new TextDecoder(e).decode(n);
@@ -1537,17 +1537,17 @@ const Yc = (n) => {
     return Hn;
   let e = n.state;
   return e.window && (e.window = null), n.state = null, xi;
-}, Xc = (n, e) => {
+}, Kc = (n, e) => {
   if (Ai(n))
     return Hn;
   const t = n.state;
   return (t.wrap & 2) === 0 ? Hn : (t.head = e, e.done = !1, xi);
-}, Kc = (n, e) => {
+}, Xc = (n, e) => {
   const t = e.length;
   let i, o, s;
   return Ai(n) || (i = n.state, i.wrap !== 0 && i.mode !== xs) ? Hn : i.mode === xs && (o = 1, o = Po(o, e, t, 0), o !== i.check) ? Bu : (s = Hu(n, e, t, t), s ? (i.mode = Ru, Mu) : (i.havedict = 1, xi));
 };
-var Zc = qu, Qc = Uu, tf = Du, ef = Gc, nf = zu, rf = Jc, af = $c, sf = Xc, of = Kc, lf = "pako inflate (from Nodeca project)", fr = {
+var Zc = qu, Qc = Uu, tf = Du, ef = Gc, nf = zu, rf = Jc, af = $c, sf = Kc, of = Xc, lf = "pako inflate (from Nodeca project)", fr = {
   inflateReset: Zc,
   inflateReset2: Qc,
   inflateResetKeep: tf,
@@ -1565,12 +1565,12 @@ function uf() {
 var hf = uf;
 const Wu = Object.prototype.toString, {
   Z_NO_FLUSH: cf,
-  Z_FINISH: Xl,
+  Z_FINISH: Kl,
   Z_OK: Zi,
   Z_STREAM_END: po,
   Z_NEED_DICT: go,
   Z_STREAM_ERROR: ff,
-  Z_DATA_ERROR: Kl,
+  Z_DATA_ERROR: Xl,
   Z_MEM_ERROR: df,
   Z_BUF_ERROR: Zl
 } = Cu, pf = {
@@ -1595,12 +1595,12 @@ Ca.prototype.push = function(n, e) {
   const t = this.strm, i = this.options.chunkSize, o = this.options.dictionary;
   let s, f, u;
   if (this.ended) return !1;
-  for (e === ~~e ? f = e : f = e === !0 ? Xl : cf, Wu.call(n) === "[object ArrayBuffer]" ? t.input = new Uint8Array(n) : t.input = n, t.next_in = 0, t.avail_in = t.input.length; ; ) {
-    for (t.avail_out === 0 && (t.output = new Uint8Array(i), t.next_out = 0, t.avail_out = i), s = fr.inflate(t, f), s === go && o && (s = fr.inflateSetDictionary(t, o), s === Zi ? s = fr.inflate(t, f) : s === Kl && (s = go)); t.avail_in > 0 && s === po && t.state.wrap & 2 && t.state.flags !== 0 && t.input[t.next_in] !== 0; )
+  for (e === ~~e ? f = e : f = e === !0 ? Kl : cf, Wu.call(n) === "[object ArrayBuffer]" ? t.input = new Uint8Array(n) : t.input = n, t.next_in = 0, t.avail_in = t.input.length; ; ) {
+    for (t.avail_out === 0 && (t.output = new Uint8Array(i), t.next_out = 0, t.avail_out = i), s = fr.inflate(t, f), s === go && o && (s = fr.inflateSetDictionary(t, o), s === Zi ? s = fr.inflate(t, f) : s === Xl && (s = go)); t.avail_in > 0 && s === po && t.state.wrap & 2 && t.state.flags !== 0 && t.input[t.next_in] !== 0; )
       fr.inflateReset(t), s = fr.inflate(t, f);
     switch (s) {
       case ff:
-      case Kl:
+      case Xl:
       case go:
       case df:
         return this.onEnd(s), this.ended = !0, !1;
@@ -1615,7 +1615,7 @@ Ca.prototype.push = function(n, e) {
       if (s === po)
         return s = fr.inflateEnd(this.strm), this.onEnd(s), this.ended = !0, !0;
       if (t.avail_in === 0) {
-        if (f === Xl)
+        if (f === Kl)
           return s = fr.inflateEnd(this.strm), this.onEnd(s === Zi ? Zl : s), this.ended = !0, !1;
         break;
       }
@@ -1696,7 +1696,7 @@ function $u(n, e, t, i, o) {
       e[s] = n[s] + (e[s - o] + t[s] >> 1) & 255;
   }
 }
-function Xu(n, e, t, i, o) {
+function Ku(n, e, t, i, o) {
   let s = 0;
   if (t.length === 0) {
     for (; s < o; s++)
@@ -1729,7 +1729,7 @@ function Lf(n, e, t, i, o, s) {
       $u(e, t, i, o, s);
       break;
     case 4:
-      Xu(e, t, i, o, s);
+      Ku(e, t, i, o, s);
       break;
     default:
       throw new Error(`Unsupported filter: ${n}`);
@@ -1803,7 +1803,7 @@ function nu(n) {
         $u(A, P, d, u, f);
         break;
       case 4:
-        Xu(A, P, d, u, f);
+        Ku(A, P, d, u, f);
         break;
       default:
         throw new Error(`Unsupported filter: ${e[m]}`);
@@ -1835,7 +1835,7 @@ function Mf(n) {
       return !1;
   return !0;
 }
-const Rf = "tEXt", Tf = 0, Ku = new TextDecoder("latin1");
+const Rf = "tEXt", Tf = 0, Xu = new TextDecoder("latin1");
 function Df(n) {
   if (Uf(n), n.length === 0 || n.length > 79)
     throw new Error("keyword length must be between 1 and 79");
@@ -1854,11 +1854,11 @@ function Zu(n) {
     ;
   const e = n.offset;
   n.reset();
-  const t = Ku.decode(n.readBytes(e - n.offset - 1));
+  const t = Xu.decode(n.readBytes(e - n.offset - 1));
   return n.skip(1), Df(t), t;
 }
 function Hf(n, e) {
-  return Ku.decode(n.readBytes(e));
+  return Xu.decode(n.readBytes(e));
 }
 const Bn = {
   UNKNOWN: -1,
@@ -2455,12 +2455,12 @@ function $f(n) {
 function Fo(n) {
   return th(n).map($f).join("");
 }
-var Xf = (function(n) {
+var Kf = (function(n) {
   for (var e = 0; e < n.length; e++) n[e] = Jf(n[e]);
   return n.join("");
 })(th("hello")) != "5d41402abc4b2a76b9719d911017c592";
 function Yr(n, e) {
-  if (Xf) {
+  if (Kf) {
     var t = (65535 & n) + (65535 & e);
     return (n >> 16) + (e >> 16) + (t >> 16) << 16 | 65535 & t;
   }
@@ -2501,7 +2501,7 @@ function Eo(n, e) {
  * http://www.fpdf.org/en/script/script37.php
  */
 var uu = { print: 4, modify: 8, copy: 16, "annot-forms": 32 };
-function Xi(n, e, t, i) {
+function Ki(n, e, t, i) {
   this.v = 1, this.r = 2;
   var o = 192;
   n.forEach(function(u) {
@@ -2511,7 +2511,7 @@ function Xi(n, e, t, i) {
   var s = (e + this.padding).substr(0, 32), f = (t + this.padding).substr(0, 32);
   this.O = this.processOwnerPassword(s, f), this.P = -(1 + (255 ^ o)), this.encryptionKey = Fo(s + this.O + this.lsbFirstWord(this.P) + this.hexToBytes(i)).substr(0, 5), this.U = Eo(this.encryptionKey, this.padding);
 }
-function Ki(n) {
+function Xi(n) {
   if (/[^\u0000-\u00ff]/.test(n)) throw new Error("Invalid PDF Name Object: " + n + ", Only accept ASCII characters.");
   for (var e = "", t = n.length, i = 0; i < t; i++) {
     var o = n.charCodeAt(i);
@@ -2643,7 +2643,7 @@ function Mt(n) {
   }, nt = p.__private__.setFileId = function(l) {
     return ct = l !== void 0 && /^[a-fA-F0-9]{32}$/.test(l) ? l.toUpperCase() : ct.split("").map(function() {
       return "ABCDEF0123456789".charAt(Math.floor(16 * Math.random()));
-    }).join(""), m !== null && (sn = new Xi(m.userPermissions, m.userPassword, m.ownerPassword, ct)), ct;
+    }).join(""), m !== null && (sn = new Ki(m.userPermissions, m.userPassword, m.ownerPassword, ct)), ct;
   };
   p.setFileId = function(l) {
     return nt(l), this;
@@ -2749,7 +2749,7 @@ function Mt(n) {
     if (Object.keys(he).indexOf(l) === -1) throw new Error("Invalid arguments passed to jsPDF.setDocumentProperty");
     return he[l] = b;
   };
-  var Bt, ne, Tt, ze, ge, se = {}, oe = {}, Oe = [], qt = {}, ke = {}, Yt = {}, Qt = {}, je = null, le = 0, Vt = [], ve = new hu(p), Xr = n.hotfixes || [], hn = {}, gr = {}, tr = [], Gt = function l(b, I, T, G, st, gt) {
+  var Bt, ne, Tt, ze, ge, se = {}, oe = {}, Oe = [], qt = {}, ke = {}, Yt = {}, Qt = {}, je = null, le = 0, Vt = [], ve = new hu(p), Kr = n.hotfixes || [], hn = {}, gr = {}, tr = [], Gt = function l(b, I, T, G, st, gt) {
     if (!(this instanceof l)) return new l(b, I, T, G, st, gt);
     isNaN(b) && (b = 1), isNaN(I) && (I = 0), isNaN(T) && (T = 0), isNaN(G) && (G = 1), isNaN(st) && (st = 0), isNaN(gt) && (gt = 0), this._matrix = [b, I, T, G, st, gt];
   };
@@ -2822,8 +2822,8 @@ function Mt(n) {
   }, Gt.prototype.toString = function(l) {
     return this.join(" ");
   }, Gt.prototype.inversed = function() {
-    var l = this.sx, b = this.shy, I = this.shx, T = this.sy, G = this.tx, st = this.ty, gt = 1 / (l * T - b * I), Et = T * gt, Ft = -b * gt, Xt = -I * gt, te = l * gt;
-    return new Gt(Et, Ft, Xt, te, -Et * G - Xt * st, -Ft * G - te * st);
+    var l = this.sx, b = this.shy, I = this.shx, T = this.sy, G = this.tx, st = this.ty, gt = 1 / (l * T - b * I), Et = T * gt, Ft = -b * gt, Kt = -I * gt, te = l * gt;
+    return new Gt(Et, Ft, Kt, te, -Et * G - Kt * st, -Ft * G - te * st);
   }, Gt.prototype.applyToPoint = function(l) {
     var b = l.x * this.sx + l.y * this.shx + this.tx, I = l.x * this.shy + l.y * this.sy + this.ty;
     return new ei(b, I);
@@ -2861,7 +2861,7 @@ function Mt(n) {
     }, $;
   }, an = function(l, b) {
     return b = typeof b == "boolean" && b, Q[l] = at, b && k(l + " 0 obj"), l;
-  }, Kr = p.__private__.newAdditionalObject = function() {
+  }, Xr = p.__private__.newAdditionalObject = function() {
     var l = { objId: rn(), content: "" };
     return dt.push(l), l;
   }, Cr = rn(), Wn = rn(), er = p.__private__.decodeColorString = function(l) {
@@ -2902,17 +2902,17 @@ function Mt(n) {
     m !== null && (Et = sn.encryptor(gt, 0));
     var Ft = {};
     I === !0 && (I = ["FlateEncode"]);
-    var Xt = l.additionalKeyValues || [], te = (Ft = Mt.API.processDataByFilters !== void 0 ? Mt.API.processDataByFilters(b, I) : { data: b, reverseChain: [] }).reverseChain + (Array.isArray(T) ? T.join(" ") : T.toString());
-    if (Ft.data.length !== 0 && (Xt.push({ key: "Length", value: Ft.data.length }), G === !0 && Xt.push({ key: "Length1", value: st })), te.length != 0) if (te.split("/").length - 1 == 1) Xt.push({ key: "Filter", value: te });
+    var Kt = l.additionalKeyValues || [], te = (Ft = Mt.API.processDataByFilters !== void 0 ? Mt.API.processDataByFilters(b, I) : { data: b, reverseChain: [] }).reverseChain + (Array.isArray(T) ? T.join(" ") : T.toString());
+    if (Ft.data.length !== 0 && (Kt.push({ key: "Length", value: Ft.data.length }), G === !0 && Kt.push({ key: "Length1", value: st })), te.length != 0) if (te.split("/").length - 1 == 1) Kt.push({ key: "Filter", value: te });
     else {
-      Xt.push({ key: "Filter", value: "[" + te + "]" });
-      for (var de = 0; de < Xt.length; de += 1) if (Xt[de].key === "DecodeParms") {
-        for (var Xe = [], Ne = 0; Ne < Ft.reverseChain.split("/").length - 1; Ne += 1) Xe.push("null");
-        Xe.push(Xt[de].value), Xt[de].value = "[" + Xe.join(" ") + "]";
+      Kt.push({ key: "Filter", value: "[" + te + "]" });
+      for (var de = 0; de < Kt.length; de += 1) if (Kt[de].key === "DecodeParms") {
+        for (var Ke = [], Ne = 0; Ne < Ft.reverseChain.split("/").length - 1; Ne += 1) Ke.push("null");
+        Ke.push(Kt[de].value), Kt[de].value = "[" + Ke.join(" ") + "]";
       }
     }
     k("<<");
-    for (var Ae = 0; Ae < Xt.length; Ae++) k("/" + Xt[Ae].key + " " + Xt[Ae].value);
+    for (var Ae = 0; Ae < Kt.length; Ae++) k("/" + Kt[Ae].key + " " + Kt[Ae].value);
     k(">>"), Ft.data.length !== 0 && (k("stream"), k(Et(Ft.data)), k("endstream"));
   }, Zr = p.__private__.putPage = function(l) {
     var b = l.number, I = l.data, T = l.objId, G = l.contentsObjId;
@@ -2930,7 +2930,7 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
     for (b = 0; b < le; b++) T += I[b] + " 0 R ";
     k(T + "]"), k("/Count " + le), k(">>"), k("endobj"), ve.publish("postPutPages");
   }, Qr = function(l) {
-    ve.publish("putFont", { font: l, out: k, newObject: Te, putStream: Tn }), l.isAlreadyPutted !== !0 && (l.objectNumber = Te(), k("<<"), k("/Type /Font"), k("/BaseFont /" + Ki(l.postScriptName)), k("/Subtype /Type1"), typeof l.encoding == "string" && k("/Encoding /" + l.encoding), k("/FirstChar 32"), k("/LastChar 255"), k(">>"), k("endobj"));
+    ve.publish("putFont", { font: l, out: k, newObject: Te, putStream: Tn }), l.isAlreadyPutted !== !0 && (l.objectNumber = Te(), k("<<"), k("/Type /Font"), k("/BaseFont /" + Xi(l.postScriptName)), k("/Subtype /Type1"), typeof l.encoding == "string" && k("/Encoding /" + l.encoding), k("/FirstChar 32"), k("/LastChar 255"), k(">>"), k("endobj"));
   }, Li = function(l) {
     l.objectNumber = Te();
     var b = [];
@@ -2941,18 +2941,18 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
   }, Si = function(l, b) {
     b || (b = 21);
     var I = Te(), T = (function(gt, Et) {
-      var Ft, Xt = [], te = 1 / (Et - 1);
-      for (Ft = 0; Ft < 1; Ft += te) Xt.push(Ft);
-      if (Xt.push(1), gt[0].offset != 0) {
+      var Ft, Kt = [], te = 1 / (Et - 1);
+      for (Ft = 0; Ft < 1; Ft += te) Kt.push(Ft);
+      if (Kt.push(1), gt[0].offset != 0) {
         var de = { offset: 0, color: gt[0].color };
         gt.unshift(de);
       }
       if (gt[gt.length - 1].offset != 1) {
-        var Xe = { offset: 1, color: gt[gt.length - 1].color };
-        gt.push(Xe);
+        var Ke = { offset: 1, color: gt[gt.length - 1].color };
+        gt.push(Ke);
       }
-      for (var Ne = "", Ae = 0, Fe = 0; Fe < Xt.length; Fe++) {
-        for (Ft = Xt[Fe]; Ft > gt[Ae + 1].offset; ) Ae++;
+      for (var Ne = "", Ae = 0, Fe = 0; Fe < Kt.length; Fe++) {
+        for (Ft = Kt[Fe]; Ft > gt[Ae + 1].offset; ) Ae++;
         var Me = gt[Ae].offset, Re = (Ft - Me) / (gt[Ae + 1].offset - Me), cn = gt[Ae].color, Ar = gt[Ae + 1].color;
         Ne += V(Math.round((1 - Re) * cn[0] + Re * Ar[0]).toString(16)) + V(Math.round((1 - Re) * cn[1] + Re * Ar[1]).toString(16)) + V(Math.round((1 - Re) * cn[2] + Re * Ar[2]).toString(16));
       }
@@ -3006,18 +3006,18 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
     return ve.publish("addFont", { font: st, instance: this }), se[st.id] = st, Fa(st), st.id;
   }, Dn = p.__private__.pdfEscape = p.pdfEscape = function(l, b) {
     return (function(I, T) {
-      var G, st, gt, Et, Ft, Xt, te, de, Xe;
+      var G, st, gt, Et, Ft, Kt, te, de, Ke;
       if (gt = (T = T || {}).sourceEncoding || "Unicode", Ft = T.outputEncoding, (T.autoencode || Ft) && se[Bt].metadata && se[Bt].metadata[gt] && se[Bt].metadata[gt].encoding && (Et = se[Bt].metadata[gt].encoding, !Ft && se[Bt].encoding && (Ft = se[Bt].encoding), !Ft && Et.codePages && (Ft = Et.codePages[0]), typeof Ft == "string" && (Ft = Et[Ft]), Ft)) {
-        for (te = !1, Xt = [], G = 0, st = I.length; G < st; G++) (de = Ft[I.charCodeAt(G)]) ? Xt.push(String.fromCharCode(de)) : Xt.push(I[G]), Xt[G].charCodeAt(0) >> 8 && (te = !0);
-        I = Xt.join("");
+        for (te = !1, Kt = [], G = 0, st = I.length; G < st; G++) (de = Ft[I.charCodeAt(G)]) ? Kt.push(String.fromCharCode(de)) : Kt.push(I[G]), Kt[G].charCodeAt(0) >> 8 && (te = !0);
+        I = Kt.join("");
       }
       for (G = I.length; te === void 0 && G !== 0; ) I.charCodeAt(G - 1) >> 8 && (te = !0), G--;
       if (!te) return I;
-      for (Xt = T.noBOM ? [] : [254, 255], G = 0, st = I.length; G < st; G++) {
-        if ((Xe = (de = I.charCodeAt(G)) >> 8) >> 8) throw new Error("Character at position " + G + " of string '" + I + "' exceeds 16bits. Cannot be encoded into UCS-2 BE");
-        Xt.push(Xe), Xt.push(de - (Xe << 8));
+      for (Kt = T.noBOM ? [] : [254, 255], G = 0, st = I.length; G < st; G++) {
+        if ((Ke = (de = I.charCodeAt(G)) >> 8) >> 8) throw new Error("Character at position " + G + " of string '" + I + "' exceeds 16bits. Cannot be encoded into UCS-2 BE");
+        Kt.push(Ke), Kt.push(de - (Ke << 8));
       }
-      return String.fromCharCode.apply(void 0, Xt);
+      return String.fromCharCode.apply(void 0, Kt);
     })(l, b).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
   }, ea = p.__private__.beginPage = function(l) {
     _t[++le] = [], Vt[le] = { objId: 0, contentsObjId: 0, userUnit: Number(u), artBox: null, bleedBox: null, cropBox: null, trimBox: null, mediaBox: { bottomLeftX: 0, bottomLeftY: 0, topRightX: Number(l[0]), topRightY: Number(l[1]) } }, ja(le), zt(_t[j]);
@@ -3149,9 +3149,9 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
           st || (G = b.pdfObjectUrl);
           var gt = $t.open();
           if (gt !== null) {
-            var Et = Pn(gt), Ft = Et.document.createElement("script"), Xt = this;
+            var Et = Pn(gt), Ft = Et.document.createElement("script"), Kt = this;
             Ft.src = G, st && (Ft.integrity = "sha512-4ze/a9/4jqu+tX9dfOqJYSvyYd5M6qum/3HpCLr+/Jqf0whc37VUbkpNGHR7/8pSnCFw47T1fmIpwBV7UySh3g==", Ft.crossOrigin = "anonymous"), Ft.onload = function() {
-              gt.PDFObject.embed(Xt.output("dataurlstring"), b);
+              gt.PDFObject.embed(Kt.output("dataurlstring"), b);
             }, Et.body.appendChild(Ft);
           }
           return gt;
@@ -3161,10 +3161,10 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
         if (Object.prototype.toString.call($t) === "[object Window]") {
           var te = b.pdfJsUrl || "examples/PDF.js/web/viewer.html", de = $t.open();
           if (de !== null) {
-            var Xe = Pn(de), Ne = Xe.document.createElement("iframe"), Ae = te.indexOf("?") === -1 ? "?" : "&";
-            Xt = this, Ne.id = "pdfViewer", Ne.width = "500px", Ne.height = "400px", Ne.src = te + Ae + "file=&downloadName=" + encodeURIComponent(b.filename), Ne.onload = function() {
-              de.document.title = b.filename, Ne.contentWindow.PDFViewerApplication.open(Xt.output("bloburl"));
-            }, Xe.body.appendChild(Ne);
+            var Ke = Pn(de), Ne = Ke.document.createElement("iframe"), Ae = te.indexOf("?") === -1 ? "?" : "&";
+            Kt = this, Ne.id = "pdfViewer", Ne.width = "500px", Ne.height = "400px", Ne.src = te + Ae + "file=&downloadName=" + encodeURIComponent(b.filename), Ne.onload = function() {
+              de.document.title = b.filename, Ne.contentWindow.PDFViewerApplication.open(Kt.output("bloburl"));
+            }, Ke.body.appendChild(Ne);
           }
           return de;
         }
@@ -3196,7 +3196,7 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
       $t.console.error(b, I), $t.alert && alert(b);
     }
   }, Rn.foo.bar = Rn, Rn.foo), vr = function(l) {
-    return Array.isArray(Xr) === !0 && Xr.indexOf(l) > -1;
+    return Array.isArray(Kr) === !0 && Kr.indexOf(l) > -1;
   };
   switch (i) {
     case "pt":
@@ -3258,7 +3258,7 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
   }, p.deletePage = function() {
     return na.apply(this, arguments), this;
   }, p.__private__.text = p.text = function(l, b, I, T, G) {
-    var st, gt, Et, Ft, Xt, te, de, Xe, Ne, Ae = (T = T || {}).scope || this;
+    var st, gt, Et, Ft, Kt, te, de, Ke, Ne, Ae = (T = T || {}).scope || this;
     if (typeof l == "number" && typeof b == "number" && (typeof I == "string" || Array.isArray(I))) {
       var Fe = I;
       I = b, b = l, l = Fe;
@@ -3313,8 +3313,8 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
       var ca = Math.cos(Et), or = Math.sin(Et);
       Ne = new Gt(ca, or, -or, ca, 0, 0);
     } else Et && Et instanceof Gt && (Ne = Et);
-    D !== J || Ne || (Ne = br), (Xt = T.charSpace || ji) !== void 0 && (Re += tt(q(Xt)) + ` Tc
-`, this.setCharSpace(this.getCharSpace() || 0)), (Xe = T.horizontalScale) !== void 0 && (Re += tt(100 * Xe) + ` Tz
+    D !== J || Ne || (Ne = br), (Kt = T.charSpace || ji) !== void 0 && (Re += tt(q(Kt)) + ` Tc
+`, this.setCharSpace(this.getCharSpace() || 0)), (Ke = T.horizontalScale) !== void 0 && (Re += tt(100 * Ke) + ` Tz
 `), T.lang;
     var wn = -1, Ga = T.renderingMode !== void 0 ? T.renderingMode : T.stroke, Di = Ae.internal.getCurrentPageInfo().pageContext;
     switch (Ga) {
@@ -3357,9 +3357,9 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
 ` : Ya !== -1 && (Re += `0 Tr
 `), wn !== -1 && (Di.usedRenderingMode = wn), Ft = T.align || "left";
     var qn, li = vt * cn, fa = Ae.internal.pageSize.getWidth(), qi = se[Bt];
-    Xt = T.charSpace || ji, te = T.maxWidth || 0, de = Object.assign({ autoencode: !0, noBOM: !0 }, T.flags);
+    Kt = T.charSpace || ji, te = T.maxWidth || 0, de = Object.assign({ autoencode: !0, noBOM: !0 }, T.flags);
     var ui = [], da = function(Pe) {
-      return Ae.getStringUnitWidth(Pe, { font: qi, charSpace: Xt, fontSize: vt, doKerning: !1 }) * vt / Ar;
+      return Ae.getStringUnitWidth(Pe, { font: qi, charSpace: Kt, fontSize: vt, doKerning: !1 }) * vt / Ar;
     };
     if (Object.prototype.toString.call(l) === "[object Array]") {
       var yn;
@@ -3376,21 +3376,21 @@ Q`), an(G, !0), Tn({ data: st, filters: Gn(), objectId: G }), k("endobj"), T;
         for (var zi = 0; zi < fn; zi++) l.push(gt[zi]);
       } else if (Ft === "justify" && qi.encoding === "Identity-H") {
         l = [], fn = gt.length, te = te !== 0 ? te : fa;
-        for (var hi = 0, Ke = 0; Ke < fn; Ke++) if (yn = Ke === 0 ? yr(I) : -li, Nn = Ke === 0 ? wr(b) : hi, Ke < fn - 1) {
-          var Hs = q((te - qn[Ke]) / (gt[Ke].split(" ").length - 1)), lr = gt[Ke].split(" ");
+        for (var hi = 0, Xe = 0; Xe < fn; Xe++) if (yn = Xe === 0 ? yr(I) : -li, Nn = Xe === 0 ? wr(b) : hi, Xe < fn - 1) {
+          var Hs = q((te - qn[Xe]) / (gt[Xe].split(" ").length - 1)), lr = gt[Xe].split(" ");
           l.push([lr[0] + " ", Nn, yn]), hi = 0;
           for (var Yn = 1; Yn < lr.length; Yn++) {
             var ci = (da(lr[Yn - 1] + " " + lr[Yn]) - da(lr[Yn])) * Ar + Hs;
             Yn == lr.length - 1 ? l.push([lr[Yn], ci, 0]) : l.push([lr[Yn] + " ", ci, 0]), hi -= ci;
           }
-        } else l.push([gt[Ke], Nn, yn]);
+        } else l.push([gt[Xe], Nn, yn]);
         l.push(["", hi, 0]);
       } else {
         if (Ft !== "justify") throw new Error('Unrecognized alignment option, use "left", "center", "right" or "justify".');
-        for (l = [], fn = gt.length, te = te !== 0 ? te : fa, Ke = 0; Ke < fn; Ke++) {
-          yn = Ke === 0 ? yr(I) : -li, Nn = Ke === 0 ? wr(b) : 0;
-          var pa = gt[Ke].split(" ").length - 1, ga = pa > 0 ? (te - qn[Ke]) / pa : 0;
-          Ke < fn - 1 ? ui.push(tt(q(ga))) : ui.push(0), l.push([gt[Ke], Nn, yn]);
+        for (l = [], fn = gt.length, te = te !== 0 ? te : fa, Xe = 0; Xe < fn; Xe++) {
+          yn = Xe === 0 ? yr(I) : -li, Nn = Xe === 0 ? wr(b) : 0;
+          var pa = gt[Xe].split(" ").length - 1, ga = pa > 0 ? (te - qn[Xe]) / pa : 0;
+          Xe < fn - 1 ? ui.push(tt(q(ga))) : ui.push(0), l.push([gt[Xe], Nn, yn]);
         }
       }
     }
@@ -3521,9 +3521,9 @@ T* `) : l.join(` Tj
     if (isNaN(l) || isNaN(b) || isNaN(I) || isNaN(T) || !ar(G)) throw new Error("Invalid arguments passed to jsPDF.line");
     return D === Y ? this.lines([[I - l, T - b]], l, b, [1, 1], G || "S") : this.lines([[I - l, T - b]], l, b, [1, 1]).stroke();
   }, p.__private__.lines = p.lines = function(l, b, I, T, G, st) {
-    var gt, Et, Ft, Xt, te, de, Xe, Ne, Ae, Fe, Me, Re;
+    var gt, Et, Ft, Kt, te, de, Ke, Ne, Ae, Fe, Me, Re;
     if (typeof l == "number" && (Re = I, I = b, b = l, l = Re), T = T || [1, 1], st = st || !1, isNaN(b) || isNaN(I) || !Array.isArray(l) || !Array.isArray(T) || !ar(G) || typeof st != "boolean") throw new Error("Invalid arguments passed to jsPDF.lines");
-    for (Fr(b, I), gt = T[0], Et = T[1], Xt = l.length, Fe = b, Me = I, Ft = 0; Ft < Xt; Ft++) (te = l[Ft]).length === 2 ? (Fe = te[0] * gt + Fe, Me = te[1] * Et + Me, qa(Fe, Me)) : (de = te[0] * gt + Fe, Xe = te[1] * Et + Me, Ne = te[2] * gt + Fe, Ae = te[3] * Et + Me, Fe = te[4] * gt + Fe, Me = te[5] * Et + Me, Er(de, Xe, Ne, Ae, Fe, Me));
+    for (Fr(b, I), gt = T[0], Et = T[1], Kt = l.length, Fe = b, Me = I, Ft = 0; Ft < Kt; Ft++) (te = l[Ft]).length === 2 ? (Fe = te[0] * gt + Fe, Me = te[1] * Et + Me, qa(Fe, Me)) : (de = te[0] * gt + Fe, Ke = te[1] * Et + Me, Ne = te[2] * gt + Fe, Ae = te[3] * Et + Me, Fe = te[4] * gt + Fe, Me = te[5] * Et + Me, Er(de, Ke, Ne, Ae, Fe, Me));
     return st && Fi(), ia(G), this;
   }, p.path = function(l) {
     for (var b = 0; b < l.length; b++) {
@@ -3767,7 +3767,7 @@ T* `) : l.join(` Tj
   }, Va = p.setPageHeight = function(l, b) {
     za(l, b * ne);
   };
-  return p.internal = { pdfEscape: Dn, getStyle: Da, getFont: Os, getFontSize: Ct, getCharSpace: zs, getTextColor: Us, getLineHeight: Ms, getLineHeightFactor: Ts, getLineWidth: js, write: Lt, getHorizontalCoordinate: wr, getVerticalCoordinate: yr, getCoordinateString: Ds, getVerticalCoordinateString: qs, collections: {}, newObject: Te, newAdditionalObject: Kr, newObjectDeferred: rn, newObjectDeferredBegin: an, getFilters: Gn, putStream: Tn, events: ve, scaleFactor: ne, pageSize: { getWidth: function() {
+  return p.internal = { pdfEscape: Dn, getStyle: Da, getFont: Os, getFontSize: Ct, getCharSpace: zs, getTextColor: Us, getLineHeight: Ms, getLineHeightFactor: Ts, getLineWidth: js, write: Lt, getHorizontalCoordinate: wr, getVerticalCoordinate: yr, getCoordinateString: Ds, getVerticalCoordinateString: qs, collections: {}, newObject: Te, newAdditionalObject: Xr, newObjectDeferred: rn, newObjectDeferredBegin: an, getFilters: Gn, putStream: Tn, events: ve, scaleFactor: ne, pageSize: { getWidth: function() {
     return Ha(j);
   }, setWidth: function(l) {
     Wa(j, l);
@@ -3799,18 +3799,18 @@ T* `) : l.join(` Tj
     ve.publish("addFonts", { fonts: se, dictionary: oe });
   }).call(p, Ht), Bt = "F1", Oa(o, t), ve.publish("initialized"), p;
 }
-Xi.prototype.lsbFirstWord = function(n) {
+Ki.prototype.lsbFirstWord = function(n) {
   return String.fromCharCode(255 & n, n >> 8 & 255, n >> 16 & 255, n >> 24 & 255);
-}, Xi.prototype.toHexString = function(n) {
+}, Ki.prototype.toHexString = function(n) {
   return n.split("").map(function(e) {
     return ("0" + (255 & e.charCodeAt(0)).toString(16)).slice(-2);
   }).join("");
-}, Xi.prototype.hexToBytes = function(n) {
+}, Ki.prototype.hexToBytes = function(n) {
   for (var e = [], t = 0; t < n.length; t += 2) e.push(String.fromCharCode(parseInt(n.substr(t, 2), 16)));
   return e.join("");
-}, Xi.prototype.processOwnerPassword = function(n, e) {
+}, Ki.prototype.processOwnerPassword = function(n, e) {
   return Eo(Fo(e).substr(0, 5), n);
-}, Xi.prototype.encryptor = function(n, e) {
+}, Ki.prototype.encryptor = function(n, e) {
   var t = Fo(this.encryptionKey + String.fromCharCode(255 & n, n >> 8 & 255, n >> 16 & 255, 255 & e, e >> 8 & 255)).substr(0, 10);
   return function(i) {
     return Eo(t, i);
@@ -3835,7 +3835,7 @@ var Ue = Mt.API, Mo = 1, Ni = function(n) {
     var t = e.charCodeAt(0).toString(16).toUpperCase();
     return "#" + (t.length === 1 ? "0" + t : t);
   });
-}, Kt = function(n) {
+}, Xt = function(n) {
   return n.toFixed(2);
 }, Vr = function(n) {
   return n.toFixed(5);
@@ -3847,8 +3847,8 @@ var kn = function(n, e) {
   return n * Mo;
 }, cr = function(n) {
   var e = new rh(), t = It.internal.getHeight(n) || 0, i = It.internal.getWidth(n) || 0;
-  return e.BBox = [0, 0, Number(Kt(i)), Number(Kt(t))], e;
-}, Kf = Ue.__acroform__.setBit = function(n, e) {
+  return e.BBox = [0, 0, Number(Xt(i)), Number(Xt(t))], e;
+}, Xf = Ue.__acroform__.setBit = function(n, e) {
   if (n = n || 0, e = e || 0, isNaN(n) || isNaN(e)) throw new Error("Invalid arguments passed to jsPDF.API.__acroform__.setBit");
   return n | 1 << e;
 }, Zf = Ue.__acroform__.clearBit = function(n, e) {
@@ -3862,18 +3862,18 @@ var kn = function(n, e) {
   return Qf(n, e - 1);
 }, Ye = Ue.__acroform__.setBitForPdf = function(n, e) {
   if (isNaN(n) || isNaN(e)) throw new Error("Invalid arguments passed to jsPDF.API.__acroform__.setBitForPdf");
-  return Kf(n, e - 1);
+  return Xf(n, e - 1);
 }, Je = Ue.__acroform__.clearBitForPdf = function(n, e) {
   if (isNaN(n) || isNaN(e)) throw new Error("Invalid arguments passed to jsPDF.API.__acroform__.clearBitForPdf");
   return Zf(n, e - 1);
 }, t1 = Ue.__acroform__.calculateCoordinates = function(n, e) {
   var t = e.internal.getHorizontalCoordinate, i = e.internal.getVerticalCoordinate, o = n[0], s = n[1], f = n[2], u = n[3], c = {};
-  return c.lowerLeft_X = t(o) || 0, c.lowerLeft_Y = i(s + u) || 0, c.upperRight_X = t(o + f) || 0, c.upperRight_Y = i(s) || 0, [Number(Kt(c.lowerLeft_X)), Number(Kt(c.lowerLeft_Y)), Number(Kt(c.upperRight_X)), Number(Kt(c.upperRight_Y))];
+  return c.lowerLeft_X = t(o) || 0, c.lowerLeft_Y = i(s + u) || 0, c.upperRight_X = t(o + f) || 0, c.upperRight_Y = i(s) || 0, [Number(Xt(c.lowerLeft_X)), Number(Xt(c.lowerLeft_Y)), Number(Xt(c.upperRight_X)), Number(Xt(c.upperRight_Y))];
 }, e1 = function(n) {
   if (n.appearanceStreamContent) return n.appearanceStreamContent;
   if (n.V || n.DV) {
     var e = [], t = n._V || n.DV, i = Oo(n, t), o = n.scope.internal.getFont(n.fontName, n.fontStyle).id;
-    e.push("/Tx BMC"), e.push("q"), e.push("BT"), e.push(n.scope.__private__.encodeColorString(n.color)), e.push("/" + o + " " + Kt(i.fontSize) + " Tf"), e.push("1 0 0 1 0 0 Tm"), e.push(i.text), e.push("ET"), e.push("Q"), e.push("EMC");
+    e.push("/Tx BMC"), e.push("q"), e.push("BT"), e.push(n.scope.__private__.encodeColorString(n.color)), e.push("/" + o + " " + Xt(i.fontSize) + " Tf"), e.push("1 0 0 1 0 0 Tm"), e.push(i.text), e.push("ET"), e.push("Q"), e.push("EMC");
     var s = cr(n);
     return s.scope = n.scope, s.stream = e.join(`
 `), s;
@@ -3951,9 +3951,9 @@ var kn = function(n, e) {
         default:
           d = 2;
       }
-      e += Kt(d) + " " + Kt(p) + ` Td
+      e += Xt(d) + " " + Xt(p) + ` Td
 `, e += "(" + Ni(tt) + `) Tj
-`, e += -Kt(d) + ` 0 Td
+`, e += -Xt(d) + ` 0 Td
 `, p = -(s + 2), m = 0, B = D ? O : O + 1, Y++, S = "";
     }
     break;
@@ -4539,19 +4539,19 @@ var It = { CheckBox: { createAppearanceStream: function() {
   var e = cr(n);
   e.scope = n.scope;
   var t = [], i = n.scope.internal.getFont(n.fontName, n.fontStyle).id, o = n.scope.__private__.encodeColorString(n.color), s = Oo(n, n.caption);
-  return t.push("0.749023 g"), t.push("0 0 " + Kt(It.internal.getWidth(n)) + " " + Kt(It.internal.getHeight(n)) + " re"), t.push("f"), t.push("BMC"), t.push("q"), t.push("0 0 1 rg"), t.push("/" + i + " " + Kt(s.fontSize) + " Tf " + o), t.push("BT"), t.push(s.text), t.push("ET"), t.push("Q"), t.push("EMC"), e.stream = t.join(`
+  return t.push("0.749023 g"), t.push("0 0 " + Xt(It.internal.getWidth(n)) + " " + Xt(It.internal.getHeight(n)) + " re"), t.push("f"), t.push("BMC"), t.push("q"), t.push("0 0 1 rg"), t.push("/" + i + " " + Xt(s.fontSize) + " Tf " + o), t.push("BT"), t.push(s.text), t.push("ET"), t.push("Q"), t.push("EMC"), e.stream = t.join(`
 `), e;
 }, YesNormal: function(n) {
   var e = cr(n);
   e.scope = n.scope;
   var t = n.scope.internal.getFont(n.fontName, n.fontStyle).id, i = n.scope.__private__.encodeColorString(n.color), o = [], s = It.internal.getHeight(n), f = It.internal.getWidth(n), u = Oo(n, n.caption);
-  return o.push("1 g"), o.push("0 0 " + Kt(f) + " " + Kt(s) + " re"), o.push("f"), o.push("q"), o.push("0 0 1 rg"), o.push("0 0 " + Kt(f - 1) + " " + Kt(s - 1) + " re"), o.push("W"), o.push("n"), o.push("0 g"), o.push("BT"), o.push("/" + t + " " + Kt(u.fontSize) + " Tf " + i), o.push(u.text), o.push("ET"), o.push("Q"), e.stream = o.join(`
+  return o.push("1 g"), o.push("0 0 " + Xt(f) + " " + Xt(s) + " re"), o.push("f"), o.push("q"), o.push("0 0 1 rg"), o.push("0 0 " + Xt(f - 1) + " " + Xt(s - 1) + " re"), o.push("W"), o.push("n"), o.push("0 g"), o.push("BT"), o.push("/" + t + " " + Xt(u.fontSize) + " Tf " + i), o.push(u.text), o.push("ET"), o.push("Q"), e.stream = o.join(`
 `), e;
 }, OffPushDown: function(n) {
   var e = cr(n);
   e.scope = n.scope;
   var t = [];
-  return t.push("0.749023 g"), t.push("0 0 " + Kt(It.internal.getWidth(n)) + " " + Kt(It.internal.getHeight(n)) + " re"), t.push("f"), e.stream = t.join(`
+  return t.push("0.749023 g"), t.push("0 0 " + Xt(It.internal.getWidth(n)) + " " + Xt(It.internal.getHeight(n)) + " re"), t.push("f"), e.stream = t.join(`
 `), e;
 } }, RadioButton: { Circle: { createAppearanceStream: function(n) {
   var e = { D: { Off: It.RadioButton.Circle.OffPushDown }, N: {} };
@@ -4591,19 +4591,19 @@ var It = { CheckBox: { createAppearanceStream: function() {
   var e = cr(n);
   e.scope = n.scope;
   var t = [], i = It.internal.calculateCross(n);
-  return t.push("q"), t.push("1 1 " + Kt(It.internal.getWidth(n) - 2) + " " + Kt(It.internal.getHeight(n) - 2) + " re"), t.push("W"), t.push("n"), t.push(Kt(i.x1.x) + " " + Kt(i.x1.y) + " m"), t.push(Kt(i.x2.x) + " " + Kt(i.x2.y) + " l"), t.push(Kt(i.x4.x) + " " + Kt(i.x4.y) + " m"), t.push(Kt(i.x3.x) + " " + Kt(i.x3.y) + " l"), t.push("s"), t.push("Q"), e.stream = t.join(`
+  return t.push("q"), t.push("1 1 " + Xt(It.internal.getWidth(n) - 2) + " " + Xt(It.internal.getHeight(n) - 2) + " re"), t.push("W"), t.push("n"), t.push(Xt(i.x1.x) + " " + Xt(i.x1.y) + " m"), t.push(Xt(i.x2.x) + " " + Xt(i.x2.y) + " l"), t.push(Xt(i.x4.x) + " " + Xt(i.x4.y) + " m"), t.push(Xt(i.x3.x) + " " + Xt(i.x3.y) + " l"), t.push("s"), t.push("Q"), e.stream = t.join(`
 `), e;
 }, YesPushDown: function(n) {
   var e = cr(n);
   e.scope = n.scope;
   var t = It.internal.calculateCross(n), i = [];
-  return i.push("0.749023 g"), i.push("0 0 " + Kt(It.internal.getWidth(n)) + " " + Kt(It.internal.getHeight(n)) + " re"), i.push("f"), i.push("q"), i.push("1 1 " + Kt(It.internal.getWidth(n) - 2) + " " + Kt(It.internal.getHeight(n) - 2) + " re"), i.push("W"), i.push("n"), i.push(Kt(t.x1.x) + " " + Kt(t.x1.y) + " m"), i.push(Kt(t.x2.x) + " " + Kt(t.x2.y) + " l"), i.push(Kt(t.x4.x) + " " + Kt(t.x4.y) + " m"), i.push(Kt(t.x3.x) + " " + Kt(t.x3.y) + " l"), i.push("s"), i.push("Q"), e.stream = i.join(`
+  return i.push("0.749023 g"), i.push("0 0 " + Xt(It.internal.getWidth(n)) + " " + Xt(It.internal.getHeight(n)) + " re"), i.push("f"), i.push("q"), i.push("1 1 " + Xt(It.internal.getWidth(n) - 2) + " " + Xt(It.internal.getHeight(n) - 2) + " re"), i.push("W"), i.push("n"), i.push(Xt(t.x1.x) + " " + Xt(t.x1.y) + " m"), i.push(Xt(t.x2.x) + " " + Xt(t.x2.y) + " l"), i.push(Xt(t.x4.x) + " " + Xt(t.x4.y) + " m"), i.push(Xt(t.x3.x) + " " + Xt(t.x3.y) + " l"), i.push("s"), i.push("Q"), e.stream = i.join(`
 `), e;
 }, OffPushDown: function(n) {
   var e = cr(n);
   e.scope = n.scope;
   var t = [];
-  return t.push("0.749023 g"), t.push("0 0 " + Kt(It.internal.getWidth(n)) + " " + Kt(It.internal.getHeight(n)) + " re"), t.push("f"), e.stream = t.join(`
+  return t.push("0.749023 g"), t.push("0 0 " + Xt(It.internal.getWidth(n)) + " " + Xt(It.internal.getHeight(n)) + " re"), t.push("f"), e.stream = t.join(`
 `), e;
 } } }, createDefaultAppearanceStream: function(n) {
   var e = n.scope.internal.getFont(n.fontName, n.fontStyle).id, t = n.scope.__private__.encodeColorString(n.color);
@@ -5471,12 +5471,12 @@ function So(n) {
         vt[Tt] = Qt + le, vt[Tt + 4] = Qt - le;
         var ve = 0.707106781 * (Vt + je);
         vt[Tt + 2] = je + ve, vt[Tt + 6] = je - ve;
-        var Xr = 0.382683433 * ((Qt = Yt + qt) - (Vt = oe + ge)), hn = 0.5411961 * Qt + Xr, gr = 1.306562965 * Vt + Xr, tr = 0.707106781 * (le = qt + oe), Gt = ge + tr, mr = ge - tr;
+        var Kr = 0.382683433 * ((Qt = Yt + qt) - (Vt = oe + ge)), hn = 0.5411961 * Qt + Kr, gr = 1.306562965 * Vt + Kr, tr = 0.707106781 * (le = qt + oe), Gt = ge + tr, mr = ge - tr;
         vt[Tt + 5] = mr + hn, vt[Tt + 3] = mr - hn, vt[Tt + 1] = Gt + gr, vt[Tt + 7] = Gt - gr, Tt += 8;
       }
       for (Tt = 0, Bt = 0; Bt < 8; ++Bt) {
         Ct = vt[Tt], Ut = vt[Tt + 8], Dt = vt[Tt + 16], be = vt[Tt + 24], ue = vt[Tt + 32], Zt = vt[Tt + 40], ce = vt[Tt + 48];
-        var br = Ct + (he = vt[Tt + 56]), Mn = Ct - he, Rn = Ut + ce, Te = Ut - ce, rn = Dt + Zt, an = Dt - Zt, Kr = be + ue, Cr = be - ue, Wn = br + Kr, er = br - Kr, Vn = Rn + rn, Gn = Rn - rn;
+        var br = Ct + (he = vt[Tt + 56]), Mn = Ct - he, Rn = Ut + ce, Te = Ut - ce, rn = Dt + Zt, an = Dt - Zt, Xr = be + ue, Cr = be - ue, Wn = br + Xr, er = br - Xr, Vn = Rn + rn, Gn = Rn - rn;
         vt[Tt] = Wn + Vn, vt[Tt + 32] = Wn - Vn;
         var Tn = 0.707106781 * (Gn + er);
         vt[Tt + 16] = er + Tn, vt[Tt + 48] = er - Tn;
@@ -5570,7 +5570,7 @@ function So(n) {
  * Licensed under the MIT License.
  * http://opensource.org/licenses/mit-license
  */
-function Kn(n, e) {
+function Xn(n, e) {
   if (this.pos = 0, this.buffer = n, this.datav = new DataView(n.buffer), this.is_with_alpha = !!e, this.bottom_up = !0, this.flag = String.fromCharCode(this.buffer[0]) + String.fromCharCode(this.buffer[1]), this.pos += 2, ["BM", "BA", "CI", "CP", "IC", "PT"].indexOf(this.flag) === -1) throw new Error("Invalid BMP File");
   this.parseHeader(), this.parseBGR();
 }
@@ -5617,31 +5617,31 @@ function Su(n) {
       if (e(2328 >= v), 512 >= v) var w = s(512);
       else if ((w = s(v)) == null) return 0;
       return (function(y, _, L, C, H, Z) {
-        var F, W, X = _, ot = 1 << L, K = s(16), ut = s(16);
+        var F, W, K = _, ot = 1 << L, X = s(16), ut = s(16);
         for (e(H != 0), e(C != null), e(y != null), e(0 < L), W = 0; W < H; ++W) {
           if (15 < C[W]) return 0;
-          ++K[C[W]];
+          ++X[C[W]];
         }
-        if (K[0] == H) return 0;
+        if (X[0] == H) return 0;
         for (ut[1] = 0, F = 1; 15 > F; ++F) {
-          if (K[F] > 1 << F) return 0;
-          ut[F + 1] = ut[F] + K[F];
+          if (X[F] > 1 << F) return 0;
+          ut[F + 1] = ut[F] + X[F];
         }
         for (W = 0; W < H; ++W) F = C[W], 0 < C[W] && (Z[ut[F]++] = W);
-        if (ut[15] == 1) return (C = new q()).g = 0, C.value = Z[0], N(y, X, 1, ot, C), ot;
+        if (ut[15] == 1) return (C = new q()).g = 0, C.value = Z[0], N(y, K, 1, ot, C), ot;
         var ht, wt = -1, bt = ot - 1, Rt = 0, Pt = 1, re = 1, Ot = 1 << L;
         for (W = 0, F = 1, H = 2; F <= L; ++F, H <<= 1) {
-          if (Pt += re <<= 1, 0 > (re -= K[F])) return 0;
-          for (; 0 < K[F]; --K[F]) (C = new q()).g = F, C.value = Z[W++], N(y, X + Rt, H, Ot, C), Rt = et(Rt, F);
+          if (Pt += re <<= 1, 0 > (re -= X[F])) return 0;
+          for (; 0 < X[F]; --X[F]) (C = new q()).g = F, C.value = Z[W++], N(y, K + Rt, H, Ot, C), Rt = et(Rt, F);
         }
         for (F = L + 1, H = 2; 15 >= F; ++F, H <<= 1) {
-          if (Pt += re <<= 1, 0 > (re -= K[F])) return 0;
-          for (; 0 < K[F]; --K[F]) {
+          if (Pt += re <<= 1, 0 > (re -= X[F])) return 0;
+          for (; 0 < X[F]; --X[F]) {
             if (C = new q(), (Rt & bt) != wt) {
-              for (X += Ot, ht = 1 << (wt = F) - L; 15 > wt && !(0 >= (ht -= K[wt])); ) ++wt, ht <<= 1;
-              ot += Ot = 1 << (ht = wt - L), y[_ + (wt = Rt & bt)].g = ht + L, y[_ + wt].value = X - _ - wt;
+              for (K += Ot, ht = 1 << (wt = F) - L; 15 > wt && !(0 >= (ht -= X[wt])); ) ++wt, ht <<= 1;
+              ot += Ot = 1 << (ht = wt - L), y[_ + (wt = Rt & bt)].g = ht + L, y[_ + wt].value = K - _ - wt;
             }
-            C.g = F - L, C.value = Z[W++], N(y, X + (Rt >> L), H, Ot, C), Rt = et(Rt, F);
+            C.g = F - L, C.value = Z[W++], N(y, K + (Rt >> L), H, Ot, C), Rt = et(Rt, F);
           }
         }
         return Pt != 2 * ut[15] - 1 ? 0 : ot;
@@ -5795,12 +5795,12 @@ function Su(n) {
       z[a] = function(w, y, _, L, C, H, Z, F, W) {
         for (L = Z; L < F; ++L) for (Z = 0; Z < W; ++Z) C[H++] = v(_[g(w[y++])]);
       }, z[r] = function(w, y, _, L, C, H, Z) {
-        var F = 8 >> w.b, W = w.Ea, X = w.K[0], ot = w.w;
+        var F = 8 >> w.b, W = w.Ea, K = w.K[0], ot = w.w;
         if (8 > F) for (w = (1 << w.b) - 1, ot = (1 << F) - 1; y < _; ++y) {
-          var K, ut = 0;
-          for (K = 0; K < W; ++K) K & w || (ut = g(L[C++])), H[Z++] = v(X[ut & ot]), ut >>= F;
+          var X, ut = 0;
+          for (X = 0; X < W; ++X) X & w || (ut = g(L[C++])), H[Z++] = v(K[ut & ot]), ut >>= F;
         }
-        else z["VP8LMapColor" + h](L, C, X, ot, H, Z, y, _, W);
+        else z["VP8LMapColor" + h](L, C, K, ot, H, Z, y, _, W);
       };
     }
     function ze(r, a, h, g, v) {
@@ -5858,12 +5858,12 @@ function Su(n) {
     function ve() {
       this.Id = this.fd = this.Md = this.hb = this.ib = this.da = this.bd = this.cd = this.j = this.v = this.Da = this.Sd = this.ob = 0;
     }
-    function Xr(r) {
+    function Kr(r) {
       return alert("todo:WebPSamplerProcessPlane"), r.T;
     }
     function hn(r, a) {
-      var h = r.T, g = a.ba.f.RGBA, v = g.eb, w = g.fb + r.ka * g.A, y = zn[a.ba.S], _ = r.y, L = r.O, C = r.f, H = r.N, Z = r.ea, F = r.W, W = a.cc, X = a.dc, ot = a.Mc, K = a.Nc, ut = r.ka, ht = r.ka + r.T, wt = r.U, bt = wt + 1 >> 1;
-      for (ut == 0 ? y(_, L, null, null, C, H, Z, F, C, H, Z, F, v, w, null, null, wt) : (y(a.ec, a.fc, _, L, W, X, ot, K, C, H, Z, F, v, w - g.A, v, w, wt), ++h); ut + 2 < ht; ut += 2) W = C, X = H, ot = Z, K = F, H += r.Rc, F += r.Rc, w += 2 * g.A, y(_, (L += 2 * r.fa) - r.fa, _, L, W, X, ot, K, C, H, Z, F, v, w - g.A, v, w, wt);
+      var h = r.T, g = a.ba.f.RGBA, v = g.eb, w = g.fb + r.ka * g.A, y = zn[a.ba.S], _ = r.y, L = r.O, C = r.f, H = r.N, Z = r.ea, F = r.W, W = a.cc, K = a.dc, ot = a.Mc, X = a.Nc, ut = r.ka, ht = r.ka + r.T, wt = r.U, bt = wt + 1 >> 1;
+      for (ut == 0 ? y(_, L, null, null, C, H, Z, F, C, H, Z, F, v, w, null, null, wt) : (y(a.ec, a.fc, _, L, W, K, ot, X, C, H, Z, F, v, w - g.A, v, w, wt), ++h); ut + 2 < ht; ut += 2) W = C, K = H, ot = Z, X = F, H += r.Rc, F += r.Rc, w += 2 * g.A, y(_, (L += 2 * r.fa) - r.fa, _, L, W, K, ot, X, C, H, Z, F, v, w - g.A, v, w, wt);
       return L += r.fa, r.j + ht < r.o ? (i(a.ec, a.fc, _, L, wt), i(a.cc, a.dc, C, H, bt), i(a.Mc, a.Nc, Z, F, bt), h--) : 1 & ht || y(_, L, null, null, C, H, Z, F, C, H, Z, F, v, w + g.A, null, null, wt), h;
     }
     function gr(r, a, h) {
@@ -5879,12 +5879,12 @@ function Su(n) {
       return 0;
     }
     function tr(r) {
-      var a = r.ma, h = a.ba.S, g = 11 > h, v = h == Ka || h == Za || h == Qa || h == Vs || h == 12 || Yt(h);
+      var a = r.ma, h = a.ba.S, g = 11 > h, v = h == Xa || h == Za || h == Qa || h == Vs || h == 12 || Yt(h);
       if (a.memory = null, a.Ib = null, a.Jb = null, a.Nd = null, !qn(a.Oa, r, v ? 11 : 12)) return 0;
       if (v && Yt(h) && Ar(), r.da) alert("todo:use_scaling");
       else {
         if (g) {
-          if (a.Ib = Xr, r.Kb) {
+          if (a.Ib = Kr, r.Kb) {
             if (h = r.U + 1 >> 1, a.memory = s(r.U + 2 * h), a.memory == null) return 0;
             a.ec = a.memory, a.fc = 0, a.cc = a.ec, a.dc = a.fc + r.U, a.Mc = a.cc, a.Nc = a.dc + h, a.Ib = hn, Ar();
           }
@@ -5893,7 +5893,7 @@ function Su(n) {
       }
       if (g && !il) {
         for (r = 0; 256 > r; ++r) Ch[r] = 89858 * (r - 128) + ns >> es, Oh[r] = -22014 * (r - 128) + ns, Eh[r] = -45773 * (r - 128), Fh[r] = 113618 * (r - 128) + ns >> es;
-        for (r = wa; r < Ks; ++r) a = 76283 * (r - 16) + ns >> es, jh[r - wa] = rr(a, 255), Bh[r - wa] = rr(a + 8 >> 4, 15);
+        for (r = wa; r < Xs; ++r) a = 76283 * (r - 16) + ns >> es, jh[r - wa] = rr(a, 255), Bh[r - wa] = rr(a + 8 >> 4, 15);
         il = 1;
       }
       return 1;
@@ -5928,20 +5928,20 @@ function Su(n) {
       var g = r.xc;
       return e((a = g == 0 ? 0 : r.vc[r.md * (h >> g) + (a >> g)]) < r.Wb), r.Ya[a];
     }
-    function Kr(r, a, h, g) {
+    function Xr(r, a, h, g) {
       var v = r.ab, w = r.c * a, y = r.C;
       a = y + a;
       var _ = h, L = g;
       for (g = r.Ta, h = r.Ua; 0 < v--; ) {
-        var C = r.gc[v], H = y, Z = a, F = _, W = L, X = (L = g, _ = h, C.Ea);
+        var C = r.gc[v], H = y, Z = a, F = _, W = L, K = (L = g, _ = h, C.Ea);
         switch (e(H < Z), e(Z <= C.nc), C.hc) {
           case 2:
-            zi(F, W, (Z - H) * X, L, _);
+            zi(F, W, (Z - H) * K, L, _);
             break;
           case 0:
-            var ot = H, K = Z, ut = L, ht = _, wt = (Ot = C).Ea;
+            var ot = H, X = Z, ut = L, ht = _, wt = (Ot = C).Ea;
             ot == 0 && (Br(F, W, null, null, 1, ut, ht), ce(F, W + 1, 0, 0, wt - 1, ut, ht + 1), W += wt, ht += wt, ++ot);
-            for (var bt = 1 << Ot.b, Rt = bt - 1, Pt = vt(wt, Ot.b), re = Ot.K, Ot = Ot.w + (ot >> Ot.b) * Pt; ot < K; ) {
+            for (var bt = 1 << Ot.b, Rt = bt - 1, Pt = vt(wt, Ot.b), re = Ot.K, Ot = Ot.w + (ot >> Ot.b) * Pt; ot < X; ) {
               var fe = re, Qe = Ot, ie = 1;
               for (Mr(F, W, ut, ht - wt, 1, ut, ht); ie < wt; ) {
                 var jt = (ie & ~Rt) + bt;
@@ -5949,19 +5949,19 @@ function Su(n) {
               }
               W += wt, ht += wt, ++ot & Rt || (Ot += Pt);
             }
-            Z != C.nc && i(L, _ - X, L, _ + (Z - H - 1) * X, X);
+            Z != C.nc && i(L, _ - K, L, _ + (Z - H - 1) * K, K);
             break;
           case 1:
-            for (X = F, K = W, wt = (F = C.Ea) - (ht = F & ~(ut = (W = 1 << C.b) - 1)), ot = vt(F, C.b), bt = C.K, C = C.w + (H >> C.b) * ot; H < Z; ) {
-              for (Rt = bt, Pt = C, re = new Ut(), Ot = K + ht, fe = K + F; K < Ot; ) Bt(Rt[Pt++], re), ci(re, X, K, W, L, _), K += W, _ += W;
-              K < fe && (Bt(Rt[Pt++], re), ci(re, X, K, wt, L, _), K += wt, _ += wt), ++H & ut || (C += ot);
+            for (K = F, X = W, wt = (F = C.Ea) - (ht = F & ~(ut = (W = 1 << C.b) - 1)), ot = vt(F, C.b), bt = C.K, C = C.w + (H >> C.b) * ot; H < Z; ) {
+              for (Rt = bt, Pt = C, re = new Ut(), Ot = X + ht, fe = X + F; X < Ot; ) Bt(Rt[Pt++], re), ci(re, K, X, W, L, _), X += W, _ += W;
+              X < fe && (Bt(Rt[Pt++], re), ci(re, K, X, wt, L, _), X += wt, _ += wt), ++H & ut || (C += ot);
             }
             break;
           case 3:
             if (F == L && W == _ && 0 < C.b) {
-              for (K = L, F = X = _ + (Z - H) * X - (ht = (Z - H) * vt(C.Ea, C.b)), W = L, ut = _, ot = [], ht = (wt = ht) - 1; 0 <= ht; --ht) ot[ht] = W[ut + ht];
-              for (ht = wt - 1; 0 <= ht; --ht) K[F + ht] = ot[ht];
-              hi(C, H, Z, L, X, L, _);
+              for (X = L, F = K = _ + (Z - H) * K - (ht = (Z - H) * vt(C.Ea, C.b)), W = L, ut = _, ot = [], ht = (wt = ht) - 1; 0 <= ht; --ht) ot[ht] = W[ut + ht];
+              for (ht = wt - 1; 0 <= ht; --ht) X[F + ht] = ot[ht];
+              hi(C, H, Z, L, K, L, _);
             } else hi(C, H, Z, F, W, L, _);
         }
         _ = g, L = h;
@@ -5972,7 +5972,7 @@ function Su(n) {
       var h = r.V, g = r.Ba + r.c * r.C, v = a - r.C;
       if (e(a <= r.l.o), e(16 >= v), 0 < v) {
         var w = r.l, y = r.Ta, _ = r.Ua, L = w.width;
-        if (Kr(r, v, h, g), v = _ = [_], e((h = r.C) < (g = a)), e(w.v < w.va), g > w.o && (g = w.o), h < w.j) {
+        if (Xr(r, v, h, g), v = _ = [_], e((h = r.C) < (g = a)), e(w.v < w.va), g > w.o && (g = w.o), h < w.j) {
           var C = w.j - h;
           h = w.j, v[0] += C * L;
         }
@@ -5980,40 +5980,40 @@ function Su(n) {
           if (_ = _[0], 11 > (h = r.ca).S) {
             var H = h.f.RGBA, Z = (g = h.S, v = w.U, w = w.T, C = H.eb, H.A), F = w;
             for (H = H.fb + r.Ma * H.A; 0 < F--; ) {
-              var W = y, X = _, ot = v, K = C, ut = H;
+              var W = y, K = _, ot = v, X = C, ut = H;
               switch (g) {
-                case Xa:
-                  pa(W, X, ot, K, ut);
-                  break;
                 case Ka:
-                  ga(W, X, ot, K, ut);
+                  pa(W, K, ot, X, ut);
+                  break;
+                case Xa:
+                  ga(W, K, ot, X, ut);
                   break;
                 case Gs:
-                  ga(W, X, ot, K, ut), ba(K, ut, 0, ot, 1, 0);
+                  ga(W, K, ot, X, ut), ba(X, ut, 0, ot, 1, 0);
                   break;
                 case $o:
-                  di(W, X, ot, K, ut);
+                  di(W, K, ot, X, ut);
                   break;
                 case Za:
-                  qt(W, X, ot, K, ut, 1);
+                  qt(W, K, ot, X, ut, 1);
                   break;
                 case Ys:
-                  qt(W, X, ot, K, ut, 1), ba(K, ut, 0, ot, 1, 0);
+                  qt(W, K, ot, X, ut, 1), ba(X, ut, 0, ot, 1, 0);
                   break;
                 case Qa:
-                  qt(W, X, ot, K, ut, 0);
+                  qt(W, K, ot, X, ut, 0);
                   break;
                 case ts:
-                  qt(W, X, ot, K, ut, 0), ba(K, ut, 1, ot, 1, 0);
+                  qt(W, K, ot, X, ut, 0), ba(X, ut, 1, ot, 1, 0);
                   break;
                 case Vs:
-                  Hi(W, X, ot, K, ut);
+                  Hi(W, K, ot, X, ut);
                   break;
                 case Js:
-                  Hi(W, X, ot, K, ut), Uo(K, ut, ot, 1, 0);
+                  Hi(W, K, ot, X, ut), Uo(X, ut, ot, 1, 0);
                   break;
-                case Xo:
-                  fi(W, X, ot, K, ut);
+                case Ko:
+                  fi(W, K, ot, X, ut);
                   break;
                 default:
                   e(0);
@@ -6054,7 +6054,7 @@ function Su(n) {
     function Gn(r, a, h, g, v, w, y) {
       var _ = r.$ / g, L = r.$ % g, C = r.m, H = r.s, Z = h + r.$, F = Z;
       v = h + g * v;
-      var W = h + g * w, X = 280 + H.ua, ot = r.Pb ? _ : 16777216, K = 0 < H.ua ? H.Wa : null, ut = H.wc, ht = Z < W ? an(H, L, _) : null;
+      var W = h + g * w, K = 280 + H.ua, ot = r.Pb ? _ : 16777216, X = 0 < H.ua ? H.Wa : null, ut = H.wc, ht = Z < W ? an(H, L, _) : null;
       e(r.C < w), e(W <= v);
       var wt = !1;
       t: for (; ; ) {
@@ -6076,17 +6076,17 @@ function Su(n) {
               if (Q(C), wt = Te(ht.G[1], ht.H[1], C), Q(C), Rt = Te(ht.G[2], ht.H[2], C), Pt = Te(ht.G[3], ht.H[3], C), C.h) break;
               a[Z] = (Pt << 24 | wt << 16 | bt << 8 | Rt) >>> 0;
             }
-            if (wt = !1, ++Z, ++L >= g && (L = 0, ++_, y != null && _ <= w && !(_ % 16) && y(r, _), K != null)) for (; F < Z; ) bt = a[F++], K.X[(506832829 * bt & 4294967295) >>> K.Mb] = bt;
+            if (wt = !1, ++Z, ++L >= g && (L = 0, ++_, y != null && _ <= w && !(_ % 16) && y(r, _), X != null)) for (; F < Z; ) bt = a[F++], X.X[(506832829 * bt & 4294967295) >>> X.Mb] = bt;
           } else if (280 > bt) {
             if (bt = Mn(bt - 256, C), Rt = Te(ht.G[4], ht.H[4], C), Q(C), Rt = Rn(g, Rt = Mn(Rt, C)), C.h) break;
             if (Z - h < Rt || v - Z < bt) break t;
             for (Pt = 0; Pt < bt; ++Pt) a[Z + Pt] = a[Z + Pt - Rt];
             for (Z += bt, L += bt; L >= g; ) L -= g, ++_, y != null && _ <= w && !(_ % 16) && y(r, _);
-            if (e(Z <= v), L & ut && (ht = an(H, L, _)), K != null) for (; F < Z; ) bt = a[F++], K.X[(506832829 * bt & 4294967295) >>> K.Mb] = bt;
+            if (e(Z <= v), L & ut && (ht = an(H, L, _)), X != null) for (; F < Z; ) bt = a[F++], X.X[(506832829 * bt & 4294967295) >>> X.Mb] = bt;
           } else {
-            if (!(bt < X)) break t;
-            for (wt = bt - 280, e(K != null); F < Z; ) bt = a[F++], K.X[(506832829 * bt & 4294967295) >>> K.Mb] = bt;
-            bt = Z, e(!(wt >>> (Rt = K).Xa)), a[bt] = Rt.X[wt], wt = !0;
+            if (!(bt < K)) break t;
+            for (wt = bt - 280, e(X != null); F < Z; ) bt = a[F++], X.X[(506832829 * bt & 4294967295) >>> X.Mb] = bt;
+            bt = Z, e(!(wt >>> (Rt = X).Xa)), a[bt] = Rt.X[wt], wt = !0;
           }
           wt || e(C.h == V(C));
         }
@@ -6106,23 +6106,23 @@ function Su(n) {
     }
     function Zr() {
       var r = new Et();
-      return r == null ? null : (r.a = 0, r.xb = Qo, ke("Predictor", "VP8LPredictors"), ke("Predictor", "VP8LPredictors_C"), ke("PredictorAdd", "VP8LPredictorsAdd"), ke("PredictorAdd", "VP8LPredictorsAdd_C"), zi = he, ci = ne, pa = ze, ga = ge, Hi = se, fi = oe, di = Oe, z.VP8LMapColor32b = Ke, z.VP8LMapColor8b = lr, r);
+      return r == null ? null : (r.a = 0, r.xb = Qo, ke("Predictor", "VP8LPredictors"), ke("Predictor", "VP8LPredictors_C"), ke("PredictorAdd", "VP8LPredictorsAdd"), ke("PredictorAdd", "VP8LPredictorsAdd_C"), zi = he, ci = ne, pa = ze, ga = ge, Hi = se, fi = oe, di = Oe, z.VP8LMapColor32b = Xe, z.VP8LMapColor8b = lr, r);
     }
     function nr(r, a, h, g, v) {
       var w = 1, y = [r], _ = [a], L = g.m, C = g.s, H = null, Z = 0;
       t: for (; ; ) {
         if (h) for (; w && xt(L, 1); ) {
-          var F = y, W = _, X = g, ot = 1, K = X.m, ut = X.gc[X.ab], ht = xt(K, 2);
-          if (X.Oc & 1 << ht) w = 0;
+          var F = y, W = _, K = g, ot = 1, X = K.m, ut = K.gc[K.ab], ht = xt(X, 2);
+          if (K.Oc & 1 << ht) w = 0;
           else {
-            switch (X.Oc |= 1 << ht, ut.hc = ht, ut.Ea = F[0], ut.nc = W[0], ut.K = [null], ++X.ab, e(4 >= X.ab), ht) {
+            switch (K.Oc |= 1 << ht, ut.hc = ht, ut.Ea = F[0], ut.nc = W[0], ut.K = [null], ++K.ab, e(4 >= K.ab), ht) {
               case 0:
               case 1:
-                ut.b = xt(K, 3) + 2, ot = nr(vt(ut.Ea, ut.b), vt(ut.nc, ut.b), 0, X, ut.K), ut.K = ut.K[0];
+                ut.b = xt(X, 3) + 2, ot = nr(vt(ut.Ea, ut.b), vt(ut.nc, ut.b), 0, K, ut.K), ut.K = ut.K[0];
                 break;
               case 3:
-                var wt, bt = xt(K, 8) + 1, Rt = 16 < bt ? 0 : 4 < bt ? 1 : 2 < bt ? 2 : 3;
-                if (F[0] = vt(ut.Ea, Rt), ut.b = Rt, wt = ot = nr(bt, 1, 0, X, ut.K)) {
+                var wt, bt = xt(X, 8) + 1, Rt = 16 < bt ? 0 : 4 < bt ? 1 : 2 < bt ? 2 : 3;
+                if (F[0] = vt(ut.Ea, Rt), ut.b = Rt, wt = ot = nr(bt, 1, 0, K, ut.K)) {
                   var Pt, re = bt, Ot = ut, fe = 1 << (8 >> Ot.b), Qe = s(fe);
                   if (Qe == null) wt = 0;
                   else {
@@ -6160,7 +6160,7 @@ function Su(n) {
             }
             if (_n.h) break n;
             for (ee = 0; 5 > ee; ++ee) {
-              var en = Ko[ee];
+              var en = Xo[ee];
               !ee && 0 < De && (en += 1 << De), qe < en && (qe = en);
             }
             var Cn = f(we * ye, q), An = we, Fn = f(An, rt);
@@ -6173,9 +6173,9 @@ function Su(n) {
             }
             var On = Cn;
             for (We = pe = 0; We < we; ++We) {
-              var Ce = En[We], jn = Ce.G, Xn = Ce.H, pi = 0, kr = 1, un = 0;
+              var Ce = En[We], jn = Ce.G, Kn = Ce.H, pi = 0, kr = 1, un = 0;
               for (ee = 0; 5 > ee; ++ee) {
-                en = Ko[ee], jn[ee] = On, Xn[ee] = pe, !ee && 0 < De && (en += 1 << De);
+                en = Xo[ee], jn[ee] = On, Kn[ee] = pe, !ee && 0 < De && (en += 1 << De);
                 i: {
                   var is, Zs = en, as = Ee, ya = Sn, Th = On, Dh = pe, Qs = 0, Ur = as.m, qh = xt(Ur, 1);
                   if (o(ya, 0, 0, Zs), qh) {
@@ -6222,7 +6222,7 @@ function Su(n) {
                   un += no;
                 }
               }
-              if (Ce.nd = kr, Ce.Qb = 0, kr && (Ce.qb = (jn[3][Xn[3] + 0].value << 24 | jn[1][Xn[1] + 0].value << 16 | jn[2][Xn[2] + 0].value) >>> 0, pi == 0 && 256 > jn[0][Xn[0] + 0].value && (Ce.Qb = 1, Ce.qb += jn[0][Xn[0] + 0].value << 8)), Ce.jc = !Ce.Qb && 6 > un, Ce.jc) {
+              if (Ce.nd = kr, Ce.Qb = 0, kr && (Ce.qb = (jn[3][Kn[3] + 0].value << 24 | jn[1][Kn[1] + 0].value << 16 | jn[2][Kn[2] + 0].value) >>> 0, pi == 0 && 256 > jn[0][Kn[0] + 0].value && (Ce.Qb = 1, Ce.qb += jn[0][Kn[0] + 0].value << 8)), Ce.jc = !Ce.Qb && 6 > un, Ce.jc) {
                 var us, Pr = Ce;
                 for (us = 0; us < qi; ++us) {
                   var Hr = us, Wr = Pr.pd[Hr], hs = Pr.G[0][Pr.H[0] + Hr];
@@ -6267,7 +6267,7 @@ function Su(n) {
       var h = r.C, g = a - h, v = r.V, w = r.Ba + r.c * h;
       for (e(a <= r.l.o); 0 < g; ) {
         var y = 16 < g ? 16 : g, _ = r.l.ma, L = r.l.width, C = L * y, H = _.ca, Z = _.tb + L * h, F = r.Ta, W = r.Ua;
-        Kr(r, y, v, w), Ho(F, W, H, Z, C), er(_, h, h + y, H, Z, L), g -= y, v += y * r.c, h += y;
+        Xr(r, y, v, w), Ho(F, W, H, Z, C), er(_, h, h + y, H, Z, L), g -= y, v += y * r.c, h += y;
       }
       e(h == a), r.C = r.Ma = a;
     }
@@ -6384,7 +6384,7 @@ function Su(n) {
           F = h;
         }
         var W = r.pb[Z];
-        W.Sc[0] = $s[rr(F + v, 127)], W.Sc[1] = Xs[rr(F + 0, 127)], W.Eb[0] = 2 * $s[rr(F + g, 127)], W.Eb[1] = 101581 * Xs[rr(F + _, 127)] >> 16, 8 > W.Eb[1] && (W.Eb[1] = 8), W.Qc[0] = $s[rr(F + C, 117)], W.Qc[1] = Xs[rr(F + L, 127)], W.lc = F + L;
+        W.Sc[0] = $s[rr(F + v, 127)], W.Sc[1] = Ks[rr(F + 0, 127)], W.Eb[0] = 2 * $s[rr(F + g, 127)], W.Eb[1] = 101581 * Ks[rr(F + _, 127)] >> 16, 8 > W.Eb[1] && (W.Eb[1] = 8), W.Qc[0] = $s[rr(F + C, 117)], W.Qc[1] = Ks[rr(F + L, 127)], W.lc = F + L;
       }
       if (!y.Rb) return $e(r, 4, "Not a key frame.");
       for (at(w), y = r.Pa, h = 0; 4 > h; ++h) {
@@ -6612,8 +6612,8 @@ function Su(n) {
       for (w = 2 * w + 1; 0 < v--; ) {
         if (la(r, a, h, w, y)) if (oa(r, a, h, _)) Or(r, a, h);
         else {
-          var L = r, C = a, H = h, Z = L[C - 2 * H], F = L[C - H], W = L[C + 0], X = L[C + H], ot = L[C + 2 * H], K = 27 * (ht = Ws[1020 + 3 * (W - F) + Ws[1020 + Z - X]]) + 63 >> 7, ut = 18 * ht + 63 >> 7, ht = 9 * ht + 63 >> 7;
-          L[C - 3 * H] = In[255 + L[C - 3 * H] + ht], L[C - 2 * H] = In[255 + Z + ut], L[C - H] = In[255 + F + K], L[C + 0] = In[255 + W - K], L[C + H] = In[255 + X - ut], L[C + 2 * H] = In[255 + ot - ht];
+          var L = r, C = a, H = h, Z = L[C - 2 * H], F = L[C - H], W = L[C + 0], K = L[C + H], ot = L[C + 2 * H], X = 27 * (ht = Ws[1020 + 3 * (W - F) + Ws[1020 + Z - K]]) + 63 >> 7, ut = 18 * ht + 63 >> 7, ht = 9 * ht + 63 >> 7;
+          L[C - 3 * H] = In[255 + L[C - 3 * H] + ht], L[C - 2 * H] = In[255 + Z + ut], L[C - H] = In[255 + F + X], L[C + 0] = In[255 + W - X], L[C + H] = In[255 + K - ut], L[C + 2 * H] = In[255 + ot - ht];
         }
         a += g;
       }
@@ -6622,8 +6622,8 @@ function Su(n) {
       for (w = 2 * w + 1; 0 < v--; ) {
         if (la(r, a, h, w, y)) if (oa(r, a, h, _)) Or(r, a, h);
         else {
-          var L = r, C = a, H = h, Z = L[C - H], F = L[C + 0], W = L[C + H], X = $a[112 + (4 + (ot = 3 * (F - Z)) >> 3)], ot = $a[112 + (ot + 3 >> 3)], K = X + 1 >> 1;
-          L[C - 2 * H] = In[255 + L[C - 2 * H] + K], L[C - H] = In[255 + Z + ot], L[C + 0] = In[255 + F - X], L[C + H] = In[255 + W - K];
+          var L = r, C = a, H = h, Z = L[C - H], F = L[C + 0], W = L[C + H], K = $a[112 + (4 + (ot = 3 * (F - Z)) >> 3)], ot = $a[112 + (ot + 3 >> 3)], X = K + 1 >> 1;
+          L[C - 2 * H] = In[255 + L[C - 2 * H] + X], L[C - H] = In[255 + Z + ot], L[C + 0] = In[255 + F - K], L[C + H] = In[255 + W - X];
         }
         a += g;
       }
@@ -6672,22 +6672,22 @@ function Su(n) {
     function Ft() {
       this.Lc = this.Z = this.$a = this.i = this.c = 0, this.l = new Pi(), this.ic = 0, this.ca = [], this.tb = 0, this.qd = null, this.rd = 0;
     }
-    function Xt(r, a, h, g, v, w, y) {
+    function Kt(r, a, h, g, v, w, y) {
       for (r = r == null ? 0 : r[a + 0], a = 0; a < y; ++a) v[w + a] = r + h[g + a] & 255, r = v[w + a];
     }
     function te(r, a, h, g, v, w, y) {
       var _;
-      if (r == null) Xt(null, null, h, g, v, w, y);
+      if (r == null) Kt(null, null, h, g, v, w, y);
       else for (_ = 0; _ < y; ++_) v[w + _] = r[a + _] + h[g + _] & 255;
     }
     function de(r, a, h, g, v, w, y) {
-      if (r == null) Xt(null, null, h, g, v, w, y);
+      if (r == null) Kt(null, null, h, g, v, w, y);
       else {
         var _, L = r[a + 0], C = L, H = L;
         for (_ = 0; _ < y; ++_) C = H + (L = r[a + _]) - C, H = h[g + _] + (-256 & C ? 0 > C ? 0 : 255 : C) & 255, C = L, v[w + _] = H;
       }
     }
-    function Xe(r, a, h, g) {
+    function Ke(r, a, h, g) {
       var v = a.width, w = a.o;
       if (e(r != null && a != null), 0 > h || 0 >= g || h + g > w) return null;
       if (!r.Cc) {
@@ -6695,10 +6695,10 @@ function Su(n) {
           var y;
           if (r.ga = new Ft(), (y = r.ga == null) || (y = a.width * a.o, e(r.Gb.length == 0), r.Gb = s(y), r.Uc = 0, r.Gb == null ? y = 0 : (r.mb = r.Gb, r.nb = r.Uc, r.rc = null, y = 1), y = !y), !y) {
             y = r.ga;
-            var _ = r.Fa, L = r.P, C = r.qc, H = r.mb, Z = r.nb, F = L + 1, W = C - 1, X = y.l;
-            if (e(_ != null && H != null && a != null), qr[0] = null, qr[1] = Xt, qr[2] = te, qr[3] = de, y.ca = H, y.tb = Z, y.c = a.width, y.i = a.height, e(0 < y.c && 0 < y.i), 1 >= C) a = 0;
+            var _ = r.Fa, L = r.P, C = r.qc, H = r.mb, Z = r.nb, F = L + 1, W = C - 1, K = y.l;
+            if (e(_ != null && H != null && a != null), qr[0] = null, qr[1] = Kt, qr[2] = te, qr[3] = de, y.ca = H, y.tb = Z, y.c = a.width, y.i = a.height, e(0 < y.c && 0 < y.i), 1 >= C) a = 0;
             else if (y.$a = 3 & _[L + 0], y.Z = _[L + 0] >> 2 & 3, y.Lc = _[L + 0] >> 4 & 3, L = _[L + 0] >> 6 & 3, 0 > y.$a || 1 < y.$a || 4 <= y.Z || 1 < y.Lc || L) a = 0;
-            else if (X.put = Gt, X.ac = tr, X.bc = mr, X.ma = y, X.width = a.width, X.height = a.height, X.Da = a.Da, X.v = a.v, X.va = a.va, X.j = a.j, X.o = a.o, y.$a) t: {
+            else if (K.put = Gt, K.ac = tr, K.bc = mr, K.ma = y, K.width = a.width, K.height = a.height, K.Da = a.Da, K.v = a.v, K.va = a.va, K.j = a.j, K.o = a.o, y.$a) t: {
               e(y.$a == 1), a = Zr();
               e: for (; ; ) {
                 if (a == null) {
@@ -6720,39 +6720,39 @@ function Su(n) {
         e(r.ga != null), e(h + g <= w);
         t: {
           if (a = (_ = r.ga).c, w = _.l.o, _.$a == 0) {
-            if (F = r.rc, W = r.Vc, X = r.Fa, L = r.P + 1 + h * a, C = r.mb, H = r.nb + h * a, e(L <= r.P + r.qc), _.Z != 0) for (e(qr[_.Z] != null), y = 0; y < g; ++y) qr[_.Z](F, W, X, L, C, H, a), F = C, W = H, H += a, L += a;
-            else for (y = 0; y < g; ++y) i(C, H, X, L, a), F = C, W = H, H += a, L += a;
+            if (F = r.rc, W = r.Vc, K = r.Fa, L = r.P + 1 + h * a, C = r.mb, H = r.nb + h * a, e(L <= r.P + r.qc), _.Z != 0) for (e(qr[_.Z] != null), y = 0; y < g; ++y) qr[_.Z](F, W, K, L, C, H, a), F = C, W = H, H += a, L += a;
+            else for (y = 0; y < g; ++y) i(C, H, K, L, a), F = C, W = H, H += a, L += a;
             r.rc = F, r.Vc = W;
           } else {
             if (e(_.mc != null), a = h + g, e((y = _.mc) != null), e(a <= y.i), y.C >= a) a = 1;
             else if (_.ic || Re(), _.ic) {
               _ = y.V, F = y.Ba, W = y.c;
-              var ot = y.i, K = (X = 1, L = y.$ / W, C = y.$ % W, H = y.m, Z = y.s, y.$), ut = W * ot, ht = W * a, wt = Z.wc, bt = K < ht ? an(Z, C, L) : null;
-              e(K <= ut), e(a <= ot), e(Wn(Z));
+              var ot = y.i, X = (K = 1, L = y.$ / W, C = y.$ % W, H = y.m, Z = y.s, y.$), ut = W * ot, ht = W * a, wt = Z.wc, bt = X < ht ? an(Z, C, L) : null;
+              e(X <= ut), e(a <= ot), e(Wn(Z));
               e: for (; ; ) {
-                for (; !H.h && K < ht; ) {
-                  if (C & wt || (bt = an(Z, C, L)), e(bt != null), Q(H), 256 > (ot = Te(bt.G[0], bt.H[0], H))) _[F + K] = ot, ++K, ++C >= W && (C = 0, ++L <= a && !(L % 16) && Vn(y, L));
+                for (; !H.h && X < ht; ) {
+                  if (C & wt || (bt = an(Z, C, L)), e(bt != null), Q(H), 256 > (ot = Te(bt.G[0], bt.H[0], H))) _[F + X] = ot, ++X, ++C >= W && (C = 0, ++L <= a && !(L % 16) && Vn(y, L));
                   else {
                     if (!(280 > ot)) {
-                      X = 0;
+                      K = 0;
                       break e;
                     }
                     ot = Mn(ot - 256, H);
                     var Rt, Pt = Te(bt.G[4], bt.H[4], H);
-                    if (Q(H), !(K >= (Pt = Rn(W, Pt = Mn(Pt, H))) && ut - K >= ot)) {
-                      X = 0;
+                    if (Q(H), !(X >= (Pt = Rn(W, Pt = Mn(Pt, H))) && ut - X >= ot)) {
+                      K = 0;
                       break e;
                     }
-                    for (Rt = 0; Rt < ot; ++Rt) _[F + K + Rt] = _[F + K + Rt - Pt];
-                    for (K += ot, C += ot; C >= W; ) C -= W, ++L <= a && !(L % 16) && Vn(y, L);
-                    K < ht && C & wt && (bt = an(Z, C, L));
+                    for (Rt = 0; Rt < ot; ++Rt) _[F + X + Rt] = _[F + X + Rt - Pt];
+                    for (X += ot, C += ot; C >= W; ) C -= W, ++L <= a && !(L % 16) && Vn(y, L);
+                    X < ht && C & wt && (bt = an(Z, C, L));
                   }
                   e(H.h == V(H));
                 }
                 Vn(y, L > a ? a : L);
                 break e;
               }
-              !X || H.h && K < ut ? (X = 0, y.a = H.h ? 5 : 3) : y.$ = K, a = X;
+              !K || H.h && X < ut ? (K = 0, y.a = H.h ? 5 : 3) : y.$ = X, a = K;
             } else a = Gn(y, y.V, y.Ba, y.c, y.i, a, Li);
             if (!a) {
               g = 0;
@@ -6805,19 +6805,19 @@ function Su(n) {
       ba = Ne, Uo = Ae, zo = Fe, Ho = Me;
     }
     function cn(r, a, h) {
-      z[r] = function(g, v, w, y, _, L, C, H, Z, F, W, X, ot, K, ut, ht, wt) {
-        var bt, Rt = wt - 1 >> 1, Pt = _[L + 0] | C[H + 0] << 16, re = Z[F + 0] | W[X + 0] << 16;
+      z[r] = function(g, v, w, y, _, L, C, H, Z, F, W, K, ot, X, ut, ht, wt) {
+        var bt, Rt = wt - 1 >> 1, Pt = _[L + 0] | C[H + 0] << 16, re = Z[F + 0] | W[K + 0] << 16;
         e(g != null);
         var Ot = 3 * Pt + re + 131074 >> 2;
-        for (a(g[v + 0], 255 & Ot, Ot >> 16, ot, K), w != null && (Ot = 3 * re + Pt + 131074 >> 2, a(w[y + 0], 255 & Ot, Ot >> 16, ut, ht)), bt = 1; bt <= Rt; ++bt) {
-          var fe = _[L + bt] | C[H + bt] << 16, Qe = Z[F + bt] | W[X + bt] << 16, ie = Pt + fe + re + Qe + 524296, jt = ie + 2 * (fe + re) >> 3;
-          Ot = jt + Pt >> 1, Pt = (ie = ie + 2 * (Pt + Qe) >> 3) + fe >> 1, a(g[v + 2 * bt - 1], 255 & Ot, Ot >> 16, ot, K + (2 * bt - 1) * h), a(g[v + 2 * bt - 0], 255 & Pt, Pt >> 16, ot, K + (2 * bt - 0) * h), w != null && (Ot = ie + re >> 1, Pt = jt + Qe >> 1, a(w[y + 2 * bt - 1], 255 & Ot, Ot >> 16, ut, ht + (2 * bt - 1) * h), a(w[y + 2 * bt + 0], 255 & Pt, Pt >> 16, ut, ht + (2 * bt + 0) * h)), Pt = fe, re = Qe;
+        for (a(g[v + 0], 255 & Ot, Ot >> 16, ot, X), w != null && (Ot = 3 * re + Pt + 131074 >> 2, a(w[y + 0], 255 & Ot, Ot >> 16, ut, ht)), bt = 1; bt <= Rt; ++bt) {
+          var fe = _[L + bt] | C[H + bt] << 16, Qe = Z[F + bt] | W[K + bt] << 16, ie = Pt + fe + re + Qe + 524296, jt = ie + 2 * (fe + re) >> 3;
+          Ot = jt + Pt >> 1, Pt = (ie = ie + 2 * (Pt + Qe) >> 3) + fe >> 1, a(g[v + 2 * bt - 1], 255 & Ot, Ot >> 16, ot, X + (2 * bt - 1) * h), a(g[v + 2 * bt - 0], 255 & Pt, Pt >> 16, ot, X + (2 * bt - 0) * h), w != null && (Ot = ie + re >> 1, Pt = jt + Qe >> 1, a(w[y + 2 * bt - 1], 255 & Ot, Ot >> 16, ut, ht + (2 * bt - 1) * h), a(w[y + 2 * bt + 0], 255 & Pt, Pt >> 16, ut, ht + (2 * bt + 0) * h)), Pt = fe, re = Qe;
         }
-        1 & wt || (Ot = 3 * Pt + re + 131074 >> 2, a(g[v + wt - 1], 255 & Ot, Ot >> 16, ot, K + (wt - 1) * h), w != null && (Ot = 3 * re + Pt + 131074 >> 2, a(w[y + wt - 1], 255 & Ot, Ot >> 16, ut, ht + (wt - 1) * h)));
+        1 & wt || (Ot = 3 * Pt + re + 131074 >> 2, a(g[v + wt - 1], 255 & Ot, Ot >> 16, ot, X + (wt - 1) * h), w != null && (Ot = 3 * re + Pt + 131074 >> 2, a(w[y + wt - 1], 255 & Ot, Ot >> 16, ut, ht + (wt - 1) * h)));
       };
     }
     function Ar() {
-      zn[Xa] = Sh, zn[Ka] = tl, zn[$o] = kh, zn[Za] = el, zn[Qa] = nl, zn[Vs] = rl, zn[Xo] = Ph, zn[Gs] = tl, zn[Ys] = el, zn[ts] = nl, zn[Js] = rl;
+      zn[Ka] = Sh, zn[Xa] = tl, zn[$o] = kh, zn[Za] = el, zn[Qa] = nl, zn[Vs] = rl, zn[Ko] = Ph, zn[Gs] = tl, zn[Ys] = el, zn[ts] = nl, zn[Js] = rl;
     }
     function ha(r) {
       return r & -16384 ? 0 > r ? 0 : 255 : r >> Ih;
@@ -6885,14 +6885,14 @@ function Su(n) {
           for (h = -1; 16 > h; ++h) i(y, _ + 32 * h - 4, y, _ + 32 * h + 12, 4);
           for (h = -1; 8 > h; ++h) i(L, C + 32 * h - 4, L, C + 32 * h + 4, 4), i(H, Z + 32 * h - 4, H, Z + 32 * h + 4, 4);
         }
-        var W = r.Gd, X = r.Hd + g, ot = F.ad, K = F.Hc;
-        if (0 < v && (i(y, _ - 32, W[X].y, 0, 16), i(L, C - 32, W[X].f, 0, 8), i(H, Z - 32, W[X].ea, 0, 8)), F.Za) {
+        var W = r.Gd, K = r.Hd + g, ot = F.ad, X = F.Hc;
+        if (0 < v && (i(y, _ - 32, W[K].y, 0, 16), i(L, C - 32, W[K].f, 0, 8), i(H, Z - 32, W[K].ea, 0, 8)), F.Za) {
           var ut = y, ht = _ - 32 + 16;
-          for (0 < v && (g >= r.za - 1 ? o(ut, ht, W[X].y[15], 4) : i(ut, ht, W[X + 1].y, 0, 4)), h = 0; 4 > h; h++) ut[ht + 128 + h] = ut[ht + 256 + h] = ut[ht + 384 + h] = ut[ht + 0 + h];
-          for (h = 0; 16 > h; ++h, K <<= 2) ut = y, ht = _ + al[h], Jn[F.Ob[h]](ut, ht), Ga(K, ot, 16 * +h, ut, ht);
-        } else if (ut = wn(g, v, F.Ob[0]), Dr[ut](y, _), K != 0) for (h = 0; 16 > h; ++h, K <<= 2) Ga(K, ot, 16 * +h, y, _ + al[h]);
-        for (h = F.Gc, ut = wn(g, v, F.Dd), Sr[ut](L, C), Sr[ut](H, Z), K = ot, ut = L, ht = C, 255 & (F = 0 | h) && (170 & F ? Wi(K, 256, ut, ht) : ur(K, 256, ut, ht)), F = H, K = Z, 255 & (h >>= 8) && (170 & h ? Wi(ot, 320, F, K) : ur(ot, 320, F, K)), v < r.Ub - 1 && (i(W[X].y, 0, y, _ + 480, 16), i(W[X].f, 0, L, C + 224, 8), i(W[X].ea, 0, H, Z + 224, 8)), h = 8 * w * r.B, W = r.sa, X = r.ta + 16 * g + 16 * w * r.R, ot = r.qa, F = r.ra + 8 * g + h, K = r.Ha, ut = r.Ia + 8 * g + h, h = 0; 16 > h; ++h) i(W, X + h * r.R, y, _ + 32 * h, 16);
-        for (h = 0; 8 > h; ++h) i(ot, F + h * r.B, L, C + 32 * h, 8), i(K, ut + h * r.B, H, Z + 32 * h, 8);
+          for (0 < v && (g >= r.za - 1 ? o(ut, ht, W[K].y[15], 4) : i(ut, ht, W[K + 1].y, 0, 4)), h = 0; 4 > h; h++) ut[ht + 128 + h] = ut[ht + 256 + h] = ut[ht + 384 + h] = ut[ht + 0 + h];
+          for (h = 0; 16 > h; ++h, X <<= 2) ut = y, ht = _ + al[h], Jn[F.Ob[h]](ut, ht), Ga(X, ot, 16 * +h, ut, ht);
+        } else if (ut = wn(g, v, F.Ob[0]), Dr[ut](y, _), X != 0) for (h = 0; 16 > h; ++h, X <<= 2) Ga(X, ot, 16 * +h, y, _ + al[h]);
+        for (h = F.Gc, ut = wn(g, v, F.Dd), Sr[ut](L, C), Sr[ut](H, Z), X = ot, ut = L, ht = C, 255 & (F = 0 | h) && (170 & F ? Wi(X, 256, ut, ht) : ur(X, 256, ut, ht)), F = H, X = Z, 255 & (h >>= 8) && (170 & h ? Wi(ot, 320, F, X) : ur(ot, 320, F, X)), v < r.Ub - 1 && (i(W[K].y, 0, y, _ + 480, 16), i(W[K].f, 0, L, C + 224, 8), i(W[K].ea, 0, H, Z + 224, 8)), h = 8 * w * r.B, W = r.sa, K = r.ta + 16 * g + 16 * w * r.R, ot = r.qa, F = r.ra + 8 * g + h, X = r.Ha, ut = r.Ia + 8 * g + h, h = 0; 16 > h; ++h) i(W, K + h * r.R, y, _ + 32 * h, 16);
+        for (h = 0; 8 > h; ++h) i(ot, F + h * r.B, L, C + 32 * h, 8), i(X, ut + h * r.B, H, Z + 32 * h, 8);
       }
     }
     function Ya(r, a, h, g, v, w, y, _, L) {
@@ -6900,133 +6900,133 @@ function Su(n) {
       if (r == null || 12 > h) return 7;
       W.data = r, W.w = a, W.ha = h, a = [a], h = [h], W.gb = [W.gb];
       t: {
-        var X = a, ot = h, K = W.gb;
-        if (e(r != null), e(ot != null), e(K != null), K[0] = 0, 12 <= ot[0] && !t(r, X[0], "RIFF")) {
-          if (t(r, X[0] + 8, "WEBP")) {
-            K = 3;
+        var K = a, ot = h, X = W.gb;
+        if (e(r != null), e(ot != null), e(X != null), X[0] = 0, 12 <= ot[0] && !t(r, K[0], "RIFF")) {
+          if (t(r, K[0] + 8, "WEBP")) {
+            X = 3;
             break t;
           }
-          var ut = zt(r, X[0] + 4);
+          var ut = zt(r, K[0] + 4);
           if (12 > ut || 4294967286 < ut) {
-            K = 3;
+            X = 3;
             break t;
           }
           if (F && ut > ot[0] - 8) {
-            K = 7;
+            X = 7;
             break t;
           }
-          K[0] = ut, X[0] += 12, ot[0] -= 12;
+          X[0] = ut, K[0] += 12, ot[0] -= 12;
         }
-        K = 0;
+        X = 0;
       }
-      if (K != 0) return K;
+      if (X != 0) return X;
       for (ut = 0 < W.gb[0], h = h[0]; ; ) {
         t: {
           var ht = r;
-          ot = a, K = h;
-          var wt = C, bt = H, Rt = X = [0];
-          if ((Ot = Z = [Z])[0] = 0, 8 > K[0]) K = 7;
+          ot = a, X = h;
+          var wt = C, bt = H, Rt = K = [0];
+          if ((Ot = Z = [Z])[0] = 0, 8 > X[0]) X = 7;
           else {
             if (!t(ht, ot[0], "VP8X")) {
               if (zt(ht, ot[0] + 4) != 10) {
-                K = 3;
+                X = 3;
                 break t;
               }
-              if (18 > K[0]) {
-                K = 7;
+              if (18 > X[0]) {
+                X = 7;
                 break t;
               }
               var Pt = zt(ht, ot[0] + 8), re = 1 + kt(ht, ot[0] + 12);
               if (2147483648 <= re * (ht = 1 + kt(ht, ot[0] + 15))) {
-                K = 3;
+                X = 3;
                 break t;
               }
-              Rt != null && (Rt[0] = Pt), wt != null && (wt[0] = re), bt != null && (bt[0] = ht), ot[0] += 18, K[0] -= 18, Ot[0] = 1;
+              Rt != null && (Rt[0] = Pt), wt != null && (wt[0] = re), bt != null && (bt[0] = ht), ot[0] += 18, X[0] -= 18, Ot[0] = 1;
             }
-            K = 0;
+            X = 0;
           }
         }
-        if (Z = Z[0], X = X[0], K != 0) return K;
-        if (ot = !!(2 & X), !ut && Z) return 3;
-        if (w != null && (w[0] = !!(16 & X)), y != null && (y[0] = ot), _ != null && (_[0] = 0), y = C[0], X = H[0], Z && ot && L == null) {
-          K = 0;
+        if (Z = Z[0], K = K[0], X != 0) return X;
+        if (ot = !!(2 & K), !ut && Z) return 3;
+        if (w != null && (w[0] = !!(16 & K)), y != null && (y[0] = ot), _ != null && (_[0] = 0), y = C[0], K = H[0], Z && ot && L == null) {
+          X = 0;
           break;
         }
         if (4 > h) {
-          K = 7;
+          X = 7;
           break;
         }
         if (ut && Z || !ut && !Z && !t(r, a[0], "ALPH")) {
           h = [h], W.na = [W.na], W.P = [W.P], W.Sa = [W.Sa];
           t: {
-            Pt = r, K = a, ut = h;
+            Pt = r, X = a, ut = h;
             var Ot = W.gb;
-            wt = W.na, bt = W.P, Rt = W.Sa, re = 22, e(Pt != null), e(ut != null), ht = K[0];
+            wt = W.na, bt = W.P, Rt = W.Sa, re = 22, e(Pt != null), e(ut != null), ht = X[0];
             var fe = ut[0];
             for (e(wt != null), e(Rt != null), wt[0] = null, bt[0] = null, Rt[0] = 0; ; ) {
-              if (K[0] = ht, ut[0] = fe, 8 > fe) {
-                K = 7;
+              if (X[0] = ht, ut[0] = fe, 8 > fe) {
+                X = 7;
                 break t;
               }
               var Qe = zt(Pt, ht + 4);
               if (4294967286 < Qe) {
-                K = 3;
+                X = 3;
                 break t;
               }
               var ie = 8 + Qe + 1 & -2;
               if (re += ie, 0 < Ot && re > Ot) {
-                K = 3;
+                X = 3;
                 break t;
               }
               if (!t(Pt, ht, "VP8 ") || !t(Pt, ht, "VP8L")) {
-                K = 0;
+                X = 0;
                 break t;
               }
               if (fe[0] < ie) {
-                K = 7;
+                X = 7;
                 break t;
               }
               t(Pt, ht, "ALPH") || (wt[0] = Pt, bt[0] = ht + 8, Rt[0] = Qe), ht += ie, fe -= ie;
             }
           }
-          if (h = h[0], W.na = W.na[0], W.P = W.P[0], W.Sa = W.Sa[0], K != 0) break;
+          if (h = h[0], W.na = W.na[0], W.P = W.P[0], W.Sa = W.Sa[0], X != 0) break;
         }
         h = [h], W.Ja = [W.Ja], W.xa = [W.xa];
-        t: if (Ot = r, K = a, ut = h, wt = W.gb[0], bt = W.Ja, Rt = W.xa, Pt = K[0], ht = !t(Ot, Pt, "VP8 "), re = !t(Ot, Pt, "VP8L"), e(Ot != null), e(ut != null), e(bt != null), e(Rt != null), 8 > ut[0]) K = 7;
+        t: if (Ot = r, X = a, ut = h, wt = W.gb[0], bt = W.Ja, Rt = W.xa, Pt = X[0], ht = !t(Ot, Pt, "VP8 "), re = !t(Ot, Pt, "VP8L"), e(Ot != null), e(ut != null), e(bt != null), e(Rt != null), 8 > ut[0]) X = 7;
         else {
           if (ht || re) {
             if (Ot = zt(Ot, Pt + 4), 12 <= wt && Ot > wt - 12) {
-              K = 3;
+              X = 3;
               break t;
             }
             if (F && Ot > ut[0] - 8) {
-              K = 7;
+              X = 7;
               break t;
             }
-            bt[0] = Ot, K[0] += 8, ut[0] -= 8, Rt[0] = re;
+            bt[0] = Ot, X[0] += 8, ut[0] -= 8, Rt[0] = re;
           } else Rt[0] = 5 <= ut[0] && Ot[Pt + 0] == 47 && !(Ot[Pt + 4] >> 5), bt[0] = ut[0];
-          K = 0;
+          X = 0;
         }
-        if (h = h[0], W.Ja = W.Ja[0], W.xa = W.xa[0], a = a[0], K != 0) break;
+        if (h = h[0], W.Ja = W.Ja[0], W.xa = W.xa[0], a = a[0], X != 0) break;
         if (4294967286 < W.Ja) return 3;
-        if (_ == null || ot || (_[0] = W.xa ? 2 : 1), y = [y], X = [X], W.xa) {
+        if (_ == null || ot || (_[0] = W.xa ? 2 : 1), y = [y], K = [K], W.xa) {
           if (5 > h) {
-            K = 7;
+            X = 7;
             break;
           }
-          _ = y, F = X, ot = w, r == null || 5 > h ? r = 0 : 5 <= h && r[a + 0] == 47 && !(r[a + 4] >> 5) ? (ut = [0], Ot = [0], wt = [0], ft(bt = new j(), r, a, h), br(bt, ut, Ot, wt) ? (_ != null && (_[0] = ut[0]), F != null && (F[0] = Ot[0]), ot != null && (ot[0] = wt[0]), r = 1) : r = 0) : r = 0;
+          _ = y, F = K, ot = w, r == null || 5 > h ? r = 0 : 5 <= h && r[a + 0] == 47 && !(r[a + 4] >> 5) ? (ut = [0], Ot = [0], wt = [0], ft(bt = new j(), r, a, h), br(bt, ut, Ot, wt) ? (_ != null && (_[0] = ut[0]), F != null && (F[0] = Ot[0]), ot != null && (ot[0] = wt[0]), r = 1) : r = 0) : r = 0;
         } else {
           if (10 > h) {
-            K = 7;
+            X = 7;
             break;
           }
-          _ = X, r == null || 10 > h || !Ra(r, a + 3, h - 3) ? r = 0 : (F = r[a + 0] | r[a + 1] << 8 | r[a + 2] << 16, ot = 16383 & (r[a + 7] << 8 | r[a + 6]), r = 16383 & (r[a + 9] << 8 | r[a + 8]), 1 & F || 3 < (F >> 1 & 7) || !(F >> 4 & 1) || F >> 5 >= W.Ja || !ot || !r ? r = 0 : (y && (y[0] = ot), _ && (_[0] = r), r = 1));
+          _ = K, r == null || 10 > h || !Ra(r, a + 3, h - 3) ? r = 0 : (F = r[a + 0] | r[a + 1] << 8 | r[a + 2] << 16, ot = 16383 & (r[a + 7] << 8 | r[a + 6]), r = 16383 & (r[a + 9] << 8 | r[a + 8]), 1 & F || 3 < (F >> 1 & 7) || !(F >> 4 & 1) || F >> 5 >= W.Ja || !ot || !r ? r = 0 : (y && (y[0] = ot), _ && (_[0] = r), r = 1));
         }
-        if (!r || (y = y[0], X = X[0], Z && (C[0] != y || H[0] != X))) return 3;
+        if (!r || (y = y[0], K = K[0], Z && (C[0] != y || H[0] != K))) return 3;
         L != null && (L[0] = W, L.offset = a - L.w, e(4294967286 > a - L.w), e(L.offset == L.ha - h));
         break;
       }
-      return K == 0 || K == 7 && Z && L == null ? (w != null && (w[0] |= W.na != null && 0 < W.na.length), g != null && (g[0] = y), v != null && (v[0] = X), 0) : K;
+      return X == 0 || X == 7 && Z && L == null ? (w != null && (w[0] |= W.na != null && 0 < W.na.length), g != null && (g[0] = y), v != null && (v[0] = K), 0) : X;
     }
     function qn(r, a, h) {
       var g = a.width, v = a.height, w = 0, y = 0, _ = g, L = v;
@@ -7061,7 +7061,7 @@ function Su(n) {
       g.width = r, g.height = a;
       t: {
         var L = g.width, C = g.height;
-        if (r = g.S, 0 >= L || 0 >= C || !(r >= Xa && 13 > r)) r = 2;
+        if (r = g.S, 0 >= L || 0 >= C || !(r >= Ka && 13 > r)) r = 2;
         else {
           if (0 >= g.Rd && g.sd == null) {
             y = w = v = a = 0;
@@ -7072,7 +7072,7 @@ function Su(n) {
             }
             g.sd = C, 11 > r ? ((L = g.f.RGBA).eb = C, L.fb = 0, L.A = _, L.size = H) : ((L = g.f.kb).y = C, L.O = 0, L.fa = _, L.Fd = H, L.f = C, L.N = 0 + H, L.Ab = a, L.Cd = w, L.ea = C, L.W = 0 + H + w, L.Db = a, L.Ed = w, r == 12 && (L.F = C, L.J = 0 + H + 2 * w), L.Tc = y, L.lb = v);
           }
-          if (a = 1, v = g.S, w = g.width, y = g.height, v >= Xa && 13 > v) if (11 > v) r = g.f.RGBA, a &= (_ = Math.abs(r.A)) * (y - 1) + w <= r.size, a &= _ >= w * sl[v], a &= r.eb != null;
+          if (a = 1, v = g.S, w = g.width, y = g.height, v >= Ka && 13 > v) if (11 > v) r = g.f.RGBA, a &= (_ = Math.abs(r.A)) * (y - 1) + w <= r.size, a &= _ >= w * sl[v], a &= r.eb != null;
           else {
             r = g.f.kb, _ = (w + 1) / 2, H = (y + 1) / 2, L = Math.abs(r.fa), C = Math.abs(r.Ab);
             var Z = Math.abs(r.Db), F = Math.abs(r.lb), W = F * (y - 1) + w;
@@ -7129,15 +7129,15 @@ function Su(n) {
     }, function(r) {
       return r >> 8 & 255;
     });
-    var zi, hi = z.ColorIndexInverseTransform, Ke = z.MapARGB, Hs = z.VP8LColorIndexInverseTransformAlpha, lr = z.MapAlpha, Yn = z.VP8LPredictorsAdd = [];
+    var zi, hi = z.ColorIndexInverseTransform, Xe = z.MapARGB, Hs = z.VP8LColorIndexInverseTransformAlpha, lr = z.MapAlpha, Yn = z.VP8LPredictorsAdd = [];
     Yn.length = 16, (z.VP8LPredictors = []).length = 16, (z.VP8LPredictorsAdd_C = []).length = 16, (z.VP8LPredictors_C = []).length = 16;
-    var ci, pa, ga, Hi, fi, di, Rr, Nr, Tr, Wi, dn, ur, Pe, Ie, He, Ze, Lr, ma, Vi, Ja, Ro, To, Do, qo, ba, Uo, zo, Ho, Wo = s(511), Vo = s(2041), Go = s(225), Yo = s(767), Jo = 0, Ws = Vo, $a = Go, In = Yo, Un = Wo, Xa = 0, Ka = 1, $o = 2, Za = 3, Qa = 4, Vs = 5, Xo = 6, Gs = 7, Ys = 8, ts = 9, Js = 10, fh = [2, 3, 7], dh = [3, 3, 11], Ko = [280, 256, 256, 256, 40], ph = [0, 1, 1, 1, 0], gh = [17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], mh = [24, 7, 23, 25, 40, 6, 39, 41, 22, 26, 38, 42, 56, 5, 55, 57, 21, 27, 54, 58, 37, 43, 72, 4, 71, 73, 20, 28, 53, 59, 70, 74, 36, 44, 88, 69, 75, 52, 60, 3, 87, 89, 19, 29, 86, 90, 35, 45, 68, 76, 85, 91, 51, 61, 104, 2, 103, 105, 18, 30, 102, 106, 34, 46, 84, 92, 67, 77, 101, 107, 50, 62, 120, 1, 119, 121, 83, 93, 17, 31, 100, 108, 66, 78, 118, 122, 33, 47, 117, 123, 49, 63, 99, 109, 82, 94, 0, 116, 124, 65, 79, 16, 32, 98, 110, 48, 115, 125, 81, 95, 64, 114, 126, 97, 111, 80, 113, 127, 96, 112], bh = [2954, 2956, 2958, 2962, 2970, 2986, 3018, 3082, 3212, 3468, 3980, 5004], vh = 8, $s = [4, 5, 6, 7, 8, 9, 10, 10, 11, 12, 13, 14, 15, 16, 17, 17, 18, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 25, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 91, 93, 95, 96, 98, 100, 101, 102, 104, 106, 108, 110, 112, 114, 116, 118, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 143, 145, 148, 151, 154, 157], Xs = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 119, 122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158, 161, 164, 167, 170, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 234, 239, 245, 249, 254, 259, 264, 269, 274, 279, 284], va = null, wh = [[173, 148, 140, 0], [176, 155, 140, 135, 0], [180, 157, 141, 134, 130, 0], [254, 254, 243, 230, 196, 177, 153, 140, 133, 130, 129, 0]], yh = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15], Zo = [-0, 1, -1, 2, -2, 3, 4, 6, -3, 5, -4, -5, -6, 7, -7, 8, -8, -9], xh = [[[[128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]], [[253, 136, 254, 255, 228, 219, 128, 128, 128, 128, 128], [189, 129, 242, 255, 227, 213, 255, 219, 128, 128, 128], [106, 126, 227, 252, 214, 209, 255, 255, 128, 128, 128]], [[1, 98, 248, 255, 236, 226, 255, 255, 128, 128, 128], [181, 133, 238, 254, 221, 234, 255, 154, 128, 128, 128], [78, 134, 202, 247, 198, 180, 255, 219, 128, 128, 128]], [[1, 185, 249, 255, 243, 255, 128, 128, 128, 128, 128], [184, 150, 247, 255, 236, 224, 128, 128, 128, 128, 128], [77, 110, 216, 255, 236, 230, 128, 128, 128, 128, 128]], [[1, 101, 251, 255, 241, 255, 128, 128, 128, 128, 128], [170, 139, 241, 252, 236, 209, 255, 255, 128, 128, 128], [37, 116, 196, 243, 228, 255, 255, 255, 128, 128, 128]], [[1, 204, 254, 255, 245, 255, 128, 128, 128, 128, 128], [207, 160, 250, 255, 238, 128, 128, 128, 128, 128, 128], [102, 103, 231, 255, 211, 171, 128, 128, 128, 128, 128]], [[1, 152, 252, 255, 240, 255, 128, 128, 128, 128, 128], [177, 135, 243, 255, 234, 225, 128, 128, 128, 128, 128], [80, 129, 211, 255, 194, 224, 128, 128, 128, 128, 128]], [[1, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [246, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [255, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]]], [[[198, 35, 237, 223, 193, 187, 162, 160, 145, 155, 62], [131, 45, 198, 221, 172, 176, 220, 157, 252, 221, 1], [68, 47, 146, 208, 149, 167, 221, 162, 255, 223, 128]], [[1, 149, 241, 255, 221, 224, 255, 255, 128, 128, 128], [184, 141, 234, 253, 222, 220, 255, 199, 128, 128, 128], [81, 99, 181, 242, 176, 190, 249, 202, 255, 255, 128]], [[1, 129, 232, 253, 214, 197, 242, 196, 255, 255, 128], [99, 121, 210, 250, 201, 198, 255, 202, 128, 128, 128], [23, 91, 163, 242, 170, 187, 247, 210, 255, 255, 128]], [[1, 200, 246, 255, 234, 255, 128, 128, 128, 128, 128], [109, 178, 241, 255, 231, 245, 255, 255, 128, 128, 128], [44, 130, 201, 253, 205, 192, 255, 255, 128, 128, 128]], [[1, 132, 239, 251, 219, 209, 255, 165, 128, 128, 128], [94, 136, 225, 251, 218, 190, 255, 255, 128, 128, 128], [22, 100, 174, 245, 186, 161, 255, 199, 128, 128, 128]], [[1, 182, 249, 255, 232, 235, 128, 128, 128, 128, 128], [124, 143, 241, 255, 227, 234, 128, 128, 128, 128, 128], [35, 77, 181, 251, 193, 211, 255, 205, 128, 128, 128]], [[1, 157, 247, 255, 236, 231, 255, 255, 128, 128, 128], [121, 141, 235, 255, 225, 227, 255, 255, 128, 128, 128], [45, 99, 188, 251, 195, 217, 255, 224, 128, 128, 128]], [[1, 1, 251, 255, 213, 255, 128, 128, 128, 128, 128], [203, 1, 248, 255, 255, 128, 128, 128, 128, 128, 128], [137, 1, 177, 255, 224, 255, 128, 128, 128, 128, 128]]], [[[253, 9, 248, 251, 207, 208, 255, 192, 128, 128, 128], [175, 13, 224, 243, 193, 185, 249, 198, 255, 255, 128], [73, 17, 171, 221, 161, 179, 236, 167, 255, 234, 128]], [[1, 95, 247, 253, 212, 183, 255, 255, 128, 128, 128], [239, 90, 244, 250, 211, 209, 255, 255, 128, 128, 128], [155, 77, 195, 248, 188, 195, 255, 255, 128, 128, 128]], [[1, 24, 239, 251, 218, 219, 255, 205, 128, 128, 128], [201, 51, 219, 255, 196, 186, 128, 128, 128, 128, 128], [69, 46, 190, 239, 201, 218, 255, 228, 128, 128, 128]], [[1, 191, 251, 255, 255, 128, 128, 128, 128, 128, 128], [223, 165, 249, 255, 213, 255, 128, 128, 128, 128, 128], [141, 124, 248, 255, 255, 128, 128, 128, 128, 128, 128]], [[1, 16, 248, 255, 255, 128, 128, 128, 128, 128, 128], [190, 36, 230, 255, 236, 255, 128, 128, 128, 128, 128], [149, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128]], [[1, 226, 255, 128, 128, 128, 128, 128, 128, 128, 128], [247, 192, 255, 128, 128, 128, 128, 128, 128, 128, 128], [240, 128, 255, 128, 128, 128, 128, 128, 128, 128, 128]], [[1, 134, 252, 255, 255, 128, 128, 128, 128, 128, 128], [213, 62, 250, 255, 255, 128, 128, 128, 128, 128, 128], [55, 93, 255, 128, 128, 128, 128, 128, 128, 128, 128]], [[128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]]], [[[202, 24, 213, 235, 186, 191, 220, 160, 240, 175, 255], [126, 38, 182, 232, 169, 184, 228, 174, 255, 187, 128], [61, 46, 138, 219, 151, 178, 240, 170, 255, 216, 128]], [[1, 112, 230, 250, 199, 191, 247, 159, 255, 255, 128], [166, 109, 228, 252, 211, 215, 255, 174, 128, 128, 128], [39, 77, 162, 232, 172, 180, 245, 178, 255, 255, 128]], [[1, 52, 220, 246, 198, 199, 249, 220, 255, 255, 128], [124, 74, 191, 243, 183, 193, 250, 221, 255, 255, 128], [24, 71, 130, 219, 154, 170, 243, 182, 255, 255, 128]], [[1, 182, 225, 249, 219, 240, 255, 224, 128, 128, 128], [149, 150, 226, 252, 216, 205, 255, 171, 128, 128, 128], [28, 108, 170, 242, 183, 194, 254, 223, 255, 255, 128]], [[1, 81, 230, 252, 204, 203, 255, 192, 128, 128, 128], [123, 102, 209, 247, 188, 196, 255, 233, 128, 128, 128], [20, 95, 153, 243, 164, 173, 255, 203, 128, 128, 128]], [[1, 222, 248, 255, 216, 213, 128, 128, 128, 128, 128], [168, 175, 246, 252, 235, 205, 255, 255, 128, 128, 128], [47, 116, 215, 255, 211, 212, 255, 255, 128, 128, 128]], [[1, 121, 236, 253, 212, 214, 255, 255, 128, 128, 128], [141, 84, 213, 252, 201, 202, 255, 219, 128, 128, 128], [42, 80, 160, 240, 162, 185, 255, 205, 128, 128, 128]], [[1, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [244, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [238, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128]]]], _h = [[[231, 120, 48, 89, 115, 113, 120, 152, 112], [152, 179, 64, 126, 170, 118, 46, 70, 95], [175, 69, 143, 80, 85, 82, 72, 155, 103], [56, 58, 10, 171, 218, 189, 17, 13, 152], [114, 26, 17, 163, 44, 195, 21, 10, 173], [121, 24, 80, 195, 26, 62, 44, 64, 85], [144, 71, 10, 38, 171, 213, 144, 34, 26], [170, 46, 55, 19, 136, 160, 33, 206, 71], [63, 20, 8, 114, 114, 208, 12, 9, 226], [81, 40, 11, 96, 182, 84, 29, 16, 36]], [[134, 183, 89, 137, 98, 101, 106, 165, 148], [72, 187, 100, 130, 157, 111, 32, 75, 80], [66, 102, 167, 99, 74, 62, 40, 234, 128], [41, 53, 9, 178, 241, 141, 26, 8, 107], [74, 43, 26, 146, 73, 166, 49, 23, 157], [65, 38, 105, 160, 51, 52, 31, 115, 128], [104, 79, 12, 27, 217, 255, 87, 17, 7], [87, 68, 71, 44, 114, 51, 15, 186, 23], [47, 41, 14, 110, 182, 183, 21, 17, 194], [66, 45, 25, 102, 197, 189, 23, 18, 22]], [[88, 88, 147, 150, 42, 46, 45, 196, 205], [43, 97, 183, 117, 85, 38, 35, 179, 61], [39, 53, 200, 87, 26, 21, 43, 232, 171], [56, 34, 51, 104, 114, 102, 29, 93, 77], [39, 28, 85, 171, 58, 165, 90, 98, 64], [34, 22, 116, 206, 23, 34, 43, 166, 73], [107, 54, 32, 26, 51, 1, 81, 43, 31], [68, 25, 106, 22, 64, 171, 36, 225, 114], [34, 19, 21, 102, 132, 188, 16, 76, 124], [62, 18, 78, 95, 85, 57, 50, 48, 51]], [[193, 101, 35, 159, 215, 111, 89, 46, 111], [60, 148, 31, 172, 219, 228, 21, 18, 111], [112, 113, 77, 85, 179, 255, 38, 120, 114], [40, 42, 1, 196, 245, 209, 10, 25, 109], [88, 43, 29, 140, 166, 213, 37, 43, 154], [61, 63, 30, 155, 67, 45, 68, 1, 209], [100, 80, 8, 43, 154, 1, 51, 26, 71], [142, 78, 78, 16, 255, 128, 34, 197, 171], [41, 40, 5, 102, 211, 183, 4, 1, 221], [51, 50, 17, 168, 209, 192, 23, 25, 82]], [[138, 31, 36, 171, 27, 166, 38, 44, 229], [67, 87, 58, 169, 82, 115, 26, 59, 179], [63, 59, 90, 180, 59, 166, 93, 73, 154], [40, 40, 21, 116, 143, 209, 34, 39, 175], [47, 15, 16, 183, 34, 223, 49, 45, 183], [46, 17, 33, 183, 6, 98, 15, 32, 183], [57, 46, 22, 24, 128, 1, 54, 17, 37], [65, 32, 73, 115, 28, 128, 23, 128, 205], [40, 3, 9, 115, 51, 192, 18, 6, 223], [87, 37, 9, 115, 59, 77, 64, 21, 47]], [[104, 55, 44, 218, 9, 54, 53, 130, 226], [64, 90, 70, 205, 40, 41, 23, 26, 57], [54, 57, 112, 184, 5, 41, 38, 166, 213], [30, 34, 26, 133, 152, 116, 10, 32, 134], [39, 19, 53, 221, 26, 114, 32, 73, 255], [31, 9, 65, 234, 2, 15, 1, 118, 73], [75, 32, 12, 51, 192, 255, 160, 43, 51], [88, 31, 35, 67, 102, 85, 55, 186, 85], [56, 21, 23, 111, 59, 205, 45, 37, 192], [55, 38, 70, 124, 73, 102, 1, 34, 98]], [[125, 98, 42, 88, 104, 85, 117, 175, 82], [95, 84, 53, 89, 128, 100, 113, 101, 45], [75, 79, 123, 47, 51, 128, 81, 171, 1], [57, 17, 5, 71, 102, 57, 53, 41, 49], [38, 33, 13, 121, 57, 73, 26, 1, 85], [41, 10, 67, 138, 77, 110, 90, 47, 114], [115, 21, 2, 10, 102, 255, 166, 23, 6], [101, 29, 16, 10, 85, 128, 101, 196, 26], [57, 18, 10, 102, 102, 213, 34, 20, 43], [117, 20, 15, 36, 163, 128, 68, 1, 26]], [[102, 61, 71, 37, 34, 53, 31, 243, 192], [69, 60, 71, 38, 73, 119, 28, 222, 37], [68, 45, 128, 34, 1, 47, 11, 245, 171], [62, 17, 19, 70, 146, 85, 55, 62, 70], [37, 43, 37, 154, 100, 163, 85, 160, 1], [63, 9, 92, 136, 28, 64, 32, 201, 85], [75, 15, 9, 9, 64, 255, 184, 119, 16], [86, 6, 28, 5, 64, 255, 25, 248, 1], [56, 8, 17, 132, 137, 255, 55, 116, 128], [58, 15, 20, 82, 135, 57, 26, 121, 40]], [[164, 50, 31, 137, 154, 133, 25, 35, 218], [51, 103, 44, 131, 131, 123, 31, 6, 158], [86, 40, 64, 135, 148, 224, 45, 183, 128], [22, 26, 17, 131, 240, 154, 14, 1, 209], [45, 16, 21, 91, 64, 222, 7, 1, 197], [56, 21, 39, 155, 60, 138, 23, 102, 213], [83, 12, 13, 54, 192, 255, 68, 47, 28], [85, 26, 85, 85, 128, 128, 32, 146, 171], [18, 11, 7, 63, 144, 171, 4, 4, 246], [35, 27, 10, 146, 174, 171, 12, 26, 128]], [[190, 80, 35, 99, 180, 80, 126, 54, 45], [85, 126, 47, 87, 176, 51, 41, 20, 32], [101, 75, 128, 139, 118, 146, 116, 128, 85], [56, 41, 15, 176, 236, 85, 37, 9, 62], [71, 30, 17, 119, 118, 255, 17, 18, 138], [101, 38, 60, 138, 55, 70, 43, 26, 142], [146, 36, 19, 30, 171, 255, 97, 27, 20], [138, 45, 61, 62, 219, 1, 81, 188, 64], [32, 41, 20, 117, 151, 142, 20, 21, 163], [112, 19, 12, 61, 195, 128, 48, 4, 24]]], Ah = [[[[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[176, 246, 255, 255, 255, 255, 255, 255, 255, 255, 255], [223, 241, 252, 255, 255, 255, 255, 255, 255, 255, 255], [249, 253, 253, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 244, 252, 255, 255, 255, 255, 255, 255, 255, 255], [234, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 246, 254, 255, 255, 255, 255, 255, 255, 255, 255], [239, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 248, 254, 255, 255, 255, 255, 255, 255, 255, 255], [251, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [251, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 253, 255, 254, 255, 255, 255, 255, 255, 255], [250, 255, 254, 255, 254, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]], [[[217, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [225, 252, 241, 253, 255, 255, 254, 255, 255, 255, 255], [234, 250, 241, 250, 253, 255, 253, 254, 255, 255, 255]], [[255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [223, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [238, 253, 254, 254, 255, 255, 255, 255, 255, 255, 255]], [[255, 248, 254, 255, 255, 255, 255, 255, 255, 255, 255], [249, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 255, 255, 255, 255, 255, 255, 255, 255, 255], [247, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [252, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 253, 255, 255, 255, 255, 255, 255, 255, 255], [250, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]], [[[186, 251, 250, 255, 255, 255, 255, 255, 255, 255, 255], [234, 251, 244, 254, 255, 255, 255, 255, 255, 255, 255], [251, 251, 243, 253, 254, 255, 254, 255, 255, 255, 255]], [[255, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [236, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [251, 253, 253, 254, 254, 255, 255, 255, 255, 255, 255]], [[255, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [254, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]], [[[248, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [250, 254, 252, 254, 255, 255, 255, 255, 255, 255, 255], [248, 254, 249, 253, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 253, 255, 255, 255, 255, 255, 255, 255, 255], [246, 253, 253, 255, 255, 255, 255, 255, 255, 255, 255], [252, 254, 251, 254, 254, 255, 255, 255, 255, 255, 255]], [[255, 254, 252, 255, 255, 255, 255, 255, 255, 255, 255], [248, 254, 253, 255, 255, 255, 255, 255, 255, 255, 255], [253, 255, 254, 254, 255, 255, 255, 255, 255, 255, 255]], [[255, 251, 254, 255, 255, 255, 255, 255, 255, 255, 255], [245, 251, 254, 255, 255, 255, 255, 255, 255, 255, 255], [253, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 251, 253, 255, 255, 255, 255, 255, 255, 255, 255], [252, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 252, 255, 255, 255, 255, 255, 255, 255, 255, 255], [249, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 253, 255, 255, 255, 255, 255, 255, 255, 255], [250, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]]], Nh = [0, 1, 2, 3, 6, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 0], Dr = [], Jn = [], Sr = [], Lh = 1, Qo = 2, qr = [], zn = [];
+    var ci, pa, ga, Hi, fi, di, Rr, Nr, Tr, Wi, dn, ur, Pe, Ie, He, Ze, Lr, ma, Vi, Ja, Ro, To, Do, qo, ba, Uo, zo, Ho, Wo = s(511), Vo = s(2041), Go = s(225), Yo = s(767), Jo = 0, Ws = Vo, $a = Go, In = Yo, Un = Wo, Ka = 0, Xa = 1, $o = 2, Za = 3, Qa = 4, Vs = 5, Ko = 6, Gs = 7, Ys = 8, ts = 9, Js = 10, fh = [2, 3, 7], dh = [3, 3, 11], Xo = [280, 256, 256, 256, 40], ph = [0, 1, 1, 1, 0], gh = [17, 18, 0, 1, 2, 3, 4, 5, 16, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], mh = [24, 7, 23, 25, 40, 6, 39, 41, 22, 26, 38, 42, 56, 5, 55, 57, 21, 27, 54, 58, 37, 43, 72, 4, 71, 73, 20, 28, 53, 59, 70, 74, 36, 44, 88, 69, 75, 52, 60, 3, 87, 89, 19, 29, 86, 90, 35, 45, 68, 76, 85, 91, 51, 61, 104, 2, 103, 105, 18, 30, 102, 106, 34, 46, 84, 92, 67, 77, 101, 107, 50, 62, 120, 1, 119, 121, 83, 93, 17, 31, 100, 108, 66, 78, 118, 122, 33, 47, 117, 123, 49, 63, 99, 109, 82, 94, 0, 116, 124, 65, 79, 16, 32, 98, 110, 48, 115, 125, 81, 95, 64, 114, 126, 97, 111, 80, 113, 127, 96, 112], bh = [2954, 2956, 2958, 2962, 2970, 2986, 3018, 3082, 3212, 3468, 3980, 5004], vh = 8, $s = [4, 5, 6, 7, 8, 9, 10, 10, 11, 12, 13, 14, 15, 16, 17, 17, 18, 19, 20, 20, 21, 21, 22, 22, 23, 23, 24, 25, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 91, 93, 95, 96, 98, 100, 101, 102, 104, 106, 108, 110, 112, 114, 116, 118, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 143, 145, 148, 151, 154, 157], Ks = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 119, 122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158, 161, 164, 167, 170, 173, 177, 181, 185, 189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 234, 239, 245, 249, 254, 259, 264, 269, 274, 279, 284], va = null, wh = [[173, 148, 140, 0], [176, 155, 140, 135, 0], [180, 157, 141, 134, 130, 0], [254, 254, 243, 230, 196, 177, 153, 140, 133, 130, 129, 0]], yh = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15], Zo = [-0, 1, -1, 2, -2, 3, 4, 6, -3, 5, -4, -5, -6, 7, -7, 8, -8, -9], xh = [[[[128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]], [[253, 136, 254, 255, 228, 219, 128, 128, 128, 128, 128], [189, 129, 242, 255, 227, 213, 255, 219, 128, 128, 128], [106, 126, 227, 252, 214, 209, 255, 255, 128, 128, 128]], [[1, 98, 248, 255, 236, 226, 255, 255, 128, 128, 128], [181, 133, 238, 254, 221, 234, 255, 154, 128, 128, 128], [78, 134, 202, 247, 198, 180, 255, 219, 128, 128, 128]], [[1, 185, 249, 255, 243, 255, 128, 128, 128, 128, 128], [184, 150, 247, 255, 236, 224, 128, 128, 128, 128, 128], [77, 110, 216, 255, 236, 230, 128, 128, 128, 128, 128]], [[1, 101, 251, 255, 241, 255, 128, 128, 128, 128, 128], [170, 139, 241, 252, 236, 209, 255, 255, 128, 128, 128], [37, 116, 196, 243, 228, 255, 255, 255, 128, 128, 128]], [[1, 204, 254, 255, 245, 255, 128, 128, 128, 128, 128], [207, 160, 250, 255, 238, 128, 128, 128, 128, 128, 128], [102, 103, 231, 255, 211, 171, 128, 128, 128, 128, 128]], [[1, 152, 252, 255, 240, 255, 128, 128, 128, 128, 128], [177, 135, 243, 255, 234, 225, 128, 128, 128, 128, 128], [80, 129, 211, 255, 194, 224, 128, 128, 128, 128, 128]], [[1, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [246, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [255, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]]], [[[198, 35, 237, 223, 193, 187, 162, 160, 145, 155, 62], [131, 45, 198, 221, 172, 176, 220, 157, 252, 221, 1], [68, 47, 146, 208, 149, 167, 221, 162, 255, 223, 128]], [[1, 149, 241, 255, 221, 224, 255, 255, 128, 128, 128], [184, 141, 234, 253, 222, 220, 255, 199, 128, 128, 128], [81, 99, 181, 242, 176, 190, 249, 202, 255, 255, 128]], [[1, 129, 232, 253, 214, 197, 242, 196, 255, 255, 128], [99, 121, 210, 250, 201, 198, 255, 202, 128, 128, 128], [23, 91, 163, 242, 170, 187, 247, 210, 255, 255, 128]], [[1, 200, 246, 255, 234, 255, 128, 128, 128, 128, 128], [109, 178, 241, 255, 231, 245, 255, 255, 128, 128, 128], [44, 130, 201, 253, 205, 192, 255, 255, 128, 128, 128]], [[1, 132, 239, 251, 219, 209, 255, 165, 128, 128, 128], [94, 136, 225, 251, 218, 190, 255, 255, 128, 128, 128], [22, 100, 174, 245, 186, 161, 255, 199, 128, 128, 128]], [[1, 182, 249, 255, 232, 235, 128, 128, 128, 128, 128], [124, 143, 241, 255, 227, 234, 128, 128, 128, 128, 128], [35, 77, 181, 251, 193, 211, 255, 205, 128, 128, 128]], [[1, 157, 247, 255, 236, 231, 255, 255, 128, 128, 128], [121, 141, 235, 255, 225, 227, 255, 255, 128, 128, 128], [45, 99, 188, 251, 195, 217, 255, 224, 128, 128, 128]], [[1, 1, 251, 255, 213, 255, 128, 128, 128, 128, 128], [203, 1, 248, 255, 255, 128, 128, 128, 128, 128, 128], [137, 1, 177, 255, 224, 255, 128, 128, 128, 128, 128]]], [[[253, 9, 248, 251, 207, 208, 255, 192, 128, 128, 128], [175, 13, 224, 243, 193, 185, 249, 198, 255, 255, 128], [73, 17, 171, 221, 161, 179, 236, 167, 255, 234, 128]], [[1, 95, 247, 253, 212, 183, 255, 255, 128, 128, 128], [239, 90, 244, 250, 211, 209, 255, 255, 128, 128, 128], [155, 77, 195, 248, 188, 195, 255, 255, 128, 128, 128]], [[1, 24, 239, 251, 218, 219, 255, 205, 128, 128, 128], [201, 51, 219, 255, 196, 186, 128, 128, 128, 128, 128], [69, 46, 190, 239, 201, 218, 255, 228, 128, 128, 128]], [[1, 191, 251, 255, 255, 128, 128, 128, 128, 128, 128], [223, 165, 249, 255, 213, 255, 128, 128, 128, 128, 128], [141, 124, 248, 255, 255, 128, 128, 128, 128, 128, 128]], [[1, 16, 248, 255, 255, 128, 128, 128, 128, 128, 128], [190, 36, 230, 255, 236, 255, 128, 128, 128, 128, 128], [149, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128]], [[1, 226, 255, 128, 128, 128, 128, 128, 128, 128, 128], [247, 192, 255, 128, 128, 128, 128, 128, 128, 128, 128], [240, 128, 255, 128, 128, 128, 128, 128, 128, 128, 128]], [[1, 134, 252, 255, 255, 128, 128, 128, 128, 128, 128], [213, 62, 250, 255, 255, 128, 128, 128, 128, 128, 128], [55, 93, 255, 128, 128, 128, 128, 128, 128, 128, 128]], [[128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128], [128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128]]], [[[202, 24, 213, 235, 186, 191, 220, 160, 240, 175, 255], [126, 38, 182, 232, 169, 184, 228, 174, 255, 187, 128], [61, 46, 138, 219, 151, 178, 240, 170, 255, 216, 128]], [[1, 112, 230, 250, 199, 191, 247, 159, 255, 255, 128], [166, 109, 228, 252, 211, 215, 255, 174, 128, 128, 128], [39, 77, 162, 232, 172, 180, 245, 178, 255, 255, 128]], [[1, 52, 220, 246, 198, 199, 249, 220, 255, 255, 128], [124, 74, 191, 243, 183, 193, 250, 221, 255, 255, 128], [24, 71, 130, 219, 154, 170, 243, 182, 255, 255, 128]], [[1, 182, 225, 249, 219, 240, 255, 224, 128, 128, 128], [149, 150, 226, 252, 216, 205, 255, 171, 128, 128, 128], [28, 108, 170, 242, 183, 194, 254, 223, 255, 255, 128]], [[1, 81, 230, 252, 204, 203, 255, 192, 128, 128, 128], [123, 102, 209, 247, 188, 196, 255, 233, 128, 128, 128], [20, 95, 153, 243, 164, 173, 255, 203, 128, 128, 128]], [[1, 222, 248, 255, 216, 213, 128, 128, 128, 128, 128], [168, 175, 246, 252, 235, 205, 255, 255, 128, 128, 128], [47, 116, 215, 255, 211, 212, 255, 255, 128, 128, 128]], [[1, 121, 236, 253, 212, 214, 255, 255, 128, 128, 128], [141, 84, 213, 252, 201, 202, 255, 219, 128, 128, 128], [42, 80, 160, 240, 162, 185, 255, 205, 128, 128, 128]], [[1, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [244, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128], [238, 1, 255, 128, 128, 128, 128, 128, 128, 128, 128]]]], _h = [[[231, 120, 48, 89, 115, 113, 120, 152, 112], [152, 179, 64, 126, 170, 118, 46, 70, 95], [175, 69, 143, 80, 85, 82, 72, 155, 103], [56, 58, 10, 171, 218, 189, 17, 13, 152], [114, 26, 17, 163, 44, 195, 21, 10, 173], [121, 24, 80, 195, 26, 62, 44, 64, 85], [144, 71, 10, 38, 171, 213, 144, 34, 26], [170, 46, 55, 19, 136, 160, 33, 206, 71], [63, 20, 8, 114, 114, 208, 12, 9, 226], [81, 40, 11, 96, 182, 84, 29, 16, 36]], [[134, 183, 89, 137, 98, 101, 106, 165, 148], [72, 187, 100, 130, 157, 111, 32, 75, 80], [66, 102, 167, 99, 74, 62, 40, 234, 128], [41, 53, 9, 178, 241, 141, 26, 8, 107], [74, 43, 26, 146, 73, 166, 49, 23, 157], [65, 38, 105, 160, 51, 52, 31, 115, 128], [104, 79, 12, 27, 217, 255, 87, 17, 7], [87, 68, 71, 44, 114, 51, 15, 186, 23], [47, 41, 14, 110, 182, 183, 21, 17, 194], [66, 45, 25, 102, 197, 189, 23, 18, 22]], [[88, 88, 147, 150, 42, 46, 45, 196, 205], [43, 97, 183, 117, 85, 38, 35, 179, 61], [39, 53, 200, 87, 26, 21, 43, 232, 171], [56, 34, 51, 104, 114, 102, 29, 93, 77], [39, 28, 85, 171, 58, 165, 90, 98, 64], [34, 22, 116, 206, 23, 34, 43, 166, 73], [107, 54, 32, 26, 51, 1, 81, 43, 31], [68, 25, 106, 22, 64, 171, 36, 225, 114], [34, 19, 21, 102, 132, 188, 16, 76, 124], [62, 18, 78, 95, 85, 57, 50, 48, 51]], [[193, 101, 35, 159, 215, 111, 89, 46, 111], [60, 148, 31, 172, 219, 228, 21, 18, 111], [112, 113, 77, 85, 179, 255, 38, 120, 114], [40, 42, 1, 196, 245, 209, 10, 25, 109], [88, 43, 29, 140, 166, 213, 37, 43, 154], [61, 63, 30, 155, 67, 45, 68, 1, 209], [100, 80, 8, 43, 154, 1, 51, 26, 71], [142, 78, 78, 16, 255, 128, 34, 197, 171], [41, 40, 5, 102, 211, 183, 4, 1, 221], [51, 50, 17, 168, 209, 192, 23, 25, 82]], [[138, 31, 36, 171, 27, 166, 38, 44, 229], [67, 87, 58, 169, 82, 115, 26, 59, 179], [63, 59, 90, 180, 59, 166, 93, 73, 154], [40, 40, 21, 116, 143, 209, 34, 39, 175], [47, 15, 16, 183, 34, 223, 49, 45, 183], [46, 17, 33, 183, 6, 98, 15, 32, 183], [57, 46, 22, 24, 128, 1, 54, 17, 37], [65, 32, 73, 115, 28, 128, 23, 128, 205], [40, 3, 9, 115, 51, 192, 18, 6, 223], [87, 37, 9, 115, 59, 77, 64, 21, 47]], [[104, 55, 44, 218, 9, 54, 53, 130, 226], [64, 90, 70, 205, 40, 41, 23, 26, 57], [54, 57, 112, 184, 5, 41, 38, 166, 213], [30, 34, 26, 133, 152, 116, 10, 32, 134], [39, 19, 53, 221, 26, 114, 32, 73, 255], [31, 9, 65, 234, 2, 15, 1, 118, 73], [75, 32, 12, 51, 192, 255, 160, 43, 51], [88, 31, 35, 67, 102, 85, 55, 186, 85], [56, 21, 23, 111, 59, 205, 45, 37, 192], [55, 38, 70, 124, 73, 102, 1, 34, 98]], [[125, 98, 42, 88, 104, 85, 117, 175, 82], [95, 84, 53, 89, 128, 100, 113, 101, 45], [75, 79, 123, 47, 51, 128, 81, 171, 1], [57, 17, 5, 71, 102, 57, 53, 41, 49], [38, 33, 13, 121, 57, 73, 26, 1, 85], [41, 10, 67, 138, 77, 110, 90, 47, 114], [115, 21, 2, 10, 102, 255, 166, 23, 6], [101, 29, 16, 10, 85, 128, 101, 196, 26], [57, 18, 10, 102, 102, 213, 34, 20, 43], [117, 20, 15, 36, 163, 128, 68, 1, 26]], [[102, 61, 71, 37, 34, 53, 31, 243, 192], [69, 60, 71, 38, 73, 119, 28, 222, 37], [68, 45, 128, 34, 1, 47, 11, 245, 171], [62, 17, 19, 70, 146, 85, 55, 62, 70], [37, 43, 37, 154, 100, 163, 85, 160, 1], [63, 9, 92, 136, 28, 64, 32, 201, 85], [75, 15, 9, 9, 64, 255, 184, 119, 16], [86, 6, 28, 5, 64, 255, 25, 248, 1], [56, 8, 17, 132, 137, 255, 55, 116, 128], [58, 15, 20, 82, 135, 57, 26, 121, 40]], [[164, 50, 31, 137, 154, 133, 25, 35, 218], [51, 103, 44, 131, 131, 123, 31, 6, 158], [86, 40, 64, 135, 148, 224, 45, 183, 128], [22, 26, 17, 131, 240, 154, 14, 1, 209], [45, 16, 21, 91, 64, 222, 7, 1, 197], [56, 21, 39, 155, 60, 138, 23, 102, 213], [83, 12, 13, 54, 192, 255, 68, 47, 28], [85, 26, 85, 85, 128, 128, 32, 146, 171], [18, 11, 7, 63, 144, 171, 4, 4, 246], [35, 27, 10, 146, 174, 171, 12, 26, 128]], [[190, 80, 35, 99, 180, 80, 126, 54, 45], [85, 126, 47, 87, 176, 51, 41, 20, 32], [101, 75, 128, 139, 118, 146, 116, 128, 85], [56, 41, 15, 176, 236, 85, 37, 9, 62], [71, 30, 17, 119, 118, 255, 17, 18, 138], [101, 38, 60, 138, 55, 70, 43, 26, 142], [146, 36, 19, 30, 171, 255, 97, 27, 20], [138, 45, 61, 62, 219, 1, 81, 188, 64], [32, 41, 20, 117, 151, 142, 20, 21, 163], [112, 19, 12, 61, 195, 128, 48, 4, 24]]], Ah = [[[[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[176, 246, 255, 255, 255, 255, 255, 255, 255, 255, 255], [223, 241, 252, 255, 255, 255, 255, 255, 255, 255, 255], [249, 253, 253, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 244, 252, 255, 255, 255, 255, 255, 255, 255, 255], [234, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 246, 254, 255, 255, 255, 255, 255, 255, 255, 255], [239, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 248, 254, 255, 255, 255, 255, 255, 255, 255, 255], [251, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [251, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 253, 255, 254, 255, 255, 255, 255, 255, 255], [250, 255, 254, 255, 254, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]], [[[217, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [225, 252, 241, 253, 255, 255, 254, 255, 255, 255, 255], [234, 250, 241, 250, 253, 255, 253, 254, 255, 255, 255]], [[255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [223, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [238, 253, 254, 254, 255, 255, 255, 255, 255, 255, 255]], [[255, 248, 254, 255, 255, 255, 255, 255, 255, 255, 255], [249, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 255, 255, 255, 255, 255, 255, 255, 255, 255], [247, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [252, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 253, 255, 255, 255, 255, 255, 255, 255, 255], [250, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]], [[[186, 251, 250, 255, 255, 255, 255, 255, 255, 255, 255], [234, 251, 244, 254, 255, 255, 255, 255, 255, 255, 255], [251, 251, 243, 253, 254, 255, 254, 255, 255, 255, 255]], [[255, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [236, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [251, 253, 253, 254, 254, 255, 255, 255, 255, 255, 255]], [[255, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [254, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]], [[[248, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [250, 254, 252, 254, 255, 255, 255, 255, 255, 255, 255], [248, 254, 249, 253, 255, 255, 255, 255, 255, 255, 255]], [[255, 253, 253, 255, 255, 255, 255, 255, 255, 255, 255], [246, 253, 253, 255, 255, 255, 255, 255, 255, 255, 255], [252, 254, 251, 254, 254, 255, 255, 255, 255, 255, 255]], [[255, 254, 252, 255, 255, 255, 255, 255, 255, 255, 255], [248, 254, 253, 255, 255, 255, 255, 255, 255, 255, 255], [253, 255, 254, 254, 255, 255, 255, 255, 255, 255, 255]], [[255, 251, 254, 255, 255, 255, 255, 255, 255, 255, 255], [245, 251, 254, 255, 255, 255, 255, 255, 255, 255, 255], [253, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 251, 253, 255, 255, 255, 255, 255, 255, 255, 255], [252, 253, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 252, 255, 255, 255, 255, 255, 255, 255, 255, 255], [249, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 253, 255, 255, 255, 255, 255, 255, 255, 255], [250, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]], [[255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255], [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]]]], Nh = [0, 1, 2, 3, 6, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 0], Dr = [], Jn = [], Sr = [], Lh = 1, Qo = 2, qr = [], zn = [];
     cn("UpsampleRgbLinePair", ai, 3), cn("UpsampleBgrLinePair", Ri, 3), cn("UpsampleRgbaLinePair", ca, 4), cn("UpsampleBgraLinePair", oi, 4), cn("UpsampleArgbLinePair", si, 4), cn("UpsampleRgba4444LinePair", fn, 2), cn("UpsampleRgb565LinePair", Ti, 2);
-    var Sh = z.UpsampleRgbLinePair, kh = z.UpsampleBgrLinePair, tl = z.UpsampleRgbaLinePair, el = z.UpsampleBgraLinePair, nl = z.UpsampleArgbLinePair, rl = z.UpsampleRgba4444LinePair, Ph = z.UpsampleRgb565LinePair, es = 16, ns = 1 << es - 1, wa = -227, Ks = 482, Ih = 6, il = 0, Ch = s(256), Fh = s(256), Eh = s(256), Oh = s(256), jh = s(Ks - wa), Bh = s(Ks - wa);
+    var Sh = z.UpsampleRgbLinePair, kh = z.UpsampleBgrLinePair, tl = z.UpsampleRgbaLinePair, el = z.UpsampleBgraLinePair, nl = z.UpsampleArgbLinePair, rl = z.UpsampleRgba4444LinePair, Ph = z.UpsampleRgb565LinePair, es = 16, ns = 1 << es - 1, wa = -227, Xs = 482, Ih = 6, il = 0, Ch = s(256), Fh = s(256), Eh = s(256), Oh = s(256), jh = s(Xs - wa), Bh = s(Xs - wa);
     or("YuvToRgbRow", ai, 3), or("YuvToBgrRow", Ri, 3), or("YuvToRgbaRow", ca, 4), or("YuvToBgraRow", oi, 4), or("YuvToArgbRow", si, 4), or("YuvToRgba4444Row", fn, 2), or("YuvToRgb565Row", Ti, 2);
     var al = [0, 4, 8, 12, 128, 132, 136, 140, 256, 260, 264, 268, 384, 388, 392, 396], rs = [0, 2, 8], Mh = [8, 7, 6, 4, 4, 2, 2, 2, 1, 1, 1, 1], Rh = 1;
     this.WebPDecodeRGBA = function(r, a, h, g, v) {
-      var w = Ka, y = new T(), _ = new le();
+      var w = Xa, y = new T(), _ = new le();
       y.ba = _, _.S = w, _.width = [_.width], _.height = [_.height];
       var L = _.width, C = _.height, H = new Vt();
       if (H == null || r == null) var Z = 2;
@@ -7152,15 +7152,15 @@ function Su(n) {
                 break t;
               }
               if ((function(F, W) {
-                var X = [0], ot = [0], K = [0];
+                var K = [0], ot = [0], X = [0];
                 e: for (; ; ) {
                   if (F == null) return 0;
                   if (W == null) return F.a = 2, 0;
-                  if (F.l = W, F.a = 0, ft(F.m, W.data, W.w, W.ha), !br(F.m, X, ot, K)) {
+                  if (F.l = W, F.a = 0, ft(F.m, W.data, W.w, W.ha), !br(F.m, K, ot, X)) {
                     F.a = 3;
                     break e;
                   }
-                  if (F.xb = Qo, W.width = X[0], W.height = ot[0], !nr(X[0], ot[0], 1, F, null)) break e;
+                  if (F.xb = Qo, W.width = K[0], W.height = ot[0], !nr(K[0], ot[0], 1, F, null)) break e;
                   return 1;
                 }
                 return e(F.a != 0), 0;
@@ -7215,57 +7215,57 @@ function Su(n) {
                     if (!F.cb && !ir(F, W)) return 0;
                     if (e(F.cb), W.ac == null || W.ac(W)) {
                       W.ob && (F.L = 0);
-                      var X = rs[F.L];
-                      if (F.L == 2 ? (F.yb = 0, F.zb = 0) : (F.yb = W.v - X >> 4, F.zb = W.j - X >> 4, 0 > F.yb && (F.yb = 0), 0 > F.zb && (F.zb = 0)), F.Va = W.o + 15 + X >> 4, F.Hb = W.va + 15 + X >> 4, F.Hb > F.za && (F.Hb = F.za), F.Va > F.Ub && (F.Va = F.Ub), 0 < F.L) {
+                      var K = rs[F.L];
+                      if (F.L == 2 ? (F.yb = 0, F.zb = 0) : (F.yb = W.v - K >> 4, F.zb = W.j - K >> 4, 0 > F.yb && (F.yb = 0), 0 > F.zb && (F.zb = 0)), F.Va = W.o + 15 + K >> 4, F.Hb = W.va + 15 + K >> 4, F.Hb > F.za && (F.Hb = F.za), F.Va > F.Ub && (F.Va = F.Ub), 0 < F.L) {
                         var ot = F.ed;
-                        for (X = 0; 4 > X; ++X) {
-                          var K;
+                        for (K = 0; 4 > K; ++K) {
+                          var X;
                           if (F.Qa.Cb) {
-                            var ut = F.Qa.Lb[X];
+                            var ut = F.Qa.Lb[K];
                             F.Qa.Fb || (ut += ot.Tb);
                           } else ut = ot.Tb;
-                          for (K = 0; 1 >= K; ++K) {
-                            var ht = F.gd[X][K], wt = ut;
-                            if (ot.Pc && (wt += ot.vd[0], K && (wt += ot.od[0])), 0 < (wt = 0 > wt ? 0 : 63 < wt ? 63 : wt)) {
+                          for (X = 0; 1 >= X; ++X) {
+                            var ht = F.gd[K][X], wt = ut;
+                            if (ot.Pc && (wt += ot.vd[0], X && (wt += ot.od[0])), 0 < (wt = 0 > wt ? 0 : 63 < wt ? 63 : wt)) {
                               var bt = wt;
                               0 < ot.wb && (bt = 4 < ot.wb ? bt >> 2 : bt >> 1) > 9 - ot.wb && (bt = 9 - ot.wb), 1 > bt && (bt = 1), ht.dd = bt, ht.tc = 2 * wt + bt, ht.ld = 40 <= wt ? 2 : 15 <= wt ? 1 : 0;
                             } else ht.tc = 0;
-                            ht.La = K;
+                            ht.La = X;
                           }
                         }
                       }
-                      X = 0;
-                    } else $e(F, 6, "Frame setup failed"), X = F.a;
-                    if (X = X == 0) {
-                      if (X) {
+                      K = 0;
+                    } else $e(F, 6, "Frame setup failed"), K = F.a;
+                    if (K = K == 0) {
+                      if (K) {
                         F.$c = 0, 0 < F.Aa || (F.Ic = Rh);
                         e: {
-                          X = F.Ic, ot = 4 * (bt = F.za);
+                          K = F.Ic, ot = 4 * (bt = F.za);
                           var Rt = 32 * bt, Pt = bt + 1, re = 0 < F.L ? bt * (0 < F.Aa ? 2 : 1) : 0, Ot = (F.Aa == 2 ? 2 : 1) * bt;
-                          if ((ht = ot + 832 + (K = 3 * (16 * X + rs[F.L]) / 2 * Rt) + (ut = F.Fa != null && 0 < F.Fa.length ? F.Kc.c * F.Kc.i : 0)) != ht) X = 0;
+                          if ((ht = ot + 832 + (X = 3 * (16 * K + rs[F.L]) / 2 * Rt) + (ut = F.Fa != null && 0 < F.Fa.length ? F.Kc.c * F.Kc.i : 0)) != ht) K = 0;
                           else {
                             if (ht > F.Vb) {
                               if (F.Vb = 0, F.Ec = s(ht), F.Fc = 0, F.Ec == null) {
-                                X = $e(F, 1, "no memory during frame initialization.");
+                                K = $e(F, 1, "no memory during frame initialization.");
                                 break e;
                               }
                               F.Vb = ht;
                             }
-                            ht = F.Ec, wt = F.Fc, F.Ac = ht, F.Bc = wt, wt += ot, F.Gd = f(Rt, Ba), F.Hd = 0, F.rb = f(Pt + 1, ea), F.sb = 1, F.wa = re ? f(re, Dn) : null, F.Y = 0, F.D.Nb = 0, F.D.wa = F.wa, F.D.Y = F.Y, 0 < F.Aa && (F.D.Y += bt), e(!0), F.oc = ht, F.pc = wt, wt += 832, F.ya = f(Ot, na), F.aa = 0, F.D.ya = F.ya, F.D.aa = F.aa, F.Aa == 2 && (F.D.aa += bt), F.R = 16 * bt, F.B = 8 * bt, bt = (Rt = rs[F.L]) * F.R, Rt = Rt / 2 * F.B, F.sa = ht, F.ta = wt + bt, F.qa = F.sa, F.ra = F.ta + 16 * X * F.R + Rt, F.Ha = F.qa, F.Ia = F.ra + 8 * X * F.B + Rt, F.$c = 0, wt += K, F.mb = ut ? ht : null, F.nb = ut ? wt : null, e(wt + ut <= F.Fc + F.Vb), ra(F), o(F.Ac, F.Bc, 0, ot), X = 1;
+                            ht = F.Ec, wt = F.Fc, F.Ac = ht, F.Bc = wt, wt += ot, F.Gd = f(Rt, Ba), F.Hd = 0, F.rb = f(Pt + 1, ea), F.sb = 1, F.wa = re ? f(re, Dn) : null, F.Y = 0, F.D.Nb = 0, F.D.wa = F.wa, F.D.Y = F.Y, 0 < F.Aa && (F.D.Y += bt), e(!0), F.oc = ht, F.pc = wt, wt += 832, F.ya = f(Ot, na), F.aa = 0, F.D.ya = F.ya, F.D.aa = F.aa, F.Aa == 2 && (F.D.aa += bt), F.R = 16 * bt, F.B = 8 * bt, bt = (Rt = rs[F.L]) * F.R, Rt = Rt / 2 * F.B, F.sa = ht, F.ta = wt + bt, F.qa = F.sa, F.ra = F.ta + 16 * K * F.R + Rt, F.Ha = F.qa, F.Ia = F.ra + 8 * K * F.B + Rt, F.$c = 0, wt += X, F.mb = ut ? ht : null, F.nb = ut ? wt : null, e(wt + ut <= F.Fc + F.Vb), ra(F), o(F.Ac, F.Bc, 0, ot), K = 1;
                           }
                         }
-                        if (X) {
+                        if (K) {
                           if (W.ka = 0, W.y = F.sa, W.O = F.ta, W.f = F.qa, W.N = F.ra, W.ea = F.Ha, W.Vd = F.Ia, W.fa = F.R, W.Rc = F.B, W.F = null, W.J = 0, !Jo) {
-                            for (X = -255; 255 >= X; ++X) Wo[255 + X] = 0 > X ? -X : X;
-                            for (X = -1020; 1020 >= X; ++X) Vo[1020 + X] = -128 > X ? -128 : 127 < X ? 127 : X;
-                            for (X = -112; 112 >= X; ++X) Go[112 + X] = -16 > X ? -16 : 15 < X ? 15 : X;
-                            for (X = -255; 510 >= X; ++X) Yo[255 + X] = 0 > X ? 0 : 255 < X ? 255 : X;
+                            for (K = -255; 255 >= K; ++K) Wo[255 + K] = 0 > K ? -K : K;
+                            for (K = -1020; 1020 >= K; ++K) Vo[1020 + K] = -128 > K ? -128 : 127 < K ? 127 : K;
+                            for (K = -112; 112 >= K; ++K) Go[112 + K] = -16 > K ? -16 : 15 < K ? 15 : K;
+                            for (K = -255; 510 >= K; ++K) Yo[255 + K] = 0 > K ? 0 : 255 < K ? 255 : K;
                             Jo = 1;
                           }
-                          Rr = Da, Nr = ks, Wi = Ps, dn = Is, ur = ar, Tr = Ta, Pe = za, Ie = Ha, He = Va, Ze = l, Lr = Wa, ma = ni, Vi = b, Ja = I, Ro = Bi, To = ua, Do = Mi, qo = Ua, Jn[0] = Ms, Jn[1] = Ei, Jn[2] = js, Jn[3] = Bs, Jn[4] = Rs, Jn[5] = wr, Jn[6] = Ts, Jn[7] = yr, Jn[8] = qs, Jn[9] = Ds, Dr[0] = qa, Dr[1] = Cs, Dr[2] = Fs, Dr[3] = Es, Dr[4] = Er, Dr[5] = Os, Dr[6] = ti, Sr[0] = Us, Sr[1] = ia, Sr[2] = Oi, Sr[3] = aa, Sr[4] = zs, Sr[5] = ji, Sr[6] = sa, X = 1;
-                        } else X = 0;
+                          Rr = Da, Nr = ks, Wi = Ps, dn = Is, ur = ar, Tr = Ta, Pe = za, Ie = Ha, He = Va, Ze = l, Lr = Wa, ma = ni, Vi = b, Ja = I, Ro = Bi, To = ua, Do = Mi, qo = Ua, Jn[0] = Ms, Jn[1] = Ei, Jn[2] = js, Jn[3] = Bs, Jn[4] = Rs, Jn[5] = wr, Jn[6] = Ts, Jn[7] = yr, Jn[8] = qs, Jn[9] = Ds, Dr[0] = qa, Dr[1] = Cs, Dr[2] = Fs, Dr[3] = Es, Dr[4] = Er, Dr[5] = Os, Dr[6] = ti, Sr[0] = Us, Sr[1] = ia, Sr[2] = Oi, Sr[3] = aa, Sr[4] = zs, Sr[5] = ji, Sr[6] = sa, K = 1;
+                        } else K = 0;
                       }
-                      X && (X = (function(fe, Qe) {
+                      K && (K = (function(fe, Qe) {
                         for (fe.M = 0; fe.M < fe.Va; ++fe.M) {
                           var ie, jt = fe.Jc[fe.M & fe.Xb], Nt = fe.m, We = fe;
                           for (ie = 0; ie < We.za; ++ie) {
@@ -7325,12 +7325,12 @@ function Su(n) {
                               var Fn = Fn.wa[Fn.Y + ln], En = un.sa, Sn = un.ta + 16 * An * qe + 16 * ln, On = Fn.dd, Ce = Fn.tc;
                               if (Ce != 0) if (e(3 <= Ce), un.L == 1) 0 < ln && To(En, Sn, qe, Ce + 4), Fn.La && qo(En, Sn, qe, Ce), 0 < $n && Ro(En, Sn, qe, Ce + 4), Fn.La && Do(En, Sn, qe, Ce);
                               else {
-                                var jn = un.B, Xn = un.qa, pi = un.ra + 8 * An * jn + 8 * ln, kr = un.Ha, un = un.Ia + 8 * An * jn + 8 * ln;
-                                An = Fn.ld, 0 < ln && (Ie(En, Sn, qe, Ce + 4, On, An), Ze(Xn, pi, kr, un, jn, Ce + 4, On, An)), Fn.La && (ma(En, Sn, qe, Ce, On, An), Ja(Xn, pi, kr, un, jn, Ce, On, An)), 0 < $n && (Pe(En, Sn, qe, Ce + 4, On, An), He(Xn, pi, kr, un, jn, Ce + 4, On, An)), Fn.La && (Lr(En, Sn, qe, Ce, On, An), Vi(Xn, pi, kr, un, jn, Ce, On, An));
+                                var jn = un.B, Kn = un.qa, pi = un.ra + 8 * An * jn + 8 * ln, kr = un.Ha, un = un.Ia + 8 * An * jn + 8 * ln;
+                                An = Fn.ld, 0 < ln && (Ie(En, Sn, qe, Ce + 4, On, An), Ze(Kn, pi, kr, un, jn, Ce + 4, On, An)), Fn.La && (ma(En, Sn, qe, Ce, On, An), Ja(Kn, pi, kr, un, jn, Ce, On, An)), 0 < $n && (Pe(En, Sn, qe, Ce + 4, On, An), He(Kn, pi, kr, un, jn, Ce + 4, On, An)), Fn.La && (Lr(En, Sn, qe, Ce, On, An), Vi(Kn, pi, kr, un, jn, Ce, On, An));
                               }
                             }
                             if (jt.ia && alert("todo:DitherRow"), Nt.put != null) {
-                              if (ye = 16 * Le, Le = 16 * (Le + 1), en ? (Nt.y = jt.sa, Nt.O = jt.ta + we, Nt.f = jt.qa, Nt.N = jt.ra + Ln, Nt.ea = jt.Ha, Nt.W = jt.Ia + Ln) : (ye -= me, Nt.y = on, Nt.O = xn, Nt.f = De, Nt.N = pe, Nt.ea = pn, Nt.W = _n), tn || (Le -= me), Le > Nt.o && (Le = Nt.o), Nt.F = null, Nt.J = null, jt.Fa != null && 0 < jt.Fa.length && ye < Le && (Nt.J = Xe(jt, Nt, ye, Le - ye), Nt.F = jt.mb, Nt.F == null && Nt.F.length == 0)) {
+                              if (ye = 16 * Le, Le = 16 * (Le + 1), en ? (Nt.y = jt.sa, Nt.O = jt.ta + we, Nt.f = jt.qa, Nt.N = jt.ra + Ln, Nt.ea = jt.Ha, Nt.W = jt.Ia + Ln) : (ye -= me, Nt.y = on, Nt.O = xn, Nt.f = De, Nt.N = pe, Nt.ea = pn, Nt.W = _n), tn || (Le -= me), Le > Nt.o && (Le = Nt.o), Nt.F = null, Nt.J = null, jt.Fa != null && 0 < jt.Fa.length && ye < Le && (Nt.J = Ke(jt, Nt, ye, Le - ye), Nt.F = jt.mb, Nt.F == null && Nt.F.length == 0)) {
                                 We = $e(jt, 3, "Could not decode alpha data.");
                                 break e;
                               }
@@ -7341,9 +7341,9 @@ function Su(n) {
                           if (!We) return $e(fe, 6, "Output aborted.");
                         }
                         return 1;
-                      })(F, W)), W.bc != null && W.bc(W), X &= 1;
+                      })(F, W)), W.bc != null && W.bc(W), K &= 1;
                     }
-                    return X ? (F.cb = 0, X) : 0;
+                    return K ? (F.cb = 0, K) : 0;
                   })(r, g) || (a = r.a);
                 }
               } else a = r.a;
@@ -8681,7 +8681,7 @@ endobj\r
     var d = { data: c, width: f, height: u }, m = new So(100).encode(d, 100);
     return n.processJPEG.call(this, m, t, i, o);
   }, n.processGIF87A = n.processGIF89A;
-})(Mt.API), Kn.prototype.parseHeader = function() {
+})(Mt.API), Xn.prototype.parseHeader = function() {
   if (this.fileSize = this.datav.getUint32(this.pos, !0), this.pos += 4, this.reserved = this.datav.getUint32(this.pos, !0), this.pos += 4, this.offset = this.datav.getUint32(this.pos, !0), this.pos += 4, this.headerSize = this.datav.getUint32(this.pos, !0), this.pos += 4, this.width = this.datav.getUint32(this.pos, !0), this.pos += 4, this.height = this.datav.getInt32(this.pos, !0), this.pos += 4, this.planes = this.datav.getUint16(this.pos, !0), this.pos += 2, this.bitPP = this.datav.getUint16(this.pos, !0), this.pos += 2, this.compress = this.datav.getUint32(this.pos, !0), this.pos += 4, this.rawSize = this.datav.getUint32(this.pos, !0), this.pos += 4, this.hr = this.datav.getUint32(this.pos, !0), this.pos += 4, this.vr = this.datav.getUint32(this.pos, !0), this.pos += 4, this.colors = this.datav.getUint32(this.pos, !0), this.pos += 4, this.importantColors = this.datav.getUint32(this.pos, !0), this.pos += 4, this.bitPP === 16 && this.is_with_alpha && (this.bitPP = 15), this.bitPP < 15) {
     var n = this.colors === 0 ? 1 << this.bitPP : this.colors;
     this.palette = new Array(n);
@@ -8691,7 +8691,7 @@ endobj\r
     }
   }
   this.height < 0 && (this.height *= -1, this.bottom_up = !1);
-}, Kn.prototype.parseBGR = function() {
+}, Xn.prototype.parseBGR = function() {
   this.pos = this.offset;
   var n = "bit" + this.bitPP, e = this.width * this.height * 4;
   if (e > 536870912) throw new Error("Image dimensions exceed 512MB, which is too large.");
@@ -8701,7 +8701,7 @@ endobj\r
   } catch (t) {
     Se.log("bit decode error:" + t);
   }
-}, Kn.prototype.bit1 = function() {
+}, Xn.prototype.bit1 = function() {
   var n, e = Math.ceil(this.width / 8), t = e % 4;
   for (n = this.height - 1; n >= 0; n--) {
     for (var i = this.bottom_up ? n : this.height - 1 - n, o = 0; o < e; o++) for (var s = this.datav.getUint8(this.pos++, !0), f = i * this.width * 4 + 8 * o * 4, u = 0; u < 8 && 8 * o + u < this.width; u++) {
@@ -8710,7 +8710,7 @@ endobj\r
     }
     t !== 0 && (this.pos += 4 - t);
   }
-}, Kn.prototype.bit4 = function() {
+}, Xn.prototype.bit4 = function() {
   for (var n = Math.ceil(this.width / 2), e = n % 4, t = this.height - 1; t >= 0; t--) {
     for (var i = this.bottom_up ? t : this.height - 1 - t, o = 0; o < n; o++) {
       var s = this.datav.getUint8(this.pos++, !0), f = i * this.width * 4 + 2 * o * 4, u = s >> 4, c = 15 & s, d = this.palette[u];
@@ -8719,7 +8719,7 @@ endobj\r
     }
     e !== 0 && (this.pos += 4 - e);
   }
-}, Kn.prototype.bit8 = function() {
+}, Xn.prototype.bit8 = function() {
   for (var n = this.width % 4, e = this.height - 1; e >= 0; e--) {
     for (var t = this.bottom_up ? e : this.height - 1 - e, i = 0; i < this.width; i++) {
       var o = this.datav.getUint8(this.pos++, !0), s = t * this.width * 4 + 4 * i;
@@ -8730,7 +8730,7 @@ endobj\r
     }
     n !== 0 && (this.pos += 4 - n);
   }
-}, Kn.prototype.bit15 = function() {
+}, Xn.prototype.bit15 = function() {
   for (var n = this.width % 3, e = parseInt("11111", 2), t = this.height - 1; t >= 0; t--) {
     for (var i = this.bottom_up ? t : this.height - 1 - t, o = 0; o < this.width; o++) {
       var s = this.datav.getUint16(this.pos, !0);
@@ -8740,7 +8740,7 @@ endobj\r
     }
     this.pos += n;
   }
-}, Kn.prototype.bit16 = function() {
+}, Xn.prototype.bit16 = function() {
   for (var n = this.width % 3, e = parseInt("11111", 2), t = parseInt("111111", 2), i = this.height - 1; i >= 0; i--) {
     for (var o = this.bottom_up ? i : this.height - 1 - i, s = 0; s < this.width; s++) {
       var f = this.datav.getUint16(this.pos, !0);
@@ -8750,7 +8750,7 @@ endobj\r
     }
     this.pos += n;
   }
-}, Kn.prototype.bit24 = function() {
+}, Xn.prototype.bit24 = function() {
   for (var n = this.height - 1; n >= 0; n--) {
     for (var e = this.bottom_up ? n : this.height - 1 - n, t = 0; t < this.width; t++) {
       var i = this.datav.getUint8(this.pos++, !0), o = this.datav.getUint8(this.pos++, !0), s = this.datav.getUint8(this.pos++, !0), f = e * this.width * 4 + 4 * t;
@@ -8758,12 +8758,12 @@ endobj\r
     }
     this.pos += this.width % 4;
   }
-}, Kn.prototype.bit32 = function() {
+}, Xn.prototype.bit32 = function() {
   for (var n = this.height - 1; n >= 0; n--) for (var e = this.bottom_up ? n : this.height - 1 - n, t = 0; t < this.width; t++) {
     var i = this.datav.getUint8(this.pos++, !0), o = this.datav.getUint8(this.pos++, !0), s = this.datav.getUint8(this.pos++, !0), f = this.datav.getUint8(this.pos++, !0), u = e * this.width * 4 + 4 * t;
     this.data[u] = s, this.data[u + 1] = o, this.data[u + 2] = i, this.data[u + 3] = f;
   }
-}, Kn.prototype.getData = function() {
+}, Xn.prototype.getData = function() {
   return this.data;
 }, /**
  * @license
@@ -8774,7 +8774,7 @@ endobj\r
  */
 (function(n) {
   n.processBMP = function(e, t, i, o) {
-    var s = new Kn(e, !1), f = s.width, u = s.height, c = { data: s.getData(), width: f, height: u }, d = new So(100).encode(c, 100);
+    var s = new Xn(e, !1), f = s.width, u = s.height, c = { data: s.getData(), width: f, height: u }, d = new So(100).encode(c, 100);
     return n.processJPEG.call(this, d, t, i, o);
   };
 })(Mt.API), Su.prototype.getData = function() {
@@ -8916,7 +8916,7 @@ endobj\r
   var d = c.getContext("2d");
   d.fillStyle = "#fff", d.fillRect(0, 0, c.width, c.height);
   var m = { ignoreMouse: !0, ignoreAnimation: !0, ignoreDimensions: !0 }, A = this;
-  return ($t.canvg ? Promise.resolve($t.canvg) : import("./index.es-DUL7vkcF.js")).catch(function(P) {
+  return ($t.canvg ? Promise.resolve($t.canvg) : import("./index.es-CesyGR9V.js")).catch(function(P) {
     return Promise.reject(new Error("Could not load canvg: " + P));
   }).then(function(P) {
     return P.default ? P.default : P;
@@ -9022,9 +9022,9 @@ end`;
         var M = d();
         m({ data: i(u.metadata.toUnicode), addLength1: !0, objectId: M }), c("endobj");
         var S = d();
-        c("<<"), c("/Type /FontDescriptor"), c("/FontName /" + Ki(u.fontName)), c("/FontFile2 " + O + " 0 R"), c("/FontBBox " + n.API.PDFObject.convert(u.metadata.bbox)), c("/Flags " + u.metadata.flags), c("/StemV " + u.metadata.stemV), c("/ItalicAngle " + u.metadata.italicAngle), c("/Ascent " + u.metadata.ascender), c("/Descent " + u.metadata.decender), c("/CapHeight " + u.metadata.capHeight), c(">>"), c("endobj");
+        c("<<"), c("/Type /FontDescriptor"), c("/FontName /" + Xi(u.fontName)), c("/FontFile2 " + O + " 0 R"), c("/FontBBox " + n.API.PDFObject.convert(u.metadata.bbox)), c("/Flags " + u.metadata.flags), c("/StemV " + u.metadata.stemV), c("/ItalicAngle " + u.metadata.italicAngle), c("/Ascent " + u.metadata.ascender), c("/Descent " + u.metadata.decender), c("/CapHeight " + u.metadata.capHeight), c(">>"), c("endobj");
         var Y = d();
-        c("<<"), c("/Type /Font"), c("/BaseFont /" + Ki(u.fontName)), c("/FontDescriptor " + S + " 0 R"), c("/W " + n.API.PDFObject.convert(A)), c("/CIDToGIDMap /Identity"), c("/DW 1000"), c("/Subtype /CIDFontType2"), c("/CIDSystemInfo"), c("<<"), c("/Supplement 0"), c("/Registry (Adobe)"), c("/Ordering (" + u.encoding + ")"), c(">>"), c(">>"), c("endobj"), u.objectNumber = d(), c("<<"), c("/Type /Font"), c("/Subtype /Type0"), c("/ToUnicode " + M + " 0 R"), c("/BaseFont /" + Ki(u.fontName)), c("/Encoding /" + u.encoding), c("/DescendantFonts [" + Y + " 0 R]"), c(">>"), c("endobj"), u.isAlreadyPutted = !0;
+        c("<<"), c("/Type /Font"), c("/BaseFont /" + Xi(u.fontName)), c("/FontDescriptor " + S + " 0 R"), c("/W " + n.API.PDFObject.convert(A)), c("/CIDToGIDMap /Identity"), c("/DW 1000"), c("/Subtype /CIDFontType2"), c("/CIDSystemInfo"), c("<<"), c("/Supplement 0"), c("/Registry (Adobe)"), c("/Ordering (" + u.encoding + ")"), c(">>"), c(">>"), c("endobj"), u.objectNumber = d(), c("<<"), c("/Type /Font"), c("/Subtype /Type0"), c("/ToUnicode " + M + " 0 R"), c("/BaseFont /" + Xi(u.fontName)), c("/Encoding /" + u.encoding), c("/DescendantFonts [" + Y + " 0 R]"), c(">>"), c("endobj"), u.isAlreadyPutted = !0;
       }
     })(s);
   }]), e.events.push(["putFont", function(s) {
@@ -9037,9 +9037,9 @@ end`;
         var O = d();
         m({ data: i(u.metadata.toUnicode), addLength1: !0, objectId: O }), c("endobj");
         var M = d();
-        c("<<"), c("/Descent " + u.metadata.decender), c("/CapHeight " + u.metadata.capHeight), c("/StemV " + u.metadata.stemV), c("/Type /FontDescriptor"), c("/FontFile2 " + B + " 0 R"), c("/Flags 96"), c("/FontBBox " + n.API.PDFObject.convert(u.metadata.bbox)), c("/FontName /" + Ki(u.fontName)), c("/ItalicAngle " + u.metadata.italicAngle), c("/Ascent " + u.metadata.ascender), c(">>"), c("endobj"), u.objectNumber = d();
+        c("<<"), c("/Descent " + u.metadata.decender), c("/CapHeight " + u.metadata.capHeight), c("/StemV " + u.metadata.stemV), c("/Type /FontDescriptor"), c("/FontFile2 " + B + " 0 R"), c("/Flags 96"), c("/FontBBox " + n.API.PDFObject.convert(u.metadata.bbox)), c("/FontName /" + Xi(u.fontName)), c("/ItalicAngle " + u.metadata.italicAngle), c("/Ascent " + u.metadata.ascender), c(">>"), c("endobj"), u.objectNumber = d();
         for (var S = 0; S < u.metadata.hmtx.widths.length; S++) u.metadata.hmtx.widths[S] = parseInt(u.metadata.hmtx.widths[S] * (1e3 / u.metadata.head.unitsPerEm));
-        c("<</Subtype/TrueType/Type/Font/ToUnicode " + O + " 0 R/BaseFont/" + Ki(u.fontName) + "/FontDescriptor " + M + " 0 R/Encoding/" + u.encoding + " /FirstChar 29 /LastChar 255 /Widths " + n.API.PDFObject.convert(u.metadata.hmtx.widths) + ">>"), c("endobj"), u.isAlreadyPutted = !0;
+        c("<</Subtype/TrueType/Type/Font/ToUnicode " + O + " 0 R/BaseFont/" + Xi(u.fontName) + "/FontDescriptor " + M + " 0 R/Encoding/" + u.encoding + " /FirstChar 29 /LastChar 255 /Widths " + n.API.PDFObject.convert(u.metadata.hmtx.widths) + ">>"), c("endobj"), u.isAlreadyPutted = !0;
       }
     })(s);
   }]);
