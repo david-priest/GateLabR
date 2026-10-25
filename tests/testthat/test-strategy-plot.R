@@ -459,3 +459,149 @@ test_that("a strategy takes its counts from the memberships Save to SCE stored",
   S4Vectors::metadata(combined) <- c(S4Vectors::metadata(sce), S4Vectors::metadata(sce)["gatelab_workspace"])
   expect_error(gatelabStrategyPlot(combined, "naive"), "workspaces of several saved objects")
 })
+
+# A quadrant gate on CD45RA x CCR7 at the root, centre (2, 2), as a spider (`arms`) or a curly
+# quadrant (`curl`), with one population made for its quadrant 2. Events are placed by hand where
+# the app's rule for that shape and a straight crosshair put them in different quadrants, each
+# point repeated a different number of times so that every count says which points it holds.
+shaped_quadrant_sce <- function(shape, points, times) {
+  values <- rbind(CD45RA = rep(points[, 1], times), CCR7 = rep(points[, 2], times))
+  quad <- c(list(gate_id = "g_quad", name = "CD45RA x CCR7 quadrant", gate_type = "quadrant", x_channel = "CD45RA",
+                 y_channel = "CCR7", color = "#377eb8", label_offset = NULL, space = "display", center = list(2, 2)), shape)
+  workspace <- list(
+    hostedAssayId = "exprs",
+    gating = list(
+      root_population_id = "root",
+      gates = list(g_quad = quad),
+      populations = list(
+        root = list(population_id = "root", name = "All Events", parent_id = NULL, children = list("p_q2"), gate_refs = list()),
+        p_q2 = list(population_id = "p_q2", name = "CD45RA_positive_CCR7_positive", parent_id = "root", children = list(),
+                    gate_refs = list(list(gate_id = "g_quad", include = TRUE, quadrant = 2))))),
+    scales = list(globalScales = list()), display = list())
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(exprs = values),
+    colData = S4Vectors::DataFrame(sample_id = rep(c("D1", "D2"), length.out = ncol(values))))
+  S4Vectors::metadata(sce)$gatelab_workspace <- list(
+    workspace_json = as.character(jsonlite::toJSON(workspace, auto_unbox = TRUE, null = "null", digits = NA)))
+  sce
+}
+
+test_that("a spider quadrant counts each event by its leaning arms, and none outside its box", {
+  # Arms from (2, 2) to the box [0, 4] x [0, 4]: down to (3, 0), right to (4, 3), up to (1, 4) and
+  # left to (0, 1). By the core's gateMaskQuadrant(), with the divider taken at the event's own x or
+  # y: a (2.3, 1) Q4, b (3, 2.3) Q3, c (1.7, 3) Q2, d (1, 1.7) Q1, e (5, 5) none, f (1, 3) Q1,
+  # g (3, 3) Q2, h (1, 1) Q4, i (3, 1) Q3, and the centre itself Q2. A crosshair at (2, 2) puts
+  # a in Q3, b in Q2, c in Q1, d in Q4 and e in Q2.
+  spider <- list(arms = list(down = list(3, 0), right = list(4, 3), up = list(1, 4), left = list(0, 1)))
+  points <- rbind(a = c(2.3, 1), b = c(3, 2.3), c = c(1.7, 3), d = c(1, 1.7), e = c(5, 5), f = c(1, 3), g = c(3, 3),
+                  h = c(1, 1), i = c(3, 1), centre = c(2, 2))
+  times <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+  sce <- shaped_quadrant_sce(spider, points, times)
+  gating <- GateLabR:::.gatelabr_strategy_gating(sce)
+  gate <- gating$gates$g_quad
+  expect_equal(gate$arms, list(down = c(3, 0), right = c(4, 3), up = c(1, 4), left = c(0, 1)))
+  expect_null(gate$curl)
+  in_gate <- GateLabR:::.gatelabr_strategy_in_gate
+  x <- points[, 1]; y <- points[, 2]
+  expect_equal(unname(which(in_gate(gate, x, y, 1))), match(c("d", "f"), rownames(points)))
+  expect_equal(unname(which(in_gate(gate, x, y, 2))), match(c("c", "g", "centre"), rownames(points)))
+  expect_equal(unname(which(in_gate(gate, x, y, 3))), match(c("b", "i"), rownames(points)))
+  expect_equal(unname(which(in_gate(gate, x, y, 4))), match(c("a", "h"), rownames(points)))
+  # An event on the box's edge is inside it; one past it, or undefined, is in no quadrant.
+  expect_true(in_gate(gate, 4, 4, 2))
+  expect_false(any(vapply(1:4, function(q) in_gate(gate, c(4.01, NA), c(4, 1), q), logical(2))))
+
+  # Quadrant 2 is a population's, from its memberships; the other three are counted from the
+  # gate, by the same rule.
+  q2 <- rep(rownames(points), times) %in% c("c", "g", "centre")
+  strategy <- gatelabStrategyPlot(sce, "CD45RA_positive_CCR7_positive", membership = cbind(CD45RA_positive_CCR7_positive = q2))
+  panels <- attr(strategy, "panels")
+  expect_equal(panels$population, c("quadrant 1", "CD45RA_positive_CCR7_positive", "quadrant 3", "quadrant 4"))
+  expect_equal(panels$events, c(4 + 6, 3 + 7 + 10, 2 + 9, 1 + 8))
+  expect_equal(panels$parent_events, rep(55, 4))
+  expect_equal(panels$percent_of_parent, round(c(10, 20, 11, 9) / 55 * 100, 1))
+
+  # Arms the core would refuse are not read: a centre outside the box the ends span, an end off
+  # its edge, a missing arm. The gate is then the crosshair it was before.
+  arms <- GateLabR:::.gatelabr_quadrant_arms
+  ends <- list(down = c(3, 0), right = c(4, 3), up = c(1, 4), left = c(0, 1))
+  expect_equal(arms(c(2, 2), ends), ends)
+  expect_null(arms(c(5, 2), ends))
+  expect_null(arms(c(2, 2), utils::modifyList(ends, list(up = c(5, 4)))))
+  expect_null(arms(c(2, 2), ends[1:3]))
+  expect_null(arms(c(2, 2), NULL))
+})
+
+test_that("a curly quadrant counts each event by its bent dividers", {
+  # The core's bend: beyond the centre the horizontal divider rises to cy + kx (x - cx)^power and
+  # the vertical one moves to cx + ky (y - cy)^power. With power 1.5, kx 0.5 and ky 0.25 about
+  # (2, 2): p (3, 2.3) is under the divider at 2.5, Q3; q (2.1, 3) is left of the divider at 2.25,
+  # Q1; r (3, 3) Q2; s (1, 1) Q4; t (1, 3) Q1; u (3, 1) Q3; an undefined event is in none. A
+  # crosshair puts p and q in Q2.
+  curly <- list(curl = list(power = 1.5, kx = 0.5, ky = 0.25))
+  points <- rbind(p = c(3, 2.3), q = c(2.1, 3), r = c(3, 3), s = c(1, 1), t = c(1, 3), u = c(3, 1), undefined = c(NaN, 3))
+  times <- c(2, 3, 4, 5, 6, 8, 1)
+  sce <- shaped_quadrant_sce(curly, points, times)
+  gate <- GateLabR:::.gatelabr_strategy_gating(sce)$gates$g_quad
+  expect_equal(gate$curl, list(power = 1.5, kx = 0.5, ky = 0.25))
+  expect_null(gate$arms)
+  q2 <- rep(rownames(points), times) == "r"
+  panels <- attr(gatelabStrategyPlot(sce, "CD45RA_positive_CCR7_positive",
+                                     membership = cbind(CD45RA_positive_CCR7_positive = q2)), "panels")
+  expect_equal(panels$events, c(3 + 6, 4, 2 + 8, 5))
+  # A curl that does not bend leaves the crosshair, as in the core.
+  curl <- GateLabR:::.gatelabr_quadrant_curl
+  expect_null(curl(list(power = 1.5, kx = 0, ky = 0)))
+  expect_null(curl(list(power = 0, kx = 0.5, ky = 0.5)))
+  expect_null(curl(list(power = 1.5, kx = 0.5)))
+})
+
+test_that("a panel draws a spider's arms and box, and a curly quadrant's bent arms", {
+  # What is drawn cut at the axes, after the events, which come first.
+  lines_of <- function(panel) {
+    clipped <- Filter(function(child) inherits(child, "gTree") && isTRUE(child$vp$clip), panel$children)
+    unlist(lapply(clipped[-1], function(tree) tree$children), recursive = FALSE)
+  }
+  geo <- GateLabR:::.gatelabr_panel_geometry(c(0, 4), c(0, 4), 300, GateLabR:::.gatelabr_panel_font_sizes(NULL), has_ylab = FALSE)
+  left <- geo$margin[["left"]]; top <- geo$margin[["top"]]
+  X <- function(v) left + v / 4 * geo$W; Y <- function(v) top + (4 - v) / 4 * geo$H
+  base <- list(type = "quadrant", gate_id = "g2", name = "CD45RA x CCR7", color = "#377eb8", center = c(2, 2),
+               quadrant_pcts = c(10, 20, 30, 40))
+  draw <- function(gate, ...) gatelabPanelGrob(c(1, 3), c(1, 3), xlim = c(0, 4), ylim = c(0, 4), gates = list(gate), ...)
+  # Straight: two lines across the plot and nothing clipped beyond the events.
+  expect_length(lines_of(draw(base)), 0)
+
+  spider <- base
+  spider$arms <- list(down = c(3, 0), right = c(4, 3), up = c(1, 4), left = c(0, 1))
+  drawn <- lines_of(draw(spider))
+  arms <- Filter(function(g) inherits(g, "polyline"), drawn)[[1]]
+  expect_equal(as.numeric(arms$x), X(c(2, 3, 2, 4, 2, 1, 2, 0)))
+  expect_equal(as.numeric(arms$y), Y(c(2, 0, 2, 3, 2, 4, 2, 1)))
+  box <- Filter(function(g) inherits(g, "polygon"), drawn)[[1]]
+  expect_equal(as.numeric(box$x), X(c(0, 4, 4, 0)))
+  expect_equal(as.numeric(box$y), Y(c(0, 0, 4, 4)))
+  expect_identical(box$gp$lty, "43")
+  # Centred shares sit inside their sectors: Q2's, the sector between the up and right arms, is
+  # right of the up arm and above the right arm.
+  shares <- Filter(function(child) inherits(child, "text") && grepl("%$", child$label), draw(spider, quadrant_labels = "centre")$children)
+  at <- vapply(shares, function(g) c(as.numeric(g$x), as.numeric(g$y)), numeric(2))
+  data_x <- (at[1, ] - left) / geo$W * 4; data_y <- 4 - (at[2, ] - top) / geo$H * 4
+  baseline <- 0.3465 * 12 / geo$H * 4   # the label's baseline is set below its anchor
+  gate <- list(type = "quadrant", center = c(2, 2), arms = spider$arms)
+  for (q in 1:4) expect_true(GateLabR:::.gatelabr_strategy_in_gate(gate, data_x[q], data_y[q] + baseline, q), info = q)
+
+  curly <- base
+  curly$curl <- list(power = 1.5, kx = 0.5, ky = 0.25)
+  drawn <- Filter(function(g) inherits(g, "polyline"), lines_of(draw(curly)))
+  expect_length(drawn, 2)
+  # The horizontal arm runs from the centre to the axis's end, rising as the core bends it.
+  expect_equal(as.numeric(drawn[[1]]$x)[c(1, 33)], X(c(2, 4)))
+  expect_equal(as.numeric(drawn[[1]]$y)[c(1, 33)], Y(c(2, 2 + 0.5 * 2^1.5)))
+  expect_equal(as.numeric(drawn[[2]]$x)[33], X(2 + 0.25 * 2^1.5))
+  # It still draws on a real device.
+  file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(file, width = 300 / 96, height = 300 / 96)
+  grid::grid.draw(draw(spider)); grid::grid.newpage(); grid::grid.draw(draw(curly))
+  grDevices::dev.off()
+  expect_gt(file.size(file), 1000)
+})

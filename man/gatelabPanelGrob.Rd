@@ -44,6 +44,9 @@ gatelabPanelGrob(
 \code{label_offset} and \code{label_placed} for an outlined gate, or \code{center},
 \code{quadrant_pcts} (four values, in the order top left, top right, bottom right, bottom
 left) and \code{quadrant_label_offsets} for a quadrant gate. Optional
+\code{curl} (a list of \code{power}, \code{kx} and \code{ky}) bends its upper and right
+dividers; \code{arms} gives a spider's \code{down}, \code{right}, \code{up} and \code{left}
+endpoints, each \code{c(x, y)} in display units, when there is no curl. Optional
 \code{quadrant_suffix} and zero-based \code{quadrant_label_row} distinguish sample-specific
 quadrant annotations. For outlined gates, optional zero-based \code{label_row} and
 \code{label_rows} stack automatic labels; explicitly placed labels keep their offsets.
@@ -103,7 +106,10 @@ panel is the same picture as in the app at any \code{scale}.
 Ported from GateLab's \code{renderMiniPlot} with the margin, label and quadrant
   rules GateLab applies to it. Contour mode only: the app's other plot modes are not drawn.
   A quadrant's shares are written in the corners of the plot unless
-  \code{quadrant_labels = "centre"}, which is where the app writes them.
+  \code{quadrant_labels = "centre"}, which is where the app writes them. A curly quadrant
+  is drawn with its arms bent beyond the centre, out to the axes' ends; a spider quadrant
+  with its four leaning arms and the dashed box their ends span, its shares, when centred,
+  inside their own sectors. Arms and box are cut at the axes.
 
   The panel is a grid \code{gTree} of a fixed size. \code{print()} and \code{plot()} draw it
   on a new page of the current device; \code{grid::grid.draw()} adds it to the page as it

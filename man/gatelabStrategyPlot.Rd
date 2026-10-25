@@ -89,7 +89,8 @@ Counts and percentages are of the samples sharing each outline. A population mad
   takes its count from the stored memberships (\code{\link{gatelabPopulations}}), so it is
   the app's own; a gate of a population made by several is counted from the gate's geometry,
   as are quadrants no population was made for. These counts use the stored parent membership
-  and each gate's recorded coordinate space. An
+  and each gate's recorded coordinate space, including curved and spider quadrant
+  dividers. Events outside a spider's bounding box are in none of its quadrants. An
   event a population was not evaluated for, which \code{gatelabPopulations()} returns as
   \code{NA} with a warning, is counted as outside it.
 

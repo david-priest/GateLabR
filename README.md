@@ -278,7 +278,7 @@ renders formatted citations in several styles.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — see [`LICENSE.md`](LICENSE.md).
 
 ## Acknowledgements
 

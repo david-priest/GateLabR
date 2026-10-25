@@ -3,6 +3,10 @@
 # strategies over synthetic events, written by tools/gatingml-fixtures.ts, which also records the
 # events GateLab places in each population. See fixtures/gatingml/README.md.
 
+# The retired Shiny importer reads XML with xml2 and names what it makes with uuid.
+skip_if_not_installed("xml2")
+skip_if_not_installed("uuid")
+
 sys.source(file.path(app_r_dir, "gatingml_import.R"), envir = globalenv())
 
 gml_fixture <- function(name) testthat::test_path("fixtures", "gatingml", name)

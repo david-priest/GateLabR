@@ -309,6 +309,28 @@ test_that("identical quadrant outlines retain each sample's named quadrant and e
   expect_equal(attr(gatelabStrategyPlot(fixture$sce[, 12:1], "CD8_positive", max_events = 0), "panels"), rows)
 })
 
+test_that("tailored curved and spider quadrants retain their own paths and stored counts", {
+  fixture <- strategy_coordinates_fixture(edit_workspace = function(ws) {
+    ws$gating$gates$q$curl <- list(power = 1.5, kx = 0.5, ky = 0.25)
+    ws$gating$stored_hierarchies[[1]]$gates[["D2:q"]]$arms <- list(
+      down = list(30, 0), right = list(100, 20), up = list(10, 30), left = list(0, 5))
+    ws
+  })
+  plot <- gatelabStrategyPlot(fixture$sce, "CD8_positive", max_events = 0)
+  rows <- attr(plot, "panels")
+  q <- rows[rows$panel == "CD4_positive", ]
+  # D1's named Q2 keeps its saved event despite the geometric Q3 classification. D2's named
+  # Q2 remains empty; its two parent events lie in the spider's Q1 and Q3.
+  expect_equal(q$events[q$samples == "D1"], c(0, 1, 1, 1))
+  expect_equal(q$events[q$samples == "D2"], c(1, 0, 1, 0))
+  panel <- strategy_find_panel(plot, "CD4_positive (4)")
+  clipped <- Filter(function(child) inherits(child, "gTree") && isTRUE(child$vp$clip), panel$children)
+  outlines <- unlist(lapply(clipped[-1], function(child) child$children), recursive = FALSE)
+  expect_equal(sum(vapply(outlines, inherits, logical(1), "polyline")), 8L)
+  expect_equal(sum(vapply(outlines, inherits, logical(1), "polygon")), 1L)
+  expect_equal(attr(gatelabStrategyPlot(fixture$sce[, 12:1], "CD8_positive", max_events = 0), "panels"), rows)
+})
+
 test_that("excluded quadrant components use their own sample parent rather than the conjunction mask", {
   fixture <- strategy_coordinates_fixture(edit_workspace = function(ws) {
     ws$gating$populations$p_and$gate_refs <- list(

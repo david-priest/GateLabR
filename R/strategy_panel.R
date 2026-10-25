@@ -16,7 +16,10 @@
 #' @details Ported from GateLab's \code{renderMiniPlot} with the margin, label and quadrant
 #'   rules GateLab applies to it. Contour mode only: the app's other plot modes are not drawn.
 #'   A quadrant's shares are written in the corners of the plot unless
-#'   \code{quadrant_labels = "centre"}, which is where the app writes them.
+#'   \code{quadrant_labels = "centre"}, which is where the app writes them. A curly quadrant
+#'   is drawn with its arms bent beyond the centre, out to the axes' ends; a spider quadrant
+#'   with its four leaning arms and the dashed box their ends span, its shares, when centred,
+#'   inside their own sectors. Arms and box are cut at the axes.
 #'
 #'   The panel is a grid \code{gTree} of a fixed size. \code{print()} and \code{plot()} draw it
 #'   on a new page of the current device; \code{grid::grid.draw()} adds it to the page as it
@@ -31,6 +34,9 @@
 #'   \code{label_offset} and \code{label_placed} for an outlined gate, or \code{center},
 #'   \code{quadrant_pcts} (four values, in the order top left, top right, bottom right, bottom
 #'   left) and \code{quadrant_label_offsets} for a quadrant gate. Optional
+#'   \code{curl} (a list of \code{power}, \code{kx} and \code{ky}) bends its upper and right
+#'   dividers; \code{arms} gives a spider's \code{down}, \code{right}, \code{up} and \code{left}
+#'   endpoints, each \code{c(x, y)} in display units, when there is no curl. Optional
 #'   \code{quadrant_suffix} and zero-based \code{quadrant_label_row} distinguish sample-specific
 #'   quadrant annotations. For outlined gates, optional zero-based \code{label_row} and
 #'   \code{label_rows} stack automatic labels; explicitly placed labels keep their offsets.
@@ -118,9 +124,12 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
     data[[length(data) + 1L]] <- line(X(ct$paths$x), Y(ct$paths$y), id = ct$paths$group,
                                       col = grDevices::adjustcolor("#111111", min(1, alpha + 0.15)),
                                       width = max(0.5, min(1, min(W, H) / 270)))
-  add(grid::gTree(children = do.call(grid::gList, data),
-                  vp = grid::viewport(nat(left), nat(top), inch(W), inch(H), just = c("left", "top"),
-                                      xscale = c(left, left + W), yscale = c(bottom, top), clip = "on")))
+  # The plot's area, clipped: what is drawn in it is cut at the axes.
+  clipped <- function(grobs)
+    grid::gTree(children = do.call(grid::gList, grobs),
+                vp = grid::viewport(nat(left), nat(top), inch(W), inch(H), just = c("left", "top"),
+                                    xscale = c(left, left + W), yscale = c(bottom, top), clip = "on"))
+  add(clipped(data))
 
   # d3's axes: the line with a tick at each end, 6 px ticks, labels 3 px beyond them.
   add(line(c(left, left, left + W, left + W), c(bottom + 6, bottom, bottom, bottom + 6)))
@@ -143,10 +152,47 @@ gatelabPanelGrob <- function(x, y, xlim, ylim, xlab = NULL, ylab = NULL, title =
     if (identical(gate$type, "quadrant")) {
       qx <- X(gate$center[1]); qy <- Y(gate$center[2])
       if (!is.finite(qx) || !is.finite(qy)) next
-      add(line(c(left, left + W), c(qy, qy), col = stroke, width = gate_line_width))
-      add(line(c(qx, qx), c(bottom, top), col = stroke, width = gate_line_width))
       mids <- list(c((left + qx) / 2, (top + qy) / 2), c((qx + left + W) / 2, (top + qy) / 2),
                    c((qx + left + W) / 2, (qy + bottom) / 2), c((left + qx) / 2, (qy + bottom) / 2))
+      # As the app's mini plot draws a quadrant (quadrantOverlayShape): a spider's four arms from
+      # its centre and the dashed box their ends span, with each share inside its own sector; a
+      # curly quadrant's straight halves to the left and below and its bent arms out to the axes'
+      # ends; otherwise the crosshair. Arms and box are cut at the axes.
+      curl <- .gatelabr_quadrant_curl(gate$curl)
+      a <- if (is.null(curl)) .gatelabr_quadrant_arms(gate$center, gate$arms) else NULL
+      if (is.function(gate$quadrant_geometry)) {
+        # A saved quadrant on different axes supplies fully mapped paths. A nonlinear
+        # transform changes a straight spider arm into a curve and does not preserve a curl's
+        # power-law coefficients. Resolve the paths only now, against the final panel ranges.
+        geometry <- gate$quadrant_geometry(xlim, ylim)
+        for (path in geometry$paths) if (nrow(path) > 1L)
+          add(clipped(list(line(X(path[, 1]), Y(path[, 2]), col = stroke, width = gate_line_width))))
+        if (!is.null(geometry$box))
+          add(clipped(list(grid::polygonGrob(nat(X(geometry$box[, 1])), nat(Y(geometry$box[, 2])),
+                            gp = grid::gpar(fill = NA, col = grDevices::adjustcolor(stroke, 0.6), lty = "43",
+                                            lwd = max(0.5, gate_line_width / 2) * scale)))))
+        if (!is.null(geometry$anchors)) mids <- lapply(geometry$anchors, function(p) c(X(p[1]), Y(p[2])))
+      } else if (!is.null(a)) {
+        ends <- rbind(a$down, a$right, a$up, a$left)
+        arm_x <- as.vector(rbind(gate$center[1], ends[, 1])); arm_y <- as.vector(rbind(gate$center[2], ends[, 2]))
+        box <- c(min(ends[, 1]), max(ends[, 1]), min(ends[, 2]), max(ends[, 2]))
+        add(clipped(list(
+          line(X(arm_x), Y(arm_y), id = rep(1:4, each = 2L), col = stroke, width = gate_line_width),
+          grid::polygonGrob(nat(X(box[c(1, 2, 2, 1)])), nat(Y(box[c(3, 3, 4, 4)])),
+                            gp = grid::gpar(fill = NA, col = grDevices::adjustcolor(stroke, 0.6), lty = "43",
+                                            lwd = max(0.5, gate_line_width / 2) * scale)))))
+        mids <- lapply(.gatelabr_spider_anchors(gate$center, a, xlim, ylim), function(p) c(X(p[1]), Y(p[2])))
+      } else if (!is.null(curl)) {
+        add(line(c(left, qx), c(qy, qy), col = stroke, width = gate_line_width))
+        add(line(c(qx, qx), c(bottom, qy), col = stroke, width = gate_line_width))
+        bent <- list(.gatelabr_quadrant_arm_points(gate$center, curl, "h", xlim[2]),
+                     .gatelabr_quadrant_arm_points(gate$center, curl, "v", ylim[2]))
+        for (arm in bent) if (nrow(arm) > 1L)
+          add(clipped(list(line(X(arm[, 1]), Y(arm[, 2]), col = stroke, width = gate_line_width))))
+      } else {
+        add(line(c(left, left + W), c(qy, qy), col = stroke, width = gate_line_width))
+        add(line(c(qx, qx), c(bottom, top), col = stroke, width = gate_line_width))
+      }
       # The plot's four corners, 6 px in, as baselines: the text's box touches the inset line.
       inset <- 6
       corners <- list(c(left + inset, top + inset + 0.905 * fs$gate), c(left + W - inset, top + inset + 0.905 * fs$gate),
@@ -286,4 +332,80 @@ makeContent.gatelab_panel <- function(x) .gatelabr_panel_true_hyphens(x)
   shown <- logical(length(px)); last <- -Inf
   for (i in order(px)) if (abs(px[i] - last) >= spacing) { shown[i] <- TRUE; last <- px[i] }
   shown
+}
+
+# Points along one bent arm of a curly quadrant, from the centre to `end` on its axis: the
+# horizontal arm ("h") as (x, cy + kx (x - cx)^power), the vertical one ("v") as
+# (cx + ky (y - cy)^power, y). None when `end` is not beyond the centre. Ported from the core's
+# quadrantArmPoints() (src/engine/gates.ts), 32 steps.
+.gatelabr_quadrant_arm_points <- function(center, curl, arm = c("h", "v"), end, steps = 32L) {
+  arm <- match.arg(arm)
+  from <- if (arm == "h") center[1] else center[2]
+  if (!(end > from)) return(matrix(numeric(0), ncol = 2L))
+  d <- (end - from) * (0:steps) / steps
+  bend <- d^curl$power
+  if (arm == "h") cbind(center[1] + d, center[2] + curl$kx * bend) else cbind(center[1] + curl$ky * bend, center[2] + d)
+}
+
+# Where a spider quadrant's four shares sit, in the order top left, top right, bottom right,
+# bottom left (GateLab's quadrants 1 to 4), ported from the core's spiderOverlayShape()
+# (src/engine/quadrantOverlay.ts). The diagonal from the centre to a quadrant's box corner cuts it
+# into two triangles that both lie inside it; the share sits at the centroid of the larger one's
+# part inside the axes, or at the larger whole triangle's centroid when no part is.
+.gatelabr_spider_anchors <- function(center, arms, xlim, ylim) {
+  cx <- center[1]; cy <- center[2]
+  area <- function(a, b) abs((a[1] - cx) * (b[2] - cy) - (a[2] - cy) * (b[1] - cx))
+  anchor <- function(side, vertical) {
+    corner <- c(side[1], vertical[2])
+    other <- if (area(side, corner) >= area(corner, vertical)) side else vertical
+    whole <- (center + corner + other) / 3
+    seen <- list()
+    if (all(is.finite(c(xlim, ylim)))) {
+      for (tri in list(rbind(center, side, corner), rbind(center, corner, vertical))) {
+        part <- .gatelabr_polygon_centroid(.gatelabr_clip_to_box(tri, xlim, ylim))
+        if (!is.null(part) && part$area > 0) seen[[length(seen) + 1L]] <- part
+      }
+    }
+    if (!length(seen)) return(whole)
+    seen[[which.max(vapply(seen, function(p) p$area, numeric(1)))]]$at
+  }
+  list(anchor(arms$left, arms$up), anchor(arms$right, arms$up), anchor(arms$right, arms$down), anchor(arms$left, arms$down))
+}
+
+# A polygon (rows of x, y) cut to the box xlim by ylim, Sutherland-Hodgman.
+.gatelabr_clip_to_box <- function(poly, xlim, ylim) {
+  x0 <- min(xlim); x1 <- max(xlim); y0 <- min(ylim); y1 <- max(ylim)
+  edges <- list(
+    list(inside = function(p) p[1] >= x0, cut = function(a, b) c(x0, a[2] + (b[2] - a[2]) * (x0 - a[1]) / (b[1] - a[1]))),
+    list(inside = function(p) p[1] <= x1, cut = function(a, b) c(x1, a[2] + (b[2] - a[2]) * (x1 - a[1]) / (b[1] - a[1]))),
+    list(inside = function(p) p[2] >= y0, cut = function(a, b) c(a[1] + (b[1] - a[1]) * (y0 - a[2]) / (b[2] - a[2]), y0)),
+    list(inside = function(p) p[2] <= y1, cut = function(a, b) c(a[1] + (b[1] - a[1]) * (y1 - a[2]) / (b[2] - a[2]), y1))
+  )
+  out <- lapply(seq_len(nrow(poly)), function(i) poly[i, ])
+  out <- Filter(function(p) all(is.finite(p)), out)
+  for (edge in edges) {
+    prev <- out; out <- list(); n <- length(prev)
+    for (i in seq_len(n)) {
+      a <- prev[[if (i == 1L) n else i - 1L]]; b <- prev[[i]]
+      if (edge$inside(b)) {
+        if (!edge$inside(a)) out[[length(out) + 1L]] <- edge$cut(a, b)
+        out[[length(out) + 1L]] <- b
+      } else if (edge$inside(a)) {
+        out[[length(out) + 1L]] <- edge$cut(a, b)
+      }
+    }
+  }
+  if (!length(out)) return(matrix(numeric(0), ncol = 2L))
+  do.call(rbind, out)
+}
+
+# A polygon's centroid and area, or NULL for fewer than three vertices or no area.
+.gatelabr_polygon_centroid <- function(poly) {
+  n <- NROW(poly)
+  if (n < 3L) return(NULL)
+  nx <- poly[c(2:n, 1L), 1]; ny <- poly[c(2:n, 1L), 2]
+  cross <- poly[, 1] * ny - nx * poly[, 2]
+  a <- sum(cross)
+  if (a == 0) return(NULL)
+  list(at = c(sum((poly[, 1] + nx) * cross), sum((poly[, 2] + ny) * cross)) / (3 * a), area = abs(a) / 2)
 }

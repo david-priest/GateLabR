@@ -234,15 +234,21 @@
     if (is.null(cache[[channel]])) cache[[channel]] <- .gatelabr_strategy_transform(spec(channel))
     cache[[channel]]
   }
-  raw <- function(channel) {
+  stored <- function(channel) {
     index <- match(channel, ids)
     if (is.na(index)) stop("Channel '", channel, "' is not a row of assay '", assay, "'.", call. = FALSE)
     v <- as.numeric(values[index, ])
     for (layer in layers)
       v[layer$events] <- as.numeric(SummarizedExperiment::assay(sce, layer$assay)[index, layer$events])
-    if (display_assay) cofactor * sinh(v) else v
+    v
   }
-  list(raw = raw, display = function(channel) transform(channel)$forward(raw(channel)),
+  assay_spec <- if (display_assay) list(kind = "asinh", cofactor = cofactor) else list(kind = "identity")
+  raw <- function(channel) if (display_assay) cofactor * sinh(stored(channel)) else stored(channel)
+  display <- function(channel) {
+    if (display_assay && isTRUE(all.equal(spec(channel), assay_spec, tolerance = 0))) return(stored(channel))
+    transform(channel)$forward(raw(channel))
+  }
+  list(raw = raw, display = display, stored = stored, assay_spec = assay_spec,
        spec = spec, transform = transform, display_assay = display_assay)
 }
 
@@ -308,6 +314,44 @@
   map_pair <- function(v) c(maps[[1]](v[[1]]), maps[[2]](v[[2]]))
   out <- gate
   if (!is.null(gate$center)) out$center <- map_pair(gate$center)
+  if (identical(gate$type, "quadrant") && !all(same) &&
+      (!is.null(gate$curl) || !is.null(gate$arms))) {
+    from_display <- lapply(1:2, function(i) {
+      inverse <- coordinates$transform(channels[[i]])$inverse
+      forward <- .gatelabr_strategy_transform(specs[[i]])$forward
+      function(v) forward(inverse(v))
+    })
+    out$quadrant_geometry <- function(xlim, ylim) {
+      limits <- list(from_display[[1]](xlim), from_display[[2]](ylim))
+      spans <- c(diff(xlim), diff(ylim))
+      trace <- function(at) .gatelabr_strategy_divider_outline(at, map_pair, spans)
+      center <- gate$center
+      if (!is.null(gate$curl)) {
+        curl <- gate$curl
+        ends <- c(max(center[1], limits[[1]][2]), max(center[2], limits[[2]][2]))
+        paths <- list(
+          rbind(map_pair(c(limits[[1]][1], center[2])), map_pair(center)),
+          rbind(map_pair(c(center[1], limits[[2]][1])), map_pair(center)),
+          trace(function(t) {
+            d <- (ends[1] - center[1]) * t
+            c(center[1] + d, center[2] + curl$kx * d^curl$power)
+          }),
+          trace(function(t) {
+            d <- (ends[2] - center[2]) * t
+            c(center[1] + curl$ky * d^curl$power, center[2] + d)
+          }))
+        return(list(paths = paths, box = NULL, anchors = NULL))
+      }
+      paths <- lapply(gate$arms, function(end) trace(function(t) center + (end - center) * t))
+      box <- .gatelabr_spider_box(gate$arms)
+      corners <- cbind(box[c(1, 2, 2, 1)], box[c(3, 3, 4, 4)])
+      list(paths = paths, box = cbind(maps[[1]](corners[, 1]), maps[[2]](corners[, 2])),
+           anchors = lapply(.gatelabr_spider_anchors(center, gate$arms, limits[[1]], limits[[2]]), map_pair))
+    }
+    # The panel must not interpret the old coefficients alongside the transformed centre.
+    out$curl <- NULL
+    out$arms <- NULL
+  }
   if (!is.null(gate$vertices)) {
     vertices <- gate$vertices
     out$vertices <- cbind(maps[[1]](vertices[, 1]), maps[[2]](vertices[, 2]))
@@ -318,9 +362,31 @@
   out
 }
 
+# Trace an open divider in display coordinates to the same normalized tolerance and depth cap
+# as polygon outlines. Quarter points expose an inflection that the midpoint alone can miss.
+.gatelabr_strategy_divider_outline <- function(at, map, spans) {
+  spans[!is.finite(spans) | spans <= 0] <- 1
+  edge <- function(t0, t1, depth = 0L) {
+    p0 <- map(at(t0)); p1 <- map(at(t1))
+    off <- max(vapply(c(0.25, 0.5, 0.75), function(f) {
+      sqrt(sum(((map(at(t0 + (t1 - t0) * f)) - (p0 + (p1 - p0) * f)) / spans)^2))
+    }, numeric(1)))
+    # Leave a margin between the sampled flatness criterion and the 0.2% path tolerance.
+    if (depth >= 15L || !is.finite(off) || off <= 0.001) return(rbind(p0, p1))
+    tm <- (t0 + t1) / 2
+    rbind(edge(t0, tm, depth + 1L), edge(tm, t1, depth + 1L)[-1L, , drop = FALSE])
+  }
+  edge(0, 1)
+}
+
 .gatelabr_strategy_gate_membership <- function(gate, coordinates, instrument = NULL, quadrant = NA_integer_) {
   value <- function(channel) {
-    transform <- .gatelabr_strategy_transform(.gatelabr_strategy_gate_spec(gate, channel, coordinates, instrument))
+    spec <- .gatelabr_strategy_gate_spec(gate, channel, coordinates, instrument)
+    # A display assay already holds these coordinates. Inverting then reapplying asinh can
+    # move an event at a quadrant's centre just below its divider through rounding alone.
+    if (coordinates$display_assay && isTRUE(all.equal(spec, coordinates$assay_spec, tolerance = 0)))
+      return(coordinates$stored(channel))
+    transform <- .gatelabr_strategy_transform(spec)
     transform$forward(coordinates$raw(channel))
   }
   out <- .gatelabr_strategy_in_gate(gate, value(gate$x_channel), value(gate$y_channel), quadrant)
