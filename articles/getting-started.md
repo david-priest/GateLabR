@@ -80,7 +80,7 @@ sce <- SingleCellExperiment(
   rowData = DataFrame(channel_name = colnames(events),
                       marker_name = unname(markernames(fs[[1]])[colnames(events)]))
 )
-metadata(sce)$spillover <- spillover(fs[[1]])$SPILL     # offered in the Compensation tab
+metadata(sce)$spillover <- spillover(fs[[1]])$SPILL     # kept with the object; see section 7
 launchGatingApp(sce)
 ```
 
@@ -158,8 +158,11 @@ row names and the receiver channels as column names, as
 returns it; that is the one documented name, read first (the older
 `spillover_matrix`, `spilloverMatrix` and `sm` are still read after it);
 a matrix applied in the app is kept with the workspace record, not
-written back to this slot. A `GatingSet` carries its applied matrix
-itself
+written back to this slot. On mass cytometry data the app offers it in
+the Compensation tab to apply; on flow data it is not offered yet,
+because the app would install it as every sample’s own matrix and could
+then apply it by itself, to an assay already compensated too. A
+`GatingSet` carries its applied matrix itself
 ([`gh_get_compensations()`](https://rdrr.io/pkg/flowWorkspace/man/gh_get_compensations.html)).
 
 > 📸 *Screenshot: the compensation toggle + matrix viewer.* — add

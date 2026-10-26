@@ -65,10 +65,13 @@ gatelabPanelGrob(
   `label_offset` and `label_placed` for an outlined gate, or `center`,
   `quadrant_pcts` (four values, in the order top left, top right, bottom
   right, bottom left) and `quadrant_label_offsets` for a quadrant gate.
-  A quadrant gate may also carry GateLab's `curl` (a curly quadrant:
-  `power`, `kx`, `ky`) or `arms` (a spider quadrant: `down`, `right`,
-  `up` and `left`, each the `c(x, y)` end of an arm), in display units;
-  a curl or arms GateLab would refuse are ignored. A `gate_id` is
+  Optional `curl` (a list of `power`, `kx` and `ky`) bends its upper and
+  right dividers; `arms` gives a spider's `down`, `right`, `up` and
+  `left` endpoints, each `c(x, y)` in display units, when there is no
+  curl. Optional `quadrant_suffix` and zero-based `quadrant_label_row`
+  distinguish sample-specific quadrant annotations. For outlined gates,
+  optional zero-based `label_row` and `label_rows` stack automatic
+  labels; explicitly placed labels keep their offsets. A `gate_id` is
   optional: it names the gate's entry in the `anchors` attribute.
 
 - plot_size:

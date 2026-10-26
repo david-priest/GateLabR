@@ -1,5 +1,129 @@
 # Changelog
 
+## GateLabR 1.6.4
+
+- The embedded GateLab core is GateLab 0.10.1 (GateLab-dev 161a0a07), up
+  from 0.10.0 (822e42b). From the core: Export → MIFlowCyt report,
+  written from the instrument and parameter keywords the data carry,
+  with the author’s items saved in the workspace; Export → Export event
+  memberships; File list ⋯ → Tailored gates, which lists every gate a
+  sample or group holds its own version of, with a reason saved for
+  each; Display → Control, another sample taken through the same gates
+  and drawn in grey beneath the plot, display only; Populations ⋯ → Mark
+  siblings that share events; Statistics → Minimum events; the Gating-ML
+  export naming the gates it writes other than as drawn; and the
+  FACSChorus export keeping each matched gate’s own axis scale. Gate
+  definitions and gate evaluation are unchanged.
+- GateLabR 1.6.3 refuses a workspace saved into an object by 1.6.4, with
+  a message, when it is saved with a compensation profile and also holds
+  a minimum event count, tailoring reasons or MIFlowCyt author items.
+  Other workspaces open in both.
+- Reconciles the 1.6.3 public package with the retained R-host fixes.
+  Strategy plots retain curved and spider quadrant dividers, including
+  when a saved gate is mapped onto different display transforms. Display
+  assays use their stored coordinates directly when a gate has exactly
+  the same transform, preserving events on a quadrant divider without an
+  inverse/forward rounding step.
+- [`gatelabStrategyPlot()`](https://david-priest.github.io/GateLabR/reference/gatelabStrategyPlot.md)
+  draws a workspace as the app showed it. Events are drawn through the
+  display transforms the save recorded, so a workspace drawn on a linear
+  assay is reproduced, which 1.6.2 did not do; each gate’s outline is
+  mapped from the space it was saved in, and an edge that bends on the
+  drawn axes is traced to the embedded core’s tolerance and depth (0.2%
+  per axis, 15 halvings). A file gated under a tailored copy of the tree
+  draws its own outline, labelled by sample, with its own inclusion
+  rule, quadrant references and parent count, where 1.6.2 drew the
+  active tree’s outlines only. Each sample’s saved compensated layer is
+  drawn, and one that cannot be reconstructed is refused, not drawn
+  uncompensated. Named population counts are still the stored
+  memberships.
+- `gatelabStrategyPlot(assay = )` naming the saved assay draws the saved
+  compensated layers, as leaving it unset does. Any other assay is drawn
+  as it stands for every sample, with a warning naming the samples whose
+  saved compensated layers it leaves out.
+- In a strategy plot, a gate saved without a space is read as the app
+  reads it: in display space under mass cytometry, in raw space
+  otherwise, by the sample’s instrument mode, where “auto”, which the
+  app saves, is the instrument the app detects.
+- A saved Hyperlog transform is reconstructed with flowCore’s own
+  Hyperlog, in strategy plots and when a gate drawn on a Hyperlog axis
+  is written to a GatingSet.
+- A GatingSet’s logicle channels are read in the object’s own
+  coordinates: flowWorkspace’s legacy logicle
+  ([`logicle_trans()`](https://rdrr.io/pkg/flowWorkspace/man/logicle_trans.html))
+  runs from 0 to M, Gating-ML 2’s
+  ([`logicleGml2_trans()`](https://rdrr.io/pkg/flowWorkspace/man/logicleGml2_trans.html))
+  from 0 to 1, and 1.6.2 took both as GateLab’s 0 to 1, so a gate on a
+  legacy logicle channel opened at M times its place, and the values of
+  a Gating-ML 2 channel were served through flowWorkspace’s inverse,
+  which reads the legacy scale. flowWorkspace 4.16 does not report which
+  convention a channel uses, so GateLabR runs the object’s own transform
+  on one event in a file of its own, removed afterwards. A channel where
+  that fails is left unmapped: its nodes stay on the object, a gate the
+  app draws on it is saved as its membership, and the launch note names
+  it with the reason.
+- `metadata(sce)$spillover` on mass cytometry data is offered in the
+  Compensation tab, for the user to apply; nothing applies it by itself.
+  On flow data it is not offered: the app would install it as every
+  sample’s own matrix and could then apply it by itself, to an assay
+  already compensated too. The console says so once per launch. A matrix
+  naming a channel the SCE lacks, as a CATALYST matrix’s receiver
+  columns often do, is refused whole, and the warning names the
+  channels.
+- Compensation Apply refuses a source assay whose role is compensated,
+  by its name or by `metadata(sce)$gatelabr_assay_roles`, rather than
+  compensating it twice.
+- A compensated GatingSet no longer sends its applied matrix to the app.
+  The app installed it as each sample’s own spillover and offered
+  “Compensated · this session” in the header, which applied it to values
+  flowWorkspace had compensated already: on a synthetic GatingSet every
+  event was shown compensated twice, and “Save to GatingSet” then wrote
+  the twice-compensated memberships to the hierarchy, as nodes of fixed
+  events. The same held for a GatingSet compensated in place from the
+  app, and after a reopen. The launch note names the matrix instead; the
+  Compensation tab no longer shows it.
+- A spillover matrix refused because a GatingSet is read-only on its
+  data
+  ([`load_gs()`](https://rdrr.io/pkg/flowWorkspace/man/save_gs.html)
+  opens it so) no longer leaves the object reading as compensated.
+  [`flowWorkspace::compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html)
+  records the matrix on the hierarchy before it fails on the values, so
+  after the refusal the object reported a compensation its values did
+  not carry, the app was served it as `compensated`, and
+  [`save_gs()`](https://rdrr.io/pkg/flowWorkspace/man/save_gs.html) kept
+  the record. GateLabR now writes one value back through a view of each
+  sample first, which meets the same read-only guard, and refuses before
+  anything is recorded.
+- Compensation Apply on a GatingSet host compensates the object in
+  place, as 1.6.1 describes. The request went to the job that
+  compensates an SCE assay, which failed on a GatingSet, so in a live
+  session the app’s Apply never reached
+  [`flowWorkspace::compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html);
+  the tests called the GatingSet handler directly. It now takes the path
+  every other write takes, with the write-back guard, and the refusals
+  (compensated already, transformed, read-only, mass cytometry) reach
+  the app as their reasons.
+- Compensation Apply on a GatingSet host refuses an identity matrix,
+  with the reason, before anything is recorded on the object. The
+  Compensation tab’s “Start from an empty matrix” applies an identity
+  first; a GatingSet is compensated once, in place, so
+  [`flowWorkspace::compensate()`](https://rdrr.io/pkg/flowCore/man/compensation-class.html)
+  would record the identity, which changes no values, and the object
+  would then read as compensated and refuse the matrix the user went on
+  to edit. Send the full matrix in one Apply, or compensate in R before
+  launching. The SCE host is unchanged: there the identity is a scratch
+  layer beside the original assay, not the object’s one compensation.
+- Compensation Apply on an SCE host works in a live session. The job
+  that applies it read the app’s object from R’s event loop
+  ([`later::later()`](https://later.r-lib.org/reference/later.html)),
+  outside any reactive context, where Shiny refuses to read a
+  `reactiveVal`, so every Apply from the app failed with “Operation not
+  allowed without an active reactive context”, in a background launch
+  and a blocking one alike; the job’s tests passed a plain function as
+  the state, which reads anywhere. The job now reads the object with
+  [`shiny::isolate()`](https://rdrr.io/pkg/shiny/man/isolate.html). The
+  code dates from 1.4.0.
+
 ## GateLabR 1.6.3
 
 - The embedded GateLab core is GateLab 0.10.0 (GateLab-dev 822e42b), up

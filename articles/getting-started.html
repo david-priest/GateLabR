@@ -19,7 +19,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,7 +58,7 @@
       <h1>Getting started with GateLabR</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/v1.6.4/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
       <div class="d-none name"><code>getting-started.Rmd</code></div>
     </div>
 
@@ -134,7 +134,7 @@ into either object with flowCore and flowWorkspace:</p>
 <span>  rowData <span class="op">=</span> <span class="fu">DataFrame</span><span class="op">(</span>channel_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">events</span><span class="op">)</span>,</span>
 <span>                      marker_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/markernames.html" class="external-link">markernames</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">events</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">spillover</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">spillover</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">$</span><span class="va">SPILL</span>     <span class="co"># offered in the Compensation tab</span></span>
+<span><span class="fu">metadata</span><span class="op">(</span><span class="va">sce</span><span class="op">)</span><span class="op">$</span><span class="va">spillover</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/flowCore/man/flowFrame-class.html" class="external-link">spillover</a></span><span class="op">(</span><span class="va">fs</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">$</span><span class="va">SPILL</span>     <span class="co"># kept with the object; see section 7</span></span>
 <span><span class="fu"><a href="../reference/launchGatingApp.html">launchGatingApp</a></span><span class="op">(</span><span class="va">sce</span><span class="op">)</span></span></code></pre></div>
 <p>On a <code>GatingSet</code>, the hierarchy it holds opens as the
 app’s gates, drawn in the transformed space the object evaluates them
@@ -247,8 +247,12 @@ channels as row names and the receiver channels as column names, as
 documented name, read first (the older <code>spillover_matrix</code>,
 <code>spilloverMatrix</code> and <code>sm</code> are still read after
 it); a matrix applied in the app is kept with the workspace record, not
-written back to this slot. A <code>GatingSet</code> carries its applied
-matrix itself (<code><a href="https://rdrr.io/pkg/flowWorkspace/man/gh_get_compensations.html" class="external-link">gh_get_compensations()</a></code>).</p>
+written back to this slot. On mass cytometry data the app offers it in
+the Compensation tab to apply; on flow data it is not offered yet,
+because the app would install it as every sample’s own matrix and could
+then apply it by itself, to an assay already compensated too. A
+<code>GatingSet</code> carries its applied matrix itself
+(<code><a href="https://rdrr.io/pkg/flowWorkspace/man/gh_get_compensations.html" class="external-link">gh_get_compensations()</a></code>).</p>
 <blockquote>
 <p>📸 <em>Screenshot: the compensation toggle + matrix viewer.</em> —
 add <code>man/figures/compensation.png</code></p>

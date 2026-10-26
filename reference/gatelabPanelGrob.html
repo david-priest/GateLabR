@@ -15,7 +15,7 @@ panel is the same picture as in the app at any scale."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,7 +41,7 @@ panel is the same picture as in the app at any scale."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>One gating panel, drawn as GateLab draws it</h1>
-      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/main/R/strategy_panel.R" class="external-link"><code>R/strategy_panel.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/david-priest/GateLabR/blob/v1.6.4/R/strategy_panel.R" class="external-link"><code>R/strategy_panel.R</code></a></small>
       <div class="d-none name"><code>gatelabPanelGrob.Rd</code></div>
     </div>
 
@@ -107,12 +107,15 @@ panel is the same picture as in the app at any <code>scale</code>.</p>
 <code>color</code>, and <code>vertices</code> (two-column matrix, display units), <code>percent</code>,
 <code>label_offset</code> and <code>label_placed</code> for an outlined gate, or <code>center</code>,
 <code>quadrant_pcts</code> (four values, in the order top left, top right, bottom right, bottom
-left) and <code>quadrant_label_offsets</code> for a quadrant gate. A quadrant gate may also
-carry GateLab's <code>curl</code> (a curly quadrant: <code>power</code>, <code>kx</code>, <code>ky</code>) or
-<code>arms</code> (a spider quadrant: <code>down</code>, <code>right</code>, <code>up</code> and <code>left</code>,
-each the <code>c(x, y)</code> end of an arm), in display units; a curl or arms GateLab would
-refuse are ignored. A <code>gate_id</code> is optional: it names the gate's entry in the
-<code>anchors</code> attribute.</p></dd>
+left) and <code>quadrant_label_offsets</code> for a quadrant gate. Optional
+<code>curl</code> (a list of <code>power</code>, <code>kx</code> and <code>ky</code>) bends its upper and right
+dividers; <code>arms</code> gives a spider's <code>down</code>, <code>right</code>, <code>up</code> and <code>left</code>
+endpoints, each <code>c(x, y)</code> in display units, when there is no curl. Optional
+<code>quadrant_suffix</code> and zero-based <code>quadrant_label_row</code> distinguish sample-specific
+quadrant annotations. For outlined gates, optional zero-based <code>label_row</code> and
+<code>label_rows</code> stack automatic labels; explicitly placed labels keep their offsets.
+A <code>gate_id</code> is
+optional: it names the gate's entry in the <code>anchors</code> attribute.</p></dd>
 
 
 <dt id="arg-plot-size">plot_size<a class="anchor" aria-label="anchor" href="#arg-plot-size"></a></dt>

@@ -105,7 +105,12 @@ gatelabStrategyPlot(
 - assay:
 
   The assay the gates were drawn on; `NULL` takes the one the workspace
-  names, or `exprs` when it names none.
+  names, or `exprs` when it names none. For a saved linear assay, each
+  sample uses its saved original or compensated layer, whether the assay
+  is left `NULL` or named. Any other assay is used as it stands for
+  every sample, with a warning naming the samples whose saved
+  compensated layers it leaves out. A missing or ambiguous saved
+  compensated layer is refused, never recomputed.
 
 ## Value
 
@@ -113,30 +118,35 @@ A grid `gTree` of class `gatelab_strategy`. Attributes: `width` and
 `height`, the figure's size in inches; `panels`, a data frame with one
 row per gate or quadrant drawn (`panel`, `x_channel`, `y_channel`,
 `parent_events`, `events_drawn`, `population`, `events`,
-`percent_of_parent`).
+`percent_of_parent`, `samples`). Identical outlines and inclusion rules
+are pooled; a differing sample-specific outline or rule has its own row
+and parent denominator.
 
 ## Details
 
-Counts and percentages are of the pooled samples. A population made by
-one gate takes its count from the stored memberships
+Counts and percentages are of the samples sharing each outline. A
+population made by one gate takes its count from the stored memberships
 ([`gatelabPopulations`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)),
 so it is the app's own; a gate of a population made by several is
 counted from the gate's geometry, as are quadrants no population was
-made for, by the app's rule for a curly or a spider quadrant too (an
-event outside a spider's box is in none of its quadrants). That is exact
-where gates are stored in display units, as on a `SingleCellExperiment`
-hosted on its transformed assay. An event a population was not evaluated
-for, which
+made for. These counts use the stored parent membership and each gate's
+recorded coordinate space, including curved and spider quadrant
+dividers. Events outside a spider's bounding box are in none of its
+quadrants. An event a population was not evaluated for, which
 [`gatelabPopulations()`](https://david-priest.github.io/GateLabR/reference/gatelabMemberships.md)
 returns as `NA` with a warning, is counted as outside it.
 
-Events are drawn as the assay holds them and gates as the workspace
-holds them, with no transform applied. A workspace drawn on a linear
-assay, which the app shows through a transform, is not reproduced. The
-gates drawn are those of the hierarchy that was active when the
-workspace was saved: a file gated under a copy of the tree with
-coordinates of its own keeps its counts, which come from the
-memberships, but its own outlines are not drawn.
+Events are drawn through the display transforms recorded at the save. A
+display-space assay is read in its recorded arcsinh units; a linear
+assay requires saved channel transforms. Gate outlines are mapped from
+each gate's own coordinate space to that display. Files gated under
+tailored copies of the active tree contribute their own outlines,
+labelled by sample when the outlines differ. Named population counts
+remain the stored memberships; individual gate and unnamed quadrant
+counts use each sample's own gate in its recorded space. A sample
+without a saved counterpart is refused, since its outline cannot be
+reconstructed; select the samples whose trees contain the population.
+Drawing does not change the object.
 
 Axis ranges follow the app: a channel's global scale when the workspace
 sets one, else 5 percent of the drawn events' span below them and 20
@@ -183,10 +193,10 @@ workspace <- list(
     gates = list(
       g1 = list(gate_id = "g1", name = "CD4 gate", gate_type = "rectangle",
                 x_channel = "CD4", y_channel = "CD8", color = "#e41a1c", label_offset = NULL,
-                vertices = list(list(2.5, -0.5), list(6, 2.5))),
+                space = "display", vertices = list(list(2.5, -0.5), list(6, 2.5))),
       g2 = list(gate_id = "g2", name = "naive gate", gate_type = "rectangle",
                 x_channel = "CD45RA", y_channel = "CCR7", color = "#377eb8", label_offset = NULL,
-                vertices = list(list(2, 2), list(5, 5)))
+                space = "display", vertices = list(list(2, 2), list(5, 5)))
     ),
     populations = list(
       root = list(population_id = "root", name = "All Events", parent_id = NULL,
@@ -216,9 +226,9 @@ attr(strategy, "panels")
 #>          panel x_channel y_channel parent_events events_drawn   population
 #> 1   All Events       CD4       CD8          3000         2000 CD4_positive
 #> 2 CD4_positive    CD45RA      CCR7          1497         1497        naive
-#>   events percent_of_parent
-#> 1   1497              49.9
-#> 2    741              49.5
+#>   events percent_of_parent    samples
+#> 1   1497              49.9 D1, D2, D3
+#> 2    741              49.5 D1, D2, D3
 plot(strategy)
 
 
