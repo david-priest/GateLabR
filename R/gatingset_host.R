@@ -3,7 +3,7 @@
 # A GatingSet keeps, per sample, a cytoframe on disk (one HDF5 file, opened lazily and read by
 # column), each channel's transform with its parameters in C++, a compensation where one was
 # applied, and a hierarchy of nodes, each a gate evaluated in the transformed space of its
-# channels or a boolean of other nodes. Nothing here copies the object: the dataset the app sees
+# channels or a boolean of other nodes. Event data are not copied: the dataset the app sees
 # is described from the object's own parts, each sample's values are read from its cytoframe one
 # channel at a time when the app asks for them and put through the channel's inverse transform
 # in R (gh_pop_get_data(inverse.transform = TRUE) would write a full temporary copy of the
@@ -33,7 +33,95 @@
   if (!is.function(reader)) return(list())
   raw <- tryCatch(reader(gs@pointer, sample, inverse = FALSE), error = function(...) NULL)
   if (!is.list(raw) || is.null(names(raw))) return(list())
-  raw[nzchar(names(raw))]
+  raw <- raw[nzchar(names(raw))]
+  scales <- .gatelabr_gatingset_logicle_scales(gs, sample, raw)
+  for (channel in names(scales)) {
+    if (is.character(scales[[channel]])) {
+      raw[[channel]]$native_failure <- scales[[channel]]
+    } else {
+      raw[[channel]]$native_scale <- scales[[channel]]
+    }
+  }
+  raw
+}
+
+# flowWorkspace 4.16 drops cytolib's isGml2 flag from its transform parameter accessor.
+# Both logicle modes consequently return the same R forward/inverse closures, although
+# native event and gate coordinates span M for legacy logicle and 1 for Gating-ML 2.
+# Probe the stored C++ transforms on fresh one-event data. No original events, ranges,
+# keywords or gates are written or inferred from their values. The temporary hierarchy does
+# copy its membership indices; probe all logicle channels together once per sample, not
+# separately for every channel or population.
+#
+# Returns, by logicle channel, its native scale (1 or M) or, where the probe cannot tell, the
+# reason. A reason marks only that channel unsupported (.gatelabr_gatingset_axis): its nodes stay
+# on the object, a gate the app draws on it is saved as its membership, and its values reach the
+# app through flowWorkspace's own inverse, which reads the legacy scale.
+.gatelabr_gatingset_logicle_scales <- function(gs, sample, raw) {
+  channels <- names(raw)[vapply(raw, function(p) identical(p$type, "logicle"), logical(1))]
+  if (!length(channels)) return(list())
+  parameter <- function(name) vapply(raw[channels], function(p) {
+    value <- suppressWarnings(as.numeric(p[[name]]))
+    if (length(value) == 1L) value else NA_real_
+  }, numeric(1))
+  top <- parameter("T")
+  decades <- parameter("M")
+  valid <- is.finite(top) & top > 0 & is.finite(decades) & decades > 0
+  result <- stats::setNames(as.list(rep("invalid logicle parameters", length(channels))), channels)
+  if (!any(valid)) return(result)
+  probed <- channels[valid]
+  measured <- tryCatch(
+    .gatelabr_gatingset_probe_logicle(gs, sample, probed, unname(top[valid])),
+    error = function(cause) conditionMessage(cause)
+  )
+  if (is.character(measured)) {
+    result[probed] <- measured
+    return(result)
+  }
+  for (index in seq_along(probed)) {
+    m <- unname(decades[valid][[index]])
+    value <- measured[[index]]
+    # cytolib stores event values as float32. Require one of the two documented native
+    # conventions, which coincide when M is 1; do not accept arbitrary scaling or ambiguous
+    # evidence.
+    candidates <- unique(c(1, m))
+    matches <- is.finite(value) & abs(value - candidates) <= 1e-6 * max(1, m)
+    result[[probed[[index]]]] <- if (sum(matches) == 1L) candidates[matches] else {
+      paste0("the native transform took T to ", format(value, digits = 7), ", neither 1 nor M")
+    }
+  }
+  result
+}
+
+# The native transform's value at T for each channel, on a hierarchy cloned from the sample whose
+# data are replaced by one event written to a directory of the probe's own, removed when the
+# probe ends. The clone shares the object's data until they are replaced, and a native call on
+# shared data would transform the object's own events, so the probe goes ahead only once the
+# clone's cytoframe is that file. (Two reads of one cytoframe give different external pointers,
+# so comparing pointers cannot tell.)
+.gatelabr_gatingset_probe_logicle <- function(gs, sample, channels, top) {
+  native_transform <- get0("gs_transform_data", envir = asNamespace("flowWorkspace"))
+  if (!is.function(native_transform)) {
+    stop("flowWorkspace's native transform accessor is unavailable", call. = FALSE)
+  }
+  directory <- tempfile("gatelabr-logicle-probe-")
+  on.exit(unlink(directory, recursive = TRUE), add = TRUE)
+  sentinel <- flowCore::flowSet(list(flowCore::flowFrame(
+    matrix(top, nrow = 1L, dimnames = list(NULL, channels)))))
+  flowCore::sampleNames(sentinel) <- sample
+  data <- flowWorkspace::flowSet_to_cytoset(sentinel, path = directory, backend = "h5")
+  probe <- flowWorkspace::gs_copy_tree_only(gs[sample])
+  flowWorkspace::gs_cyto_data(probe) <- data
+  frame <- flowWorkspace::gs_cyto_data(probe)[[sample]]
+  uri <- flowWorkspace::cf_get_uri(frame)
+  own <- length(uri) == 1L && !is.na(uri) && nzchar(uri) &&
+    startsWith(normalizePath(uri, mustWork = FALSE),
+               paste0(normalizePath(directory, mustWork = FALSE), .Platform$file.sep))
+  if (!own || nrow(frame) != 1L || !identical(as.character(colnames(frame)), channels)) {
+    stop("the probe's data were not isolated from the object's", call. = FALSE)
+  }
+  native_transform(probe@pointer)
+  as.numeric(flowCore::exprs(flowWorkspace::gs_cyto_data(probe)[[sample]])[1L, ])
 }
 
 # How one channel's transformed values relate to a GateLab transform spec: the spec the app
@@ -43,8 +131,9 @@
 #
 # fasinh is `length * (asinh(x * sinh(M ln10) / T) + A ln10) / ((M + A) ln10)`, an affine
 # function of GateLab's asinh at cofactor T / sinh(M ln10); FlowJo's log is GateLab's wsplog
-# times its scale; the logicle and Gating-ML's logtGml2 (GateLab's standard flog) are the same
-# functions by parameters. So is the biexponential, provided the spec carries no
+# times its scale; native logicle is normalized or multiplied by M, depending on its mode.
+# Gating-ML's logtGml2 (GateLab's standard flog) is the same function by parameters.
+# So is the biexponential, provided the spec carries no
 # `tableChannels` and says `spline`: GateLab then builds cytolib's own table at `channelRange`
 # channels and evaluates it as R's natural cubic spline, which is the function flowWorkspace
 # runs to the last digit (GateLab's biexSpline.test.ts checks it against R's coefficients);
@@ -69,10 +158,22 @@
   type <- raw$type
   malformed <- list(unsupported = paste0("a ", type, " transform with missing parameters"))
   if (identical(type, "logicle")) {
+    if (is.character(raw$native_failure)) {
+      return(list(unsupported = paste0(
+        "a logicle transform whose native coordinate convention could not be determined (",
+        raw$native_failure, ")")))
+    }
     p <- numbers("T", "W", "M", "A")
-    if (is.null(p)) return(malformed)
+    if (is.null(p) || p$M <= 0) return(malformed)
+    scale <- number("native_scale")
+    if (is.null(scale)) scale <- p$M
+    legacy <- flowCore::logicleTransform(t = p$T, w = p$W, m = p$M, a = p$A)
+    undo <- flowCore::inverseLogicleTransform(legacy)@.Data
+    native <- legacy@.Data
     return(list(spec = list(kind = "logicle", T = p$T, W = p$W, M = p$M, A = p$A),
-                forward = identity, backward = identity))
+                forward = function(v) v / scale, backward = function(y) y * scale,
+                transform = function(x) native(x) * scale / p$M,
+                inverse = function(v) undo(v * p$M / scale)))
   }
   if (identical(type, "fasinh")) {
     p <- numbers("T", "M", "A", "length")
@@ -128,7 +229,7 @@
   axes <- lapply(channels, function(channel) {
     axis <- .gatelabr_gatingset_axis(raw[[channel]])
     transform <- transforms[[channel]]
-    axis$transform <- if (is.function(transform)) transform else NULL
+    if (!is.function(axis$transform)) axis$transform <- if (is.function(transform)) transform else NULL
     axis
   })
   names(axes) <- channels
@@ -230,8 +331,9 @@
   "unknown"
 }
 
-# The matrix flowWorkspace applied, as the app's descriptor states one: rows the source
-# channels, columns the receivers. NULL when none was applied.
+# The matrix flowWorkspace applied, in the form the app's descriptor states one: rows the source
+# channels, columns the receivers. NULL when none was applied. The launch note names it; the
+# descriptor does not carry it (below).
 .gatelabr_gatingset_compensation_matrix <- function(gs) {
   compensation <- tryCatch(flowWorkspace::gh_get_compensations(gs[[1]]), error = function(...) NULL)
   if (is.null(compensation)) return(NULL)
@@ -250,6 +352,19 @@
 
 .gatelabr_gatingset_compensated <- function(gs) {
   !is.null(tryCatch(flowWorkspace::gh_get_compensations(gs[[1]]), error = function(...) NULL))
+}
+
+# What the launch says of the object's compensation.
+.gatelabr_gatingset_compensation_note <- function(gs) {
+  if (!.gatelabr_gatingset_compensated(gs)) return("no compensation applied")
+  matrix <- .gatelabr_gatingset_compensation_matrix(gs)
+  channels <- if (is.null(matrix)) character() else as.character(matrix$sourceChannels)
+  paste0(
+    "compensated by flowWorkspace",
+    if (length(channels)) paste0(" (", length(channels), " x ", length(channels), " spillover over ",
+                                 paste(channels, collapse = ", "), ")") else "",
+    "; the app is not given the matrix, which it would apply to these values a second time"
+  )
 }
 
 # The dataset descriptor the SCE host sends, built from the object's parts. One assay: the
@@ -306,8 +421,11 @@
     colDataCategorical = categorical,
     rowDataRevision = .gatelabr_gatingset_state(gs)$rowdata_revision
   )
-  matrix <- .gatelabr_gatingset_compensation_matrix(gs)
-  if (!is.null(matrix)) descriptor$compensationMatrix <- matrix
+  # The applied matrix is not sent as compensationMatrix. The app installs a hosted flow matrix as
+  # each sample's own spillover (host/hostedSample.ts) and then applies it by itself to the values
+  # served, which flowWorkspace has compensated already: the header's "Compensated · this session"
+  # showed every event compensated twice, and Save to GatingSet wrote those memberships to the
+  # hierarchy. The launch note states the matrix instead.
   descriptor
 }
 
@@ -319,12 +437,14 @@
 .gatelabr_write_gatingset_assay_payload <- function(gs, sample, channels, path) {
   frame <- flowWorkspace::gs_cyto_data(gs)[[sample]]
   inverse <- flowWorkspace::gh_get_transformations(gs[[sample]], inverse = TRUE)
+  axes <- .gatelabr_gatingset_axes(gs, channels, sample)
   event_count <- nrow(frame)
   connection <- file(path, open = "wb")
   on.exit(close(connection), add = TRUE)
   for (channel in channels) {
     values <- as.numeric(flowCore::exprs(frame[, channel, drop = FALSE])[, 1L])
-    undo <- inverse[[channel]]
+    undo <- axes[[channel]]$inverse
+    if (!is.function(undo)) undo <- inverse[[channel]]
     if (is.function(undo)) values <- undo(values)
     writeBin(values, connection, size = 4L, endian = "little")
   }
@@ -1108,7 +1228,7 @@
   if (.gatelabr_gatingset_compensated(gs)) {
     return(paste0(
       "The GatingSet is compensated already, and flowWorkspace cannot uncompensate it; the ",
-      "matrix it carries is the one the app shows."
+      "values the app is served carry its matrix already."
     ))
   }
   if (length(flowWorkspace::gh_get_transformations(gs[[1]])) > 0L) {
@@ -1207,6 +1327,14 @@
   list(samples = samples, active = active)
 }
 
+# A square matrix with the same channels on both axes, ones on the diagonal and zeros elsewhere.
+.gatelabr_gatingset_identity_matrix <- function(spill, tolerance = 1e-9) {
+  if (!is.matrix(spill) || nrow(spill) != ncol(spill) || !identical(rownames(spill), colnames(spill))) {
+    return(FALSE)
+  }
+  isTRUE(all(abs(spill - diag(nrow(spill))) <= tolerance))
+}
+
 # Apply a spillover matrix to the object in place, with flowWorkspace::compensate(), which is
 # what a GatingSet user does in R. After it the object's one assay is `compensated`; the
 # uncompensated values are gone from the object, as they are after compensate() at the prompt.
@@ -1232,9 +1360,35 @@
   }
   # Square, in source order: flowCore's spillover has one name set on both axes.
   spill <- spill[, rownames(spill), drop = FALSE]
+  # An identity changes no values, but compensate() records it, and the object then reads as
+  # compensated and refuses the matrix that follows: the Compensation tab's "Start from an empty
+  # matrix" applies one before the user edits it. The app sends coefficients as float64, so an
+  # identity arrives as exact zeros and ones; the tolerance only absorbs rounding.
+  if (.gatelabr_gatingset_identity_matrix(spill)) {
+    stop(
+      "The matrix is the identity, which changes no values, and a GatingSet is compensated once, ",
+      "in place: flowWorkspace::compensate() would record it, and the object would then read as ",
+      "compensated and refuse the matrix that follows (\"Start from an empty matrix\" applies an ",
+      "identity first). Send the full matrix in one Apply, or compensate in R before launching ",
+      "(flowWorkspace::compensate(gs, spillover)).",
+      call. = FALSE
+    )
+  }
   chosen <- .gatelabr_gatingset_compensation_targets(gs, targets)
   tryCatch(
-    flowWorkspace::compensate(gs, spill),
+    {
+      # flowWorkspace::compensate() records the matrix on the hierarchy before it writes the
+      # values, so on a read-only object it fails with the matrix recorded and the values
+      # unchanged, and the object then reads as compensated (and survives save_gs() so). One
+      # value written back through a view of each sample meets the same read-only guard first.
+      for (sample in flowWorkspace::sampleNames(gs)) {
+        frame <- flowWorkspace::gs_cyto_data(gs)[[sample]]
+        if (nrow(frame) == 0L) next
+        probe <- frame[1, 1]
+        flowCore::exprs(probe) <- flowCore::exprs(probe)
+      }
+      flowWorkspace::compensate(gs, spill)
+    },
     error = function(cause) {
       message <- conditionMessage(cause)
       if (grepl("read-only", message, ignore.case = TRUE)) {
@@ -1367,13 +1521,18 @@
     if (!is.null(axis$unsupported)) "unsupported" else if (is.null(axis$spec)) "linear" else axis$spec$kind
   }, character(1))
   transformed <- kinds[kinds != "linear"]
+  # Each unmapped channel by its reason, which the hierarchy note's left-out nodes repeat.
+  reasons <- vapply(axes[kinds == "unsupported"], `[[`, character(1), "unsupported")
+  unmapped <- paste0(" (", paste(vapply(unique(reasons), function(reason) {
+    paste0(paste(names(reasons)[reasons == reason], collapse = ", "), ": ", reason)
+  }, character(1)), collapse = "; "), ")")
   transform_text <- if (length(transformed) == 0L) {
     "no transform (the app's axes are its own)"
   } else {
     paste(vapply(unique(transformed), function(kind) {
       paste0(sum(transformed == kind), " ", switch(kind,
         logicle = "logicle", asinh = "arcsinh", wsplog = "FlowJo log", flog = "Gating-ML log",
-        biex = "biexponential", unsupported = "unmapped", kind))
+        biex = "biexponential", unsupported = paste0("unmapped", unmapped), kind))
     }, character(1)), collapse = ", ")
   }
   nodes <- setdiff(flowWorkspace::gs_get_pop_paths(gs, path = "full"), "root")
@@ -1381,7 +1540,7 @@
     "  ", length(counts), " sample", if (length(counts) == 1L) "" else "s", ", ",
     format(sum(counts), big.mark = ","), " events, ", length(channels$pnn), " channels; ",
     "transforms: ", transform_text, "; ",
-    if (.gatelabr_gatingset_compensated(gs)) "compensated (the matrix is shown in the app)" else "no compensation applied",
+    .gatelabr_gatingset_compensation_note(gs),
     "; ", length(nodes), " node", if (length(nodes) == 1L) "" else "s", " in the hierarchy",
     if (length(nodes)) .gatelabr_gatingset_hierarchy_note(gs) else ""
   )

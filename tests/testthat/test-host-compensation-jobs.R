@@ -272,3 +272,63 @@ test_that("stale source revisions discard a complete staged result", {
       SummarizedExperiment::assayNames(sce)
   )
 })
+
+test_that("a live Apply reads the app's state from the event loop, outside any reactive context", {
+  # The app keeps its object in a shiny::reactiveVal, and in a live session the job's
+  # later::later() callbacks run from R's event loop, where reading one fails with "Operation not
+  # allowed without an active reactive context". The tests above pass a plain function as the
+  # state, which hides that; this one passes the reactiveVal the app holds and runs the loop
+  # here, outside any reactive context.
+  sce_name <- ".gatelabr_live_job_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) {
+      rm(list = sce_name, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+  submit <- function(measured, kind, solve_design, worker_count) {
+    list(
+      task = NULL,
+      promise = promises::promise_resolve(
+        GateLabR:::.gatelabr_solve_host_compensation_chunk(
+          measured,
+          kind,
+          solve_design,
+          worker_count
+        )
+      ),
+      cancel = function() invisible(NULL)
+    )
+  }
+  manager <- GateLabR:::.gatelabr_new_host_compensation_jobs(
+    submit = submit,
+    chunk_size = 2L
+  )
+  state <- shiny::reactiveVal(job_compensation_sce())
+  session <- job_test_session()
+
+  expect_true(GateLabR:::.gatelabr_start_host_compensation_job(
+    manager,
+    state,
+    sce_name,
+    job_compensation_request(),
+    "sce",
+    NULL,
+    session
+  ))
+  run_job_loop(manager)
+
+  responses <- Filter(
+    function(entry) identical(entry$type, "gatelabr-host-response"),
+    session$messages()
+  )
+  expect_length(responses, 1L)
+  expect_true(
+    isTRUE(responses[[1]]$message$ok),
+    info = as.character(responses[[1]]$message$error)
+  )
+  expect_true(
+    "gatelab_compensated" %in%
+      SummarizedExperiment::assayNames(shiny::isolate(state()))
+  )
+})

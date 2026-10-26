@@ -328,3 +328,44 @@ test_that("a port is found in use by connecting to it", {
   close(socket)
   expect_true(GateLabR:::.gatelabr_port_is_free(port))
 })
+
+test_that("a stored matrix the app is not offered is warned about once per launch", {
+  sce_name <- ".gatelabr_matrix_warning_launch_test_sce"
+  on.exit(if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) rm(list = sce_name, envir = .GlobalEnv), add = TRUE)
+  live <- GateLabR:::.gatelabr_live
+  on.exit(rm(list = ls(live, all.names = TRUE), envir = live), add = TRUE)
+  app <- NULL
+  record <- NULL
+  start_app <- function(appDir, port = NULL, launch.browser = TRUE, ...) {
+    app <<- appDir
+    appDir$onStart()
+    callbacks <- record$stop_callbacks
+    record$stop_callbacks <- list()
+    list(stop = function() for (callback in callbacks) callback(),
+         url = function() "http://127.0.0.1:4242/", status = function() "running")
+  }
+  record <- local_launch_fakes(start_app = start_app)
+  object <- make_launch_sce()
+  S4Vectors::metadata(object)$instrument_type <- "flow"
+  S4Vectors::metadata(object)$spillover <- matrix(c(1, 0.1, 0.05, 1), 2, dimnames = list(c("CD3", "CD19"), c("CD3", "CD19")))
+  said <- character(0)
+  collect <- function(code) withCallingHandlers(code,
+    warning = function(condition) {
+      said <<- c(said, conditionMessage(condition))
+      invokeRestart("muffleWarning")
+    },
+    message = function(condition) invokeRestart("muffleMessage"))
+  collect(GateLabR::launchReactGateLab(object, sce_name = sce_name, port = 4242, launch.browser = FALSE))
+  # The page asks for the manifest when it opens, and again on every reload: a new session.
+  # (The flush first: the observer ignores the input's value at its first run.)
+  for (reload in 1:2) collect(shiny::testServer(app, {
+    session$flushReact()
+    session$setInputs(gatelabr_react_ready = reload)
+  }))
+  expect_length(grep("is not offered for compensation", said, fixed = TRUE), 1L)
+  expect_true(GateLabR::gatelabStop())
+  # A new launch says it again.
+  collect(GateLabR::launchReactGateLab(object, sce_name = sce_name, port = 4242, launch.browser = FALSE))
+  expect_length(grep("is not offered for compensation", said, fixed = TRUE), 2L)
+  expect_true(GateLabR::gatelabStop())
+})

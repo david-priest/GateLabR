@@ -186,6 +186,43 @@ test_that("R host flow Apply uses the conventional event by inverse convention",
   )
 })
 
+test_that("Apply refuses a source assay that is already compensated", {
+  # The app sends the drawn assay as the source. One whose role is compensated, by its name or
+  # by metadata(sce)$gatelabr_assay_roles, would be compensated twice.
+  apply_to <- function(sce, source, kind = "cytof-spillover") {
+    GateLabR:::.gatelabr_apply_host_compensation(
+      sce,
+      dataset_id = "sce-test",
+      profile_json = host_compensation_profile(kind),
+      targets = list(list(
+        sampleId = "sample-0",
+        sourceAssayId = source,
+        expectedAssayRevision = 0,
+        activeLayer = "compensated"
+      )),
+      worker_count = 1,
+      sample_column = "sample_id"
+    )
+  }
+  sce <- host_compensation_sce()
+  SummarizedExperiment::assay(sce, "compensated") <- SummarizedExperiment::assay(sce, "counts")
+  expect_error(apply_to(sce, "compensated"), "'compensated' is already compensated")
+  S4Vectors::metadata(sce)$gatelabr_assay_roles <- list(counts = "compensated")
+  expect_error(apply_to(sce, "counts"), "'counts' is already compensated")
+  S4Vectors::metadata(sce)$instrument_type <- "flow"
+  expect_error(apply_to(sce, "counts", "flow-spillover"), "'counts' is already compensated")
+  # The job path prepares through the same function.
+  expect_error(GateLabR:::.gatelabr_prepare_host_compensation(
+    sce, dataset_id = "sce-test", profile_json = host_compensation_profile("flow-spillover"),
+    targets = list(list(sampleId = "sample-0", sourceAssayId = "counts", expectedAssayRevision = 0,
+                        activeLayer = "compensated")),
+    sample_column = "sample_id"
+  ), "'counts' is already compensated")
+  # An assay whose role is counts is applied to as before.
+  S4Vectors::metadata(sce)$gatelabr_assay_roles <- NULL
+  expect_true(apply_to(sce, "counts", "flow-spillover")$result$output_assay_id %in% c("gatelab_compensated", "gatelab_compensated_2"))
+})
+
 test_that("reapplying a profile can return a sample to the Original layer", {
   sce <- host_compensation_sce()
   profile_json <- host_compensation_profile()

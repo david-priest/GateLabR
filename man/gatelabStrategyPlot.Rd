@@ -63,14 +63,19 @@ of events by population with the population names (or ids) as column names. \cod
 reads the stored memberships with \code{gatelabPopulations()}.}
 
 \item{assay}{The assay the gates were drawn on; \code{NULL} takes the one the workspace
-names, or \code{exprs} when it names none.}
+names, or \code{exprs} when it names none. For a saved linear assay, each sample uses its
+saved original or compensated layer, whether the assay is left \code{NULL} or named. Any
+other assay is used as it stands for every sample, with a warning naming the samples whose
+saved compensated layers it leaves out. A missing or ambiguous saved compensated layer is
+refused, never recomputed.}
 }
 \value{
 A grid \code{gTree} of class \code{gatelab_strategy}. Attributes: \code{width} and
   \code{height}, the figure's size in inches; \code{panels}, a data frame with one row per
   gate or quadrant drawn (\code{panel}, \code{x_channel}, \code{y_channel},
   \code{parent_events}, \code{events_drawn}, \code{population}, \code{events},
-  \code{percent_of_parent}).
+  \code{percent_of_parent}, \code{samples}). Identical outlines and inclusion rules are
+  pooled; a differing sample-specific outline or rule has its own row and parent denominator.
 }
 \description{
 Lays out the gating path to the populations asked for as GateLab's Strategy tab does in its
@@ -80,21 +85,24 @@ gating depth, and an arrow from each gate to the panel of the population it make
 is a \code{\link{gatelabPanelGrob}}.
 }
 \details{
-Counts and percentages are of the pooled samples. A population made by one gate
+Counts and percentages are of the samples sharing each outline. A population made by one gate
   takes its count from the stored memberships (\code{\link{gatelabPopulations}}), so it is
   the app's own; a gate of a population made by several is counted from the gate's geometry,
-  as are quadrants no population was made for, by the app's rule for a curly or a spider
-  quadrant too (an event outside a spider's box is in none of its quadrants). That is exact
-  where gates are stored in display units, as on a \code{SingleCellExperiment} hosted on
-  its transformed assay. An event a population was not evaluated for, which
-  \code{gatelabPopulations()} returns as \code{NA} with a warning, is counted as outside it.
+  as are quadrants no population was made for. These counts use the stored parent membership
+  and each gate's recorded coordinate space, including curved and spider quadrant
+  dividers. Events outside a spider's bounding box are in none of its quadrants. An
+  event a population was not evaluated for, which \code{gatelabPopulations()} returns as
+  \code{NA} with a warning, is counted as outside it.
 
-  Events are drawn as the assay holds them and gates as the workspace holds them, with no
-  transform applied. A workspace drawn on a linear assay, which the app shows through a
-  transform, is not reproduced. The gates drawn are those of the hierarchy that was active
-  when the workspace was saved: a file gated under a copy of the tree with coordinates of
-  its own keeps its counts, which come from the memberships, but its own outlines are not
-  drawn.
+  Events are drawn through the display transforms recorded at the save. A display-space
+  assay is read in its recorded arcsinh units; a linear assay requires saved channel
+  transforms. Gate outlines are mapped from each gate's own coordinate space to that
+  display. Files gated under tailored copies of the active tree contribute their own
+  outlines, labelled by sample when the outlines differ. Named population counts remain
+  the stored memberships; individual gate and unnamed quadrant counts use each sample's
+  own gate in its recorded space. A sample without a saved counterpart is refused, since its
+  outline cannot be reconstructed; select the samples whose trees contain the population.
+  Drawing does not change the object.
 
   Axis ranges follow the app: a channel's global scale when the workspace sets one, else 5
   percent of the drawn events' span below them and 20 percent above, widened to keep every
@@ -131,10 +139,10 @@ workspace <- list(
     gates = list(
       g1 = list(gate_id = "g1", name = "CD4 gate", gate_type = "rectangle",
                 x_channel = "CD4", y_channel = "CD8", color = "#e41a1c", label_offset = NULL,
-                vertices = list(list(2.5, -0.5), list(6, 2.5))),
+                space = "display", vertices = list(list(2.5, -0.5), list(6, 2.5))),
       g2 = list(gate_id = "g2", name = "naive gate", gate_type = "rectangle",
                 x_channel = "CD45RA", y_channel = "CCR7", color = "#377eb8", label_offset = NULL,
-                vertices = list(list(2, 2), list(5, 5)))
+                space = "display", vertices = list(list(2, 2), list(5, 5)))
     ),
     populations = list(
       root = list(population_id = "root", name = "All Events", parent_id = NULL,
