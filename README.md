@@ -8,13 +8,13 @@
 
 <p align="center">
   <a href="https://doi.org/10.5281/zenodo.20404387"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg" alt="DOI"></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-1b2027" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/works_on-SingleCellExperiment_·_GatingSet-1b2027" alt="Works on SingleCellExperiment and GatingSet">
-  <img src="https://img.shields.io/badge/exchanges-Gating--ML_2.0-1b2027" alt="Exchanges Gating-ML 2.0">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-08264c" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/works_on-SingleCellExperiment_·_GatingSet-08264c" alt="Works on SingleCellExperiment and GatingSet">
+  <img src="https://img.shields.io/badge/exchanges-Gating--ML_2.0-08264c" alt="Exchanges Gating-ML 2.0">
 </p>
 
 <p align="center">
-  <a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/Documentation-and_getting_started_%E2%86%92-ed4e19?style=for-the-badge&labelColor=ed4e19" alt="Documentation and getting started"></a>
+  <a href="https://david-priest.github.io/GateLabR"><img src="https://img.shields.io/badge/Documentation-and_getting_started_%E2%86%92-0866ff?style=for-the-badge&labelColor=0866ff" alt="Documentation and getting started"></a>
 </p>
 
 <p align="center">

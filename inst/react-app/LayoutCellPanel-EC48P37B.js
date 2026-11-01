@@ -1,8 +1,8 @@
-import { u as z, a as h, a$ as F, b0 as J, b1 as R, b2 as V, j as X } from "./embed-DOsAEi9z.js";
+import { u as z, a as h, bf as F, bg as J, bh as R, bi as V, j as X } from "./embed-Ad5xBSHI.js";
 import { N as q } from "./cvwDecode-CKHzN2J_.js";
-import { drawTile as v } from "./LayoutImageWall-IGxBm0b7.js";
+import { drawTile as v } from "./LayoutImageWall-DcKEhEHB.js";
 const P = "Helvetica Neue, Helvetica, Arial, sans-serif";
-function $(e, o, d) {
+function H(e, o, d) {
   if (d <= 0 || e.measureText(o).width <= d) return o;
   let u = 0, m = o.length;
   for (; u < m; ) {
@@ -13,7 +13,7 @@ function $(e, o, d) {
 }
 function tt({ recipe: e, service: o, width: d, height: u }) {
   var j, B;
-  const { t: m } = z(), p = h.useRef(null), [c, M] = h.useState(null), [k, H] = h.useState(() => /* @__PURE__ */ new Map()), f = e.sampleId, g = !!(o != null && o.hasSource(f));
+  const { t: m } = z(), p = h.useRef(null), [c, M] = h.useState(null), [k, $] = h.useState(() => /* @__PURE__ */ new Map()), f = e.sampleId, g = !!(o != null && o.hasSource(f));
   h.useEffect(() => {
     if (!o || !g) {
       M(null);
@@ -36,7 +36,7 @@ function tt({ recipe: e, service: o, width: d, height: u }) {
       s = !1;
     };
   }, [o, g, f]);
-  const Y = JSON.stringify([e.columns, e.display, e.gain ?? null]), E = h.useMemo(() => {
+  const Y = JSON.stringify([e.columns, e.display, e.gain ?? null]), b = h.useMemo(() => {
     if (!g || !c || c.fileKey !== f || !c.info) return null;
     const s = F(e);
     return {
@@ -51,7 +51,7 @@ function tt({ recipe: e, service: o, width: d, height: u }) {
     };
   }, [g, c, f, Y, e.exposure, e.outline, (j = e.mask) == null ? void 0 : j.slot, (B = e.mask) == null ? void 0 : B.fraction]), I = e.cells.map((s) => s.event).join(",");
   return h.useEffect(() => {
-    if (!o || !E) return;
+    if (!o || !b) return;
     const s = /* @__PURE__ */ new Map(), n = (i, t) => {
       const l = t.kind === "image" ? t.image : null;
       s.set(i, { composite: (l == null ? void 0 : l.composite) ?? null, channels: (l == null ? void 0 : l.channels) ?? {}, cols: (l == null ? void 0 : l.cols) ?? 1, rows: (l == null ? void 0 : l.rows) ?? 1, aspect: (l == null ? void 0 : l.aspect) ?? 1 });
@@ -59,34 +59,34 @@ function tt({ recipe: e, service: o, width: d, height: u }) {
     let a = null;
     const x = () => {
       a || (a = setTimeout(() => {
-        a = null, H(new Map(s));
+        a = null, $(new Map(s));
       }, 60));
-    }, b = [...new Set(e.cells.map((i) => i.event))].map((i) => {
-      const t = o.cached(f, i, E);
+    }, E = [...new Set(e.cells.map((i) => i.event))].map((i) => {
+      const t = o.cached(f, i, b);
       if (t)
         return n(i, t), null;
-      const l = o.render(f, i, E, "batch");
+      const l = o.render(f, i, b, "batch");
       return l.promise.then((y) => {
         n(i, y), x();
       }, () => {
       }), l;
     });
-    return H(new Map(s)), () => {
+    return $(new Map(s)), () => {
       a && clearTimeout(a);
-      for (const i of b) i == null || i.cancel();
+      for (const i of E) i == null || i.cancel();
     };
-  }, [o, E, f, I]), h.useEffect(() => {
+  }, [o, b, f, I]), h.useEffect(() => {
     const s = p.current;
     if (!s) return;
-    const n = J(e), a = Math.max(0.05, Math.min(d / n.width, u / n.height)), x = Math.max(1, Math.min(3, typeof window < "u" && window.devicePixelRatio || 1)), b = Math.round(n.width * a), i = Math.round(n.height * a);
-    s.style.width = `${b}px`, s.style.height = `${i}px`, s.width = Math.round(b * x), s.height = Math.round(i * x);
+    const n = J(e), a = Math.max(0.05, Math.min(d / n.width, u / n.height)), x = Math.max(1, Math.min(3, typeof window < "u" && window.devicePixelRatio || 1)), E = Math.round(n.width * a), i = Math.round(n.height * a);
+    s.style.width = `${E}px`, s.style.height = `${i}px`, s.width = Math.round(E * x), s.height = Math.round(i * x);
     const t = s.getContext("2d");
     if (!t) return;
     t.setTransform(x * a, 0, 0, x * a, 0, 0), t.fillStyle = "#fff", t.fillRect(0, 0, n.width, n.height);
     const l = e.tile, y = l + 3;
-    n.titleHeight > 0 && (t.fillStyle = "#1a1a1a", t.font = `600 12px ${P}`, t.textAlign = "left", t.textBaseline = "alphabetic", t.fillText($(t, e.title.trim(), n.width - 2 * R), R, R + 12));
+    n.titleHeight > 0 && (t.fillStyle = "#1a1a1a", t.font = `600 12px ${P}`, t.textAlign = "left", t.textBaseline = "alphabetic", t.fillText(H(t, e.title.trim(), n.width - 2 * R), R, R + 12));
     const S = e.transpose === !0, A = V(e), O = S ? e.cells.map((r) => r.label) : A.map((r) => r.header), W = S ? A.map((r) => r.header) : e.cells.map((r) => r.label);
-    if (n.headerHeight > 0 && (t.fillStyle = "#333", t.font = `10px ${P}`, t.textAlign = "center", t.textBaseline = "bottom", O.forEach((r, w) => t.fillText($(t, r, l), n.gridX + w * y + l / 2, n.gridY - 3))), n.labelWidth > 0 && (t.fillStyle = "#333", t.font = `10px ${P}`, t.textAlign = "right", t.textBaseline = "middle", W.forEach((r, w) => t.fillText($(t, r, n.labelWidth - 6), n.gridX - 5, n.gridY + w * y + l / 2))), t.textAlign = "left", !g || c != null && c.error) {
+    if (n.headerHeight > 0 && (t.fillStyle = "#333", t.font = `10px ${P}`, t.textAlign = "center", t.textBaseline = "bottom", O.forEach((r, w) => t.fillText(H(t, r, l), n.gridX + w * y + l / 2, n.gridY - 3))), n.labelWidth > 0 && (t.fillStyle = "#333", t.font = `10px ${P}`, t.textAlign = "right", t.textBaseline = "middle", W.forEach((r, w) => t.fillText(H(t, r, n.labelWidth - 6), n.gridX - 5, n.gridY + w * y + l / 2))), t.textAlign = "left", !g || c != null && c.error) {
       t.fillStyle = "#666", t.font = `10px ${P}`, t.textBaseline = "alphabetic", t.fillText((c == null ? void 0 : c.error) ?? m("The file's cell images are not attached"), n.gridX, n.gridY + 14);
       return;
     }
