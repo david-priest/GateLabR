@@ -1,4 +1,4 @@
-import { u as C, a as w, b3 as G, b4 as P, b5 as u, b6 as D, b7 as j, j as k, b8 as K } from "./embed-Db9E81r0.js";
+import { u as C, a as w, bj as G, bk as P, bl as u, bm as D, bn as k, j as v, bo as K } from "./embed-Ad5xBSHI.js";
 import { N as O } from "./cvwDecode-CKHzN2J_.js";
 function $(t, n, N, A, E, I, i, r) {
   if (t.fillStyle = "#111", t.fillRect(I, i, r, r), !n) return;
@@ -87,13 +87,13 @@ function V({ recipe: t, service: n, width: N, height: A }) {
       return;
     }
     t.events.forEach((S, b) => {
-      var v;
-      const m = u + b % f * (t.tile + j), p = L + Math.floor(b / f) * (t.tile + j), H = g.get(S);
+      var j;
+      const m = u + b % f * (t.tile + k), p = L + Math.floor(b / f) * (t.tile + k), H = g.get(S);
       H ? $(l, H.picture, H.cols, H.rows, H.aspect, m, p, t.tile) : (l.fillStyle = "#e6e6e6", l.fillRect(m, p, t.tile, t.tile));
-      const _ = (v = t.tileColours) == null ? void 0 : v[b];
+      const _ = (j = t.tileColours) == null ? void 0 : j[b];
       _ && (l.strokeStyle = _, l.lineWidth = 1.5, l.strokeRect(m + 0.75, p + 0.75, t.tile - 1.5, t.tile - 1.5));
     });
-  }, [t, g, N, A, c, i, E]), /* @__PURE__ */ k.jsx("div", { className: "gl-layout-imagewall", "data-events": t.events.length, "data-ready": g.size, children: /* @__PURE__ */ k.jsx("canvas", { ref: I }) });
+  }, [t, g, N, A, c, i, E]), /* @__PURE__ */ v.jsx("div", { className: "gl-layout-imagewall", "data-events": t.events.length, "data-ready": g.size, children: /* @__PURE__ */ v.jsx("canvas", { ref: I }) });
 }
 export {
   V as LayoutImageWall,
