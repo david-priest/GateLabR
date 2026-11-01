@@ -8,14 +8,14 @@ the populations back in R. The gating is stored in the object.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20404387.svg)](https://doi.org/10.5281/zenodo.20404387)
 [![License:
-MIT](https://img.shields.io/badge/license-MIT-1b2027)](https://opensource.org/licenses/MIT)
+MIT](https://img.shields.io/badge/license-MIT-08264c)](https://opensource.org/licenses/MIT)
 ![Works on SingleCellExperiment and
-GatingSet](https://img.shields.io/badge/works_on-SingleCellExperiment_%C2%B7_GatingSet-1b2027)![Exchanges
+GatingSet](https://img.shields.io/badge/works_on-SingleCellExperiment_%C2%B7_GatingSet-08264c)![Exchanges
 Gating-ML
-2.0](https://img.shields.io/badge/exchanges-Gating--ML_2.0-1b2027)
+2.0](https://img.shields.io/badge/exchanges-Gating--ML_2.0-08264c)
 
 [![Documentation and getting
-started](https://img.shields.io/badge/Documentation-and_getting_started_%E2%86%92-ed4e19?style=for-the-badge&labelColor=ed4e19)](https://david-priest.github.io/GateLabR)
+started](https://img.shields.io/badge/Documentation-and_getting_started_%E2%86%92-0866ff?style=for-the-badge&labelColor=0866ff)](https://david-priest.github.io/GateLabR)
 
 [**Documentation**](https://david-priest.github.io/GateLabR) ·
 [Installation](#installation) · [GateLab in your
