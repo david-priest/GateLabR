@@ -1,5 +1,5 @@
-import { u as Ie, a as c, j as t, d as se, E as kt, B as yt, G as wt, aY as jt } from "./embed-DOsAEi9z.js";
-import { o as Mt, u as Ct, d as Nt } from "./CellInspector-Dvq1t4qy.js";
+import { u as Ie, a as c, j as t, g as se, J as kt, I as yt, K as wt, bc as jt } from "./embed-Ad5xBSHI.js";
+import { o as Mt, u as Ct, d as Nt } from "./CellInspector-C0KoNOrJ.js";
 import { N as St } from "./cvwDecode-CKHzN2J_.js";
 const Rt = "#7b9bc8", Pt = "rgba(47, 111, 228, 0.22)", Tt = "rgba(255, 255, 255, 0.6)", At = "#2f6fe4";
 function Et({ histogram: r, label: d, inView: s, range: N, onRange: f, width: o = 220, height: u = 40 }) {
@@ -12,9 +12,9 @@ function Et({ histogram: r, label: d, inView: s, range: N, onRange: f, width: o 
     const h = p.getContext("2d");
     if (!h) return;
     h.setTransform(i, 0, 0, i, 0, 0), h.clearRect(0, 0, o, u);
-    const z = r.counts.length, a = o / z;
+    const G = r.counts.length, a = o / G;
     h.fillStyle = Rt;
-    for (let v = 0; v < z; v++) {
+    for (let v = 0; v < G; v++) {
       const D = r.peak > 0 ? r.counts[v] / r.peak * (u - 2) : 0;
       D > 0 && h.fillRect(v * a, u - D, Math.max(1, a - 0.5), D);
     }
@@ -28,7 +28,7 @@ function Et({ histogram: r, label: d, inView: s, range: N, onRange: f, width: o 
       h.fillStyle = Tt, h.fillRect(0, 0, v, u), h.fillRect(D, 0, o - D, u), h.strokeStyle = At, h.lineWidth = 1, h.beginPath(), h.moveTo(v + 0.5, 0), h.lineTo(v + 0.5, u), h.moveTo(D - 0.5, 0), h.lineTo(D - 0.5, u), h.stroke();
     }
   }, [r, s, N, L, o, u]);
-  const E = (p) => p.clientX - p.currentTarget.getBoundingClientRect().left, G = (p) => {
+  const E = (p) => p.clientX - p.currentTarget.getBoundingClientRect().left, z = (p) => {
     if (p.button !== 0) return;
     const i = E(p);
     j.current = [i, i], w([M(i), M(i)]);
@@ -50,8 +50,8 @@ function Et({ histogram: r, label: d, inView: s, range: N, onRange: f, width: o 
       f(null);
       return;
     }
-    const z = M(i[0]), a = M(h);
-    f([Math.min(z, a), Math.max(z, a)]);
+    const G = M(i[0]), a = M(h);
+    f([Math.min(G, a), Math.max(G, a)]);
   };
   return /* @__PURE__ */ t.jsx(
     "canvas",
@@ -62,7 +62,7 @@ function Et({ histogram: r, label: d, inView: s, range: N, onRange: f, width: o 
       "aria-label": S("Distribution of {channel} over the wall's cells; drag across it to show only a range of values, click it to show them all", { channel: d }),
       title: S("Distribution of {channel} over the wall's cells; drag across it to show only a range of values, click it to show them all", { channel: d }),
       style: { width: o, height: u },
-      onPointerDown: G,
+      onPointerDown: z,
       onPointerMove: k,
       onPointerUp: A,
       onPointerCancel: () => {
@@ -115,7 +115,7 @@ function Me(r) {
 }
 const Ce = "__class__", De = 4, Qe = 2, Kt = 6, Lt = St, $t = c.memo(function({ service: d, fileKey: s, sampleId: N, eventIndex: f, spec: o, size: u, pinned: S, onPin: W, onOpen: L, label: w, colour: j = null, picked: b = !1, onPick: M }) {
   var p;
-  const { t: E } = Ie(), G = Ct(d, s, f, o, "batch"), k = ((p = G.result) == null ? void 0 : p.kind) === "image" ? G.result.image : null, A = c.useRef(null);
+  const { t: E } = Ie(), z = Ct(d, s, f, o, "batch"), k = ((p = z.result) == null ? void 0 : p.kind) === "image" ? z.result.image : null, A = c.useRef(null);
   return c.useEffect(() => {
     if (!(k != null && k.composite) || !A.current) return;
     const i = k.cols * k.aspect, h = Math.min(u / i, u / k.rows);
@@ -148,7 +148,7 @@ const Ce = "__class__", De = 4, Qe = 2, Kt = 6, Lt = St, $t = c.memo(function({ 
       },
       onDoubleClick: L,
       children: [
-        k ? /* @__PURE__ */ t.jsx("canvas", { ref: A }) : /* @__PURE__ */ t.jsx("span", { className: "gl-wall-tile-empty", children: G.status === "none" ? "·" : "" }),
+        k ? /* @__PURE__ */ t.jsx("canvas", { ref: A }) : /* @__PURE__ */ t.jsx("span", { className: "gl-wall-tile-empty", children: z.status === "none" ? "·" : "" }),
         j && /* @__PURE__ */ t.jsx("span", { className: "gl-wall-tile-ring", "aria-hidden": "true", style: { boxShadow: `inset 0 0 0 2px ${j}` } }),
         M && /* @__PURE__ */ t.jsx(
           "span",
@@ -185,13 +185,13 @@ function Wt({
   onChoosePopulation: b,
   excludedMask: M = null,
   parentName: E = null,
-  onSendToLayout: G,
+  onSendToLayout: z,
   classOf: k,
   classes: A,
   classTitle: p,
   onMakePopulation: i,
   onFindSimilar: h,
-  onSendCellPanel: z
+  onSendCellPanel: G
 }) {
   const { t: a } = Ie(), H = c.useRef(L);
   H.current = L;
@@ -230,7 +230,7 @@ function Wt({
       l = !1;
     };
   }, [d, s, I, r]);
-  const ue = ce && s && ce.id === s.id ? ce.info : null, _e = ce && s && ce.id === s.id ? ce.error : null, at = c.useMemo(() => !P || !ue ? null : { display: P, scale: ue.scale, exposure: te, hop: Lt, composite: !0, channels: [], ...ye ? { outline: ye } : {} }, [P, ue, te, re, I]), { events: m, inPopulation: Ge, all: ze } = c.useMemo(() => {
+  const ue = ce && s && ce.id === s.id ? ce.info : null, _e = ce && s && ce.id === s.id ? ce.error : null, at = c.useMemo(() => !P || !ue ? null : { display: P, scale: ue.scale, exposure: te, hop: Lt, composite: !0, channels: [], ...ye ? { outline: ye } : {} }, [P, ue, te, re, I]), { events: m, inPopulation: ze, all: Ge } = c.useMemo(() => {
     if (!s || !ue) return { events: new Int32Array(0), inPopulation: 0, all: new Int32Array(0) };
     const e = s.sample.fcs.nEvents, l = ue.hasImage;
     let n = 0, x = 0;
@@ -247,7 +247,7 @@ function Wt({
     B && R && (g = It(B, g, R[0], R[1]).slice());
     const Q = ae ? -1 : 1;
     return U === Ce && X ? g.sort((y, _) => Q * ((k(y) ?? 99) - (k(_) ?? 99)) || y - _) : F ? g.sort((y, _) => Q * (F[y] - F[_]) || y - _) : ae && g.reverse(), { events: g, inPopulation: n, all: T };
-  }, [s, ue, oe, U, ae, X, k, ke, F, B, R == null ? void 0 : R[0], R == null ? void 0 : R[1]]), He = c.useMemo(() => B ? Dt(B, ze) : null, [B, ze]), Ae = (e, l) => {
+  }, [s, ue, oe, U, ae, X, k, ke, F, B, R == null ? void 0 : R[0], R == null ? void 0 : R[1]]), He = c.useMemo(() => B ? Dt(B, Ge) : null, [B, Ge]), Ae = (e, l) => {
     const n = ee.current;
     $((x) => {
       if (l === "replace") return /* @__PURE__ */ new Set([e]);
@@ -259,7 +259,7 @@ function Wt({
       } else l === "range" ? g.add(e) : g.has(e) ? g.delete(e) : g.add(e);
       return g;
     }), ee.current = e;
-  }, [Y, we] = c.useState(null), ge = c.useRef(null), ot = (e) => e.altKey ? "remove" : e.metaKey || e.ctrlKey ? "add" : "replace", Ee = c.useRef(!1), ve = (e) => {
+  }, [J, we] = c.useState(null), ge = c.useRef(null), ot = (e) => e.altKey ? "remove" : e.metaKey || e.ctrlKey ? "add" : "replace", Ee = c.useRef(!1), ve = (e) => {
     const l = le.current, n = l.getBoundingClientRect();
     return { x: e.clientX - n.left + l.scrollLeft, y: e.clientY - n.top + l.scrollTop };
   }, it = (e) => {
@@ -296,10 +296,10 @@ function Wt({
       const de = C + me * K;
       if (!(x.y1 < de || x.y0 > de + Z))
         for (let ne = Q; ne <= y; ne++) {
-          const Ye = C + ne * K;
-          if (x.x1 < Ye || x.x0 > Ye + Z) continue;
-          const Je = me * O + ne;
-          Je < m.length && T.push(m[Je]);
+          const Je = C + ne * K;
+          if (x.x1 < Je || x.x0 > Je + Z) continue;
+          const Ye = me * O + ne;
+          Ye < m.length && T.push(m[Ye]);
         }
     }
     if (g === "replace") {
@@ -321,7 +321,7 @@ function Wt({
     const e = [];
     for (let l = 0; l < m.length; l++) be.has(m[l]) && e.push(m[l]);
     return e.sort((l, n) => l - n);
-  }, [be, m]), le = c.useRef(null), [J, mt] = c.useState({ width: 0, height: 0, scrollTop: 0 });
+  }, [be, m]), le = c.useRef(null), [Y, mt] = c.useState({ width: 0, height: 0, scrollTop: 0 });
   c.useEffect(() => {
     const e = le.current;
     if (!e || !r) return;
@@ -332,9 +332,9 @@ function Wt({
       n == null || n.disconnect(), e.removeEventListener("scroll", l);
     };
   }, [r]);
-  const K = Z + De, O = Math.max(1, Math.floor((J.width + De) / K)), je = Math.ceil(m.length / O), qe = Math.max(0, Math.floor(J.scrollTop / K) - Qe), Be = Math.min(je, Math.ceil((J.scrollTop + J.height) / K) + Qe), Xe = qe * O, dt = Math.min(m.length, Be * O), ft = (() => {
-    if (!F || F !== B || m.length === 0 || J.height === 0) return null;
-    const e = Math.min(m.length - 1, Math.max(0, Math.floor(J.scrollTop / K)) * O), l = Math.min(m.length - 1, Math.ceil((J.scrollTop + J.height) / K) * O - 1);
+  const K = Z + De, O = Math.max(1, Math.floor((Y.width + De) / K)), je = Math.ceil(m.length / O), qe = Math.max(0, Math.floor(Y.scrollTop / K) - Qe), Be = Math.min(je, Math.ceil((Y.scrollTop + Y.height) / K) + Qe), Xe = qe * O, dt = Math.min(m.length, Be * O), ft = (() => {
+    if (!F || F !== B || m.length === 0 || Y.height === 0) return null;
+    const e = Math.min(m.length - 1, Math.max(0, Math.floor(Y.scrollTop / K)) * O), l = Math.min(m.length - 1, Math.ceil((Y.scrollTop + Y.height) / K) * O - 1);
     return [F[m[e]], F[m[l]]];
   })(), gt = (e, l) => {
     var C;
@@ -394,7 +394,7 @@ function Wt({
         )
       ] }),
       /* @__PURE__ */ t.jsx("span", { className: "gl-images-count", children: a("{count} cells in {population} · {shown} with images", {
-        count: Ge.toLocaleString(),
+        count: ze.toLocaleString(),
         population: Re,
         shown: m.length.toLocaleString()
       }) }),
@@ -475,7 +475,7 @@ function Wt({
         e.name
       ] }, e.slot)) }),
       /* @__PURE__ */ t.jsx("button", { type: "button", className: "gl-mini-btn", disabled: !S, onClick: L, children: a("Show on plot") }),
-      G && /* @__PURE__ */ t.jsxs("label", { className: "gl-images-control gl-images-send", children: [
+      z && /* @__PURE__ */ t.jsxs("label", { className: "gl-images-control gl-images-send", children: [
         /* @__PURE__ */ t.jsx("span", { children: a("Cells") }),
         /* @__PURE__ */ t.jsx("select", { value: We, onChange: (e) => et(Number(e.target.value)), "aria-label": a("Cells to send"), children: [12, 24, 48, 96, 192].map((e) => /* @__PURE__ */ t.jsx("option", { value: e, children: e }, e)) }),
         /* @__PURE__ */ t.jsx(
@@ -488,7 +488,7 @@ function Wt({
             onClick: () => {
               if (!P) return;
               const e = Math.min(We, m.length), l = U ? s.sample.channels.find((n) => n.key === U) : void 0;
-              G({
+              z({
                 kind: "imagewall",
                 sampleId: s.id,
                 fileName: s.name,
@@ -496,7 +496,7 @@ function Wt({
                 populationName: Re,
                 events: Array.from(m.subarray(0, e)),
                 imaged: m.length,
-                populationCount: Ge,
+                populationCount: ze,
                 sortKey: U,
                 sortLabel: U === Ce ? p ?? a("Class") : l ? l.label ?? l.key : "",
                 sortDesc: ae,
@@ -583,7 +583,7 @@ function Wt({
                   children: a("Make population")
                 }
               ),
-              z && /* @__PURE__ */ t.jsx(
+              G && /* @__PURE__ */ t.jsx(
                 "button",
                 {
                   type: "button",
@@ -592,7 +592,7 @@ function Wt({
                   onClick: () => {
                     if (!P || !s) return;
                     const e = new Set(he), l = Array.from(m).filter((n) => e.has(n));
-                    z(jt({
+                    G(jt({
                       sampleId: s.id,
                       fileName: s.name,
                       cells: l.map((n) => {
@@ -651,11 +651,11 @@ function Wt({
         },
         onClickCapture: ut,
         children: [
-          Y && /* @__PURE__ */ t.jsx(
+          J && /* @__PURE__ */ t.jsx(
             "div",
             {
-              className: "gl-images-marquee" + (Y.mode === "remove" ? " gl-images-marquee-unpick" : ""),
-              style: { left: Y.x0, top: Y.y0, width: Math.max(1, Y.x1 - Y.x0), height: Math.max(1, Y.y1 - Y.y0) }
+              className: "gl-images-marquee" + (J.mode === "remove" ? " gl-images-marquee-unpick" : ""),
+              style: { left: J.x0, top: J.y0, width: Math.max(1, J.x1 - J.x0), height: Math.max(1, J.y1 - J.y0) }
             }
           ),
           /* @__PURE__ */ t.jsx("div", { style: { height: qe * K } }),
@@ -690,9 +690,9 @@ function Wt({
 function Ut(r, d) {
   return r.visible || d.visible ? !1 : r.stateKey === d.stateKey;
 }
-const zt = c.memo(Wt, Ut);
+const Gt = c.memo(Wt, Ut);
 export {
   Ce as CLASS_SORT,
-  zt as ImagesTab,
+  Gt as ImagesTab,
   Ut as imagesTabPropsEqual
 };
