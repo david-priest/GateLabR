@@ -86,6 +86,62 @@
   invisible(sce)
 }
 
+#' Why an object with the app's cell count does not hold the app's cells in the app's order, or
+#' NULL when it does.
+#'
+#' Every write places the browser's values sample by sample on the SCE columns of each sample, in
+#' order (.gatelabr_sample_partition()). The object handed over must therefore put the same cells
+#' in each sample, in the same order. Unique column names prove the order. CATALYST::prepData()
+#' builds an SCE without them, and a reorder within a sample then keeps the cell count, the absent
+#' names and every sample's count, so Save to SCE wrote each population onto other cells. Without
+#' names the order is proven by the event ids of the last save, else by an assay both objects hold
+#' being equal on the channels both hold: unchanged assays are the same object, and the check
+#' returns at the pointer.
+#' @noRd
+.gatelabr_cells_reordered <- function(object, current, sample_column = NULL) {
+  samples <- function(x) {
+    .gatelabr_sample_partition(x, sample_column, include_metadata = FALSE)$event_indices
+  }
+  object_samples <- tryCatch(samples(object), error = function(cause) NULL)
+  if (is.null(object_samples)) return(paste0("its samples cannot be read (", sample_column, ")"))
+  if (!identical(object_samples, samples(current))) {
+    return("its samples hold other cells than the app's")
+  }
+
+  names <- colnames(current)
+  if (!is.null(names) && !anyNA(names) && !anyDuplicated(names)) return(NULL)
+
+  ids <- .gatelabr_event_id_column
+  saved <- SummarizedExperiment::colData(current)[[ids]]
+  if (!is.null(saved) && !anyNA(saved) && !anyDuplicated(saved)) {
+    if (identical(SummarizedExperiment::colData(object)[[ids]], saved)) return(NULL)
+    return(paste0("its `", ids, "` values, written at the last save, are not in the app's order"))
+  }
+
+  shared <- intersect(SummarizedExperiment::assayNames(object), SummarizedExperiment::assayNames(current))
+  for (name in shared) {
+    if (identical(
+      SummarizedExperiment::assay(object, name, withDimnames = FALSE),
+      SummarizedExperiment::assay(current, name, withDimnames = FALSE)
+    )) return(NULL)
+  }
+  rows <- if (is.null(rownames(object)) && is.null(rownames(current)) && nrow(object) == nrow(current)) {
+    seq_len(nrow(current))
+  } else {
+    intersect(rownames(object), rownames(current))
+  }
+  if (length(rows) > 0L) {
+    for (name in shared) {
+      values <- function(x) unname(as.matrix(SummarizedExperiment::assay(x, name)[rows, , drop = FALSE]))
+      if (identical(values(object), values(current))) return(NULL)
+    }
+  }
+  paste0(
+    "its columns have no names, and neither saved event ids nor an assay it shares with the ",
+    "app's object show its cells in the app's order"
+  )
+}
+
 #' Stop the running GateLabR app
 #'
 #' The app started by \code{\link{launchGatingApp}} without blocking keeps running after the
@@ -157,6 +213,15 @@ gatelabSync <- function(sce_name = NULL) {
       "`", sce_name, "` holds ", ncol(object), " cells and the app was launched with ",
       ncol(current), ": the browser keeps the cells it loaded. Stop the app (gatelabStop()) ",
       "and relaunch on the object.",
+      call. = FALSE
+    )
+  }
+  reordered <- .gatelabr_cells_reordered(object, current, live$sample_column)
+  if (!is.null(reordered)) {
+    stop(
+      "`", sce_name, "` holds the app's ", ncol(current), " cells, but ", reordered, ". The ",
+      "browser keeps the cells it loaded, sample by sample in their order, and writes to them by ",
+      "position. Stop the app (gatelabStop()) and relaunch on the object.",
       call. = FALSE
     )
   }

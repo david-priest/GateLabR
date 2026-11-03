@@ -214,6 +214,7 @@ launchReactGateLab <- function(
   live$token <- prefix
   live$handle <- NULL
   live$sce_name <- sce_name
+  live$sample_column <- sample_column
   live$gatingset <- gatingset
   live$set_sce <- function(object) sce_state(object)
   live$get_sce <- function() shiny::isolate(sce_state())
