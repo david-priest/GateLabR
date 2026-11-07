@@ -615,6 +615,19 @@ test_that("outlines over mass cytometry's raw ranges are traced as deep as the e
     vertices <- rbind(c(0, 0), c(top, 0), c(0, top))
     mapped <- map(vertices[, 1], vertices[, 2])
     drawn <- GateLabR:::.gatelabr_strategy_polygon_outline(vertices, mapped, function(v) as.numeric(map(v[1], v[2])))
+    expect_true(is.matrix(drawn))
+    expect_identical(ncol(drawn), 2L)
+    expect_true(all(is.finite(drawn)))
+    expect_gte(nrow(drawn), 4L)
+    expect_identical(unname(drawn[1L, ]), unname(drawn[nrow(drawn), ]))
+    expect_gte(nrow(unique(drawn)), 3L)
+    # The literal triangle's three mapped corners must survive, so duplicate points cannot
+    # satisfy the row count while leaving the segment-error loop empty or meaningless.
+    for (vertex in seq_len(nrow(mapped))) {
+      expect_true(any(apply(drawn, 1L, function(point) {
+        identical(as.numeric(point), as.numeric(mapped[vertex, ]))
+      })))
+    }
     spans <- apply(mapped, 2, function(v) diff(range(v)))
     fractions <- (1:63) / 64
     worst <- 0
