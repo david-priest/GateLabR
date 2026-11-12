@@ -1,5 +1,5 @@
-import { u as qe, a as r, j as t, g as ie, a6 as St, a5 as vt, a7 as Rt, c9 as Pt } from "./embed-DSSuvWcG.js";
-import { o as Lt, u as At, d as Et } from "./CellInspector-DAC0s_PQ.js";
+import { u as qe, a as r, j as t, g as ie, a6 as St, a5 as vt, a7 as Rt, c9 as Pt } from "./embed-3DD01fPl.js";
+import { o as Lt, u as At, d as Et } from "./CellInspector-CPw0Ug-M.js";
 import { N as Tt } from "./cvwDecode-CKHzN2J_.js";
 const Dt = "#7b9bc8", It = "rgba(47, 111, 228, 0.22)", Kt = "rgba(255, 255, 255, 0.6)", zt = "#2f6fe4";
 function Ft({ histogram: i, label: g, inView: s, range: j, onRange: m, width: c = 220, height: h = 40 }) {
