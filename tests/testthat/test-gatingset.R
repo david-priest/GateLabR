@@ -1236,9 +1236,18 @@ test_that("the transforms a save was drawn on stay on the SCE's rows, as a Gatin
   expect_identical(own[["FL1-H"]], logicle_spec())
   expect_identical(own[["FL4-H"]]$kind, "biex")
   # A save that states no transforms leaves the rows as they were.
+  parsed <- jsonlite::fromJSON(json, simplifyVector = FALSE)
+  expect_true("hostedChannelTransforms" %in% names(parsed))
+  legacy <- parsed
+  legacy$hostedChannelTransforms <- NULL
+  legacy_json <- as.character(jsonlite::toJSON(legacy, auto_unbox = TRUE, null = "null", digits = NA))
+  legacy_parsed <- jsonlite::fromJSON(legacy_json, simplifyVector = FALSE)
+  expect_false("hostedChannelTransforms" %in% names(legacy_parsed))
+  expect_false(identical(legacy_json, json))
+  expect_identical(legacy_parsed, parsed[names(parsed) != "hostedChannelTransforms"])
   again <- GateLabR:::.gatelabr_store_host_workspace(
     sce, dataset_id = "sce-gs", expected_revision = 1L, client_revision = 2L, reason = "autosave",
-    workspace_json = sub(",\"hostedChannelTransforms\":\\{[^}]*\\}\\}\\}", "", json), sample_column = "sample_id"
+    workspace_json = legacy_json, sample_column = "sample_id"
   )
   expect_identical(SummarizedExperiment::rowData(again$sce)$gatelab_transform, column)
 })
@@ -1250,6 +1259,34 @@ test_that("populations can be read by path, which is unique, on both objects", {
   expect_true("/rect/poly" %in% colnames(by_path))
   by_name <- GateLabR::gatelabPopulations(gs)
   expect_identical(unname(by_name[, "poly"]), unname(by_path[, "/rect/poly"]))
+
+  # The SCE reader uses full population paths too, in the stored hierarchy's own notation.
+  sce <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = matrix(1:3, nrow = 1L)),
+    colData = S4Vectors::DataFrame(sample_id = rep("D1", 3L))
+  )
+  population <- function(id, name, parent, mask) list(
+    hierarchyId = "main", populationId = id, populationName = name, parentId = parent,
+    gateLogic = "and", gates = list(), sampleMasks = list(list(
+      sampleId = "sample-0", eventCount = 3L, membershipBitsBase64 = packed_sample(mask)
+    ))
+  )
+  memberships <- list(
+    hierarchies = list(list(id = "main", name = "Main", active = TRUE, rootPopulationId = "root")),
+    populations = list(population("root", "All Events", NULL, rep(TRUE, 3L)),
+                       population("bright", "bright", "root", c(TRUE, FALSE, TRUE)))
+  )
+  record <- GateLabR:::.gatelabr_pack_host_memberships(
+    sce, memberships, revision = 1L, saved_at = "2026-11-07T00:00:00Z", sample_column = "sample_id"
+  )
+  SummarizedExperiment::colData(sce)[[record$event_ids$column]] <-
+    GateLabR:::.gatelabr_event_ids(record$event_ids, ncol(sce))
+  S4Vectors::metadata(sce)$gatelab_workspace <- list(revision = 1L, memberships = record)
+  sce_by_path <- GateLabR::gatelabPopulations(sce, by = "path")
+  sce_by_name <- GateLabR::gatelabPopulations(sce)
+  expect_identical(colnames(sce_by_path), c("All Events", "All Events > bright"))
+  expect_identical(unname(sce_by_path[, "All Events > bright"]), c(TRUE, FALSE, TRUE))
+  expect_identical(unname(sce_by_name[, "bright"]), unname(sce_by_path[, "All Events > bright"]))
 })
 
 # ── an SCE's gating as a GatingSet ────────────────────────────────────────────
