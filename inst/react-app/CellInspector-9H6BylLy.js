@@ -1,8 +1,8 @@
-import { a as p, u as W, j as e, C as X } from "./embed-Ad5xBSHI.js";
-import { N as Y } from "./cvwDecode-CKHzN2J_.js";
-import { RenderCancelled as V } from "./imageService-BucHAYme.js";
+import { a as p, u as W, j as e, C as X, F as Y } from "./embed-CyQ8URJR.js";
+import { N as V } from "./cvwDecode-CKHzN2J_.js";
+import { RenderCancelled as K } from "./imageService-BSVTX87i.js";
 const $ = { status: "idle", result: null, error: null };
-function K(l, a, d, c, m) {
+function ee(l, a, d, c, m) {
   const [u, x] = p.useState($);
   return p.useEffect(() => {
     if (!l || a === null || d === null || !c) {
@@ -22,7 +22,7 @@ function K(l, a, d, c, m) {
         f && x({ status: h.kind === "image" ? "ready" : "none", result: h, error: null });
       },
       (h) => {
-        !f || h instanceof V || x({ status: "error", result: null, error: h instanceof Error ? h.message : String(h) });
+        !f || h instanceof K || x({ status: "error", result: null, error: h instanceof Error ? h.message : String(h) });
       }
     ), () => {
       f = !1, I.cancel();
@@ -33,7 +33,7 @@ function A(l, a) {
   if (l)
     return a != null && a.mask ? { slot: a.mask.slot, fraction: a.mask.fraction } : {};
 }
-const ee = 512, te = 112;
+const te = 512, le = 112;
 function L(l, a, d, c) {
   l.width = Math.max(1, Math.round(d)), l.height = Math.max(1, Math.round(c));
   const m = l.getContext("2d");
@@ -48,7 +48,7 @@ function L(l, a, d, c) {
   const x = u.getContext("2d");
   x && (x.putImageData(new ImageData(a.pixels, a.width, a.height), 0, 0), m.drawImage(u, 0, 0, l.width, l.height));
 }
-const le = (l) => Number.isFinite(l) ? Math.abs(l) >= 1e3 ? Math.round(l).toLocaleString() : Math.abs(l) >= 10 ? l.toFixed(1) : l.toFixed(3) : "–";
+const ne = (l) => Number.isFinite(l) ? Math.abs(l) >= 1e3 ? Math.round(l).toLocaleString() : Math.abs(l) >= 10 ? l.toFixed(1) : l.toFixed(3) : "–";
 function G(l, a) {
   const d = [];
   return l.channels.forEach((c, m) => {
@@ -57,7 +57,7 @@ function G(l, a) {
     d.push({ name: c.label ?? c.key, value: u ? Number(u[a]) : NaN });
   }), d;
 }
-function ne({
+function se({
   service: l,
   hoverStore: a,
   pinned: d,
@@ -97,13 +97,13 @@ function ne({
   const C = w && n && w.id === n.id ? ((T = w.info) == null ? void 0 : T.scale) ?? null : null, F = w && n && w.id === n.id ? w.error : null, U = p.useMemo(() => {
     if (!g || !C) return null;
     const t = A(S, j);
-    return { display: g, scale: C, exposure: k, hop: Y, composite: !0, channels: g.map((i) => i.slot), ...t ? { outline: t } : {} };
-  }, [g, C, k, S, j]), E = K(l, j && n && !f ? n.id : null, (o == null ? void 0 : o.eventIndex) ?? null, U, "interactive"), r = ((z = E.result) == null ? void 0 : z.kind) === "image" ? E.result.image : null, P = p.useMemo(() => n && o ? G(n.sample, o.eventIndex) : [], [n, o]), H = p.useRef(null), _ = p.useRef(/* @__PURE__ */ new Map());
+    return { display: g, scale: C, exposure: k, hop: V, composite: !0, channels: g.map((i) => i.slot), ...t ? { outline: t } : {} };
+  }, [g, C, k, S, j]), E = ee(l, j && n && !f ? n.id : null, (o == null ? void 0 : o.eventIndex) ?? null, U, "interactive"), r = ((z = E.result) == null ? void 0 : z.kind) === "image" ? E.result.image : null, P = p.useMemo(() => n && o ? G(n.sample, o.eventIndex) : [], [n, o]), H = p.useRef(null), _ = p.useRef(/* @__PURE__ */ new Map());
   p.useEffect(() => {
     if (!r) return;
-    const t = ee / r.rows;
+    const t = te / r.rows;
     H.current && r.composite && L(H.current, r.composite, r.cols * r.aspect * t, r.rows * t);
-    const i = te / r.rows;
+    const i = le / r.rows;
     for (const [N, J] of Object.entries(r.channels)) {
       const D = _.current.get(Number(N));
       D && L(D, J, r.cols * r.aspect * i, r.rows * i);
@@ -214,10 +214,10 @@ function ne({
             )
           ] }),
           P.length > 0 && /* @__PURE__ */ e.jsxs("details", { className: "gl-cell-features", children: [
-            /* @__PURE__ */ e.jsx("summary", { children: s("Image features") }),
+            /* @__PURE__ */ e.jsx(Y, { children: s("Image features") }),
             /* @__PURE__ */ e.jsx("dl", { children: P.map((t) => /* @__PURE__ */ e.jsxs("div", { children: [
               /* @__PURE__ */ e.jsx("dt", { title: t.name, children: t.name }),
-              /* @__PURE__ */ e.jsx("dd", { children: le(t.value) })
+              /* @__PURE__ */ e.jsx("dd", { children: ne(t.value) })
             ] }, t.name)) })
           ] })
         ] }) : /* @__PURE__ */ e.jsx("div", { className: "gl-hint", children: s("No cell images are attached to {name}", { name: n.name }) })
@@ -225,16 +225,16 @@ function ne({
     }
   );
 }
-const oe = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const re = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  CellInspector: ne,
+  CellInspector: se,
   drawPicture: L,
   imagingFeaturesOf: G,
   outlineSpecOf: A
 }, Symbol.toStringTag, { value: "Module" }));
 export {
-  oe as C,
+  re as C,
   L as d,
   A as o,
-  K as u
+  ee as u
 };
