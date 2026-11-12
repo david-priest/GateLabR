@@ -25,6 +25,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { retainedPngDataUrls, maskRetainedPngPayloads } from "./retained-png-data-urls.mjs";
 
 const LIST = process.env.IDENTIFIER_DENYLIST ?? join(homedir(), ".claude", "private-identifiers.txt");
 
@@ -56,8 +57,32 @@ if (patterns.length === 0) {
 
 const diffArgs = range
   ? ["diff", "-U0", "--no-color", range]
-  : ["diff", "-U0", "--no-color", "--cached"];
+  : ["diff", "-U0", "--no-color", "--cached", "--find-renames"];
 const diff = execFileSync("git", diffArgs, { encoding: "utf8", maxBuffer: 512 * 1024 * 1024 });
+
+// Staged checks may retain PNG bytes only from the same file or Git's rename pair.
+// Range checks deliberately keep scanning every added byte.
+const retainedByFile = new Map();
+if (!range && args.includes("--staged")) {
+  const records = execFileSync("git", ["diff", "--cached", "--raw", "-z", "--no-abbrev", "--find-renames"], { encoding: "utf8" }).split("\0");
+  for (let i = 0; i < records.length - 1;) {
+    const [oldMode, newMode, oldBlob, newBlob, status] = records[i++].slice(1).split(" ");
+    const previous = records[i++];
+    const file = /^[RC]/.test(status) ? records[i++] : previous;
+    if (!["100644", "100755"].includes(oldMode) || !["100644", "100755"].includes(newMode)) continue;
+    if (status === "M" || /^R\d+$/.test(status)) retainedByFile.set(file, { oldBlob, newBlob });
+  }
+}
+
+function scanText(file, added) {
+  const pair = retainedByFile.get(file);
+  if (!pair || !added.includes("data:image/png;base64,")) return added;
+  if (!pair.urls) {
+    const blob = (id) => execFileSync("git", ["cat-file", "blob", id], { encoding: "utf8", maxBuffer: 512 * 1024 * 1024 });
+    pair.urls = retainedPngDataUrls(blob(pair.oldBlob), blob(pair.newBlob));
+  }
+  return maskRetainedPngPayloads(added, pair.urls);
+}
 
 // Walk the unified diff so a hit can name the file and line it would land on.
 const hits = [];
@@ -75,8 +100,9 @@ for (const text of diff.split("\n")) {
   }
   if (!text.startsWith("+") || text.startsWith("+++")) continue;
   const added = text.slice(1);
+  const scanned = scanText(file, added);
   for (const { source, re } of patterns) {
-    if (re.test(added)) {
+    if (re.test(scanned)) {
       hits.push({ file, line, source, excerpt: added.trim().slice(0, 110) });
       break;
     }
