@@ -26,6 +26,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { retainedPngDataUrls, maskRetainedPngPayloads } from "./retained-png-data-urls.mjs";
+import { addedFilePath } from "./git-diff-path.mjs";
 
 const LIST = process.env.IDENTIFIER_DENYLIST ?? join(homedir(), ".claude", "private-identifiers.txt");
 
@@ -70,7 +71,7 @@ if (!range && args.includes("--staged")) {
     const previous = records[i++];
     const file = /^[RC]/.test(status) ? records[i++] : previous;
     if (!["100644", "100755"].includes(oldMode) || !["100644", "100755"].includes(newMode)) continue;
-    if (status === "M" || /^R\d+$/.test(status)) retainedByFile.set(file, { oldBlob, newBlob });
+    if (!file.includes("\uFFFD") && (status === "M" || /^R\d+$/.test(status))) retainedByFile.set(file, { oldBlob, newBlob });
   }
 }
 
@@ -87,10 +88,12 @@ function scanText(file, added) {
 // Walk the unified diff so a hit can name the file and line it would land on.
 const hits = [];
 let file = null;
+let displayFile = null;
 let line = 0;
 for (const text of diff.split("\n")) {
   if (text.startsWith("+++ ")) {
-    file = text.slice(4).replace(/^b\//, "");
+    file = addedFilePath(text.slice(4));
+    displayFile = file ?? text.slice(4);
     continue;
   }
   if (text.startsWith("@@")) {
@@ -103,7 +106,7 @@ for (const text of diff.split("\n")) {
   const scanned = scanText(file, added);
   for (const { source, re } of patterns) {
     if (re.test(scanned)) {
-      hits.push({ file, line, source, excerpt: added.trim().slice(0, 110) });
+      hits.push({ file: displayFile, line, source, excerpt: added.trim().slice(0, 110) });
       break;
     }
   }

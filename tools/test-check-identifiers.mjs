@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 import test from "node:test";
 import { retainedPngDataUrls, maskRetainedPngPayloads } from "./retained-png-data-urls.mjs";
+import { addedFilePath } from "./git-diff-path.mjs";
 
 const checker = fileURLToPath(new URL("./check-identifiers.mjs", import.meta.url));
 const magicPattern = "iVBORw0KGgo";
@@ -26,7 +27,7 @@ function chunk(type, bytes) {
   return Buffer.concat([size, name, bytes, checksum]);
 }
 
-function image(pixel = 0, compressed = deflateSync(Buffer.from([0, pixel, 2, 3, 255]))) {
+function image(pixel = 0, compressed = deflateSync(Buffer.from([0, pixel, 2, 3, 255])), headerType = "IHDR", extraChunks = []) {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(1, 0);
   header.writeUInt32BE(1, 4);
@@ -34,7 +35,7 @@ function image(pixel = 0, compressed = deflateSync(Buffer.from([0, pixel, 2, 3, 
   header[9] = 6;
   return `data:image/png;base64,${Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk("IHDR", header), chunk("IDAT", compressed), chunk("IEND", Buffer.alloc(0)),
+    chunk(headerType, header), ...extraChunks, chunk("IDAT", compressed), chunk("IEND", Buffer.alloc(0)),
   ]).toString("base64")}`;
 }
 
@@ -42,7 +43,7 @@ const png = image();
 const stable = Array.from({ length: 40 }, (_, i) => `// synthetic stable line ${i}`).join("\n");
 const content = (url = png, label = "before", extra = "") => `const image = "${url}"; const label = "${label}"; ${extra}\n${stable}\n`;
 
-function fixture(before = content()) {
+function fixture(before = content(), filename = "asset.js") {
   const cwd = mkdtempSync(join(tmpdir(), "gatelabr-identifiers-"));
   const git = (...args) => execFileSync("git", args, { cwd, encoding: "utf8" });
   const write = (name, value) => writeFileSync(join(cwd, name), value);
@@ -50,8 +51,8 @@ function fixture(before = content()) {
   git("config", "user.name", "Synthetic Fixture");
   git("config", "user.email", "fixture@example.invalid");
   write("patterns.txt", `${magicPattern}\n${textPattern}\n`);
-  write("asset.js", before);
-  git("add", "asset.js");
+  write(filename, before);
+  git("add", filename);
   git("commit", "-qm", "Synthetic baseline");
   const check = (...args) => spawnSync(process.execPath, [checker, ...args, "--require-list"], {
     cwd, encoding: "utf8", env: { ...process.env, IDENTIFIER_DENYLIST: join(cwd, "patterns.txt") },
@@ -79,6 +80,35 @@ test("staged Git rename pair retains an identical valid PNG", () => {
   f.git("add", "renamed.js");
   assert.match(f.git("diff", "--cached", "--name-status", "--find-renames"), /^R\d+\s+asset\.js\s+renamed\.js/m);
   expectCheck(f, 0, "--staged");
+});
+
+for (const [name, source, destination, quotePath] of [
+  ["same-file spaces", "space name.js", "space name.js", true],
+  ["rename destination spaces", "asset.js", "renamed file.js", true],
+  ["same-file C-quoted UTF-8", "caf\u00e9.js", "caf\u00e9.js", true],
+  ["rename C-quoted UTF-8", "asset.js", "caf\u00e9.js", true],
+  ["same-file literal UTF-8", "caf\u00e9.js", "caf\u00e9.js", false],
+  ["same-file C escapes", 'quote"tab\tback\\.js', 'quote"tab\tback\\.js', true],
+]) {
+  test(`retained PNG matches Git paths with ${name}`, () => {
+    const f = fixture(content(), source);
+    f.git("config", "core.quotePath", String(quotePath));
+    if (source !== destination) f.git("mv", source, destination);
+    f.write(destination, content(png, "after"));
+    f.git("add", destination);
+    expectCheck(f, 0, "--staged");
+    f.write(destination, content(png, "after", `const note = '${textPattern}';`));
+    f.git("add", destination);
+    expectCheck(f, 1, "--staged");
+  });
+}
+
+test("undecodable and malformed Git path fields cannot establish a file pair", () => {
+  for (const header of ['"b/\\377.js"', '"b/\\q.js"', '"b/unclosed.js', "b/\uFFFD.js", "/dev/null"]) {
+    assert.equal(addedFilePath(header), null, header);
+  }
+  assert.equal(addedFilePath("b/space name.js\t"), "space name.js");
+  assert.equal(addedFilePath('"b/caf\\303\\251.js"\t'), "caf\u00e9.js");
 });
 
 test("changed PNG payload is still scanned", () => {
@@ -117,6 +147,18 @@ test("retained malformed data URLs and invalid PNGs remain checked", () => {
     `${png}!`, `${png}=`, `data:image/png;base64,${magicPattern}`,
     `data:image/png;base64,${bytes.toString("base64")}`,
     image(0, Buffer.from("not a zlib stream")),
+  ]) {
+    const f = fixture(content(invalid));
+    f.write("asset.js", content(invalid, "after"));
+    f.git("add", "asset.js");
+    expectCheck(f, 1, "--staged");
+  }
+});
+
+test("CRC-correct invalid PNG chunk-name bytes remain checked", () => {
+  for (const invalid of [
+    image(0, undefined, Buffer.from([0xc9, 0x48, 0x44, 0x52])),
+    image(0, undefined, "IHDR", [chunk("tExt", Buffer.from("key\0value"))]),
   ]) {
     const f = fixture(content(invalid));
     f.write("asset.js", content(invalid, "after"));

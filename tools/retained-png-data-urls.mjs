@@ -26,8 +26,10 @@ function validPng(base64) {
     const size = png.readUInt32BE(offset);
     const end = offset + 12 + size;
     if (end > png.length) return false;
-    const type = png.toString("ascii", offset + 4, offset + 8);
-    if (!/^[A-Za-z]{4}$/.test(type) || crc32(png.subarray(offset + 4, end - 4)) !== png.readUInt32BE(end - 4)) return false;
+    const name = png.subarray(offset + 4, offset + 8);
+    if (!name.every((byte) => (byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122)) || name[2] < 65 || name[2] > 90) return false;
+    const type = name.toString("ascii");
+    if (crc32(png.subarray(offset + 4, end - 4)) !== png.readUInt32BE(end - 4)) return false;
     const data = png.subarray(offset + 8, end - 4);
     if (!header && type !== "IHDR") return false;
     if (type === "IHDR") {
