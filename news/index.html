@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">GateLabR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.6.5</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,9 +33,20 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/david-priest/GateLabR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/david-priest/GateLabR/blob/v1.6.5/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.6.5" id="gatelabr-165">GateLabR 1.6.5<a class="anchor" aria-label="anchor" href="#gatelabr-165"></a></h2>
+<ul><li>The embedded GateLab core is GateLab 0.11.0 (GateLab-dev 41448da6), up from 0.10.1 (9e3626a1). From the core: the Plotting tab draws a channel per cell as violins, boxes, split violins or ridgelines and a channel statistic per sample as boxes, bars or points, with Kruskal-Wallis, pairwise Wilcoxon (Holm) and signed-rank tests, several named charts saved with the workspace, shelves for rows, columns and pages, and the table behind a chart; Layout is a page editor, with copy and paste between sheets, panel letters, shapes, formatted text, rulers and guides, placed images and a written legend, and chart blocks whose legend is a key and whose frame holds the chart at the sheet’s text sizes; Illustration overlays chosen populations and puts chart panels in the figure grid; a population has one colour in every tab, set in the population tree, and the workspace one figure style; New Workspace and Open Workspace ask before unsaved changes are replaced.</li>
+<li>The core’s file reading, writing and gate evaluation carry 76 corrections from an audit, each with a regression test. Among them: a workspace holding strategy, derived-channel or image settings can be reopened; a file with no <code>$TOT</code> opens; control characters are left out of written Gating-ML names; a GatingSet or Cytobank-model population that excludes a population of another branch is left out by name, where it was imported with the wrong events; a Gating-ML rectangle with min above max is empty, and a population cycle refuses the file. Gate evaluation is otherwise unchanged.</li>
+<li>Gating-ML export keeps representable empty quadrant regions and their dependent populations. Changing one channel’s transform preserves the other channel’s chosen range.</li>
+<li>Illustration and Layout keep unrelated gate outlines out of an empty branch. Plotting tables use sample headings in R without renaming user metadata columns.</li>
+<li>GateLabR 1.6.4 refuses a workspace saved into an object by 1.6.5, with a message, when it is saved with a compensation profile and also holds named charts or an edited figure style. Other workspaces open in both.</li>
+<li>
+<code><a href="../reference/gatelabSync.html">gatelabSync()</a></code> refuses an object whose cells are not the app’s, sample by sample and in order. It compared the cell count and the column names only, and <code>CATALYST::prepData()</code> builds an object without column names, so an object whose events were reordered within a sample passed, and the next Save to SCE or colData write placed each sample’s values on other cells. Without unique column names the order is proven by the event ids of the last save, or by an assay both objects hold being equal on the channels both hold.</li>
+<li>The package’s logo and the embedded app’s header use the blue GateLabR branding and the wordmark alone.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.6.4" id="gatelabr-164">GateLabR 1.6.4<a class="anchor" aria-label="anchor" href="#gatelabr-164"></a></h2>
 <ul><li>The embedded GateLab core is GateLab 0.10.1 (GateLab-dev 161a0a07), up from 0.10.0 (822e42b). From the core: Export → MIFlowCyt report, written from the instrument and parameter keywords the data carry, with the author’s items saved in the workspace; Export → Export event memberships; File list ⋯ → Tailored gates, which lists every gate a sample or group holds its own version of, with a reason saved for each; Display → Control, another sample taken through the same gates and drawn in grey beneath the plot, display only; Populations ⋯ → Mark siblings that share events; Statistics → Minimum events; the Gating-ML export naming the gates it writes other than as drawn; and the FACSChorus export keeping each matched gate’s own axis scale. Gate definitions and gate evaluation are unchanged.</li>
