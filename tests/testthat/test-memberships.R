@@ -792,3 +792,85 @@ test_that("the memberships status says what the readers would do, and the stop-t
   expect_no_warning(GateLabR:::.gatelabr_warn_memberships_at_stop(name))
   expect_identical(GateLabR:::.gatelabr_warn_memberships_at_stop("no_such_object_here"), "absent")
 })
+
+test_that("gatelabSync refuses cells reordered within a sample, so a save cannot land on other cells", {
+  # CATALYST::prepData() builds an SCE without column names. Swapping two events of one sample
+  # keeps the cell count, the absent names and every sample's count, which was all gatelabSync()
+  # compared; the next Save to SCE then wrote each population's bits onto the swapped events.
+  sce_name <- ".gatelabr_sync_reorder_test_sce"
+  on.exit(
+    if (exists(sce_name, envir = .GlobalEnv, inherits = FALSE)) rm(list = sce_name, envir = .GlobalEnv),
+    add = TRUE
+  )
+  live <- GateLabR:::.gatelabr_live
+  on.exit(rm(list = ls(live, all.names = TRUE), envir = live), add = TRUE)
+  launched <- make_memberships_sce()
+  colnames(launched) <- NULL
+  assign(sce_name, launched, envir = .GlobalEnv)
+  sce_state <- shiny::reactiveVal(launched)
+  live$sce_name <- sce_name
+  live$set_sce <- function(object) sce_state(object)
+  live$get_sce <- function() shiny::isolate(sce_state())
+  live$written <- launched
+  live$address <- GateLabR:::.gatelabr_object_address(launched)
+  server <- GateLabR:::.gatelabr_react_server(
+    sce_state = sce_state,
+    sce_name = sce_name,
+    dataset_id = "test-sce",
+    live = live
+  )
+  save <- function(request_id) {
+    list(
+      requestId = request_id,
+      operation = "write-workspace",
+      payload = list(
+        datasetId = "test-sce",
+        expectedRevision = 0L,
+        clientRevision = 1L,
+        reason = "explicit",
+        workspaceJson = memberships_workspace_json(),
+        memberships = memberships_payload()
+      )
+    )
+  }
+  run <- function(request) {
+    messages <- character(0)
+    withCallingHandlers(
+      suppressWarnings(shiny::testServer(server, {
+        session$flushReact()
+        session$setInputs(gatelabr_host_request = request)
+        session$flushReact()
+      })),
+      message = function(condition) {
+        messages <<- c(messages, conditionMessage(condition))
+        invokeRestart("muffleMessage")
+      }
+    )
+    messages
+  }
+  global <- function() get(sce_name, envir = .GlobalEnv)
+
+  # The console swaps the two events of the first sample.
+  shuffled <- launched[, c(2L, 1L, 3L)]
+  assign(sce_name, shuffled, envir = .GlobalEnv)
+  expect_null(colnames(shuffled))
+  expect_error(GateLabR::gatelabSync(sce_name), "in the app's order")
+  expect_identical(shiny::isolate(sce_state()), launched)
+
+  # The next save is refused, and neither the console's object nor the app's copy moves.
+  messages <- run(save("save-1"))
+  expect_match(messages, "gatelabSync", all = FALSE)
+  expect_identical(global(), shuffled)
+  expect_identical(shiny::isolate(sce_state()), launched)
+
+  # The cells back in the app's order, with a console change, go across, and the save puts each
+  # population on its own events.
+  changed <- launched
+  changed$console_column <- c("a", "b", "c")
+  assign(sce_name, changed, envir = .GlobalEnv)
+  expect_message(GateLabR::gatelabSync(sce_name), "now works on")
+  expect_length(run(save("save-2")), 0L)
+  members <- gatelabPopulations(global())
+  expect_identical(unname(members[, "CD3+"]), c(TRUE, FALSE, TRUE))
+  expect_identical(unname(members[, "CD3+CD19-"]), c(FALSE, FALSE, TRUE))
+})

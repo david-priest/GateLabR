@@ -1,11 +1,25 @@
 test_that("saved Hyperlog coordinates agree with independent FlowUtils vectors", {
   oracle <- jsonlite::fromJSON(test_path("fixtures", "hyperlog-oracle.json"), simplifyVector = FALSE)
   expect_identical(oracle$flowutils, "1.2.2")
+  expect_gt(length(oracle$cases), 0L)
+  # The reference generator's eight parameter sets and vector sizes are declared here,
+  # independently of the loop, so an empty or shortened oracle cannot silently pass.
+  expect_identical(lapply(oracle$cases, function(case) {
+    as.numeric(unlist(case$params[c("t", "w", "m", "a")]))
+  }), list(c(1000, 1, 4, 0), c(1000, 1, 4, 1), c(1000, 0.01, 4, 1),
+           c(262144, 0.5, 4.5, 0), c(50000, 1.8, 5, 0.4), c(10000, 2, 4, 0),
+           c(10000, 0.5, 4, -0.5), c(10000, 0.87, 4.42, 2.68)))
+  expect_identical(vapply(oracle$cases, function(case) length(case$raw), integer(1)),
+                   c(131L, 131L, 131L, 132L, 132L, 132L, 132L, 132L))
+  expect_identical(vapply(oracle$cases, function(case) length(case$display), integer(1)),
+                   c(64L, 63L, 64L, 64L, 64L, 63L, 63L, 64L))
   for (case in oracle$cases) {
     p <- case$params
     spec <- list(kind = "hyperlog", T = p$t, W = p$w, M = p$m, A = p$a)
     tx <- GateLabR:::.gatelabr_strategy_transform(spec)
     raw <- unlist(case$raw); saved <- raw + 0
+    expect_length(case$forward, length(case$raw))
+    expect_length(case$inverse, length(case$display))
     expect_equal(tx$forward(raw), unlist(case$forward), tolerance = 1e-10)
     expect_equal(tx$inverse(unlist(case$display)), unlist(case$inverse), tolerance = 1e-10)
     expect_equal(GateLabR:::.gatelabr_spec_inverse(spec)(unlist(case$display)),

@@ -227,10 +227,12 @@ selecting_fields <- function(gate) {
   gate[intersect(c("gate_type", "x_channel", "y_channel", "space", "transforms", geometry), names(gate))]
 }
 
-expect_mirror_restores_like_canonical <- function(restored) {
+expect_mirror_restores_like_canonical <- function(restored, expected_gate_ids) {
   expect_null(restored$canonical$error)
   expect_null(restored$mirror$error, label = "restoring the mirror alone")
   if (!is.null(restored$mirror$error)) return(invisible())
+  expect_identical(names(restored$canonical$gates), expected_gate_ids)
+  expect_identical(names(restored$mirror$gates), expected_gate_ids)
   expect_identical(names(restored$mirror$gates), names(restored$canonical$gates))
   for (gate_id in names(restored$canonical$gates)) {
     expect_equal(
@@ -252,7 +254,7 @@ test_that("a mirror of an SCE whose instrument R cannot tell restores the same g
   expect_null(fixture$mirror_space)
   restored <- mirror_core_restore(fixture)
   expect_identical(restored$canonical$gatingSpace, "raw")
-  expect_mirror_restores_like_canonical(restored)
+  expect_mirror_restores_like_canonical(restored, c("rawRect", "noSpaceRect", "dispRect", "dispPoly", "dispEllipse"))
 
   # Without the raw rectangle the mirror loaded, but its display gates had moved.
   display_only <- mirror_core_restore(mirror_core_fixture(
@@ -260,19 +262,19 @@ test_that("a mirror of an SCE whose instrument R cannot tell restores the same g
     instrument_mode = "auto",
     gate_ids = c("dispRect", "dispPoly", "dispEllipse")
   ))
-  expect_mirror_restores_like_canonical(display_only)
+  expect_mirror_restores_like_canonical(display_only, c("dispRect", "dispPoly", "dispEllipse"))
 })
 
 test_that("a mirror of a flow or CyTOF SCE restores the same gates in the core", {
   flow <- mirror_core_fixture(mirror_core_sce("flow"), instrument_mode = "flow")
   expect_identical(flow$mirror_space, "raw")
-  expect_mirror_restores_like_canonical(mirror_core_restore(flow))
+  expect_mirror_restores_like_canonical(mirror_core_restore(flow), c("rawRect", "noSpaceRect", "dispRect", "dispPoly", "dispEllipse"))
 
   cytof <- mirror_core_fixture(mirror_core_sce("cytof"), instrument_mode = "cytof")
   expect_identical(cytof$mirror_space, "display")
   restored <- mirror_core_restore(cytof)
   expect_identical(restored$canonical$gatingSpace, "display")
-  expect_mirror_restores_like_canonical(restored)
+  expect_mirror_restores_like_canonical(restored, c("rawRect", "noSpaceRect", "dispRect", "dispPoly", "dispEllipse"))
 })
 
 test_that("a mirror restores an unbounded edge and every digit of a vertex in the core", {
@@ -286,7 +288,7 @@ test_that("a mirror restores an unbounded edge and every digit of a vertex in th
     gate_ids = c("openRect", "finePoly")
   )
   restored <- mirror_core_restore(fixture)
-  expect_mirror_restores_like_canonical(restored)
+  expect_mirror_restores_like_canonical(restored, c("openRect", "finePoly"))
   if (!is.null(restored$mirror$error)) return(invisible())
   for (gate_id in c("openRect", "finePoly")) {
     expect_identical(
@@ -325,7 +327,7 @@ test_that("a version 4 workspace stored by R restores in the embedded core, from
     external_spillover = matrix
   )
   restored <- mirror_core_restore(fixture)
-  expect_mirror_restores_like_canonical(restored)
+  expect_mirror_restores_like_canonical(restored, c("halfOpenRect", "gridPoly", "flowjoRect", "rawRect"))
   if (!is.null(restored$canonical$error) || !is.null(restored$mirror$error)) return(invisible())
 
   kept <- c("bounds", "flowjo_vertices", "flowjo_polygon", "flowjo_axes", "flowjo_bounds")
@@ -369,7 +371,7 @@ test_that("a mirror keeps a spider quadrant's arms and a curly quadrant's curl, 
   # and its quadrants held other events.
   fixture <- mirror_core_fixture(mirror_core_sce("flow"), instrument_mode = "flow", gate_ids = c("spiderQuad", "curlyQuad"))
   restored <- mirror_core_restore(fixture)
-  expect_mirror_restores_like_canonical(restored)
+  expect_mirror_restores_like_canonical(restored, c("spiderQuad", "curlyQuad"))
   if (!is.null(restored$mirror$error)) return(invisible())
   for (source in c("canonical", "mirror")) {
     gates <- restored[[source]]$gates

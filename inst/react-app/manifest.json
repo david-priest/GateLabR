@@ -1,42 +1,10 @@
 {
-  "../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js": {
-    "file": "index.es-BvR4-4q9.js",
-    "name": "index.es",
-    "src": "../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "_embed-Ad5xBSHI.js",
-      "_jspdf.es.min-BjxRJ2Uq.js"
-    ]
-  },
-  "../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs": {
-    "file": "purify.es-_9WAe1aK.js",
-    "name": "purify.es",
-    "src": "../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs",
-    "isDynamicEntry": true
-  },
-  "../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js": {
-    "file": "html2canvas.esm-dgT_1dIT.js",
-    "name": "html2canvas.esm",
-    "src": "../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
-    "isDynamicEntry": true
-  },
-  "../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js": {
-    "file": "svg2pdf.es.min-U_gbboDE.js",
-    "name": "svg2pdf.es.min",
-    "src": "../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "_embed-Ad5xBSHI.js",
-      "_jspdf.es.min-BjxRJ2Uq.js"
-    ]
-  },
-  "_CellInspector-C0KoNOrJ.js": {
-    "file": "CellInspector-C0KoNOrJ.js",
+  "_CellInspector-CPw0Ug-M.js": {
+    "file": "CellInspector-CPw0Ug-M.js",
     "name": "CellInspector",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
+      "_embed-3DD01fPl.js",
       "_cvwDecode-CKHzN2J_.js",
       "src/imaging/imageService.ts"
     ]
@@ -45,17 +13,17 @@
     "file": "cvwDecode-CKHzN2J_.js",
     "name": "cvwDecode"
   },
-  "_embed-Ad5xBSHI.js": {
-    "file": "embed-Ad5xBSHI.js",
+  "_embed-3DD01fPl.js": {
+    "file": "embed-3DD01fPl.js",
     "name": "embed",
     "dynamicImports": [
-      "../../../../Users/davidpriest/code/GateLab/node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
-      "_jspdf.es.min-BjxRJ2Uq.js",
-      "_jspdf.es.min-BjxRJ2Uq.js",
+      "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
+      "_jspdf.es.min-YEsIa7Zh.js",
+      "_jspdf.es.min-YEsIa7Zh.js",
       "src/ui/CompensationTab.tsx",
       "src/ui/LayoutTab.tsx",
       "src/imaging/CellHoverProbe.tsx",
-      "_CellInspector-C0KoNOrJ.js",
+      "_CellInspector-CPw0Ug-M.js",
       "src/imaging/CellMarker.tsx",
       "src/imaging/ImagesTab.tsx",
       "src/imaging/PlotThumbnails.tsx",
@@ -68,22 +36,54 @@
       "src/imaging/attach.ts"
     ]
   },
-  "_jspdf.es.min-BjxRJ2Uq.js": {
-    "file": "jspdf.es.min-BjxRJ2Uq.js",
+  "_jspdf.es.min-YEsIa7Zh.js": {
+    "file": "jspdf.es.min-YEsIa7Zh.js",
     "name": "jspdf.es.min",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js"
+      "_embed-3DD01fPl.js"
     ],
     "dynamicImports": [
-      "../../../../Users/davidpriest/code/GateLab/node_modules/html2canvas/dist/html2canvas.esm.js",
-      "../../../../Users/davidpriest/code/GateLab/node_modules/dompurify/dist/purify.es.mjs",
-      "../../../../Users/davidpriest/code/GateLab/node_modules/canvg/lib/index.es.js"
+      "node_modules/html2canvas/dist/html2canvas.esm.js",
+      "node_modules/dompurify/dist/purify.es.mjs",
+      "node_modules/canvg/lib/index.es.js"
     ]
   },
   "_plotGeometry-CJtfGMFK.js": {
     "file": "plotGeometry-CJtfGMFK.js",
     "name": "plotGeometry"
+  },
+  "node_modules/canvg/lib/index.es.js": {
+    "file": "index.es-KgckYXFe.js",
+    "name": "index.es",
+    "src": "node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-3DD01fPl.js",
+      "_jspdf.es.min-YEsIa7Zh.js"
+    ]
+  },
+  "node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "purify.es-_9WAe1aK.js",
+    "name": "purify.es",
+    "src": "node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "html2canvas.esm-dgT_1dIT.js",
+    "name": "html2canvas.esm",
+    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js": {
+    "file": "svg2pdf.es.min-BJLhYQql.js",
+    "name": "svg2pdf.es.min",
+    "src": "node_modules/svg2pdf.js/dist/svg2pdf.es.min.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_embed-3DD01fPl.js",
+      "_jspdf.es.min-YEsIa7Zh.js"
+    ]
   },
   "src/embed.ts": {
     "file": "gatelab-embed.js",
@@ -91,69 +91,69 @@
     "src": "src/embed.ts",
     "isEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js"
+      "_embed-3DD01fPl.js"
     ]
   },
   "src/imaging/CellHoverProbe.tsx": {
-    "file": "CellHoverProbe-DUjc2YFN.js",
+    "file": "CellHoverProbe-RS-rt5Wn.js",
     "name": "CellHoverProbe",
     "src": "src/imaging/CellHoverProbe.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
+      "_embed-3DD01fPl.js",
       "_plotGeometry-CJtfGMFK.js"
     ]
   },
   "src/imaging/CellMarker.tsx": {
-    "file": "CellMarker-FsxG4SjT.js",
+    "file": "CellMarker-9O1ZneNT.js",
     "name": "CellMarker",
     "src": "src/imaging/CellMarker.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
+      "_embed-3DD01fPl.js",
       "_plotGeometry-CJtfGMFK.js"
     ]
   },
   "src/imaging/ImagesTab.tsx": {
-    "file": "ImagesTab-iin63M3k.js",
+    "file": "ImagesTab-Cv9CxPym.js",
     "name": "ImagesTab",
     "src": "src/imaging/ImagesTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
-      "_CellInspector-C0KoNOrJ.js",
+      "_embed-3DD01fPl.js",
+      "_CellInspector-CPw0Ug-M.js",
       "_cvwDecode-CKHzN2J_.js"
     ]
   },
   "src/imaging/LayoutCellPanel.tsx": {
-    "file": "LayoutCellPanel-EC48P37B.js",
+    "file": "LayoutCellPanel-BYXPH1YT.js",
     "name": "LayoutCellPanel",
     "src": "src/imaging/LayoutCellPanel.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
+      "_embed-3DD01fPl.js",
       "_cvwDecode-CKHzN2J_.js",
       "src/imaging/LayoutImageWall.tsx"
     ]
   },
   "src/imaging/LayoutImageWall.tsx": {
-    "file": "LayoutImageWall-DcKEhEHB.js",
+    "file": "LayoutImageWall-BN2APwFf.js",
     "name": "LayoutImageWall",
     "src": "src/imaging/LayoutImageWall.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
+      "_embed-3DD01fPl.js",
       "_cvwDecode-CKHzN2J_.js"
     ]
   },
   "src/imaging/PlotThumbnails.tsx": {
-    "file": "PlotThumbnails-BM1oQGRj.js",
+    "file": "PlotThumbnails-BMF1A8OQ.js",
     "name": "PlotThumbnails",
     "src": "src/imaging/PlotThumbnails.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js",
-      "_CellInspector-C0KoNOrJ.js",
+      "_embed-3DD01fPl.js",
+      "_CellInspector-CPw0Ug-M.js",
       "_cvwDecode-CKHzN2J_.js",
       "_plotGeometry-CJtfGMFK.js"
     ]
@@ -168,33 +168,34 @@
     ]
   },
   "src/imaging/imageService.ts": {
-    "file": "imageService-BucHAYme.js",
+    "file": "imageService-BSVTX87i.js",
     "name": "imageService",
     "src": "src/imaging/imageService.ts",
     "isDynamicEntry": true
   },
   "src/ui/CompensationTab.tsx": {
-    "file": "CompensationTab-BeXPatpo.js",
+    "file": "CompensationTab-DZML2wCd.js",
     "name": "CompensationTab",
     "src": "src/ui/CompensationTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js"
+      "_embed-3DD01fPl.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-BjxRJ2Uq.js"
+      "_jspdf.es.min-YEsIa7Zh.js"
     ]
   },
   "src/ui/LayoutTab.tsx": {
-    "file": "LayoutTab-CTxw051Z.js",
+    "file": "LayoutTab-nPj-hhlU.js",
     "name": "LayoutTab",
     "src": "src/ui/LayoutTab.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_embed-Ad5xBSHI.js"
+      "_embed-3DD01fPl.js"
     ],
     "dynamicImports": [
-      "_jspdf.es.min-BjxRJ2Uq.js",
+      "_jspdf.es.min-YEsIa7Zh.js",
+      "_jspdf.es.min-YEsIa7Zh.js",
       "src/imaging/LayoutImageWall.tsx",
       "src/imaging/LayoutCellPanel.tsx"
     ]

@@ -108,3 +108,36 @@ test_that("the background start is used only when Shiny exports it", {
     expect_null(start)
   }
 })
+
+test_that("the cells of an object without column names are checked for the app's order", {
+  counts <- matrix(c(1, 2, 3, 4, 5, 6, 7, 8), nrow = 2, dimnames = list(c("M1", "M2"), NULL))
+  current <- SingleCellExperiment::SingleCellExperiment(
+    assays = list(counts = counts, exprs = asinh(counts / 5)),
+    colData = S4Vectors::DataFrame(sample_id = c("D1", "D1", "D2", "D2"))
+  )
+  reordered <- GateLabR:::.gatelabr_cells_reordered
+
+  # A console change that leaves the assays alone, and one that drops a channel: the same cells.
+  changed <- current
+  changed$cluster <- c("c1", "c2", "c1", "c2")
+  expect_null(reordered(changed, current))
+  expect_null(reordered(current["M1", ], current))
+
+  # Two events of one sample swapped, and two events moved between samples with the counts kept.
+  expect_match(reordered(current[, c(2, 1, 3, 4)], current), "in the app's order")
+  moved <- current
+  moved$sample_id <- c("D1", "D2", "D1", "D2")
+  expect_match(reordered(moved, current), "samples hold other cells")
+  expect_match(reordered(current, current, sample_column = "batch"), "cannot be read")
+
+  # The ids of the last save decide when the object has them, whatever the assays hold.
+  saved <- current
+  saved$gatelab_event_id <- 2^48 + c(1, 3, 5, 7)
+  expect_null(reordered(saved, saved))
+  expect_match(reordered(saved[, c(2, 1, 3, 4)], saved), "gatelab_event_id")
+
+  # Unique column names decide when the object has them.
+  named <- current
+  colnames(named) <- paste0("event", 1:4)
+  expect_null(reordered(named, named))
+})
