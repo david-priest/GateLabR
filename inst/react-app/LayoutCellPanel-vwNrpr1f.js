@@ -1,7 +1,7 @@
-import { u as Z, a as m, cm as x, cn as tt, j as v, co as et, cp as j } from "./embed-DAY6mzhM.js";
+import { u as Z, r as m, cv as x, cw as tt, j as _, cx as et, cy as j } from "./embed-dEZivmKw.js";
 import { N as nt } from "./cvwDecode-CKHzN2J_.js";
-import { drawTile as lt } from "./LayoutImageWall-BxNH2Xob.js";
-import { k as st, f as H } from "./LayoutTab-bSrkDViU.js";
+import { drawTile as lt } from "./LayoutImageWall-iupv4K_g.js";
+import { k as st, f as H } from "./LayoutTab-BvIQ69Yw.js";
 const L = "Helvetica Neue, Helvetica, Arial, sans-serif";
 function z(e, o, w) {
   if (w <= 0 || e.measureText(o).width <= w) return o;
@@ -97,21 +97,21 @@ function ft({ recipe: e, service: o, width: w, height: c }) {
         return;
       }
       e.cells.forEach((f, M) => {
-        $.forEach((C, O) => {
-          const q = R ? O : M, Q = R ? M : O, W = n.gridX + Q * b, _ = n.gridY + q * b, E = A.get(f.event);
+        $.forEach((C, v) => {
+          const q = R ? v : M, Q = R ? M : v, O = n.gridX + Q * b, W = n.gridY + q * b, E = A.get(f.event);
           if (!E) {
-            t.fillStyle = "#e6e6e6", t.fillRect(W, _, h, h);
+            t.fillStyle = "#e6e6e6", t.fillRect(O, W, h, h);
             return;
           }
           const U = C.kind === "merge" ? E.composite : C.slot !== void 0 ? E.channels[C.slot] ?? null : null;
-          lt(t, U, E.cols, E.rows, E.aspect, W, _, h);
+          lt(t, U, E.cols, E.rows, E.aspect, O, W, h);
         });
       });
     };
     a(k, null), st(l, { width: n.width, height: n.height, draw: a });
   }, [e, A, w, c, p, i, y]);
   const I = p && !(i != null && i.error) && A.size + D.size < new Set(e.cells.map((l) => l.event)).size;
-  return /* @__PURE__ */ v.jsx("div", { className: "gl-layout-cellpanel", "data-cells": e.cells.length, "data-ready": A.size, "data-layout-pending": I ? "1" : void 0, children: /* @__PURE__ */ v.jsx("canvas", { ref: S }) });
+  return /* @__PURE__ */ _.jsx("div", { className: "gl-layout-cellpanel", "data-cells": e.cells.length, "data-ready": A.size, "data-layout-pending": I ? "1" : void 0, children: /* @__PURE__ */ _.jsx("canvas", { ref: S }) });
 }
 export {
   ft as LayoutCellPanel
