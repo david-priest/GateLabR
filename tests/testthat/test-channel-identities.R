@@ -59,13 +59,14 @@ test_that("conjugate names ending -A do not make a file spectral-unmixed", {
   unlink(path)
 })
 
-test_that("a raw detector alongside unmixed markers still triggers filtering", {
+test_that("raw detectors alongside unmixed markers still trigger filtering", {
   skip_if_not_installed("flowCore")
 
-  # Same file plus one raw spectral detector (no $PnS of its own). That is what an
-  # unmixed export looks like, so the detector is dropped and markers are renamed.
-  chans <- c("FSC-A", "B1-A", "V500-A", "PE-A")
-  descs <- c("FSC-A", NA, "CD4-A", "CD25-A")
+  # Same file plus raw spectral detectors (no $PnS of their own). That is what an unmixed
+  # export looks like, so the detectors are dropped and markers are renamed. A marker written
+  # "-a" is an unmixed marker too, in the keep rule as in the detection.
+  chans <- c("FSC-A", "B1-A", "B2-A", "V500-A", "PE-A")
+  descs <- c("FSC-A", NA, NA, "cd4-a", "CD25-A")
   values <- matrix(seq_len(3 * length(chans)), nrow = 3,
                    dimnames = list(NULL, chans))
   frame <- flowCore::flowFrame(values)
@@ -76,7 +77,30 @@ test_that("a raw detector alongside unmixed markers still triggers filtering", {
   sce <- import_fcs_files(path, instrument_mode = "flow")
 
   expect_false("B1-A" %in% rownames(sce))
-  expect_identical(rownames(sce), c("FSC-A", "CD4-A (V500-A)", "CD25-A (PE-A)"))
+  expect_false("B2-A" %in% rownames(sce))
+  expect_identical(rownames(sce), c("FSC-A", "cd4-a (V500-A)", "CD25-A (PE-A)"))
+
+  unlink(path)
+})
+
+test_that("one unlabelled fluorescence channel does not make a conventional file spectral", {
+  skip_if_not_installed("flowCore")
+
+  # An unstained or spare channel on a conventional analyser: one channel without $PnS. It
+  # used to count as the raw detector that makes a file spectral-unmixed, which dropped every
+  # -H channel and changed the gate channel identities between files of one panel.
+  chans <- c("FSC-A", "FL1-H", "FL1-A", "FL2-H", "FL2-A", "FL3-A")
+  descs <- c("FSC-A", "FITC-H", "FITC-A", "PE-H", "PE-A", NA)
+  values <- matrix(seq_len(3 * length(chans)), nrow = 3,
+                   dimnames = list(NULL, chans))
+  frame <- flowCore::flowFrame(values)
+  flowCore::pData(flowCore::parameters(frame))$desc <- descs
+  path <- tempfile(fileext = ".fcs")
+  flowCore::write.FCS(frame, path)
+
+  sce <- import_fcs_files(path, instrument_mode = "flow")
+
+  expect_identical(rownames(sce), c("FSC-A", "FITC-H", "FITC-A", "PE-H", "PE-A", "FL3-A"))
 
   unlink(path)
 })
