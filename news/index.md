@@ -1,5 +1,24 @@
 # Changelog
 
+## GateLabR 1.6.6
+
+- The embedded GateLab core is GateLab 0.11.1 (GateLab-dev e1bc7a48), up
+  from 0.11.0 (41448da6). From the core: “Calculate from controls…” in
+  the Compensation tab estimates a matrix from single-stained beads or
+  cells; a matrix that has been applied keeps its values and the
+  workspace bundle saves them; for mass cytometry, a Check view reads a
+  matrix against the events, “Named only” restricts NNLS to channels
+  with a marker name, and the Compensation Matrices list shows CyTOF
+  matrices and every version of a matrix; the Gating tab shows up to
+  four plots; Plotting has a tab per chart and Illustration a tab per
+  plot, both side panes have the tabs Data, Plot, Arrange, Style and
+  Export, Plotting draws a summary heatmap of populations by channels,
+  the Illustration heatmap and histogram take several channels, and a
+  grip at the corner resizes a chart or figure; Layout’s PDF export
+  keeps high-resolution pages as vectors, chart blocks are scaled rather
+  than cut, and a new item is placed on a page. Gate evaluation is
+  unchanged.
+
 ## GateLabR 1.6.5
 
 - The embedded GateLab core is GateLab 0.11.0 (GateLab-dev 41448da6), up
