@@ -1,9 +1,9 @@
-import { u as qe, a as r, j as t, g as ie, a6 as St, a5 as vt, a7 as Rt, c9 as Pt } from "./embed-3DD01fPl.js";
-import { o as Lt, u as At, d as Et } from "./CellInspector-CPw0Ug-M.js";
+import { u as $e, r, j as t, w as ie, af as St, ae as vt, ag as Rt, cs as Pt } from "./embed-dEZivmKw.js";
+import { o as Lt, u as At, d as Et } from "./CellInspector-DMRsgJAU.js";
 import { N as Tt } from "./cvwDecode-CKHzN2J_.js";
 const Dt = "#7b9bc8", It = "rgba(47, 111, 228, 0.22)", Kt = "rgba(255, 255, 255, 0.6)", zt = "#2f6fe4";
-function Ft({ histogram: i, label: g, inView: s, range: j, onRange: m, width: c = 220, height: h = 40 }) {
-  const { t: M } = qe(), W = r.useRef(null), [K, N] = r.useState(null), S = r.useRef(null), C = (f) => (f - i.lo) / (i.hi - i.lo) * c, v = (f) => i.lo + Math.max(0, Math.min(c, f)) / c * (i.hi - i.lo);
+function Ft({ histogram: i, label: g, inView: a, range: w, onRange: m, width: c = 220, height: h = 40 }) {
+  const { t: M } = $e(), W = r.useRef(null), [K, N] = r.useState(null), S = r.useRef(null), C = (f) => (f - i.lo) / (i.hi - i.lo) * c, v = (f) => i.lo + Math.max(0, Math.min(c, f)) / c * (i.hi - i.lo);
   r.useEffect(() => {
     const f = W.current;
     if (!f) return;
@@ -18,16 +18,16 @@ function Ft({ histogram: i, label: g, inView: s, range: j, onRange: m, width: c 
       const z = i.peak > 0 ? i.counts[E] / i.peak * (h - 2) : 0;
       z > 0 && b.fillRect(E * o, h - z, Math.max(1, o - 0.5), z);
     }
-    if (s) {
-      const E = C(Math.min(s[0], s[1])), z = C(Math.max(s[0], s[1]));
+    if (a) {
+      const E = C(Math.min(a[0], a[1])), z = C(Math.max(a[0], a[1]));
       b.fillStyle = It, b.fillRect(E, 0, Math.max(2, z - E), h);
     }
-    const l = K ?? j;
+    const l = K ?? w;
     if (l) {
       const E = C(Math.min(l[0], l[1])), z = C(Math.max(l[0], l[1]));
       b.fillStyle = Kt, b.fillRect(0, 0, E, h), b.fillRect(z, 0, c - z, h), b.strokeStyle = zt, b.lineWidth = 1, b.beginPath(), b.moveTo(E + 0.5, 0), b.lineTo(E + 0.5, h), b.moveTo(z - 0.5, 0), b.lineTo(z - 0.5, h), b.stroke();
     }
-  }, [i, s, j, K, c, h]);
+  }, [i, a, w, K, c, h]);
   const T = (f) => f.clientX - f.currentTarget.getBoundingClientRect().left, X = (f) => {
     if (f.button !== 0) return;
     const d = T(f);
@@ -38,7 +38,7 @@ function Ft({ histogram: i, label: g, inView: s, range: j, onRange: m, width: c 
         b.setPointerCapture(f.pointerId);
       } catch {
       }
-  }, w = (f) => {
+  }, j = (f) => {
     if (!S.current) return;
     const d = T(f);
     S.current = [S.current[0], d], N([v(S.current[0]), v(d)]);
@@ -63,7 +63,7 @@ function Ft({ histogram: i, label: g, inView: s, range: j, onRange: m, width: c 
       title: M("Distribution of {channel} over the wall's cells; drag across it to show only a range of values, click it to show them all", { channel: g }),
       style: { width: c, height: h },
       onPointerDown: X,
-      onPointerMove: w,
+      onPointerMove: j,
       onPointerUp: P,
       onPointerCancel: () => {
         S.current = null, N(null);
@@ -72,19 +72,19 @@ function Ft({ histogram: i, label: g, inView: s, range: j, onRange: m, width: c 
   );
 }
 function qt(i, g) {
-  let s = 1 / 0, j = -1 / 0;
+  let a = 1 / 0, w = -1 / 0;
   for (let m = 0; m < g.length; m++) {
     const c = i[g[m]];
-    Number.isFinite(c) && (c < s && (s = c), c > j && (j = c));
+    Number.isFinite(c) && (c < a && (a = c), c > w && (w = c));
   }
-  return s <= j ? [s, j] : null;
+  return a <= w ? [a, w] : null;
 }
-function $t(i, g, s = 64) {
-  const j = qt(i, g);
-  if (!j) return null;
-  let [m, c] = j;
+function $t(i, g, a = 64) {
+  const w = qt(i, g);
+  if (!w) return null;
+  let [m, c] = w;
   c === m && (m -= 0.5, c += 0.5);
-  const h = new Uint32Array(Math.max(1, s)), M = (c - m) / h.length;
+  const h = new Uint32Array(Math.max(1, a)), M = (c - m) / h.length;
   let W = 0;
   for (let N = 0; N < g.length; N++) {
     const S = i[g[N]];
@@ -96,12 +96,12 @@ function $t(i, g, s = 64) {
   for (const N of h) N > K && (K = N);
   return { counts: h, lo: m, hi: c, total: W, peak: K };
 }
-function Wt(i, g, s, j) {
+function Wt(i, g, a, w) {
   const m = new Int32Array(g.length);
   let c = 0;
   for (let h = 0; h < g.length; h++) {
     const M = i[g[h]];
-    M >= s && M <= j && (m[c++] = g[h]);
+    M >= a && M <= w && (m[c++] = g[h]);
   }
   return m.subarray(0, c);
 }
@@ -110,33 +110,33 @@ function Se(i) {
   if (i === 0) return "0";
   const g = Math.abs(i);
   if (g >= 1e6 || g < 1e-3) return i.toExponential(2).replace(/\.?0+e/, "e");
-  const s = Math.max(0, 2 - Math.floor(Math.log10(g)));
-  return i.toFixed(Math.min(6, s)).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+  const a = Math.max(0, 2 - Math.floor(Math.log10(g)));
+  return i.toFixed(Math.min(6, a)).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
 }
-function ze(i, g) {
+function Fe(i, g) {
   if (i.length === 0) return NaN;
-  const s = g * (i.length - 1), j = Math.floor(s), m = Math.min(i.length - 1, j + 1);
-  return i[j] + (i[m] - i[j]) * (s - j);
+  const a = g * (i.length - 1), w = Math.floor(a), m = Math.min(i.length - 1, w + 1);
+  return i[w] + (i[m] - i[w]) * (a - w);
 }
-function Ut(i, g, s) {
-  const j = [];
+function Ut(i, g, a) {
+  const w = [];
   for (let c = 0; c < g.length; c++) {
     const h = g[c];
-    if (s && s[h] !== 1) continue;
+    if (a && a[h] !== 1) continue;
     const M = i[h];
-    Number.isFinite(M) && M > 0 && j.push(M);
+    Number.isFinite(M) && M > 0 && w.push(M);
   }
-  const m = Float64Array.from(j).sort();
-  return { n: m.length, q1: ze(m, 0.25), median: ze(m, 0.5), q3: ze(m, 0.75) };
+  const m = Float64Array.from(w).sort();
+  return { n: m.length, q1: Fe(m, 0.25), median: Fe(m, 0.5), q3: Fe(m, 0.75) };
 }
-const ve = "__class__", Fe = 4, at = 2, Bt = 6, Gt = Tt, Ot = r.memo(function({ service: g, fileKey: s, sampleId: j, eventIndex: m, spec: c, size: h, pinned: M, onPin: W, onOpen: K, label: N, colour: S = null, picked: C = !1, onPick: v }) {
+const ve = "__class__", qe = 4, st = 2, Bt = 6, Gt = Tt, Ot = r.memo(function({ service: g, fileKey: a, sampleId: w, eventIndex: m, spec: c, size: h, pinned: M, onPin: W, onOpen: K, label: N, colour: S = null, picked: C = !1, onPick: v }) {
   var f;
-  const { t: T } = qe(), X = At(g, s, m, c, "batch"), w = ((f = X.result) == null ? void 0 : f.kind) === "image" ? X.result.image : null, P = r.useRef(null);
+  const { t: T } = $e(), X = At(g, a, m, c, "batch"), j = ((f = X.result) == null ? void 0 : f.kind) === "image" ? X.result.image : null, P = r.useRef(null);
   return r.useEffect(() => {
-    if (!(w != null && w.composite) || !P.current) return;
-    const d = w.cols * w.aspect, b = Math.min(h / d, h / w.rows);
-    Et(P.current, w.composite, d * b, w.rows * b);
-  }, [w, h]), /* @__PURE__ */ t.jsxs(
+    if (!(j != null && j.composite) || !P.current) return;
+    const d = j.cols * j.aspect, b = Math.min(h / d, h / j.rows);
+    Et(P.current, j.composite, d * b, j.rows * b);
+  }, [j, h]), /* @__PURE__ */ t.jsxs(
     "button",
     {
       type: "button",
@@ -160,11 +160,11 @@ const ve = "__class__", Fe = 4, at = 2, Bt = 6, Gt = Tt, Ot = r.memo(function({ 
           }
           v(m, "replace");
         }
-        W({ sampleId: j, eventIndex: m });
+        W({ sampleId: w, eventIndex: m });
       },
       onDoubleClick: K,
       children: [
-        w ? /* @__PURE__ */ t.jsx("canvas", { ref: P }) : /* @__PURE__ */ t.jsx("span", { className: "gl-wall-tile-empty", children: X.status === "none" ? "·" : "" }),
+        j ? /* @__PURE__ */ t.jsx("canvas", { ref: P }) : /* @__PURE__ */ t.jsx("span", { className: "gl-wall-tile-empty", children: X.status === "none" ? "·" : "" }),
         S && /* @__PURE__ */ t.jsx("span", { className: "gl-wall-tile-ring", "aria-hidden": "true", style: { boxShadow: `inset 0 0 0 2px ${S}` } }),
         v && /* @__PURE__ */ t.jsx(
           "span",
@@ -188,8 +188,8 @@ const ve = "__class__", Fe = 4, at = 2, Bt = 6, Gt = Tt, Ot = r.memo(function({ 
 function _t({
   visible: i,
   service: g,
-  entry: s,
-  mask: j,
+  entry: a,
+  mask: w,
   populationLabel: m,
   view: c,
   onViewChange: h,
@@ -202,7 +202,7 @@ function _t({
   excludedMask: v = null,
   parentName: T = null,
   onSendToLayout: X,
-  classOf: w,
+  classOf: j,
   classes: P,
   classTitle: f,
   onMakePopulation: d,
@@ -210,118 +210,118 @@ function _t({
   onSendCellPanel: Y,
   measure: o
 }) {
-  const { t: l } = qe(), E = r.useRef(K);
+  const { t: l } = $e(), E = r.useRef(K);
   E.current = K;
-  const z = r.useCallback(() => E.current(), []), $e = r.useRef(W);
-  $e.current = W;
-  const st = r.useCallback((e) => $e.current(e), []), [F, Re] = ie("images.sortKey", ""), [ce, We] = ie("images.sortDesc", !1), [te, ot] = ie("images.tileSize", 72), [Pe, Le] = r.useState(!1);
+  const z = r.useCallback(() => E.current(), []), We = r.useRef(W);
+  We.current = W;
+  const at = r.useCallback((e) => We.current(e), []), [F, Re] = ie("images.sortKey", ""), [ce, Ue] = ie("images.sortDesc", !1), [te, ot] = ie("images.tileSize", 72), [Pe, Le] = r.useState(!1);
   r.useEffect(() => {
     Le(!1);
   }, [N]);
-  const Ue = Pe && !!v && !!T, G = Ue ? v : j, Ae = Ue ? l("{parent} without {population}", { parent: T ?? "", population: m }) : m, [Be, it] = ie("images.wallCount", 48), [ke, pe] = ie("images.range", null), le = s && F && F !== ve ? s.sample.channels.findIndex((e) => e.key === F) : -1, ct = le >= 0 && s ? s.sample.channels[le] : null, J = r.useMemo(() => s && le >= 0 ? s.sample.displayColumn(le) : null, [s, le]), [rt, ut] = ie("images.histKey", ""), xe = s ? le >= 0 ? le : Math.max(0, s.sample.channels.findIndex((e) => e.key === rt)) : -1, Q = xe >= 0 && s ? s.sample.channels[xe] : null, Ge = Q ? Q.label ?? Q.key : "", Z = r.useMemo(() => s && xe >= 0 ? s.sample.displayColumn(xe) : null, [s, xe]), L = Z && Q && ke && ke.key === Q.key ? [ke.lo, ke.hi] : null, [je, q] = r.useState(() => /* @__PURE__ */ new Set()), [re, Ee] = r.useState(""), ne = r.useRef(null);
+  const Be = Pe && !!v && !!T, G = Be ? v : w, Ae = Be ? l("{parent} without {population}", { parent: T ?? "", population: m }) : m, [Ge, it] = ie("images.wallCount", 48), [ke, pe] = ie("images.range", null), le = a && F && F !== ve ? a.sample.channels.findIndex((e) => e.key === F) : -1, ct = le >= 0 && a ? a.sample.channels[le] : null, J = r.useMemo(() => a && le >= 0 ? a.sample.displayColumn(le) : null, [a, le]), [rt, ut] = ie("images.histKey", ""), xe = a ? le >= 0 ? le : Math.max(0, a.sample.channels.findIndex((e) => e.key === rt)) : -1, Q = xe >= 0 && a ? a.sample.channels[xe] : null, Oe = Q ? Q.label ?? Q.key : "", Z = r.useMemo(() => a && xe >= 0 ? a.sample.displayColumn(xe) : null, [a, xe]), L = Z && Q && ke && ke.key === Q.key ? [ke.lo, ke.hi] : null, [we, q] = r.useState(() => /* @__PURE__ */ new Set()), [re, Ee] = r.useState(""), ne = r.useRef(null);
   r.useEffect(() => {
     q(/* @__PURE__ */ new Set()), ne.current = null;
-  }, [s == null ? void 0 : s.id, G]);
-  const U = !!P && !!w, [ue, we] = ie("images.wallClass", "all"), Oe = r.useRef(f);
+  }, [a == null ? void 0 : a.id, G]);
+  const U = !!P && !!j, [ue, je] = ie("images.wallClass", "all"), _e = r.useRef(f);
   r.useEffect(() => {
-    Oe.current !== f && (Oe.current = f, we("all"));
-  }, [f, we]);
-  const _e = (e) => {
-    var a;
-    if (!P || !w) return null;
-    const n = w(e);
-    return n === null ? null : ((a = P[n]) == null ? void 0 : a.colour) ?? null;
-  }, D = (s == null ? void 0 : s.images) ?? null, A = (c == null ? void 0 : c.display) ?? (D == null ? void 0 : D.display) ?? null, ae = (c == null ? void 0 : c.exposure) ?? 1, he = (c == null ? void 0 : c.outline) ?? !1, Ce = Lt(he, D), [me, Te] = r.useState(null);
+    _e.current !== f && (_e.current = f, je("all"));
+  }, [f, je]);
+  const He = (e) => {
+    var s;
+    if (!P || !j) return null;
+    const n = j(e);
+    return n === null ? null : ((s = P[n]) == null ? void 0 : s.colour) ?? null;
+  }, D = (a == null ? void 0 : a.images) ?? null, A = (c == null ? void 0 : c.display) ?? (D == null ? void 0 : D.display) ?? null, se = (c == null ? void 0 : c.exposure) ?? 1, he = (c == null ? void 0 : c.outline) ?? !1, Ce = Lt(he, D), [me, Te] = r.useState(null);
   r.useEffect(() => {
-    if (!g || !s || !D || !i) return;
-    const e = g.knownInfo(s.id);
+    if (!g || !a || !D || !i) return;
+    const e = g.knownInfo(a.id);
     if (e) {
-      Te({ id: s.id, info: e, error: null });
+      Te({ id: a.id, info: e, error: null });
       return;
     }
     let n = !0;
-    return g.info(s.id).then(
-      (a) => {
-        n && Te({ id: s.id, info: a, error: null });
+    return g.info(a.id).then(
+      (s) => {
+        n && Te({ id: a.id, info: s, error: null });
       },
-      (a) => {
-        n && Te({ id: s.id, info: null, error: a instanceof Error ? a.message : String(a) });
+      (s) => {
+        n && Te({ id: a.id, info: null, error: s instanceof Error ? s.message : String(s) });
       }
     ), () => {
       n = !1;
     };
-  }, [g, s, D, i]);
-  const O = me && s && me.id === s.id ? me.info : null, He = me && s && me.id === s.id ? me.error : null, ht = r.useMemo(() => !A || !O ? null : { display: A, scale: O.scale, exposure: ae, hop: Gt, composite: !0, channels: [], ...Ce ? { outline: Ce } : {} }, [A, O, ae, he, D]), { events: p, inPopulation: Xe, all: Ye } = r.useMemo(() => {
-    if (!s || !O) return { events: new Int32Array(0), inPopulation: 0, all: new Int32Array(0) };
-    const e = s.sample.fcs.nEvents, n = O.hasImage;
-    let a = 0, y = 0;
+  }, [g, a, D, i]);
+  const O = me && a && me.id === a.id ? me.info : null, Xe = me && a && me.id === a.id ? me.error : null, ht = r.useMemo(() => !A || !O ? null : { display: A, scale: O.scale, exposure: se, hop: Gt, composite: !0, channels: [], ...Ce ? { outline: Ce } : {} }, [A, O, se, he, D]), { events: p, inPopulation: De, all: Ye } = r.useMemo(() => {
+    if (!a || !O) return { events: new Int32Array(0), inPopulation: 0, all: new Int32Array(0) };
+    const e = a.sample.fcs.nEvents, n = O.hasImage;
+    let s = 0, y = 0;
     for (let x = 0; x < e; x++)
-      G && !G[x] || (a++, n[x] && y++);
+      G && !G[x] || (s++, n[x] && y++);
     let u = new Int32Array(y), k = 0;
     for (let x = 0; x < e; x++)
       G && !G[x] || n[x] && (u[k++] = x);
     if (U && ue !== "all") {
       const x = Number(ue);
-      u = u.filter((H) => w(H) === x);
+      u = u.filter((H) => j(H) === x);
     }
     const R = u;
     Z && L && (u = Wt(Z, u, L[0], L[1]).slice());
     const $ = ce ? -1 : 1;
-    return F === ve && U ? u.sort((x, H) => $ * ((w(x) ?? 99) - (w(H) ?? 99)) || x - H) : J ? u.sort((x, H) => $ * (J[x] - J[H]) || x - H) : ce && u.reverse(), { events: u, inPopulation: a, all: R };
-  }, [s, O, G, F, ce, U, w, ue, J, Z, L == null ? void 0 : L[0], L == null ? void 0 : L[1]]), Je = r.useMemo(() => Z ? $t(Z, Ye) : null, [Z, Ye]), be = r.useMemo(() => {
-    if (!o || !U || !s || !O) return null;
-    const e = s.sample.fcs.nEvents, n = O.hasImage, a = new Array(P.length).fill(0);
+    return F === ve && U ? u.sort((x, H) => $ * ((j(x) ?? 99) - (j(H) ?? 99)) || x - H) : J ? u.sort((x, H) => $ * (J[x] - J[H]) || x - H) : ce && u.reverse(), { events: u, inPopulation: s, all: R };
+  }, [a, O, G, F, ce, U, j, ue, J, Z, L == null ? void 0 : L[0], L == null ? void 0 : L[1]]), Je = r.useMemo(() => Z ? $t(Z, Ye) : null, [Z, Ye]), be = r.useMemo(() => {
+    if (!o || !U || !a || !O) return null;
+    const e = a.sample.fcs.nEvents, n = O.hasImage, s = new Array(P.length).fill(0);
     let y = 0;
     for (let u = 0; u < e; u++) {
       if (G && !G[u] || !n[u]) continue;
-      const k = w(u);
-      k === null || k < 0 || k >= a.length || (a[k]++, y++);
+      const k = j(u);
+      k === null || k < 0 || k >= s.length || (s[k]++, y++);
     }
-    return { counts: a, total: y };
-  }, [o, U, P, w, s, O, G]), [Qe, mt] = r.useState(""), _ = r.useMemo(() => !o || o.sizes.length === 0 ? [] : o.sizes.map((e) => ({ ...e, ...Ut(e.values, p, o.objectCount) })), [o, p]), De = (e, n) => {
-    const a = ne.current;
+    return { counts: s, total: y };
+  }, [o, U, P, j, a, O, G]), [Qe, mt] = r.useState(""), _ = r.useMemo(() => !o || o.sizes.length === 0 ? [] : o.sizes.map((e) => ({ ...e, ...Ut(e.values, p, o.objectCount) })), [o, p]), Ie = (e, n) => {
+    const s = ne.current;
     q((y) => {
       if (n === "replace") return /* @__PURE__ */ new Set([e]);
       const u = new Set(y);
-      if (n === "range" && a !== null) {
-        const k = p.indexOf(a), R = p.indexOf(e);
+      if (n === "range" && s !== null) {
+        const k = p.indexOf(s), R = p.indexOf(e);
         if (k >= 0 && R >= 0) for (let $ = Math.min(k, R); $ <= Math.max(k, R); $++) u.add(p[$]);
         else u.add(e);
       } else n === "range" ? u.add(e) : u.has(e) ? u.delete(e) : u.add(e);
       return u;
     }), ne.current = e;
-  }, [V, Me] = r.useState(null), ye = r.useRef(null), dt = (e) => e.altKey ? "remove" : e.metaKey || e.ctrlKey ? "add" : "replace", Ie = r.useRef(!1), Ke = (e) => {
-    const n = se.current, a = n.getBoundingClientRect();
-    return { x: e.clientX - a.left + n.scrollLeft, y: e.clientY - a.top + n.scrollTop };
+  }, [V, Me] = r.useState(null), ye = r.useRef(null), dt = (e) => e.altKey ? "remove" : e.metaKey || e.ctrlKey ? "add" : "replace", Ke = r.useRef(!1), ze = (e) => {
+    const n = ae.current, s = n.getBoundingClientRect();
+    return { x: e.clientX - s.left + n.scrollLeft, y: e.clientY - s.top + n.scrollTop };
   }, gt = (e) => {
-    if (!d || e.button !== 0 || !se.current) return;
+    if (!d || e.button !== 0 || !ae.current) return;
     const n = e.target;
     if (n.closest(".gl-wall-tile-pick") || n.closest(".gl-wall-tile") && (e.metaKey || e.ctrlKey || e.shiftKey)) return;
-    const a = Ke(e);
-    ye.current = { x: a.x, y: a.y, mode: dt(e), active: !1 };
+    const s = ze(e);
+    ye.current = { x: s.x, y: s.y, mode: dt(e), active: !1 };
   }, ft = (e) => {
     const n = ye.current;
-    if (!n || !se.current) return;
-    const a = Ke(e);
+    if (!n || !ae.current) return;
+    const s = ze(e);
     if (!n.active) {
-      if (Math.abs(a.x - n.x) < 4 && Math.abs(a.y - n.y) < 4) return;
+      if (Math.abs(s.x - n.x) < 4 && Math.abs(s.y - n.y) < 4) return;
       n.active = !0;
-      const y = se.current;
+      const y = ae.current;
       if (typeof y.setPointerCapture == "function")
         try {
           y.setPointerCapture(e.pointerId);
         } catch {
         }
     }
-    Me({ x0: Math.min(n.x, a.x), y0: Math.min(n.y, a.y), x1: Math.max(n.x, a.x), y1: Math.max(n.y, a.y), mode: n.mode });
+    Me({ x0: Math.min(n.x, s.x), y0: Math.min(n.y, s.y), x1: Math.max(n.x, s.x), y1: Math.max(n.y, s.y), mode: n.mode });
   }, pt = (e) => {
     const n = ye.current;
     if (ye.current = null, !n || !n.active) {
       Me(null);
       return;
     }
-    const a = Ke(e), y = { x0: Math.min(n.x, a.x), y0: Math.min(n.y, a.y), x1: Math.max(n.x, a.x), y1: Math.max(n.y, a.y) }, u = n.mode;
-    Me(null), Ie.current = !0;
+    const s = ze(e), y = { x0: Math.min(n.x, s.x), y0: Math.min(n.y, s.y), x1: Math.max(n.x, s.x), y1: Math.max(n.y, s.y) }, u = n.mode;
+    Me(null), Ke.current = !0;
     const k = Bt, R = [], $ = Math.max(0, Math.floor((y.x0 - k) / I)), x = Math.min(B - 1, Math.floor((y.x1 - k) / I)), H = Math.max(0, Math.floor((y.y0 - k) / I)), Nt = Math.min(Ne - 1, Math.floor((y.y1 - k) / I));
     for (let ge = H; ge <= Nt; ge++) {
       const fe = k + ge * I;
@@ -344,41 +344,41 @@ function _t({
       return fe;
     }), ne.current = R[R.length - 1]);
   }, xt = (e) => {
-    Ie.current && (Ie.current = !1, e.stopPropagation(), e.preventDefault());
-  }, Ze = r.useRef(De);
-  Ze.current = De;
+    Ke.current && (Ke.current = !1, e.stopPropagation(), e.preventDefault());
+  }, Ze = r.useRef(Ie);
+  Ze.current = Ie;
   const bt = r.useCallback((e, n) => Ze.current(e, n), []), de = r.useMemo(() => {
-    if (je.size === 0) return [];
+    if (we.size === 0) return [];
     const e = [];
-    for (let n = 0; n < p.length; n++) je.has(p[n]) && e.push(p[n]);
-    return e.sort((n, a) => n - a);
-  }, [je, p]), se = r.useRef(null), [ee, yt] = r.useState({ width: 0, height: 0, scrollTop: 0 });
+    for (let n = 0; n < p.length; n++) we.has(p[n]) && e.push(p[n]);
+    return e.sort((n, s) => n - s);
+  }, [we, p]), ae = r.useRef(null), [ee, yt] = r.useState({ width: 0, height: 0, scrollTop: 0 });
   r.useEffect(() => {
-    const e = se.current;
+    const e = ae.current;
     if (!e || !i) return;
     const n = () => yt({ width: e.clientWidth, height: e.clientHeight, scrollTop: e.scrollTop });
     n();
-    const a = typeof ResizeObserver == "function" ? new ResizeObserver(n) : null;
-    return a == null || a.observe(e), e.addEventListener("scroll", n, { passive: !0 }), () => {
-      a == null || a.disconnect(), e.removeEventListener("scroll", n);
+    const s = typeof ResizeObserver == "function" ? new ResizeObserver(n) : null;
+    return s == null || s.observe(e), e.addEventListener("scroll", n, { passive: !0 }), () => {
+      s == null || s.disconnect(), e.removeEventListener("scroll", n);
     };
   }, [i]);
-  const I = te + Fe, B = Math.max(1, Math.floor((ee.width + Fe) / I)), Ne = Math.ceil(p.length / B), Ve = Math.max(0, Math.floor(ee.scrollTop / I) - at), et = Math.min(Ne, Math.ceil((ee.scrollTop + ee.height) / I) + at), tt = Ve * B, kt = Math.min(p.length, et * B), jt = (() => {
+  const I = te + qe, B = Math.max(1, Math.floor((ee.width + qe) / I)), Ne = Math.ceil(p.length / B), Ve = Math.max(0, Math.floor(ee.scrollTop / I) - st), et = Math.min(Ne, Math.ceil((ee.scrollTop + ee.height) / I) + st), tt = Ve * B, kt = Math.min(p.length, et * B), wt = (() => {
     if (!J || J !== Z || p.length === 0 || ee.height === 0) return null;
     const e = Math.min(p.length - 1, Math.max(0, Math.floor(ee.scrollTop / I)) * B), n = Math.min(p.length - 1, Math.ceil((ee.scrollTop + ee.height) / I) * B - 1);
     return [J[p[e]], J[p[n]]];
-  })(), wt = (e, n) => {
+  })(), jt = (e, n) => {
     var k;
-    const a = [...((k = se.current) == null ? void 0 : k.querySelectorAll(".gl-wall-tile")) ?? []], y = a.indexOf(e);
+    const s = [...((k = ae.current) == null ? void 0 : k.querySelectorAll(".gl-wall-tile")) ?? []], y = s.indexOf(e);
     if (y < 0) return;
-    const u = a[Math.max(0, Math.min(a.length - 1, y + n))];
+    const u = s[Math.max(0, Math.min(s.length - 1, y + n))];
     u == null || u.focus();
   }, Ct = (e) => {
     const n = e.target;
     if (!n.classList.contains("gl-wall-tile")) return;
     if (d && e.key === " ") {
       const y = Number(n.getAttribute("data-event"));
-      Number.isInteger(y) && (e.preventDefault(), De(y, e.shiftKey ? "range" : "toggle"));
+      Number.isInteger(y) && (e.preventDefault(), Ie(y, e.shiftKey ? "range" : "toggle"));
       return;
     }
     if (d && e.key === "Escape") {
@@ -389,14 +389,14 @@ function _t({
       e.preventDefault(), q(new Set(Array.from(p)));
       return;
     }
-    const a = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "ArrowDown" ? B : e.key === "ArrowUp" ? -B : null;
-    a !== null && (e.preventDefault(), wt(n, a));
+    const s = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : e.key === "ArrowDown" ? B : e.key === "ArrowUp" ? -B : null;
+    s !== null && (e.preventDefault(), jt(n, s));
   };
   if (!i) return /* @__PURE__ */ t.jsx("div", { style: { display: "none" } });
   const Mt = (e) => {
-    !s || !A || h(s.id, { display: A.map((n) => n.slot === e ? { ...n, enabled: !n.enabled } : n), exposure: ae, outline: he });
+    !a || !A || h(a.id, { display: A.map((n) => n.slot === e ? { ...n, enabled: !n.enabled } : n), exposure: se, outline: he });
   };
-  return /* @__PURE__ */ t.jsx("section", { className: "gl-tab-panel gl-tab-fill gl-images-tab", "aria-label": l("Images"), children: !s || !D ? /* @__PURE__ */ t.jsx("div", { className: "gl-empty", children: l("No cell images are attached to the viewed file. Attach a .cvw from the Import menu.") }) : /* @__PURE__ */ t.jsxs(t.Fragment, { children: [
+  return /* @__PURE__ */ t.jsx("section", { className: "gl-tab-panel gl-tab-fill gl-images-tab", "aria-label": l("Images"), children: !a || !D ? /* @__PURE__ */ t.jsx("div", { className: "gl-empty", children: l("No cell images are attached to the viewed file. Attach a .cvw from the Import menu.") }) : /* @__PURE__ */ t.jsxs(t.Fragment, { children: [
     /* @__PURE__ */ t.jsxs("div", { className: "gl-images-toolbar", children: [
       S && S.length > 0 && C && /* @__PURE__ */ t.jsxs("label", { className: "gl-images-control", children: [
         /* @__PURE__ */ t.jsx("span", { children: l("Population") }),
@@ -424,8 +424,8 @@ function _t({
           }
         )
       ] }),
-      /* @__PURE__ */ t.jsx("span", { className: "gl-images-count", children: l("{count} cells in {population} · {shown} with images", {
-        count: Xe.toLocaleString(),
+      /* @__PURE__ */ t.jsx("span", { className: "gl-images-count", children: l(De === 1 ? "1 cell in {population} · {shown} with images" : "{count} cells in {population} · {shown} with images", {
+        count: De.toLocaleString(),
         population: Ae,
         shown: p.length.toLocaleString()
       }) }),
@@ -434,9 +434,9 @@ function _t({
         /* @__PURE__ */ t.jsxs("select", { value: F, onChange: (e) => Re(e.target.value), children: [
           /* @__PURE__ */ t.jsx("option", { value: "", children: l("Event order") }),
           U && /* @__PURE__ */ t.jsx("option", { value: ve, children: l("Class") }),
-          s.sample.channels.map((e) => /* @__PURE__ */ t.jsx("option", { value: e.key, children: e.label ?? e.key }, e.key))
+          a.sample.channels.map((e) => /* @__PURE__ */ t.jsx("option", { value: e.key, children: e.label ?? e.key }, e.key))
         ] }),
-        /* @__PURE__ */ t.jsx("button", { type: "button", className: "gl-mini-btn", "aria-pressed": ce, onClick: () => We((e) => !e), title: l("Reverse the order"), children: ce ? /* @__PURE__ */ t.jsx(St, { size: 12 }) : /* @__PURE__ */ t.jsx(vt, { size: 12 }) })
+        /* @__PURE__ */ t.jsx("button", { type: "button", className: "gl-mini-btn", "aria-pressed": ce, onClick: () => Ue((e) => !e), title: l("Reverse the order"), children: ce ? /* @__PURE__ */ t.jsx(St, { size: 12 }) : /* @__PURE__ */ t.jsx(vt, { size: 12 }) })
       ] }),
       Je && Q && /* @__PURE__ */ t.jsxs("span", { className: "gl-images-histogram", children: [
         !ct && /* @__PURE__ */ t.jsx(
@@ -449,15 +449,15 @@ function _t({
             onChange: (e) => {
               ut(e.target.value), pe(null);
             },
-            children: s.sample.channels.map((e) => /* @__PURE__ */ t.jsx("option", { value: e.key, children: e.label ?? e.key }, e.key))
+            children: a.sample.channels.map((e) => /* @__PURE__ */ t.jsx("option", { value: e.key, children: e.label ?? e.key }, e.key))
           }
         ),
         /* @__PURE__ */ t.jsx(
           Ft,
           {
             histogram: Je,
-            label: Ge,
-            inView: jt,
+            label: Oe,
+            inView: wt,
             range: L,
             onRange: (e) => pe(e ? { key: Q.key, lo: e[0], hi: e[1] } : null)
           }
@@ -469,7 +469,7 @@ function _t({
       ] }),
       U && /* @__PURE__ */ t.jsxs("label", { className: "gl-images-control", children: [
         /* @__PURE__ */ t.jsx("span", { children: f ?? l("Class") }),
-        /* @__PURE__ */ t.jsxs("select", { value: ue, "aria-label": l("Show class"), onChange: (e) => we(e.target.value), children: [
+        /* @__PURE__ */ t.jsxs("select", { value: ue, "aria-label": l("Show class"), onChange: (e) => je(e.target.value), children: [
           /* @__PURE__ */ t.jsx("option", { value: "all", children: l("all classes") }),
           P.map((e, n) => /* @__PURE__ */ t.jsx("option", { value: String(n), children: e.label }, e.label))
         ] })
@@ -487,16 +487,16 @@ function _t({
             min: -2,
             max: 2,
             step: 0.05,
-            value: Math.log2(ae),
+            value: Math.log2(se),
             onChange: (e) => {
-              A && h(s.id, { display: A.slice(), exposure: Math.pow(2, Number(e.target.value)), outline: he });
+              A && h(a.id, { display: A.slice(), exposure: Math.pow(2, Number(e.target.value)), outline: he });
             }
           }
         )
       ] }),
       /* @__PURE__ */ t.jsxs("label", { className: "gl-images-control gl-images-check", title: l("Outline the objects the count found on the mask image, in magenta"), children: [
         /* @__PURE__ */ t.jsx("input", { type: "checkbox", checked: he, onChange: (e) => {
-          A && h(s.id, { display: A.slice(), exposure: ae, outline: e.target.checked });
+          A && h(a.id, { display: A.slice(), exposure: se, outline: e.target.checked });
         } }),
         /* @__PURE__ */ t.jsx("span", { children: l("Mask outline") })
       ] }),
@@ -508,7 +508,7 @@ function _t({
       /* @__PURE__ */ t.jsx("button", { type: "button", className: "gl-mini-btn", disabled: !M, onClick: K, children: l("Show on plot") }),
       X && /* @__PURE__ */ t.jsxs("label", { className: "gl-images-control gl-images-send", children: [
         /* @__PURE__ */ t.jsx("span", { children: l("Cells") }),
-        /* @__PURE__ */ t.jsx("select", { value: Be, onChange: (e) => it(Number(e.target.value)), "aria-label": l("Cells to send"), children: [12, 24, 48, 96, 192].map((e) => /* @__PURE__ */ t.jsx("option", { value: e, children: e }, e)) }),
+        /* @__PURE__ */ t.jsx("select", { value: Ge, onChange: (e) => it(Number(e.target.value)), "aria-label": l("Cells to send"), children: [12, 24, 48, 96, 192].map((e) => /* @__PURE__ */ t.jsx("option", { value: e, children: e }, e)) }),
         /* @__PURE__ */ t.jsx(
           "button",
           {
@@ -518,28 +518,28 @@ function _t({
             title: l("Lay the first cells of this wall, in this order, on the Layout tab as one labelled block"),
             onClick: () => {
               if (!A) return;
-              const e = Math.min(Be, p.length), n = F ? s.sample.channels.find((a) => a.key === F) : void 0;
+              const e = Math.min(Ge, p.length), n = F ? a.sample.channels.find((s) => s.key === F) : void 0;
               X({
                 kind: "imagewall",
-                sampleId: s.id,
-                fileName: s.name,
+                sampleId: a.id,
+                fileName: a.name,
                 populationId: N ?? "",
                 populationName: Ae,
                 events: Array.from(p.subarray(0, e)),
                 imaged: p.length,
-                populationCount: Xe,
+                populationCount: De,
                 sortKey: F,
                 sortLabel: F === ve ? f ?? l("Class") : n ? n.label ?? n.key : "",
                 sortDesc: ce,
-                display: A.map((a) => ({ ...a })),
-                exposure: ae,
+                display: A.map((s) => ({ ...s })),
+                exposure: se,
                 tile: Math.max(24, Math.min(96, Math.round(te * 0.75))),
                 columns: e <= 12 ? 6 : e <= 48 ? 8 : 12,
                 ...Ce ? { outline: Ce } : {},
-                ...L ? { rangeLabel: `${Ge} ${Se(L[0])}–${Se(L[1])}` } : {},
+                ...L ? { rangeLabel: `${Oe} ${Se(L[0])}–${Se(L[1])}` } : {},
                 ...U ? {
-                  tileColours: Array.from(p.subarray(0, e), (a) => _e(a) ?? ""),
-                  legend: P.map((a) => ({ label: a.label, colour: a.colour }))
+                  tileColours: Array.from(p.subarray(0, e), (s) => He(s) ?? ""),
+                  legend: P.map((s) => ({ label: s.label, colour: s.colour }))
                 } : {}
               });
             },
@@ -564,7 +564,7 @@ function _t({
                 onClick: () => {
                   q((e) => {
                     const n = new Set(e);
-                    for (let a = 0; a < p.length; a++) n.add(p[a]);
+                    for (let s = 0; s < p.length; s++) n.add(p[s]);
                     return n;
                   });
                 },
@@ -581,7 +581,7 @@ function _t({
                   onClick: () => {
                     q((e) => {
                       const n = new Set(e);
-                      for (let a = 0; a < p.length; a++) n.delete(p[a]);
+                      for (let s = 0; s < p.length; s++) n.delete(p[s]);
                       return n;
                     });
                   },
@@ -621,18 +621,18 @@ function _t({
                   className: "gl-mini-btn",
                   title: l("Put the picked cells on the Layout tab side by side, one row per cell and a column per channel, to edit there"),
                   onClick: () => {
-                    if (!A || !s) return;
-                    const e = new Set(de), n = Array.from(p).filter((a) => e.has(a));
+                    if (!A || !a) return;
+                    const e = new Set(de), n = Array.from(p).filter((s) => e.has(s));
                     Y(Pt({
-                      sampleId: s.id,
-                      fileName: s.name,
-                      cells: n.map((a) => {
+                      sampleId: a.id,
+                      fileName: a.name,
+                      cells: n.map((s) => {
                         var k;
-                        const y = U ? w(a) : null, u = y !== null && P ? (k = P[y]) == null ? void 0 : k.label : null;
-                        return { event: a, label: u ? `${l("Event {index}", { index: a.toLocaleString() })} · ${u}` : l("Event {index}", { index: a.toLocaleString() }) };
+                        const y = U ? j(s) : null, u = y !== null && P ? (k = P[y]) == null ? void 0 : k.label : null;
+                        return { event: s, label: u ? `${l("Event {index}", { index: s.toLocaleString() })} · ${u}` : l("Event {index}", { index: s.toLocaleString() }) };
                       }),
                       display: A,
-                      exposure: ae,
+                      exposure: se,
                       mask: D != null && D.mask ? { slot: D.mask.slot, fraction: D.mask.fraction } : null,
                       outline: he
                     }));
@@ -648,7 +648,7 @@ function _t({
                   title: l("Sort the wall by likeness to the picked cells over the file's channels: the most alike come first, and a range on the histogram keeps them"),
                   onClick: () => {
                     const e = b(de, re.trim() || l("picks"));
-                    e && (Re(e), We(!1), pe(null));
+                    e && (Re(e), Ue(!1), pe(null));
                   },
                   children: l("Find similar")
                 }
@@ -723,7 +723,7 @@ function _t({
           className: "gl-chip",
           "aria-pressed": ue === String(n),
           title: l("Show only this class on the wall; click again to show every class"),
-          onClick: () => we(ue === String(n) ? "all" : String(n)),
+          onClick: () => je(ue === String(n) ? "all" : String(n)),
           children: [
             /* @__PURE__ */ t.jsx("span", { className: "gl-cell-chip", style: { background: e.colour } }),
             l("{label} {count} ({percent}%)", {
@@ -737,16 +737,16 @@ function _t({
       )) }),
       _.length > 0 && (() => {
         var k, R, $;
-        const e = o.micronsPerPixel ?? null, n = e ?? 1, a = (o.sizeSource ?? "lightloss") === "lightloss", y = _.length >= 3 && _[2].median > 0 ? _[1].median / _[2].median : null, u = Number(Qe);
+        const e = o.micronsPerPixel ?? null, n = e ?? 1, s = (o.sizeSource ?? "lightloss") === "lightloss", y = _.length >= 3 && _[2].median > 0 ? _[1].median / _[2].median : null, u = Number(Qe);
         return /* @__PURE__ */ t.jsxs(
           "span",
           {
             className: "gl-images-control gl-images-sizes",
             role: "group",
             "aria-label": l("Cell size"),
-            title: l(a ? "Measured by GateLab on each cell's own LightLoss picture: the outline of the dark ring a cell makes in the beam, over the one-object cells now on the wall. Median, with the middle half of the cells in brackets. Click one to sort the wall by it." : "Measured by GateLab on each cell's own SSC picture: the outline of the counted object, in image pixels (the spacing of the picture's rows), over the one-object cells now on the wall. Median, with the middle half of the cells in brackets. Click one to sort the wall by it."),
+            title: l(s ? "Measured by GateLab on each cell's own LightLoss picture: the outline of the dark ring a cell makes in the beam, over the one-object cells now on the wall. Median, with the middle half of the cells in brackets. Click one to sort the wall by it." : "Measured by GateLab on each cell's own SSC picture: the outline of the counted object, in image pixels (the spacing of the picture's rows), over the one-object cells now on the wall. Median, with the middle half of the cells in brackets. Click one to sort the wall by it."),
             children: [
-              /* @__PURE__ */ t.jsx("span", { children: l(a ? e ? "Cell size (LightLoss outline), µm" : "Cell size (LightLoss outline), px" : "Cell size (SSC mask), px") }),
+              /* @__PURE__ */ t.jsx("span", { children: l(s ? e ? "Cell size (LightLoss outline), µm" : "Cell size (LightLoss outline), px" : "Cell size (SSC mask), px") }),
               _.map((x) => /* @__PURE__ */ t.jsx(
                 "button",
                 {
@@ -806,12 +806,12 @@ function _t({
       /* @__PURE__ */ t.jsx("span", { className: "gl-cell-chip", style: { background: e.colour } }),
       e.label
     ] }, e.label)) }),
-    He && /* @__PURE__ */ t.jsx("div", { className: "gl-error-inline", children: He }),
+    Xe && /* @__PURE__ */ t.jsx("div", { className: "gl-error-inline", children: Xe }),
     /* @__PURE__ */ t.jsxs(
       "div",
       {
         className: "gl-images-scroll",
-        ref: se,
+        ref: ae,
         role: "grid",
         "aria-rowcount": Ne,
         onKeyDown: Ct,
@@ -831,26 +831,26 @@ function _t({
             }
           ),
           /* @__PURE__ */ t.jsx("div", { style: { height: Ve * I } }),
-          /* @__PURE__ */ t.jsx("div", { className: "gl-images-grid", style: { gridTemplateColumns: `repeat(${B}, ${te}px)`, gap: Fe }, children: Array.from({ length: Math.max(0, kt - tt) }, (e, n) => {
-            const a = p[tt + n];
+          /* @__PURE__ */ t.jsx("div", { className: "gl-images-grid", style: { gridTemplateColumns: `repeat(${B}, ${te}px)`, gap: qe }, children: Array.from({ length: Math.max(0, kt - tt) }, (e, n) => {
+            const s = p[tt + n];
             return /* @__PURE__ */ t.jsx(
               Ot,
               {
                 service: g,
-                fileKey: s.id,
-                sampleId: s.id,
-                eventIndex: a,
+                fileKey: a.id,
+                sampleId: a.id,
+                eventIndex: s,
                 spec: ht,
                 size: te,
-                pinned: (M == null ? void 0 : M.sampleId) === s.id && M.eventIndex === a,
-                onPin: st,
+                pinned: (M == null ? void 0 : M.sampleId) === a.id && M.eventIndex === s,
+                onPin: at,
                 onOpen: z,
-                label: l("Event {index} of {name}", { index: a.toLocaleString(), name: s.name }),
-                colour: _e(a),
-                picked: je.has(a),
+                label: l("Event {index} of {name}", { index: s.toLocaleString(), name: a.name }),
+                colour: He(s),
+                picked: we.has(s),
                 onPick: d ? bt : void 0
               },
-              a
+              s
             );
           }) }),
           /* @__PURE__ */ t.jsx("div", { style: { height: Math.max(0, (Ne - et) * I) } })
