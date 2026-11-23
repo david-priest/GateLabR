@@ -1,4 +1,4 @@
-import { r as h, j as s } from "./embed-dEZivmKw.js";
+import { r as h, j as s } from "./embed-D_eRnync.js";
 import { p as N, d as w } from "./plotGeometry-CJtfGMFK.js";
 function C({ plotAreaRef: m, xRange: v, yRange: x, hoverStore: d, pinned: i, displayPointOf: f, colourOf: o, layoutKey: E }) {
   const a = h.useSyncExternalStore(d.subscribe, d.get, d.get), [e, g] = h.useState({ hovered: null, pinned: null });
