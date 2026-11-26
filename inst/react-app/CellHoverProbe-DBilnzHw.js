@@ -1,4 +1,4 @@
-import { r as P } from "./embed-D_eRnync.js";
+import { r as P } from "./embed-DE3p7Uql.js";
 import { p as H, i as K, a as S, b as U } from "./plotGeometry-CJtfGMFK.js";
 function j(u, r, I = {}) {
   const v = Math.min(u.length, r.length), g = I.maxPoints ?? 1e6;

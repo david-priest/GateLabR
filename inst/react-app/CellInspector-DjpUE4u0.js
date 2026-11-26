@@ -1,4 +1,4 @@
-import { r as p, u as W, j as e, C as X, F as Y } from "./embed-D_eRnync.js";
+import { r as p, u as W, j as e, N as X, L as Y } from "./embed-DE3p7Uql.js";
 import { N as V } from "./cvwDecode-CKHzN2J_.js";
 import { RenderCancelled as K } from "./imageService-BSVTX87i.js";
 const $ = { status: "idle", result: null, error: null };
@@ -34,7 +34,7 @@ function A(l, a) {
     return a != null && a.mask ? { slot: a.mask.slot, fraction: a.mask.fraction } : {};
 }
 const te = 512, le = 112;
-function L(l, a, d, c) {
+function _(l, a, d, c) {
   l.width = Math.max(1, Math.round(d)), l.height = Math.max(1, Math.round(c));
   const m = l.getContext("2d");
   if (!m) return;
@@ -98,15 +98,15 @@ function se({
     if (!g || !C) return null;
     const t = A(S, j);
     return { display: g, scale: C, exposure: k, hop: V, composite: !0, channels: g.map((i) => i.slot), ...t ? { outline: t } : {} };
-  }, [g, C, k, S, j]), E = ee(l, j && n && !f ? n.id : null, (o == null ? void 0 : o.eventIndex) ?? null, U, "interactive"), r = ((z = E.result) == null ? void 0 : z.kind) === "image" ? E.result.image : null, P = p.useMemo(() => n && o ? G(n.sample, o.eventIndex) : [], [n, o]), H = p.useRef(null), _ = p.useRef(/* @__PURE__ */ new Map());
+  }, [g, C, k, S, j]), E = ee(l, j && n && !f ? n.id : null, (o == null ? void 0 : o.eventIndex) ?? null, U, "interactive"), r = ((z = E.result) == null ? void 0 : z.kind) === "image" ? E.result.image : null, P = p.useMemo(() => n && o ? G(n.sample, o.eventIndex) : [], [n, o]), H = p.useRef(null), L = p.useRef(/* @__PURE__ */ new Map());
   p.useEffect(() => {
     if (!r) return;
     const t = te / r.rows;
-    H.current && r.composite && L(H.current, r.composite, r.cols * r.aspect * t, r.rows * t);
+    H.current && r.composite && _(H.current, r.composite, r.cols * r.aspect * t, r.rows * t);
     const i = le / r.rows;
     for (const [N, J] of Object.entries(r.channels)) {
-      const D = _.current.get(Number(N));
-      D && L(D, J, r.cols * r.aspect * i, r.rows * i);
+      const D = L.current.get(Number(N));
+      D && _(D, J, r.cols * r.aspect * i, r.rows * i);
     }
   }, [r]);
   const Z = (t) => {
@@ -171,7 +171,7 @@ function se({
           /* @__PURE__ */ e.jsx("div", { className: "gl-cell-composite", style: { visibility: r ? "visible" : "hidden" }, children: /* @__PURE__ */ e.jsx("canvas", { ref: H }) }),
           g && /* @__PURE__ */ e.jsx("div", { className: "gl-cell-tiles", children: g.map((t) => /* @__PURE__ */ e.jsxs("label", { className: "gl-cell-tile" + (t.enabled ? "" : " gl-cell-tile-off"), title: t.name, children: [
             /* @__PURE__ */ e.jsx("span", { className: "gl-cell-tile-picture", children: /* @__PURE__ */ e.jsx("canvas", { ref: (i) => {
-              i ? _.current.set(t.slot, i) : _.current.delete(t.slot);
+              i ? L.current.set(t.slot, i) : L.current.delete(t.slot);
             } }) }),
             /* @__PURE__ */ e.jsxs("span", { className: "gl-cell-tile-name", children: [
               /* @__PURE__ */ e.jsx("input", { type: "checkbox", checked: t.enabled, onChange: () => Z(t.slot) }),
@@ -228,13 +228,13 @@ function se({
 const re = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CellInspector: se,
-  drawPicture: L,
+  drawPicture: _,
   imagingFeaturesOf: G,
   outlineSpecOf: A
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   re as C,
-  L as d,
+  _ as d,
   A as o,
   ee as u
 };
