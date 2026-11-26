@@ -1,5 +1,29 @@
 # Changelog
 
+## GateLabR 1.6.7
+
+- The embedded GateLab core is GateLab 0.11.2 (GateLab-dev 9cfd1aff), up
+  from 0.11.1 (e1bc7a48). From the core: Workspace → Gating states…
+  saves the gating under a name and restores it later in one undo step,
+  and the states are kept in the workspace; Review, in the Populations
+  header, shows a gated population over an ancestor gate’s plot in each
+  selected file; an Illustration biplot takes several X and Y channels,
+  which sit on the Rows, Columns and Pages shelves beside files and
+  populations; Data → QC sheets makes a Layout sheet per file; a
+  right-click on a tick label, axis title, plot title or gate label in
+  Illustration or Strategy makes that text larger or smaller or opens
+  its size field; Strategy has a tab per strategy, with undo and redo,
+  and a grip that resizes its plots; Panel → Review titration… reports
+  the stain index of titrated stains and a working dose; side tabs stay
+  at the top of the pane, Typography is open in the Illustration and
+  Plotting side panes, and a quadrant’s handles follow its centre while
+  it is dragged. Gate evaluation is unchanged.
+- GateLabR 1.6.6 refuses a workspace saved into an object by 1.6.7 when
+  its Illustration figure places X channels or Y channels on a shelf, or
+  when it is compensated and holds saved gating states; an uncompensated
+  workspace with gating states opens there without them. Other
+  workspaces open in both.
+
 ## GateLabR 1.6.6
 
 - The embedded GateLab core is GateLab 0.11.1 (GateLab-dev e1bc7a48), up
