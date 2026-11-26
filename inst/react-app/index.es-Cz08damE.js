@@ -1,5 +1,5 @@
-import { cF as Va, ct as il } from "./embed-dEZivmKw.js";
-import { _ as La } from "./jspdf.es.min-BQOdeLQK.js";
+import { cV as Va, cJ as il } from "./embed-DE3p7Uql.js";
+import { _ as La } from "./jspdf.es.min-BY1oRxmx.js";
 var fn = {}, cn = {}, cr, vn;
 function Q() {
   if (vn) return cr;
